@@ -1,0 +1,12 @@
+{
+	"name": "simplelmm",
+	"authors": [
+		"prasunanand"
+	],
+	"dependencies": {
+		"mir-glas": "~>0.0.5"
+	},
+	"description": "Experiment lmm",
+	"copyright": "Copyright © 2016, prasun",
+	"license": "MIT"
+}
