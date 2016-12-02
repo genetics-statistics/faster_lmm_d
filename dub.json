@@ -4,7 +4,7 @@
 		"prasunanand"
 	],
 	"dependencies": {
-		"mir-glas": "~>0.0.5"
+		"dyaml": "~>0.5.0"
 	},
 	"description": "Experiment lmm",
 	"copyright": "Copyright © 2016, prasun",

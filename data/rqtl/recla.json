@@ -1,0 +1,28 @@
+{
+  "description": "DO data from Recla et al. (2014) Mamm Genome 25:211-222",
+  "crosstype": "do",
+  "geno": "recla_geno.csv",
+  "geno_transposed": true,
+  "founder_geno": "recla_foundergeno.csv",
+  "founder_geno_transposed": true,
+  "genotypes": {
+    "1": "1",
+    "2": "2",
+    "3": "3"
+  },
+  "pheno": "recla_pheno.csv",
+  "pheno_transposed": false,
+  "covar": "recla_covar.csv",
+  "sex": {
+    "covar": "Sex",
+    "female": "female",
+    "male": "male"
+  },
+  "x_chr": "X",
+  "cross_info": {
+    "covar": "ngen"
+  },
+  "gmap": "recla_gmap.csv",
+  "pmap": "recla_pmap.csv",
+  "alleles": ["A", "B", "C", "D", "E", "F", "G", "H"]
+}
