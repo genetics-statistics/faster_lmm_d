@@ -1,0 +1,11 @@
+# Genotype format version 1.0
+# Individuals = 5
+# SNPs = 6
+# Encoding = HAB
+	1	2	3	4	5
+snp1	BBHAB
+snp2	BBAAA
+snp3	ABHAB
+snp4	BBAAA
+snp5	BBBAB
+snp6	BBHAB
