@@ -9,19 +9,20 @@ import simplelmm.rqtlreader;
 
 void main(string[] args)
 {
-  string control;
+  string ocontrol;
   string okinship;
   string opheno;
-  string geno;
+  string ogeno;
   string useBLAS;
   string noBLAS;
   string noCUDA;
   int pheno_column;
   string cmd;
 
-  getopt(args, "control", &control, "kinship", &okinship, "opheno", &opheno, "geno", &geno, "useBLAS", &useBLAS, "noBLAS", &noBLAS, "noCUDA", &noCUDA, "pheno_column", &pheno_column, "cmd", &cmd);
+  getopt(args, "control", &ocontrol, "kinship", &okinship, "pheno", &opheno, "geno", &ogeno, "useBLAS", &useBLAS, "noBLAS", &noBLAS, "noCUDA", &noCUDA, "pheno_column", &pheno_column, "cmd", &cmd);
 
   writeln(cmd);
+  Node ctrl;
 
   if(cmd == "rqtl"){
     writeln("import rqtlreader as reader");
@@ -30,9 +31,11 @@ void main(string[] args)
     writeln("import tsvreader as reader");
   }
 
-  if(control){
-    //string ctrl = reader.control(control);//type
-    writeln("ctrl");
+  if(ocontrol){
+    ctrl = control(ocontrol);//type
+    writeln(".....///////////////////////////////..................");
+    writeln(ctrl);
+    writeln(".....///////////////////////////////..................");
   }
 
   if(okinship){
@@ -49,10 +52,11 @@ void main(string[] args)
     writeln("y.shape");
   }
 
-  if(geno && cmd != "iterator"){
+  if(ogeno && cmd != "iterator"){
     string g = "reader.geno";
     string gnames = "reader.gnames";
-    //g,gnames = reader.geno(options.geno, ctrl);
+    //g,
+    int gname = geno(ogeno, ctrl);
     writeln("g.shape");
   }
 
