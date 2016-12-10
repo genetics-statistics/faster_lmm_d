@@ -9,6 +9,7 @@ import std.getopt;
 import std.typecons;
 import std.json;
 import std.conv;
+import std.range;
 
 JSONValue control(string fn){
   //Node root = Loader(fn).load();
@@ -112,22 +113,29 @@ int geno(string fn, JSONValue ctrl){
   writeln("simplelmm_mapper", simplelmm_mapper);
   //writeln(fn);
 
-  //string input = cast(string)std.file.read(fn);
-  //auto tsv = csvReader!(string)(input, null);
+  string input = cast(string)std.file.read(fn);
+  auto tsv = csvReader!(string, Malformed.ignore)(input, null);
 
-  //auto gnames = tsv[1..$];
+  writeln(tsv.header[1..$]);
+  auto gnames = tsv.header[1..$];
 
-  //foreach(row; tsv){
-  //  id = row[0]
-  //  gs = row[1:]
-  //  //# print id,gs
-  //  //# Convert all items to genotype values
-  //  gs2 = [pylmm_mapper[hab_mapper[g]] for g in gs]
-  //  //# print id,gs2
-  //  //# ns = np.genfromtxt(row[1:])
-  //  //G1.append(gs2) # <--- slow
-  //  //G = np.array(G1)
-  //}
+  foreach(row; tsv){
+    string id = row.front;
+    writeln(id);
+    row.popFront();
+    string[] gs;
+    foreach(item; row){
+      gs ~= item;
+    }
+    writeln(gs);
+    ////# print id,gs
+    ////# Convert all items to genotype values
+    //gs2 = [simplelmm_mapper[hab_mapper[g]] for g in gs]
+    //# print id,gs2
+    //# ns = np.genfromtxt(row[1:])
+    //G1.append(gs2) # <--- slow
+    //G = np.array(G1)
+  }
   ////# print(row)
 
   //string* ptr;
@@ -144,33 +152,37 @@ int geno(string fn, JSONValue ctrl){
 }
 
 
-//int geno_callback(){
-//  int[string] hab_mapper;
-//  hab_mapper["A"] = 0;
-//  hab_mapper["H"] = 1;
-//  hab_mapper["B"] = 2;
-//  hab_mapper["-"] = 3;
-//  auto pylmm_mapper = [ 0.0, 0.5, 1.0, float.nan]
+int geno_callback(string fn){
+  int[string] hab_mapper;
+  hab_mapper["A"] = 0;
+  hab_mapper["H"] = 1;
+  hab_mapper["B"] = 2;
+  hab_mapper["-"] = 3;
+  auto simplelmm_mapper = [ 0.0, 0.5, 1.0, double.nan];
 
-//  //  raise "NYI"
-//  writeln(fn);
+  //  raise "NYI"
+  writeln(fn);
 
-//  string input = cast(string)std.file.read(fn);
-//  auto tsv = csvReader!(string)(input, null);
-//  //  with open(fn,'r') as csvin:
-//  //      assert(csvin.readline().strip() == "# Genotype format version 1.0")
-//  //      csvin.readline()
-//  //      csvin.readline()
-//  //      csvin.readline()
-//  //      csvin.readline()
-//  //      tsv = csv.reader(csvin, delimiter='\t')
-//  //      for row in tsv:
-//  //          id = row[0]
-//  //          gs = list(row[1])
-//  //          gs2 = [pylmm_mapper[hab_mapper[g]] for g in gs]
-//  //          func(id,gs2)
-//  return 5;
-//}
+  auto file = File("file.txt"); // Open for reading
+  auto range = file.byLine();
+  // Print first three lines
+  //assert(range.take(1).strip() == "# Genotype format version 1.0");
+
+  //foreach (line; range.take(4)){}
+  // Print remaining lines beginning with '#'
+  //assert(tsv.headers().strip() == "# Genotype format version 1.0");
+  //      csvin.readline()
+  //      csvin.readline()
+  //      csvin.readline()
+  //      csvin.readline()
+  //      tsv = csv.reader(csvin, delimiter='\t')
+  //      for row in tsv:
+  //          id = row[0]
+  //          gs = list(row[1])
+  //          gs2 = [simplelmm_mapper[hab_mapper[g]] for g in gs]
+  //          func(id,gs2)
+  return 5;
+}
 
 //int geno_iter(){
 //  nt[string] hab_mapper;
@@ -178,7 +190,7 @@ int geno(string fn, JSONValue ctrl){
 //  hab_mapper["H"] = 1;
 //  hab_mapper["B"] = 2;
 //  hab_mapper["-"] = 3;
-//  auto pylmm_mapper = [ 0.0, 0.5, 1.0, float.nan]
+//  auto simplelmm_mapper = [ 0.0, 0.5, 1.0, float.nan]
 
 //  writeln(fn);
 
@@ -194,7 +206,7 @@ int geno(string fn, JSONValue ctrl){
 //  //      for row in tsv:
 //  //          id = row[0]
 //  //          gs = list(row[1])
-//  //          gs2 = [pylmm_mapper[hab_mapper[g]] for g in gs]
+//  //          gs2 = [simplelmm_mapper[hab_mapper[g]] for g in gs]
 //  //          yield (id,gs2)
 //  return 5;
 //}
