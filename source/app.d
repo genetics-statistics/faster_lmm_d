@@ -5,6 +5,7 @@ import std.csv;
 import std.regex;
 import dyaml.all;
 import std.getopt;
+import std.json;
 import simplelmm.rqtlreader;
 
 void main(string[] args)
@@ -22,7 +23,7 @@ void main(string[] args)
   getopt(args, "control", &ocontrol, "kinship", &okinship, "pheno", &opheno, "geno", &ogeno, "useBLAS", &useBLAS, "noBLAS", &noBLAS, "noCUDA", &noCUDA, "pheno_column", &pheno_column, "cmd", &cmd);
 
   writeln(cmd);
-  Node ctrl;
+  JSONValue ctrl;
 
   if(cmd == "rqtl"){
     writeln("import rqtlreader as reader");

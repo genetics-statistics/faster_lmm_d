@@ -7,11 +7,17 @@ import std.regex;
 import dyaml.all;
 import std.getopt;
 import std.typecons;
+import std.json;
+import std.conv;
 
-Node control(string fn){
-  Node root = Loader(fn).load();
-  writeln("in control function");
-  return root;
+JSONValue control(string fn){
+  //Node root = Loader(fn).load();
+  //writeln("in control function");
+  string input = cast(string)std.file.read(fn);
+  JSONValue j = parseJSON(input);
+  writeln(j);
+
+  return j;
 }
 
 int kinship(string fn){
@@ -74,42 +80,42 @@ int pheno(string fn, int p_column){
   return 5;
 }
 
-int geno(string fn, Node ctrl){
+int geno(string fn, JSONValue ctrl){
 
   writeln("in geno function");
-  //writeln(ctrl);
-  //string[] G1;
-  //string* ptr;
+  writeln(ctrl["genotypes"].object);
+  //string ptr = ("na-strings" in ctrl.object).str;
+  writeln(ctrl.object);
 
-  //foreach(Node node; ctrl){
-  //  if(node.as!string == "na.string"){
-  //    node[1] = ["-", "NA"];
-  //  }
-  //}
-  writeln(ctrl["genotypes"]);
-  //ctrl["na.strings"] = ["-","NA"];
-  //uint[string] hab_mapper;
-  alias Pair2 = Tuple!(Node , Node);
-  foreach(Pair2 node; ctrl["genotypes"]){
-    //hab_mapper[node.as!string] = ctrl["genotypes"][node].as!int;
+  string s = `{"-" : "0","NA": "0"}`;
+  ctrl["na-strings"] = parseJSON(s);
+  writeln(ctrl.object);
+  int[string] hab_mapper;
+  int idx = 0;
+
+  foreach( key, value; ctrl["genotypes"].object){
+    hab_mapper[to!string(key)] = to!int(value.str);
+    idx++;
   }
-
-  //int idx = hab_mapper.sizeof;
-  //assert(idx == 3);
-  //auto pylmm_mapper = [double.nan, 0.0, 0.5, 1.0];
+  writeln(hab_mapper);
+  writeln(idx);
+  assert(idx == 3);
+  double[] simplelmm_mapper = [double.nan, 0.0, 0.5, 1.0];
   //foreach(s; ctrl["na.strings"]){
-  //  idx += 1;
-  //  hab_mapper[s] = idx;
-  //  pylmm_mapper ~ double.nan;
-  //}
-  //writeln("hab_mapper", hab_mapper);
-  //writeln("pylmm_mapper", pylmm_mapper);
+
+  foreach( key,value; ctrl["na-strings"].object){
+    idx += 1;
+    hab_mapper[to!string(key)] = idx;
+    simplelmm_mapper ~= double.nan;
+  }
+  writeln("hab_mapper", hab_mapper);
+  writeln("simplelmm_mapper", simplelmm_mapper);
   //writeln(fn);
 
   //string input = cast(string)std.file.read(fn);
   //auto tsv = csvReader!(string)(input, null);
 
-  //gnames = tsv.next()[1:];
+  //auto gnames = tsv[1..$];
 
   //foreach(row; tsv){
   //  id = row[0]
