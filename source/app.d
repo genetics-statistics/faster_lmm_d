@@ -82,6 +82,7 @@ void main(string[] args)
     writeln("Error: Run command is missing!");
   }
 
+  geno_callback("data/small.geno");
   //int a = pheno("./data/rqtl/iron_covar.csv");
  // writeln(a);
 	//writeln("Edit source/app.d to start your project.");

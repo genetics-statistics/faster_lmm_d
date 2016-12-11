@@ -10,6 +10,7 @@ import std.typecons;
 import std.json;
 import std.conv;
 import std.range;
+import std.file;
 
 JSONValue control(string fn){
   //Node root = Loader(fn).load();
@@ -163,19 +164,16 @@ int geno_callback(string fn){
   //  raise "NYI"
   writeln(fn);
 
-  auto file = File("file.txt"); // Open for reading
-  auto range = file.byLine();
-  // Print first three lines
-  //assert(range.take(1).strip() == "# Genotype format version 1.0");
+  auto file = File(fn); // Open for reading
+  assert(file.readln().strip() == "# Genotype format version 1.0");
+  file.readln();
+  file.readln();
+  file.readln();
+  file.readln();
 
-  //foreach (line; range.take(4)){}
-  // Print remaining lines beginning with '#'
-  //assert(tsv.headers().strip() == "# Genotype format version 1.0");
-  //      csvin.readline()
-  //      csvin.readline()
-  //      csvin.readline()
-  //      csvin.readline()
-  //      tsv = csv.reader(csvin, delimiter='\t')
+  string input = cast(string)std.file.read(fn);
+  auto tsv = csvReader!(string, Malformed.ignore)(input, '\t');
+  writeln(tsv);
   //      for row in tsv:
   //          id = row[0]
   //          gs = list(row[1])
@@ -184,29 +182,28 @@ int geno_callback(string fn){
   return 5;
 }
 
-//int geno_iter(){
-//  nt[string] hab_mapper;
-//  hab_mapper["A"] = 0;
-//  hab_mapper["H"] = 1;
-//  hab_mapper["B"] = 2;
-//  hab_mapper["-"] = 3;
-//  auto simplelmm_mapper = [ 0.0, 0.5, 1.0, float.nan]
+int geno_iter(string fn){
+  int[string] hab_mapper;
+  hab_mapper["A"] = 0;
+  hab_mapper["H"] = 1;
+  hab_mapper["B"] = 2;
+  hab_mapper["-"] = 3;
+  auto simplelmm_mapper = [ 0.0, 0.5, 1.0, double.nan];
 
-//  writeln(fn);
+  writeln(fn);
 
-//  string input = cast(string)std.file.read(fn);
-//  auto tsv = csvReader!(string)(input, null);
-//  //  with open(fn,'r') as csvin:
-//  //      assert(csvin.readline().strip() == "# Genotype format version 1.0")
-//  //      csvin.readline()
-//  //      csvin.readline()
-//  //      csvin.readline()
-//  //      csvin.readline()
-//  //      tsv = csv.reader(csvin, delimiter='\t')
-//  //      for row in tsv:
-//  //          id = row[0]
-//  //          gs = list(row[1])
-//  //          gs2 = [simplelmm_mapper[hab_mapper[g]] for g in gs]
-//  //          yield (id,gs2)
-//  return 5;
-//}
+
+  auto file = File(fn); // Open for reading
+  assert(file.readln() == "# Genotype format version 1.0");
+  file.readln();
+  file.readln();
+  file.readln();
+  file.readln();
+  writeln(file);
+
+  string input = cast(string)std.file.read(fn);
+  auto tsv = csvReader!(string, Malformed.ignore)(input, '\t');
+  writeln(tsv);
+
+  return 5;
+}
