@@ -4,7 +4,8 @@
 		"prasunanand"
 	],
 	"dependencies": {
-		"dyaml": "~>0.5.0"
+		"dyaml": "~>0.5.0",
+		"cblas": "~>1.0.0"
 	},
 	"description": "Experiment lmm",
 	"copyright": "Copyright © 2016, prasun",
