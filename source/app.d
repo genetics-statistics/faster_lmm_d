@@ -114,7 +114,7 @@ void main(string[] args)
     //}
     n = y.size;
     m = g.shape[1];
-    gwas = run_gwas('other',n,m,k,y,g);
+    //gwas = run_gwas("other",n,m,k,y,g);
     ps = gwas["ps"];
     ts = gwas["ts"];
     check_results(ps,ts);
