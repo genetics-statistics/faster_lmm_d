@@ -7,13 +7,20 @@ import dyaml.all;
 import std.getopt;
 import std.json;
 import simplelmm.rqtlreader;
-import simplelmm.lmm;
-import simplelmm.gwas;
-import simplelmm.genotype;
-import simplelmm.phenotype;
+//import simplelmm.lmm;
+//import simplelmm.gwas;
+//import simplelmm.genotype;
+//import simplelmm.phenotype;
 
 void main(string[] args)
 {
+  // Main routine
+
+  //auto ctrl;  // R/qtl control structure
+  //auto k;
+  //auto y;
+  //auto g;
+
   string ocontrol;
   string okinship;
   string opheno;
@@ -50,19 +57,20 @@ void main(string[] args)
   }
 
   if(opheno){
-    string y = "y";
-    string ynames = "ynames";
-    //y,
-    auto ynam = pheno(opheno, pheno_column);
-    writeln("y.shape");
+    double[] y;
+    string[] ynames;
+    pheno(opheno, y, ynames, pheno_column);
+    writeln(y.sizeof);
   }
 
   if(ogeno && cmd != "iterator"){
-    string g = "reader.geno";
-    string gnames = "reader.gnames";
+    //string g = "reader.geno";
+    //string gnames = "reader.gnames";
+    double[] g;
+    string[] gnames;
     //g,
-    int gname = geno(ogeno, ctrl);
-    writeln("g.shape");
+    geno(ogeno, ctrl, g, gnames);
+    writeln(g.sizeof);
   }
 
   if(useBLAS){
@@ -112,12 +120,12 @@ void main(string[] args)
     //if options.remove_missing_phenotypes{
     //  raise Exception('Can not use --remove-missing-phenotypes with LMM2')
     //}
-    n = y.size;
-    m = g.shape[1];
-    //gwas = run_gwas("other",n,m,k,y,g);
-    ps = gwas["ps"];
-    ts = gwas["ts"];
-    check_results(ps,ts);
+    //n = y.size;
+    //m = g.shape[1];
+    ////gwas = run_gwas("other",n,m,k,y,g);
+    //ps = gwas["ps"];
+    //ts = gwas["ts"];
+    //check_results(ps,ts);
   }
 //else if(cmd == "rqtl"){
 //    if options.remove_missing_phenotypes:

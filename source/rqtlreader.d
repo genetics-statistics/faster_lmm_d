@@ -42,25 +42,25 @@ int kinship(string fn){
   return 1;
 }
 
-int pheno(string fn, int p_column){
+int pheno(string fn,  ref double[] y, ref string[] ynames, int p_column= 0){
   // read recla_geno.csv
-  string[] Y1;
   writeln(fn);
 
   Regex!char Pattern = regex("\\.json$", "i");
 
   if(!match(fn, Pattern).empty)
   {
-    string[] ynames;
     Node gn2_pheno = Loader(fn).load();
     foreach(Node strain; gn2_pheno){
       writeln(strain.as!string);
-      Y1 ~= strain[2].as!string;
+      y ~= strain[2].as!double;
       ynames ~= strain[1].as!string;
     }
-    writeln(Y1);
+    writeln("interest");
+    writeln(y);
     writeln(ynames);
-    return 6;
+    writeln("interest");
+    return 2;
   }
 
 
@@ -82,24 +82,24 @@ int pheno(string fn, int p_column){
   return 5;
 }
 
-int geno(string fn, JSONValue ctrl){
+void geno(string fn, JSONValue ctrl, ref double[] g, ref string[] gnames){
 
   writeln("in geno function");
-  writeln(ctrl["genotypes"].object);
+  //writeln(ctrl["genotypes"].object);
   //string ptr = ("na-strings" in ctrl.object).str;
-  writeln(ctrl.object);
+  //writeln(ctrl.object);
 
   string s = `{"-" : "0","NA": "0"}`;
   ctrl["na-strings"] = parseJSON(s);
-  writeln(ctrl.object);
+  //writeln(ctrl.object);
   int[string] hab_mapper;
   int idx = 0;
 
   foreach( key, value; ctrl["genotypes"].object){
-    hab_mapper[to!string(key)] = to!int(value.str);
+    //hab_mapper[to!string(key)] = to!int(value.str);
     idx++;
   }
-  writeln(hab_mapper);
+  //writeln(hab_mapper);
   writeln(idx);
   assert(idx == 3);
   double[] simplelmm_mapper = [double.nan, 0.0, 0.5, 1.0];
@@ -118,7 +118,7 @@ int geno(string fn, JSONValue ctrl){
   auto tsv = csvReader!(string, Malformed.ignore)(input, null);
 
   writeln(tsv.header[1..$]);
-  auto gnames = tsv.header[1..$];
+  gnames = tsv.header[1..$];
 
   foreach(row; tsv){
     string id = row.front;
@@ -149,7 +149,8 @@ int geno(string fn, JSONValue ctrl){
 
 
 
-  return 5;
+  //return 5;
+ writeln("leaving geno function");
 }
 
 
