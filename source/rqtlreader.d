@@ -119,6 +119,7 @@ void geno(string fn, JSONValue ctrl, ref double[] g, ref string[] gnames){
 
   writeln(tsv.header[1..$]);
   gnames = tsv.header[1..$];
+  double[] gs2;
 
   foreach(row; tsv){
     string id = row.front;
@@ -132,11 +133,16 @@ void geno(string fn, JSONValue ctrl, ref double[] g, ref string[] gnames){
     ////# print id,gs
     ////# Convert all items to genotype values
     //gs2 = [simplelmm_mapper[hab_mapper[g]] for g in gs]
+    //core.exception.RangeError@source/rqtlreader.d(137): Range violation
+    //foreach(gval;gs){
+    //  gs2 ~= simplelmm_mapper[hab_mapper[gval]];
+    //}
     //# print id,gs2
     //# ns = np.genfromtxt(row[1:])
     //G1.append(gs2) # <--- slow
     //G = np.array(G1)
   }
+  g = gs2;
   ////# print(row)
 
   //string* ptr;

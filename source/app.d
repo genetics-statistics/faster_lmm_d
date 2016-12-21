@@ -11,6 +11,8 @@ import simplelmm.rqtlreader;
 //import simplelmm.gwas;
 //import simplelmm.genotype;
 //import simplelmm.phenotype;
+import simplelmm.dmatrix;
+import simplelmm.optmatrix;
 
 void main(string[] args)
 {
@@ -20,6 +22,11 @@ void main(string[] args)
   //auto k;
   //auto y;
   //auto g;
+
+  dmatrix d = dmatrix([2,2],[2,3,4,5]);
+  dmatrix e = dmatrix([2,2],[2,3,4,5]);
+  writeln(d.shape);
+  writeln(d.elements);
 
   string ocontrol;
   string okinship;
@@ -55,19 +62,19 @@ void main(string[] args)
     //kinship(kinship);
     writeln("k.shape");
   }
+  double[] y;
+  string[] ynames;
 
   if(opheno){
-    double[] y;
-    string[] ynames;
+    
     pheno(opheno, y, ynames, pheno_column);
     writeln(y.sizeof);
   }
-
+  double[] g;
+  string[] gnames;
   if(ogeno && cmd != "iterator"){
     //string g = "reader.geno";
     //string gnames = "reader.gnames";
-    double[] g;
-    string[] gnames;
     //g,
     geno(ogeno, ctrl, g, gnames);
     writeln(g.sizeof);
@@ -95,34 +102,37 @@ void main(string[] args)
   }
 
   //geno_callback("data/small.geno");
-
-
-  //if(y is not None){
-  //  n = y.shape[0]
-  //}
+double n;
+double m;
+if(y!=null){
+  n = y[0];//.sizeof;
+}
 
 //lmmoptions.set(options)
 //print lmmoptions.get()
 
 //# If there are less phenotypes than strains, reduce the genotype matrix
-//if np.size(g[0]) != y.size:
-//    print "Reduce geno matrix to match phenotype strains"
-//    print(gnames)
-//    gidx = []
-//    for ind in ynames:
-//        gidx.append(gnames.index(ind))
-//    print gidx
-//    g2 = g.T[(gidx)].T
-//    print 'geno matrix ',g.shape,' reshaped to ',g2.shape
-//    g = g2
+  if(g[0].sizeof != y.sizeof){
+    writeln("Reduce geno matrix to match phenotype strains");
+    writeln(gnames);
+    auto gidx = [];
+    //foreach(ind; ynames){
+    //  gidx ~= gnames.index(ind);
+    //}
+    writeln(gidx);
+    //g2 = g.T[(gidx)].T;
+    //writeln("geno matrix ",g.sizeof," reshaped to ",g2.sizeof);
+    //g = g2;
+  }
 
   if(cmd == "run" || cmd == "rqtl"){
     //if options.remove_missing_phenotypes{
     //  raise Exception('Can not use --remove-missing-phenotypes with LMM2')
     //}
-    //n = y.size;
+    n = y.sizeof;
     //m = g.shape[1];
-    ////gwas = run_gwas("other",n,m,k,y,g);
+    m = g.sizeof;
+    //gwas = run_gwas("other",n,m,k,y,g);
     //ps = gwas["ps"];
     //ts = gwas["ts"];
     //check_results(ps,ts);
