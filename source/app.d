@@ -23,10 +23,14 @@ void main(string[] args)
   //auto y;
   //auto g;
 
-  dmatrix d = dmatrix([2,2],[2,3,4,5]);
-  dmatrix e = dmatrix([2,2],[2,3,4,5]);
+  dmatrix d = dmatrix([2,4],[2e32,3,4,5,3,2,2,2]);
+  dmatrix e = dmatrix([3,4],[2e-1,3,4,5,3,2,2e-1,3,4,5,3,2]);
   writeln(d.shape);
   writeln(d.elements);
+  dmatrix z;
+  z = matrixMultT(d,e);
+  writeln(z.shape);
+  writeln(z.elements);
 
   string ocontrol;
   string okinship;
@@ -66,7 +70,6 @@ void main(string[] args)
   string[] ynames;
 
   if(opheno){
-    
     pheno(opheno, y, ynames, pheno_column);
     writeln(y.sizeof);
   }

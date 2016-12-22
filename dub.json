@@ -9,5 +9,6 @@
 	},
 	"description": "Experiment lmm",
 	"copyright": "Copyright © 2016, prasun",
-	"license": "MIT"
+	"license": "MIT",
+	"libs": ["blas"]
 }
