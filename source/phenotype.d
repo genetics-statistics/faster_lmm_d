@@ -1,15 +1,16 @@
 module simplelmm.phenotype;
+import simplelmm.dmatrix;
 
-int remove_missing(string n, string y, string g){
+int remove_missing(ref dmatrix n, ref dmatrix y, ref dmatrix g){
   //"""
   //Remove missing data from matrices, make sure the genotype data has
   //individuals as rows
   //"""
-  //assert(y is not None)
-  //assert y.shape[0] == g.shape[0],"y (n) %d, g (n,m) %s" % (y.shape[0],g.shape)
+  assert(y!=null);
+  assert(y.shape[0] == g.shape[0]);//,"y (n) %d, g (n,m) %s" % (y.shape[0],g.shape)
 
-  //y1 = y
-  //g1 = g
+  auto y1 = y;
+  auto g1 = g;
   //v = np.isnan(y)
   //keep = True - v
   //if v.sum():
@@ -21,12 +22,12 @@ int remove_missing(string n, string y, string g){
   return 1;
 }
 
-int remove_missing_new(string n, string y){
+int remove_missing_new(ref dmatrix n, ref dmatrix y){
   //"""
   //Remove missing data. Returns new n,y,keep
   //"""
-  //assert(y is not None)
-  //y1 = y
+  assert(y!=null);
+  auto y1 = y;
   //v = np.isnan(y)
   //keep = True - v
   //if v.sum():
