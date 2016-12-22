@@ -73,14 +73,11 @@ void main(string[] args)
     pheno(opheno, y, ynames, pheno_column);
     writeln(y.sizeof);
   }
-  double[] g;
+  dmatrix g;
   string[] gnames;
   if(ogeno && cmd != "iterator"){
-    //string g = "reader.geno";
-    //string gnames = "reader.gnames";
-    //g,
     geno(ogeno, ctrl, g, gnames);
-    writeln(g.sizeof);
+    writeln(g.shape);
   }
 
   if(useBLAS){
@@ -115,7 +112,7 @@ if(y!=null){
 //print lmmoptions.get()
 
 //# If there are less phenotypes than strains, reduce the genotype matrix
-  if(g[0].sizeof != y.sizeof){
+  if(g.shape[0] != y.sizeof){
     writeln("Reduce geno matrix to match phenotype strains");
     writeln(gnames);
     auto gidx = [];

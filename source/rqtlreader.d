@@ -1,4 +1,5 @@
 module simplelmm.rqtlreader;
+
 import std.stdio;
 import std.string;
 import std.array;
@@ -12,12 +13,14 @@ import std.conv;
 import std.range;
 import std.file;
 
+import simplelmm.dmatrix;
+
 JSONValue control(string fn){
   //Node root = Loader(fn).load();
   //writeln("in control function");
   string input = cast(string)std.file.read(fn);
   JSONValue j = parseJSON(input);
-  writeln(j);
+  //writeln(j);
 
   return j;
 }
@@ -37,14 +40,14 @@ int kinship(string fn){
   //  i++;
   //}
   auto file = File(fn);
-  writeln(file.byLine());
+  //writeln(file.byLine());
 
   return 1;
 }
 
 int pheno(string fn,  ref double[] y, ref string[] ynames, int p_column= 0){
   // read recla_geno.csv
-  writeln(fn);
+  //writeln(fn);
 
   Regex!char Pattern = regex("\\.json$", "i");
 
@@ -52,7 +55,7 @@ int pheno(string fn,  ref double[] y, ref string[] ynames, int p_column= 0){
   {
     Node gn2_pheno = Loader(fn).load();
     foreach(Node strain; gn2_pheno){
-      writeln(strain.as!string);
+      //writeln(strain.as!string);
       y ~= strain[2].as!double;
       ynames ~= strain[1].as!string;
     }
@@ -82,21 +85,29 @@ int pheno(string fn,  ref double[] y, ref string[] ynames, int p_column= 0){
   return 5;
 }
 
-void geno(string fn, JSONValue ctrl, ref double[] g, ref string[] gnames){
+void geno(string fn, JSONValue ctrl, ref dmatrix g, ref string[] gnames){
 
   writeln("in geno function");
   //writeln(ctrl["genotypes"].object);
   //string ptr = ("na-strings" in ctrl.object).str;
   //writeln(ctrl.object);
-
-  string s = `{"-" : "0","NA": "0"}`;
+  //string s = `{"-" : "0","NA": "0"}`;
+  //FIXME
+  string s = `{"-" : "0","NA": "0", "U": "0"}`;
   ctrl["na-strings"] = parseJSON(s);
   //writeln(ctrl.object);
   int[string] hab_mapper;
   int idx = 0;
 
   foreach( key, value; ctrl["genotypes"].object){
-    //hab_mapper[to!string(key)] = to!int(value.str);
+    string a  = to!string(key);
+    string b = to!string(value);
+    int c = to!int(b);
+    hab_mapper[a] = c;
+    writeln(hab_mapper);
+    //writeln(a);
+    writeln(b);
+
     idx++;
   }
   //writeln(hab_mapper);
@@ -117,19 +128,31 @@ void geno(string fn, JSONValue ctrl, ref double[] g, ref string[] gnames){
   string input = cast(string)std.file.read(fn);
   auto tsv = csvReader!(string, Malformed.ignore)(input, null);
 
-  writeln(tsv.header[1..$]);
+  //writeln(tsv.header[1..$]);
   gnames = tsv.header[1..$];
   double[] gs2;
-
+  int rowCount = 0;
+  int colCount;
+  string[] gs;
+  int allal= 0;
   foreach(row; tsv){
     string id = row.front;
-    writeln(id);
+    //writeln(id);
     row.popFront();
-    string[] gs;
+    gs = [];
+    colCount = 0;
     foreach(item; row){
       gs ~= item;
+      gs2 ~= simplelmm_mapper[hab_mapper[item]];
+      colCount++;
+      allal++;
     }
-    writeln(gs);
+    //writeln(rowCount);
+    //writeln(gs2);
+    rowCount++;
+
+
+    //writeln(gs);
     ////# print id,gs
     ////# Convert all items to genotype values
     //gs2 = [simplelmm_mapper[hab_mapper[g]] for g in gs]
@@ -142,7 +165,9 @@ void geno(string fn, JSONValue ctrl, ref double[] g, ref string[] gnames){
     //G1.append(gs2) # <--- slow
     //G = np.array(G1)
   }
-  g = gs2;
+  writeln("MATRIX CREATED");
+  g = dmatrix([rowCount, colCount], gs2);
+    //writeln(y);
   ////# print(row)
 
   //string* ptr;
