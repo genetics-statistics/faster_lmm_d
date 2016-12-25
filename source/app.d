@@ -7,8 +7,8 @@ import dyaml.all;
 import std.getopt;
 import std.json;
 import simplelmm.rqtlreader;
-//import simplelmm.lmm;
-//import simplelmm.gwas;
+import simplelmm.lmm;
+import simplelmm.gwas;
 //import simplelmm.genotype;
 //import simplelmm.phenotype;
 import simplelmm.dmatrix;
@@ -114,11 +114,13 @@ if(y!=null){
 //# If there are less phenotypes than strains, reduce the genotype matrix
   if(g.shape[0] != y.sizeof){
     writeln("Reduce geno matrix to match phenotype strains");
+    
+    //run_gwas();
     writeln(gnames);
     auto gidx = [];
-    //foreach(ind; ynames){
-    //  gidx ~= gnames.index(ind);
-    //}
+    foreach(ind; ynames){
+      //gidx ~= gnames[ind];
+    }
     writeln(gidx);
     //g2 = g.T[(gidx)].T;
     //writeln("geno matrix ",g.sizeof," reshaped to ",g2.sizeof);
