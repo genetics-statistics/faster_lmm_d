@@ -61,14 +61,14 @@ void gwas(ref dmatrix Y, ref dmatrix G, ref dmatrix K, bool restricted_max_likel
   //# if not kfile2:  L = LMM(Y,K,Kva,Kve,X0,verbose=verbose)
   //# else:  L = LMM_withK2(Y,K,Kva,Kve,X0,verbose=verbose,K2=K2)
 
-  //lmm2 = LMM2(Y,K); //,Kva,Kve,X0,verbose=verbose);
-  //if(!refit){
-  //  info("Computing fit for null model");
-  //  fit_hmax,fit_beta,fit_sigma,fit_LL = lmm2.fit(); // # follow GN model in run_other;
-  //  info("heritability=%0.3f, sigma=%0.3f, LL=%0.5f" % (lmm2.optH,lmm2.optSigma, fit_LL));
-  //}
+  LMM2 lmm2 = LMM2(Y,K); //,Kva,Kve,X0,verbose=verbose);
+  if(!refit){
+    writeln("Computing fit for null model");
+    fit_hmax,fit_beta,fit_sigma,fit_LL = lmm2fit(lmm2); // # follow GN model in run_other;
+    //writefln("heritability=%0.3f, sigma=%0.3f, LL=%0.5f" % (lmm2.optH,lmm2.optSigma, fit_LL));
+  }
 
-  //res = [];
+  double res = [];
 
   ////# Set up the pool
   ////# mp.set_start_method('spawn')
@@ -79,10 +79,10 @@ void gwas(ref dmatrix Y, ref dmatrix G, ref dmatrix K, bool restricted_max_likel
        
   //collect = []; //# container for SNPs to be processed in one batch
 
-  //count = 0;
-  //job = 0;
-  //jobs_running = 0;
-  //jobs_completed = 0;
+  int count = 0;
+  int job = 0;
+  int jobs_running = 0;
+  int jobs_completed = 0;
   //foreach(snp; G){
   //  snp_id = (snp,"SNPID");
   //  count += 1;
@@ -138,8 +138,8 @@ void gwas(ref dmatrix Y, ref dmatrix G, ref dmatrix K, bool restricted_max_likel
   //    p.apply_async(compute_snp,(job,n,collect,lmm2,reml));
   //  }
         
-  //  jobs_running += 1;
-  //  collect = [];
+  jobs_running += 1;
+  double[] collect = [];
   //  foreach(job; range(jobs_running)){
   //    j,lst = q.get(True,15);// time out
   //    info("Job "+str(j)+" finished");

@@ -1,5 +1,6 @@
 module simplelmm.lmm;
 import simplelmm.dmatrix;
+import simplelmm.gwas;
 import std.stdio;
 import simplelmm.helpers;
 
@@ -214,14 +215,16 @@ void run_other_new(ref int n, ref int m, ref double[] pheno_vector, ref dmatrix 
     //# if not options.skip_genotype_normalization:
     //# G = np.apply_along_axis( genotype.normalize, axis=1, arr=G)
 
-    geno = geno[0,keep];
-    with(Bench("Calculate Kinship")){
-      K,G = calculate_kinship_new(geno);
-    }
+    geno = newDmatrix(geno,0,cast(int)keep);
+    dmatrix K, G;
+    //with(Bench("Calculate Kinship")){
+      //K,G = 
+      calculate_kinship_new(geno);
+    //}
        
 
-    writeln("kinship_matrix: ", pf(K));
-    writeln("kinship_matrix.shape: ", pf(K.shape));
+    writeln("kinship_matrix: ", K);
+    writeln("kinship_matrix.shape: ", K.shape);
 
     //# with Bench("Create LMM object"):
     //#     lmm_ob = lmm2.LMM2(Y,K)
@@ -231,44 +234,16 @@ void run_other_new(ref int n, ref int m, ref double[] pheno_vector, ref dmatrix 
     writeln("run_other_new genotype_matrix: ", G.shape);
     writeln(G);
 
-    with(Bench("Doing GWAS")){
-      t_stats, p_values = gwas.gwas(Y, G, K, restricted_max_likelihood=True, refit=False,verbose=True);
-    }
+    //with(Bench("Doing GWAS")){
+      //t_stats, p_values = 
+      //gwas(Y, G, K, restricted_max_likelihood=True, refit=False,verbose=True);
+      gwas(Y, G, K, true, false, true);
+    //}
         
-    Bench().report();
-    return p_values, t_stats;
+    //Bench().report();
+    //return p_values, t_stats;
 }
 
-//def matrixMult(A,B){
-
-//    //# If there is no fblas then we will revert to np.dot()
-
-//    //try:
-//    //    linalg.fblas
-//    //except AttributeError:
-//    //    return np.dot(A,B)
-
-//    //writeln("A is:", pf(A.shape))
-//    //writeln("B is:", pf(B.shape))
-
-//    // If the matrices are in Fortran order then the computations will be faster
-//    // when using dgemm.  Otherwise, the function will copy the matrix and that takes time.
-//    //if not A.flags['F_CONTIGUOUS']:
-//    //   AA = A.T
-//    //   transA = True
-//    //else:
-//    //   AA = A
-//    //   transA = False
-
-//    //if not B.flags['F_CONTIGUOUS']:
-//    //   BB = B.T
-//    //   transB = True
-//    //else:
-//    //   BB = B
-//    //   transB = False
-
-//    return linalg.fblas.dgemm(alpha=1.,a=AA,b=BB,trans_a=transA,trans_b=transB);
-//}
 
 struct LMM{
   double[] Y;
@@ -304,16 +279,16 @@ struct LMM{
   }
 }
 
-  void fit(ref LMM lmmobject,ref dmatrix X, double ngrids=100, bool REML=true){
+void fit(ref LMM lmmobject,ref dmatrix X, double ngrids=100, bool REML=true){
 
-      //"""
-      //   Finds the maximum-likelihood solution for the heritability (h) given the current parameters.
-      //   X can be passed and will transformed and concatenated to X0t.  Otherwise, X0t is used as
-      //   the covariate matrix.
+  //"""
+  //   Finds the maximum-likelihood solution for the heritability (h) given the current parameters.
+  //   X can be passed and will transformed and concatenated to X0t.  Otherwise, X0t is used as
+  //   the covariate matrix.
 
-      //   This function calculates the LLs over a grid and then uses .getMax(...) to find the optimum.
-      //   Given this optimum, the function computes the LL and associated ML solutions.
-      //"""
+  //   This function calculates the LLs over a grid and then uses .getMax(...) to find the optimum.
+  //   Given this optimum, the function computes the LL and associated ML solutions.
+  //"""
 
     //if(X is None){ 
     //  X = lmmobject.X0t;
@@ -340,5 +315,22 @@ struct LMM{
 
     //# debug(["hmax",hmax,"beta",beta,"sigma",sigma,"LL",L])
     //return hmax,beta,sigma,L;
-  }
+}
 
+void calculate_kinship_new(ref dmatrix genotype_matrix){
+    //"""
+    //Call the new kinship calculation where genotype_matrix contains
+    //inds (columns) by snps (rows).
+    //"""
+    //assert type(genotype_matrix) is np.ndarray;
+    writeln("call genotype.normalize");
+    //G = np.apply_along_axis( genotype.normalize, axis=1, arr=genotype_matrix);
+    writeln("G",genotype_matrix);
+    writeln("call calculate_kinship_new");
+    //if kinship_useCUDA(G) or kinship_doCalcFull(G):
+    //    try:
+    //        return kinship_full(G),G
+    //    except:
+    //        pass # when out of memory try the iterator version
+    //return kinship(G),G
+}
