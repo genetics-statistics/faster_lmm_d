@@ -22,7 +22,7 @@ int remove_missing(ref dmatrix n, ref dmatrix y, ref dmatrix g){
   return 1;
 }
 
-int remove_missing_new(ref dmatrix n, ref dmatrix y){
+int remove_missing_new(ref dmatrix Y, double keep, int n, ref double[] y){
   //"""
   //Remove missing data. Returns new n,y,keep
   //"""
