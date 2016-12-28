@@ -23,14 +23,16 @@ void main(string[] args)
   //auto y;
   //auto g;
 
-  dmatrix d = dmatrix([2,4],[2e32,3,4,5,3,2,2,2]);
+  dmatrix d = dmatrix([4,3],[1,2,3,4,5,6,7,8,9,10,11,12]);
   dmatrix e = dmatrix([3,4],[2e-1,3,4,5,3,2,2e-1,3,4,5,3,2]);
   writeln(d.shape);
   writeln(d.elements);
   dmatrix z;
-  z = matrixMultT(d,e);
+  //z = matrixMultT(d,e);
+  z = matrixTranspose(d);
   writeln(z.shape);
   writeln(z.elements);
+  prettyPrint(z);
 
   string ocontrol;
   string okinship;
@@ -116,13 +118,29 @@ if(y!=null){
     writeln("Reduce geno matrix to match phenotype strains");
     
     //run_gwas();
+    writeln("gnames and ynames");
     writeln(gnames);
-    auto gidx = [];
+    writeln(ynames);
+    writeln("gnames and ynames");
+    int[] gidx = [];
+    int index = 0;
     foreach(ind; ynames){
-      //gidx ~= gnames[ind];
+      while(gnames[0] != ind)
+      {
+        gnames.popFront;
+        index++;
+      }
+      gidx ~= index;
+      index++;
+      gnames.popFront;
     }
     writeln(gidx);
     //g2 = g.T[(gidx)].T;
+    dmatrix gTranspose = matrixTranspose(g);
+    writeln(gTranspose.shape);
+    dmatrix slicedMatrix = sliceDmatrix(gTranspose, gidx);
+    writeln(slicedMatrix.shape);
+    //prettyPrint(gTranspose);
     //writeln("geno matrix ",g.sizeof," reshaped to ",g2.sizeof);
     //g = g2;
   }
@@ -131,9 +149,9 @@ if(y!=null){
     //if options.remove_missing_phenotypes{
     //  raise Exception('Can not use --remove-missing-phenotypes with LMM2')
     //}
-    n = y.sizeof;
+    n = y.length;
     //m = g.shape[1];
-    m = g.sizeof;
+    m = g.shape[1];
     //gwas = run_gwas("other",n,m,k,y,g);
     //ps = gwas["ps"];
     //ts = gwas["ts"];

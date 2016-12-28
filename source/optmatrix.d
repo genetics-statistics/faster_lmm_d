@@ -25,3 +25,52 @@ dmatrix matrixMultT(ref dmatrix lha, ref dmatrix rha){
   int[] resshape = [lha.shape[0],rha.shape[0]];
   return dmatrix(resshape, C);
 }
+
+dmatrix matrixTranspose(dmatrix input){
+  writeln("In matrixTranspose");
+  auto matrix = new double[input.shape[0]*input.shape[1]];
+  double[] output = new double[input.shape[0]*input.shape[1]];
+  int index = 0;
+  for(int i=0; i< input.shape[1]; i++){
+    for(int j=0; j< input.shape[0]; j++){
+      output[index] = input.elements[j*input.shape[1]+i];
+      index++;
+    }
+  }
+  int[] resshape = [input.shape[1],input.shape[0]];
+  return dmatrix(resshape,output);
+
+}
+
+void prettyPrint(dmatrix input){
+  writeln("[");
+  if(input.shape[0]>6){
+    for(int i=0; i < 3; i++){
+      writeln(input.elements[(input.shape[0]*i)..(input.shape[0]*(i+1))]);
+    }
+    writeln("...");
+    for(int i=input.shape[0]-3; i < input.shape[0]; i++){
+      writeln(input.elements[(input.shape[0]*i)..(input.shape[0]*(i+1))]);
+    }
+  }
+  else{
+    for(int i=0; i < input.shape[0]; i++){
+      writeln(input.elements[(input.shape[0]*i)..(input.shape[0]*(i+1))]);
+    }
+  }
+  
+  writeln("]");
+}
+
+dmatrix sliceDmatrix(dmatrix input, int[] along){
+  writeln("In sliceDmatrix");
+  writeln(along.length);
+  writeln(along);
+  double[] output;
+  foreach(int rowIndex; along){
+    for(int i=rowIndex*input.shape[1]; i < (rowIndex+1)*input.shape[1]; i++){
+      output ~= input.elements[i];
+    }
+  }
+  return dmatrix([cast(int)along.length,input.shape[1]],output);
+}
