@@ -32,6 +32,7 @@ void main(string[] args)
   z = matrixTranspose(d);
   writeln(z.shape);
   writeln(z.elements);
+  prettyPrint(d);
   prettyPrint(z);
 
   string ocontrol;
@@ -104,11 +105,11 @@ void main(string[] args)
   }
 
   //geno_callback("data/small.geno");
-double n;
-double m;
-if(y!=null){
-  n = y[0];//.sizeof;
-}
+int n;
+int m;
+//if(y!=null){
+//  n = y[0];//.sizeof;
+//}
 
 //lmmoptions.set(options)
 //print lmmoptions.get()
@@ -140,8 +141,10 @@ if(y!=null){
     writeln(gTranspose.shape);
     dmatrix slicedMatrix = sliceDmatrix(gTranspose, gidx);
     writeln(slicedMatrix.shape);
+    dmatrix g2 = matrixTranspose(slicedMatrix);
+    prettyPrint(g2);
     //prettyPrint(gTranspose);
-    //writeln("geno matrix ",g.sizeof," reshaped to ",g2.sizeof);
+    writeln("geno matrix ",g.shape," reshaped to ",g2.shape);
     //g = g2;
   }
 
@@ -149,10 +152,10 @@ if(y!=null){
     //if options.remove_missing_phenotypes{
     //  raise Exception('Can not use --remove-missing-phenotypes with LMM2')
     //}
-    n = y.length;
-    //m = g.shape[1];
+    n = cast(int)y.length;
     m = g.shape[1];
-    //gwas = run_gwas("other",n,m,k,y,g);
+    dmatrix k;
+    run_gwas("other",n,m,k,y,g);
     //ps = gwas["ps"];
     //ts = gwas["ts"];
     //check_results(ps,ts);

@@ -46,16 +46,16 @@ void prettyPrint(dmatrix input){
   writeln("[");
   if(input.shape[0]>6){
     for(int i=0; i < 3; i++){
-      writeln(input.elements[(input.shape[0]*i)..(input.shape[0]*(i+1))]);
+      writeln(input.elements[(input.shape[1]*i)..(input.shape[1]*(i+1))]);
     }
     writeln("...");
     for(int i=input.shape[0]-3; i < input.shape[0]; i++){
-      writeln(input.elements[(input.shape[0]*i)..(input.shape[0]*(i+1))]);
+      writeln(input.elements[(input.shape[1]*i)..(input.shape[1]*(i+1))]);
     }
   }
   else{
     for(int i=0; i < input.shape[0]; i++){
-      writeln(input.elements[(input.shape[0]*i)..(input.shape[0]*(i+1))]);
+      writeln(input.elements[(input.shape[1]*i)..(input.shape[1]*(i+1))]);
     }
   }
   

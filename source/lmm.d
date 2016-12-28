@@ -8,20 +8,27 @@ import simplelmm.helpers;
 //  //return "\t".join([str(x) for x in [id,beta,betaSD,ts,ps]]) + "\n";
 //}
 
-void run_gwas(string species,int n,int m,ref dmatrix k, ref double[] y, ref dmatrix geno, int cov, bool reml = true,bool refit = false, string inputfn = "", bool new_code = true){
+void run_gwas(string species,int n,int m,ref dmatrix k, ref double[] y, ref dmatrix geno){
+    //int cov, bool reml = true,bool refit = false, string inputfn = "", bool new_code = true){
 //  //"""
 //  //Invoke pylmm using genotype as a matrix or as a (SNP) iterator.
 //  //"""
+  int cov;
+  bool reml = true;
+  bool refit = false;
+  string inputfn = "";
+  bool new_code = true;
+  
   writeln("run_gwas");
-  writeln("pheno", y.sizeof, y[0..5]);
+  writeln("pheno ", y.length," ", y[0..5]);
   writeln(geno.shape);
   //assert(geno.shape[0] == y.size, [np.size(geno[0]), y.size]);
-  assert(y.sizeof == n);
+  assert(y.length == n);
   //if(k != null){
-    writeln(k.shape[0]);
+  //writeln(k.shape[0]);
   //}
   //else{
-    writeln("No kinship matrix passed in!");
+  writeln("No kinship matrix passed in!");
   //}
 
   writeln(m,geno.shape);
@@ -34,25 +41,20 @@ void run_gwas(string species,int n,int m,ref dmatrix k, ref double[] y, ref dmat
     //run_human(y, cov, inputfn, k, refit);
   }
   else{
-    writeln("geno", geno);
-
-    if(new_code){
-      //ps, ts = 
+    writeln("geno");
+    double ps, ts;
+    if(new_code){ 
       run_other_new(n, m, y, geno, reml, refit);
     }else{
-      //ps, ts = 
-      //run_other_old(y, geno, reml, refit);
+      run_other_new(n, m, y, geno, reml, refit);
     }
 }
 
 }
 
-//  return ps,ts;
-//}
-
 void run_human(ref double[] pheno_vector, ref dmatrix covariate_matrix, string plink_input_file, ref dmatrix kinship_matrix, bool refit=false){
 
-    double[] v = isnan(pheno_vector);
+    bool[] v = isnan(pheno_vector);
     auto keep = 0;
      //= true - v;
 
@@ -75,14 +77,14 @@ void run_human(ref double[] pheno_vector, ref dmatrix covariate_matrix, string p
 
     // there may be a need to create a vector struct
 
-    if(sum(v)){
+    //if(sum(v)){
       //pheno_vector = pheno_vector[keep];
       //writeln("pheno_vector shape is now: ", pf(pheno_vector.shape));
       //covariate_matrix = covariate_matrix[keep,$];
       //writeln("kinship_matrix shape is: ", pf(kinship_matrix.shape));
       //writeln("keep is: ", pf(keep.shape));
       //kinship_matrix = kinship_matrix[keep,$][0,keep];
-    }
+    //}
 
 
     writeln("kinship_matrix:", kinship_matrix);
@@ -205,39 +207,39 @@ void run_other_new(ref int n, ref int m, ref double[] pheno_vector, ref dmatrix 
     writeln("REML=",restricted_max_likelihood," REFIT=",refit);
 
     //# Adjust phenotypes
-    dmatrix Y;
-    double keep;
+    double[] Y;
+    bool[] keep;
     simplelmm.phenotype.remove_missing_new(Y,keep,n,pheno_vector);
 
-    //# if options.maf_normalization:
-    //#     G = np.apply_along_axis( genotype.replace_missing_with_MAF, axis=0, arr=g )
-    //#     writeln "MAF replacements: \n",G
-    //# if not options.skip_genotype_normalization:
-    //# G = np.apply_along_axis( genotype.normalize, axis=1, arr=G)
+    ////# if options.maf_normalization:
+    ////#     G = np.apply_along_axis( genotype.replace_missing_with_MAF, axis=0, arr=g )
+    ////#     writeln "MAF replacements: \n",G
+    ////# if not options.skip_genotype_normalization:
+    ////# G = np.apply_along_axis( genotype.normalize, axis=1, arr=G)
 
-    geno = newDmatrix(geno,0,cast(int)keep);
+    //geno = newDmatrix(geno,0,cast(int)keep);
     dmatrix K, G;
-    //with(Bench("Calculate Kinship")){
+    writeln("Calculate Kinship");
       //K,G = 
-      calculate_kinship_new(geno);
+    calculate_kinship_new(K,G,geno);
     //}
        
 
-    writeln("kinship_matrix: ", K);
-    writeln("kinship_matrix.shape: ", K.shape);
+    //writeln("kinship_matrix: ", K);
+    //writeln("kinship_matrix.shape: ", K.shape);
 
-    //# with Bench("Create LMM object"):
-    //#     lmm_ob = lmm2.LMM2(Y,K)
-    //# with Bench("LMM_ob fitting"):
-    //#     lmm_ob.fit()
+    ////# with Bench("Create LMM object"):
+    ////#     lmm_ob = lmm2.LMM2(Y,K)
+    ////# with Bench("LMM_ob fitting"):
+    ////#     lmm_ob.fit()
 
-    writeln("run_other_new genotype_matrix: ", G.shape);
-    writeln(G);
+    //writeln("run_other_new genotype_matrix: ", G.shape);
+    //writeln(G);
 
-    //with(Bench("Doing GWAS")){
-      //t_stats, p_values = 
-      //gwas(Y, G, K, restricted_max_likelihood=True, refit=False,verbose=True);
-      gwas(Y, G, K, true, false, true);
+    ////with(Bench("Doing GWAS")){
+    //  //t_stats, p_values = 
+    //  //gwas(Y, G, K, restricted_max_likelihood=True, refit=False,verbose=True);
+    //  gwas(Y, G, K, true, false, true);
     //}
         
     //Bench().report();
@@ -317,7 +319,7 @@ void fit(ref LMM lmmobject,ref dmatrix X, double ngrids=100, bool REML=true){
     //return hmax,beta,sigma,L;
 }
 
-void calculate_kinship_new(ref dmatrix genotype_matrix){
+void calculate_kinship_new(ref dmatrix K, ref dmatrix G, ref dmatrix genotype_matrix){
     //"""
     //Call the new kinship calculation where genotype_matrix contains
     //inds (columns) by snps (rows).
@@ -325,7 +327,7 @@ void calculate_kinship_new(ref dmatrix genotype_matrix){
     //assert type(genotype_matrix) is np.ndarray;
     writeln("call genotype.normalize");
     //G = np.apply_along_axis( genotype.normalize, axis=1, arr=genotype_matrix);
-    writeln("G",genotype_matrix);
+    //writeln("G",genotype_matrix);
     writeln("call calculate_kinship_new");
     //if kinship_useCUDA(G) or kinship_doCalcFull(G):
     //    try:

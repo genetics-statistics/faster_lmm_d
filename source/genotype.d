@@ -1,4 +1,5 @@
 module simplelmm.genotype;
+import simplelmm.helpers;
 
 int replace_missing_with_MAF(string snp_g){
   //"""
@@ -15,21 +16,23 @@ int replace_missing_with_MAF(string snp_g){
 }
 
 
-int normalize(string ind_g){
+double normalize(double[] ind_g){
   //"""
   //Run for every SNP list (for one individual) and return
   //normalized SNP genotype values with missing data filled in
   //"""
-  //g = np.copy(ind_g)              # copy to avoid side effects
-  //missing = np.isnan(g)
-  //values = g[True - missing]
-  //mean = values.mean()            # Global mean value
-  //stddev = np.sqrt(values.var())  # Global stddev
-  //g[missing] = mean               # Plug-in mean values for missing data
-  //if stddev == 0:
-  //    g = g - mean                # Subtract the mean
-  //else:
-  //    g = (g - mean) / stddev     # Normalize the deviation
-  //return g
-  return 1;
+  auto g = ind_g;                        // copy to avoid side effects
+  bool[] missing = isnan(g);
+  bool[] along = negateBool(missing);
+  dmatrix values;
+   //= g[along];
+  double mean = globalMean(values);      // Global mean value
+  double stddev = sqrt(values.var());    // Global stddev
+  g[missing] = mean;                     // Plug-in mean values for missing data
+  if(stddev == 0){
+    g = g - mean;                        // Subtract the mean
+  }else{
+    g = (g - mean) / stddev;             // Normalize the deviation
+  }
+  return g;
 }
