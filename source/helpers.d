@@ -35,3 +35,26 @@ int range(int n){
 double globalMean(double[] input){
   return sum(input)/input.length;
 }
+
+double[] getNumArray(double[] arr,bool[] valuesArr){
+  double[] result;
+  int index = 0;
+  foreach(element; arr){
+    if(valuesArr[index] == true){
+      result ~= element;
+      index++;
+    }
+  }
+  return result;
+}
+
+void replaceNaN(ref double[] arr, bool[] valuesArr, double mean){
+  int index = 0;
+  foreach(element; valuesArr){
+    if(element == true){
+      index++;
+    }else{
+      arr[index] = mean;
+    }
+  }
+}

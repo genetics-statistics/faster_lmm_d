@@ -95,12 +95,24 @@ dmatrix sliceDmatrixKeep(dmatrix input, bool[] along){
   return dmatrix([shape0,input.shape[1]],output);
 }
 
-void normalize_along_row(dmatrix input){
+void normalize_along_row(ref dmatrix G, dmatrix input){
   //dmatrix nrminput = matrixTranspose(input);
-  for(int i = 0; i<input.shape[0]; i++){
-    double[] arr = input.elements[(input.shape[1]*i)..(input.shape[1]*(i+1))];
-    double mean = globalMean(arr);
+  double[] largeArr;
+  double[] arr;
+  for(int i = 0; i < input.shape[0]; i++){
+    arr = input.elements[(input.shape[1]*i)..(input.shape[1]*(i+1))];
+    bool[] missing = isnan(arr);
+    bool[] valuesArr = negateBool(missing);
+    double[] values = getNumArray(arr,valuesArr);
+    //writeln(valuesArr);
+
+    double mean = globalMean(values);
     //writeln(arr);
-    writeln(mean);
+    //writeln(mean);
+    //writeln(arr);
+    replaceNaN(arr, valuesArr, mean);
+    //writeln(arr);
+    largeArr ~= arr;
   }
+  G = dmatrix(input.shape, largeArr);
 }

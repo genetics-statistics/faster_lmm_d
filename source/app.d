@@ -145,7 +145,7 @@ int m;
     prettyPrint(g2);
     //prettyPrint(gTranspose);
     writeln("geno matrix ",g.shape," reshaped to ",g2.shape);
-    //g = g2;
+    g = g2;
   }
 
   if(cmd == "run" || cmd == "rqtl"){

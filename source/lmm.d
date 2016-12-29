@@ -4,6 +4,7 @@ import simplelmm.gwas;
 import std.stdio;
 import simplelmm.helpers;
 import simplelmm.optmatrix;
+import simplelmm.kinship;
 
 //void formatResult(id,beta,betaSD,ts,ps){
 //  //return "\t".join([str(x) for x in [id,beta,betaSD,ts,ps]]) + "\n";
@@ -211,9 +212,11 @@ void run_other_new(ref int n, ref int m, ref double[] pheno_vector, ref dmatrix 
     double[] Y;
     bool[] keep;
     simplelmm.phenotype.remove_missing_new(Y,keep,n,pheno_vector);
+    writeln("Keep goes here");
+    writeln(keep);
+    writeln("Keep goes here");
 
     //geno = geno[:,keep];
-    //geno = newDmatrix(geno,0,cast(int)keep);
     dmatrix K, G;
     writeln("Calculate Kinship");
       //K,G = 
@@ -322,11 +325,15 @@ void calculate_kinship_new(ref dmatrix K, ref dmatrix G, ref dmatrix genotype_ma
     //inds (columns) by snps (rows).
     //"""
     //assert type(genotype_matrix) is np.ndarray;
+    writeln(genotype_matrix.shape);
+    prettyPrint(genotype_matrix);
     writeln("call genotype.normalize");
     //G = np.apply_along_axis( genotype.normalize, axis=1, arr=genotype_matrix);
-    normalize_along_row(genotype_matrix);
+    normalize_along_row(G, genotype_matrix);
     //writeln("G",genotype_matrix);
+    K = kinshipComp(G);
     writeln("call calculate_kinship_new");
+    //kinship(G);
     //if kinship_useCUDA(G) or kinship_doCalcFull(G):
     //    try:
     //        return kinship_full(G),G
