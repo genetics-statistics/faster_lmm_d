@@ -20,6 +20,7 @@ bool[] negateBool(bool[] vector){
 
 double sum(double[] vector){
   double result = 0;
+  foreach(element;vector){result+=element;}
 	return result;
 }
 
@@ -29,4 +30,8 @@ double[] array(int n){
 
 int range(int n){
   return 0;
+}
+
+double globalMean(double[] input){
+  return sum(input)/input.length;
 }

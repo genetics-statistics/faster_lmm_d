@@ -1,5 +1,6 @@
 module simplelmm.optmatrix;
 import simplelmm.dmatrix;
+import simplelmm.helpers;
 import std.stdio;
 import cblas;
 
@@ -73,4 +74,33 @@ dmatrix sliceDmatrix(dmatrix input, int[] along){
     }
   }
   return dmatrix([cast(int)along.length,input.shape[1]],output);
+}
+
+dmatrix sliceDmatrixKeep(dmatrix input, bool[] along){
+  writeln("In sliceDmatrix");
+  assert(along.length == input.shape[0]);
+  double[] output;
+  int rowIndex = 0;
+  int shape0 = 0;
+  foreach(bool toKeep; along){
+    if(toKeep){
+      for(int i=rowIndex*input.shape[1]; i < (rowIndex+1)*input.shape[1]; i++){
+        output ~= input.elements[i];
+      }
+      shape0++;
+    }
+    rowIndex++;
+    
+  }
+  return dmatrix([shape0,input.shape[1]],output);
+}
+
+void normalize_along_row(dmatrix input){
+  //dmatrix nrminput = matrixTranspose(input);
+  for(int i = 0; i<input.shape[0]; i++){
+    double[] arr = input.elements[(input.shape[1]*i)..(input.shape[1]*(i+1))];
+    double mean = globalMean(arr);
+    //writeln(arr);
+    writeln(mean);
+  }
 }

@@ -3,6 +3,7 @@ import simplelmm.dmatrix;
 import simplelmm.gwas;
 import std.stdio;
 import simplelmm.helpers;
+import simplelmm.optmatrix;
 
 //void formatResult(id,beta,betaSD,ts,ps){
 //  //return "\t".join([str(x) for x in [id,beta,betaSD,ts,ps]]) + "\n";
@@ -211,12 +212,7 @@ void run_other_new(ref int n, ref int m, ref double[] pheno_vector, ref dmatrix 
     bool[] keep;
     simplelmm.phenotype.remove_missing_new(Y,keep,n,pheno_vector);
 
-    ////# if options.maf_normalization:
-    ////#     G = np.apply_along_axis( genotype.replace_missing_with_MAF, axis=0, arr=g )
-    ////#     writeln "MAF replacements: \n",G
-    ////# if not options.skip_genotype_normalization:
-    ////# G = np.apply_along_axis( genotype.normalize, axis=1, arr=G)
-
+    //geno = geno[:,keep];
     //geno = newDmatrix(geno,0,cast(int)keep);
     dmatrix K, G;
     writeln("Calculate Kinship");
@@ -224,6 +220,7 @@ void run_other_new(ref int n, ref int m, ref double[] pheno_vector, ref dmatrix 
     calculate_kinship_new(K,G,geno);
     //}
        
+    
 
     //writeln("kinship_matrix: ", K);
     //writeln("kinship_matrix.shape: ", K.shape);
@@ -327,6 +324,7 @@ void calculate_kinship_new(ref dmatrix K, ref dmatrix G, ref dmatrix genotype_ma
     //assert type(genotype_matrix) is np.ndarray;
     writeln("call genotype.normalize");
     //G = np.apply_along_axis( genotype.normalize, axis=1, arr=genotype_matrix);
+    normalize_along_row(genotype_matrix);
     //writeln("G",genotype_matrix);
     writeln("call calculate_kinship_new");
     //if kinship_useCUDA(G) or kinship_doCalcFull(G):
