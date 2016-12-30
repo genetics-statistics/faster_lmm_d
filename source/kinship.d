@@ -4,28 +4,28 @@ import simplelmm.optmatrix;
 import simplelmm.helpers;
 import std.stdio;
 
-//dmatrix compute_W(int job, dmatrix G, int n, int snps, int compute_size){
-//  //"""
-//  //Read 1000 SNPs at a time into matrix and return the result
-//  //"""
-//	m = compute_size;
-//	dmatrix W;
-//	//W = np.ones((n,m)) * np.nan; // W matrix has dimensions individuals x SNPs (initially all NaNs)
-//	//for j in range(0,compute_size):
-//	  pos = job*m + j; //# real position
-//	  if pos >= snps{
-//	  	W = W[:,range(0,j)]
-//	    break;
-//	  }
+dmatrix compute_W(int job, dmatrix G, int n, int snps, int compute_size){
+  //"""
+  //Read 1000 SNPs at a time into matrix and return the result
+  //"""
+	int m = compute_size;
+	dmatrix W;
+	W = zerosMatrix(n,m); //* np.nan; // W matrix has dimensions individuals x SNPs (initially all NaNs)
+	for(int j = 0; j < compute_size; j++){ // j in range(0,compute_size):
+	  int pos = job*m + j; //# real position
+	  if(pos >= snps){
+	  	//W = W[:,range(0,j)]
+	    break;
+	  }
 	     
-//	  snp = G[job*compute_size+j];
-//	  if(snp.var() == 0){
-//	    continue;
-//	  }
-//	  W[:,j] = snp; // set row to list of SNPs
-//  }
-//	return W;
-//}
+	  dmatrix snp = G; //[job*compute_size+j];
+	  if(variation(snp) == 0){
+	    continue;
+	  }
+	  //W[:,j] = snp; // set row to list of SNPs
+  }
+	return W;
+}
 
 dmatrix kinshipComp(dmatrix G, int computeSize=1000){
 
@@ -50,10 +50,11 @@ dmatrix kinshipComp(dmatrix G, int computeSize=1000){
   int iterations = snps/computeSize + 1;
 
   //results = []
-  //K = np.zeros((n,n))  # The Kinship matrix has dimension individuals x individuals
+  K = zerosMatrix(n,n);  // The Kinship matrix has dimension individuals x individuals
+  //prettyPrint(K);
 
   //completed = 0
-  //for job in range(iterations):
+  //for job in rangeArray(iterations):
   //   info("Processing job %d first %d SNPs" % (job, ((job+1)*computeSize)))
   //   W = compute_W(job,G,n,snps,computeSize)
   //   if W.shape[1] == 0:
@@ -83,6 +84,16 @@ dmatrix kinshipComp(dmatrix G, int computeSize=1000){
   //            progress("kinship",completed,iterations)
   //         except Queue.Empty:
   //            pass
+  for(int job = 0; job < iterations; job++){
+    writefln("Processing job %d first %d SNPs",job, ((job+1)*computeSize));
+    dmatrix W = compute_W(job,G,n,snps,computeSize);
+    compute_matrixMult(job,W);
+    //j,x = q.get()
+    dmatrix x;
+    dmatrix K_j = x;
+    //K = addDmatrix(K,K_j);
+  }
+
 
   //if threads.multi():
   //   for job in range(len(results)-completed):
@@ -94,5 +105,21 @@ dmatrix kinshipComp(dmatrix G, int computeSize=1000){
   //      progress("kinship",completed,iterations)
 
   //K = K / float(snps)
+  K = divideDmatrixNum(K, cast(double)snps);
   return K;
+}
+
+int compute_matrixMult(int job, dmatrix W){
+  //"""
+  //Compute Kinship(W)*j
+
+  //For every set of SNPs matrixMult is used to multiply matrices T(W)*W
+  //"""
+  dmatrix res = matrixMultT(W, W);
+  //if(not q){
+  //  q= compute_matrixMult.q
+  //}
+  //q.put([job,res])
+  writeln(res);
+  return job;
 }

@@ -233,13 +233,13 @@ void run_other_new(ref int n, ref int m, ref double[] pheno_vector, ref dmatrix 
     ////# with Bench("LMM_ob fitting"):
     ////#     lmm_ob.fit()
 
-    //writeln("run_other_new genotype_matrix: ", G.shape);
-    //writeln(G);
+    writeln("run_other_new genotype_matrix: ", G.shape);
+    writeln(G);
 
     ////with(Bench("Doing GWAS")){
     //  //t_stats, p_values = 
     //  //gwas(Y, G, K, restricted_max_likelihood=True, refit=False,verbose=True);
-    //  gwas(Y, G, K, true, false, true);
+    gwas(Y, G, K, true, false, true);
     //}
         
     //Bench().report();

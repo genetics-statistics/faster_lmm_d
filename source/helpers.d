@@ -58,3 +58,11 @@ void replaceNaN(ref double[] arr, bool[] valuesArr, double mean){
     }
   }
 }
+
+double[] rangeArray(int count){
+  double[] arr;
+  for(int i = 0; i < count; i++){
+    arr ~= i;
+  }
+  return arr;
+}

@@ -27,7 +27,7 @@ import simplelmm.dmatrix;
 //  compute_snp.q = q;
 //}
 
-void gwas(ref dmatrix Y, ref dmatrix G, ref dmatrix K, bool restricted_max_likelihood = true, bool refit=false, bool verbose = true){
+void gwas(double[] Y, ref dmatrix G, ref dmatrix K, bool restricted_max_likelihood = true, bool refit=false, bool verbose = true){
   //"""
   //GWAS. The G matrix should be n inds (cols) x m snps (rows)
   //"""
@@ -47,7 +47,7 @@ void gwas(ref dmatrix Y, ref dmatrix G, ref dmatrix K, bool restricted_max_likel
   bool kfile2 = false;
   bool reml = restricted_max_likelihood;
 
-  writeln("G",G);
+  //writeln("G",G);
   int n = G.shape[1]; // inds
   int inds = n;
   int m = G.shape[0]; // snps
@@ -61,14 +61,14 @@ void gwas(ref dmatrix Y, ref dmatrix G, ref dmatrix K, bool restricted_max_likel
   //# if not kfile2:  L = LMM(Y,K,Kva,Kve,X0,verbose=verbose)
   //# else:  L = LMM_withK2(Y,K,Kva,Kve,X0,verbose=verbose,K2=K2)
 
-  LMM2 lmm2 = LMM2(Y,K); //,Kva,Kve,X0,verbose=verbose);
-  if(!refit){
-    writeln("Computing fit for null model");
-    fit_hmax,fit_beta,fit_sigma,fit_LL = lmm2fit(lmm2); // # follow GN model in run_other;
-    //writefln("heritability=%0.3f, sigma=%0.3f, LL=%0.5f" % (lmm2.optH,lmm2.optSigma, fit_LL));
-  }
+  //LMM2 lmm2 = LMM2(Y,K); //,Kva,Kve,X0,verbose=verbose);
+  //if(!refit){
+  //  writeln("Computing fit for null model");
+  //  //fit_hmax,fit_beta,fit_sigma,fit_LL = lmm2fit(lmm2); // # follow GN model in run_other;
+  //  //writefln("heritability=%0.3f, sigma=%0.3f, LL=%0.5f" % (lmm2.optH,lmm2.optSigma, fit_LL));
+  //}
 
-  double res = [];
+  //double res = [];
 
   ////# Set up the pool
   ////# mp.set_start_method('spawn')
