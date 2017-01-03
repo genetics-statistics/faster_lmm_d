@@ -147,6 +147,10 @@ struct LMM2{
   dmatrix X0t_stack;
   dmatrix q;
 
+  double optLL;
+  double optBeta;
+  double optSigma;
+
   this(double[] Y, dmatrix K, dmatrix Kva, dmatrix Kve, double X0,bool verbose){
     this.Y = Y;
     this.K = K;
@@ -243,10 +247,10 @@ struct LMM2{
     //   eigenvector matrix of K (the kinship).
     //"""
 
-    //lmmobject.Yt = matrixMult(lmmobject.Kve.T, lmmobject.Y);
-    //lmmobject.X0t = matrixMult(lmmobject.Kve.T, lmmobject.X0);
-    //lmmobject.X0t_stack = np.hstack([lmmobject.X0t, np.ones((lmmobject.N,1))]);
-    //lmmobject.q = lmmobject.X0t.shape[1];
+    lmmobject.Yt = matrixMult(lmmobject.Kve.T, lmmobject.Y);
+    lmmobject.X0t = matrixMult(lmmobject.Kve.T, lmmobject.X0);
+    lmmobject.X0t_stack = np.hstack([lmmobject.X0t, np.ones((lmmobject.N,1))]);
+    lmmobject.q = lmmobject.X0t.shape[1];
   }
 
 //  void getMLSoln(ref LMM2 lmmobject,ref double h, ref dmatrix X){
@@ -277,35 +281,37 @@ struct LMM2{
 //    //return -lmmobject.LL(h,X,stack=False,REML=REML)[0];
 //  }
 
-//  void LL(ref LMM2 lmmobject, ref double h, ref dmatrix X, bool stack=true, bool REML=false){
-//      //"""
-//      //   Computes the log-likelihood for a given heritability (h).  If X==None, then the
-//      //   default X0t will be used.  If X is set and stack=True, then X0t will be matrix concatenated with
-//      //   the input X.  If stack is false, then X is used in place of X0t in the LL calculation.
-//      //   REML is computed by adding additional terms to the standard LL and can be computed by setting REML=True.
-//      //"""
+  void LL(ref LMM2 lmmobject, ref double h, ref dmatrix X, bool stack=true, bool REML=false){
+      //"""
+      //   Computes the log-likelihood for a given heritability (h).  If X==None, then the
+      //   default X0t will be used.  If X is set and stack=True, then X0t will be matrix concatenated with
+      //   the input X.  If stack is false, then X is used in place of X0t in the LL calculation.
+      //   REML is computed by adding additional terms to the standard LL and can be computed by setting REML=True.
+      //"""
 
-//      if(X is None){
-//        X = lmmobject.X0t;
-//      }
-//      else if(stack){
-//        lmmobject.X0t_stack[sval,(lmmobject.q)] = matrixMult(lmmobject.Kve.T,X)[sval,0];
-//        X = lmmobject.X0t_stack;
-//      }
-//      n = float(lmmobject.N);
-//      q = float(X.shape[1]);
-//      beta,sigma,Q,XX_i,XX = lmmobject.getMLSoln(h,X);
-//      LL = n*np.log(2*np.pi) + np.log(h*lmmobject.Kva + (1.0-h)).sum() + n + n*np.log(1.0/n * Q);
-//      LL = -0.5 * LL;
+      if(X is None){
+        X = lmmobject.X0t;
+      }
+      else if(stack){
+        lmmobject.X0t_stack[sval,(lmmobject.q)] = matrixMult(lmmobject.Kve.T,X)[sval,0];
+        X = lmmobject.X0t_stack;
+      }
+      n = float(lmmobject.N);
+      q = float(X.shape[1]);
+      //beta,sigma,Q,XX_i,XX = 
+      lmmobject.getMLSoln(h,X);
+      double LL = 0;//n*np.log(2*np.pi) + np.log(h*lmmobject.Kva + (1.0-h)).sum() + n + n*np.log(1.0/n * Q);
+      LL = -0.5 * LL;
 
-//      if(REML){
-//        LL_REML_part = q*np.log(2.0*np.pi*sigma) + np.log(det(matrixMultT(X.T))) - np.log(det(XX));
-//        LL = LL + 0.5*LL_REML_part;
-//      }
-//      LLsum = LL.sum();
-//      //# info(["beta=",beta[0][0]," sigma=",sigma[0][0]," LL=",LLsum])
-//      //return LLsum,beta,sigma,XX_i;
-//  }
+      if(REML){
+        double LL_REML_part = 0;
+        //q*np.log(2.0*np.pi*sigma) + np.log(det(matrixMultT(X.T))) - np.log(det(XX));
+        LL = LL + 0.5*LL_REML_part;
+      }
+      double LLsum = LL.sum();
+      //# info(["beta=",beta[0][0]," sigma=",sigma[0][0]," LL=",LLsum])
+      //return LLsum,beta,sigma,XX_i;
+  }
 
 //  void getMax(ref LMM2 lmmobject, ref dmatrix H, ref dmatrix X, bool REML=false){
 
@@ -344,42 +350,42 @@ struct LMM2{
 //    }
 //  }
 
-//  void fit(ref LMM2 lmmobject,ref dmatrix X, double ngrids=100, bool REML=true){
+  void lmm2fit(ref LMM2 lmmobject,ref dmatrix X, double ngrids=100, bool REML=true){
 
-//      //"""
-//      //   Finds the maximum-likelihood solution for the heritability (h) given the current parameters.
-//      //   X can be passed and will transformed and concatenated to X0t.  Otherwise, X0t is used as
-//      //   the covariate matrix.
+    //"""
+    //   Finds the maximum-likelihood solution for the heritability (h) given the current parameters.
+    //   X can be passed and will transformed and concatenated to X0t.  Otherwise, X0t is used as
+    //   the covariate matrix.
 
-//      //   This function calculates the LLs over a grid and then uses .getMax(...) to find the optimum.
-//      //   Given this optimum, the function computes the LL and associated ML solutions.
-//      //"""
+    //   This function calculates the LLs over a grid and then uses .getMax(...) to find the optimum.
+    //   Given this optimum, the function computes the LL and associated ML solutions.
+    //"""
 
-//    if(X is None){ 
-//      X = lmmobject.X0t;
-//    }
-//    else{
-//       //#X = np.hstack([lmmobject.X0t,matrixMult(lmmobject.Kve.T, X)])
-//      lmmobject.X0t_stack[sval,(lmmobject.q)] = matrixMult(lmmobject.Kve.T,X)[sval,0];
-//      X = lmmobject.X0t_stack;
-//    }
+    if(X is None){ 
+      X = lmmobject.X0t;
+    }
+    else{
+       //#X = np.hstack([lmmobject.X0t,matrixMult(lmmobject.Kve.T, X)])
+      lmmobject.X0t_stack[sval,(lmmobject.q)] = matrixMult(lmmobject.Kve.T,X)[sval,0];
+      X = lmmobject.X0t_stack;
+    }
 
-//    H = np.array(range(ngrids)) / float(ngrids);
-//    //L = np.array([lmmobject.LL(h,X,stack=False,REML=REML)[0] for h in H]);
-//    lmmobject.LLs = L;
+    H = np.array(range(ngrids)) / float(ngrids);
+    //L = np.array([lmmobject.LL(h,X,stack=False,REML=REML)[0] for h in H]);
+    lmmobject.LLs = L;
 
-//    hmax = lmmobject.getMax(H,X,REML);
-//    L,beta,sigma,betaSTDERR = lmmobject.LL(hmax,X,stack=False,REML=REML);
+    hmax = lmmobject.getMax(H,X,REML);
+    L,beta,sigma,betaSTDERR = lmmobject.LL(hmax,X,stack=False,REML=REML);
 
-//    lmmobject.H = H;
-//    //false.optH = hmax.sum();
-//    lmmobject.optLL = L;
-//    lmmobject.optBeta = beta;
-//    lmmobject.optSigma = sigma.sum();
+    lmmobject.H = H;
+    //false.optH = hmax.sum();
+    lmmobject.optLL = L;
+    lmmobject.optBeta = beta;
+    lmmobject.optSigma = sigma.sum();
 
-//    //# debug(["hmax",hmax,"beta",beta,"sigma",sigma,"LL",L])
-//    //return hmax,beta,sigma,L;
-//  }
+    //# debug(["hmax",hmax,"beta",beta,"sigma",sigma,"LL",L])
+    //return hmax,beta,sigma,L;
+  }
 
 //  void association(ref LMM2 lmmobject, ref dmatrix X, ref dmatrix h, bool stack=true, bool REML=true, bool returnBeta=false){
 //    //"""
