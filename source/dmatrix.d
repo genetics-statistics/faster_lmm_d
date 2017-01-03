@@ -24,6 +24,24 @@ dmatrix addDmatrix(dmatrix lha, dmatrix rha){
   return dmatrix(lha.shape, elements);
 }
 
+dmatrix subDmatrix(dmatrix lha, dmatrix rha){
+  assert(lha.shape[0] == rha.shape[0]);
+  assert(lha.shape[1] == rha.shape[1]);
+  double[] elements;
+  for(int i = 0; i < lha.shape[0]*lha.shape[1]; i++){
+    elements ~= lha.elements[i] - rha.elements[i];
+  }
+  return dmatrix(lha.shape, elements);
+}
+
+dmatrix subDmatrixNum(dmatrix input, double num){
+  double[] elements;
+  for(int i = 0; i < input.shape[0]*input.shape[1]; i++){
+    elements ~= input.elements[i] - num;
+  }
+  return dmatrix(input.shape, elements);
+}
+
 dmatrix divideDmatrixNum(dmatrix input, double factor){
   double[] elements;
   for(int i = 0; i < input.shape[0]*input.shape[1]; i++){
@@ -38,8 +56,4 @@ dmatrix zerosMatrix(int rows, int cols){
     elements ~= 0;
   }
   return dmatrix([rows, cols], elements);
-}
-
-double variation(dmatrix input){
-  return 2;
 }

@@ -221,20 +221,13 @@ void run_other_new(ref int n, ref int m, ref double[] pheno_vector, ref dmatrix 
     writeln("Calculate Kinship");
       //K,G = 
     calculate_kinship_new(K,G,geno);
-    //}
-       
     
 
-    //writeln("kinship_matrix: ", K);
-    //writeln("kinship_matrix.shape: ", K.shape);
-
-    ////# with Bench("Create LMM object"):
-    ////#     lmm_ob = lmm2.LMM2(Y,K)
-    ////# with Bench("LMM_ob fitting"):
-    ////#     lmm_ob.fit()
+    writeln("kinship_matrix: ", K);
+    writeln("kinship_matrix.shape: ", K.shape);
 
     writeln("run_other_new genotype_matrix: ", G.shape);
-    writeln(G);
+    //writeln(G);
 
     ////with(Bench("Doing GWAS")){
     //  //t_stats, p_values = 
@@ -331,8 +324,9 @@ void calculate_kinship_new(ref dmatrix K, ref dmatrix G, ref dmatrix genotype_ma
     //G = np.apply_along_axis( genotype.normalize, axis=1, arr=genotype_matrix);
     normalize_along_row(G, genotype_matrix);
     //writeln("G",genotype_matrix);
-    K = kinshipComp(G);
-    writeln("call calculate_kinship_new");
+    //K = kinshipComp(G);
+    K = kinship_full(G);
+    //writeln("call calculate_kinship_new");
     //kinship(G);
     //if kinship_useCUDA(G) or kinship_doCalcFull(G):
     //    try:

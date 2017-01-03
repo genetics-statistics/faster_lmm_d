@@ -96,7 +96,6 @@ dmatrix sliceDmatrixKeep(dmatrix input, bool[] along){
 }
 
 void normalize_along_row(ref dmatrix G, dmatrix input){
-  //dmatrix nrminput = matrixTranspose(input);
   double[] largeArr;
   double[] arr;
   for(int i = 0; i < input.shape[0]; i++){
@@ -104,14 +103,19 @@ void normalize_along_row(ref dmatrix G, dmatrix input){
     bool[] missing = isnan(arr);
     bool[] valuesArr = negateBool(missing);
     double[] values = getNumArray(arr,valuesArr);
-    //writeln(valuesArr);
-
     double mean = globalMean(values);
-    //writeln(arr);
-    //writeln(mean);
-    //writeln(arr);
+    double variation = getVariation(values, mean);
+    double stddev = std.math.sqrt(variation);
     replaceNaN(arr, valuesArr, mean);
-    //writeln(arr);
+    if(stddev == 0){
+      foreach(ref elem; arr){
+        elem -= mean;      
+      }
+    }else{
+      foreach(ref elem; arr){
+        elem = (elem - mean) / stddev;      
+      }
+    }
     largeArr ~= arr;
   }
   G = dmatrix(input.shape, largeArr);

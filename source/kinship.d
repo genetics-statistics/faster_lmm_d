@@ -14,17 +14,38 @@ dmatrix compute_W(int job, dmatrix G, int n, int snps, int compute_size){
 	for(int j = 0; j < compute_size; j++){ // j in range(0,compute_size):
 	  int pos = job*m + j; //# real position
 	  if(pos >= snps){
-	  	//W = W[:,range(0,j)]
+	  	//W = W[:,range(0,j)];
 	    break;
 	  }
 	     
 	  dmatrix snp = G; //[job*compute_size+j];
-	  if(variation(snp) == 0){
-	    continue;
-	  }
+	  //if(variation(snp) == 0){
+	  //  continue;
+	  //}
 	  //W[:,j] = snp; // set row to list of SNPs
   }
 	return W;
+}
+
+
+dmatrix kinship_full(dmatrix G){
+  //"""
+  //Calculate the Kinship matrix using a full dot multiplication
+  //"""
+  writeln("Full kinship matrix used");
+  //# mprint("kinship_full G",G)
+  int m = G.shape[0]; // snps
+  int n = G.shape[1]; // inds
+  writeln("%d SNPs",m);
+  //assert m>n, "n should be larger than m (%d snps > %d inds)" % (m,n)
+  //# m = np.dot(G.T,G)
+  dmatrix temp = matrixTranspose(G);
+  dmatrix l = matrixMult(temp, G);
+  l = divideDmatrixNum(l, G.shape[0]);
+  writeln("kinship_full K");
+  writeln(l.shape);
+  prettyPrint(l);
+  return l;
 }
 
 dmatrix kinshipComp(dmatrix G, int computeSize=1000){

@@ -36,6 +36,12 @@ double globalMean(double[] input){
   return sum(input)/input.length;
 }
 
+double getVariation(double[] vector, double mean){
+  double result = 0;
+  foreach(element;vector){result+= pow(element-mean,2);}
+  return result/vector.length;
+}
+
 double[] getNumArray(double[] arr,bool[] valuesArr){
   double[] result;
   int index = 0;

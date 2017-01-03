@@ -2,6 +2,7 @@ module simplelmm.lmm2;
 
 import simplelmm.dmatrix;
 import simplelmm.optmatrix;
+
 //import std.stdio;
 ////void calculateKinship(W,center=False){
 ////  //"""
@@ -153,7 +154,7 @@ struct LMM2{
     this.Kve = Kve;
     //this.X0 = null;
     this.verbose = false;
-    lmm2transform();
+    //lmm2transform();
   }
 }
 
@@ -242,10 +243,10 @@ struct LMM2{
     //   eigenvector matrix of K (the kinship).
     //"""
 
-    lmmobject.Yt = matrixMult(lmmobject.Kve.T, lmmobject.Y);
-    lmmobject.X0t = matrixMult(lmmobject.Kve.T, lmmobject.X0);
-    lmmobject.X0t_stack = np.hstack([lmmobject.X0t, np.ones((lmmobject.N,1))]);
-    lmmobject.q = lmmobject.X0t.shape[1];
+    //lmmobject.Yt = matrixMult(lmmobject.Kve.T, lmmobject.Y);
+    //lmmobject.X0t = matrixMult(lmmobject.Kve.T, lmmobject.X0);
+    //lmmobject.X0t_stack = np.hstack([lmmobject.X0t, np.ones((lmmobject.N,1))]);
+    //lmmobject.q = lmmobject.X0t.shape[1];
   }
 
 //  void getMLSoln(ref LMM2 lmmobject,ref double h, ref dmatrix X){
