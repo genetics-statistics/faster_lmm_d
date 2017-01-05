@@ -120,3 +120,15 @@ void normalize_along_row(ref dmatrix G, dmatrix input){
   }
   G = dmatrix(input.shape, largeArr);
 }
+
+dmatrix eigh(dmatrix input){
+
+}
+
+double det(dmatrix input){
+
+}
+
+dmatrix inverse(dmatrix input){
+  
+} 

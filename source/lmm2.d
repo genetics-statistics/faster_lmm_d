@@ -50,7 +50,7 @@ import simplelmm.optmatrix;
 ////  //  Kva,Kve = linalg.eigh(K) - or the eigen vectors and values for K
 ////  //  X0 - n x q covariate matrix
 ////  //  REML - use restricted maximum likelihood
-////  //  refit - refit the variance component for each SNP
+////  //  refit - refit the variance component fors each SNP
 
 ////  //"""
 ////  n = X.shape[0];
@@ -146,10 +146,13 @@ struct LMM2{
   dmatrix X0t;
   dmatrix X0t_stack;
   dmatrix q;
+  dmatrix H;
+  double N;
 
-  double optLL;
+  dmatrix optLL;
   double optBeta;
   double optSigma;
+  double LLs;
 
   this(double[] Y, dmatrix K, dmatrix Kva, dmatrix Kve, double X0,bool verbose){
     this.Y = Y;
@@ -162,83 +165,7 @@ struct LMM2{
   }
 }
 
-////class LMM2{
 
-////   //"""This is a simple version of EMMA/fastLMM.
-
-////   //The main purpose of this module is to take a phenotype vector (Y),
-////   //a set of covariates (X) and a kinship matrix (K) and to optimize
-////   //this model by finding the maximum-likelihood estimates for the
-////   //model parameters.  There are three model parameters: heritability
-////   //(h), covariate coefficients (beta) and the total phenotypic
-////   //variance (sigma).  Heritability as defined here is the proportion
-////   //of the total variance (sigma) that is attributed to the kinship
-////   //matrix.
-
-////   //For simplicity, we assume that everything being input is a numpy
-////   //array.  If this is not the case, the module may throw an error as
-////   //conversion from list to numpy array is not done consistently.
-
-////   //"""
-////   void __init__(self,Y,K,Kva=[],Kve=[],X0=None,verbose=False){
-
-////    //"""The constructor takes a phenotype vector or array Y of size n. It
-////    //takes a kinship matrix K of size n x n.  Kva and Kve can be
-////    //computed as Kva,Kve = linalg.eigh(K) and cached.  If they are
-////    //not provided, the constructor will calculate them.  X0 is an
-////    //optional covariate matrix of size n x q, where there are q
-////    //covariates.  When this parameter is not provided, the
-////    //constructor will set X0 to an n x 1 matrix of all ones to
-////    //represent a mean effect.
-////    //"""
-
-////    if(X0 is None){
-////       X0 = np.ones(len(Y)).reshape(len(Y),1);
-////    }
-////    self.verbose = verbose;
-
-////    x = True - np.isnan(Y);
-////    x = x.reshape(-1,);
-////    if(! x.sum() == len(Y)){
-////      if(self.verbose){
-////        sys.stderr.write("Removing %d missing values from Y\n" % ((True - x).sum()));
-////      }
-////      Y = Y[x];
-////      K = K[x,sval][sval,x];
-////      X0 = X0[x,sval];
-////      Kva = [];
-////      Kve = [];
-////    }
-////    self.nonmissing = x;
-
-////    writeln("this K is:", K.shape, K);
-
-////    if(len(Kva) == 0 || len(Kve) == 0){
-////      //# if self.verbose: sys.stderr.write("Obtaining eigendecomposition for %dx%d matrix\n" % (K.shape[0],K.shape[1]) )
-////      begin = time.time();
-////      //# Kva,Kve = linalg.eigh(K)
-////      Kva,Kve = kinship.kvakve(K);
-////      end = time.time();
-////      if(self.verbose){
-////        sys.stderr.write("Total time: %0.3f\n" % (end - begin));
-////      }
-////      writeln("sum(Kva),sum(Kve)=",sum(Kva),sum(Kve));
-
-////    }
-        
-////    self.K = K;
-////    self.Kva = Kva;
-////    self.Kve = Kve;
-////    self.N = self.K.shape[0];
-////    self.Y = Y.reshape((self.N,1));
-////    self.X0 = X0;
-
-////    if(sum(self.Kva < 1e-6)){
-////      if(self.verbose){ sys.stderr.write("Cleaning %d eigen values\n" % (sum(self.Kva < 0)));}
-////      self.Kva[self.Kva < 1e-6] = 1e-6;
-
-////    self.transform();
-////  }
 
   void lmm2transform(ref LMM2 lmmobject){
     //"""
@@ -247,32 +174,32 @@ struct LMM2{
     //   eigenvector matrix of K (the kinship).
     //"""
 
-    lmmobject.Yt = matrixMult(lmmobject.Kve.T, lmmobject.Y);
-    lmmobject.X0t = matrixMult(lmmobject.Kve.T, lmmobject.X0);
-    lmmobject.X0t_stack = np.hstack([lmmobject.X0t, np.ones((lmmobject.N,1))]);
+    lmmobject.Yt = matrixMult(matrixTranspose(lmmobject.Kve), lmmobject.Y);
+    lmmobject.X0t = matrixMult(matrixTranspose(lmmobject.Kve), lmmobject.X0);
+    //lmmobject.X0t_stack = gethstack([lmmobject.X0t, np.ones((lmmobject.N,1))]);
     lmmobject.q = lmmobject.X0t.shape[1];
   }
 
-//  void getMLSoln(ref LMM2 lmmobject,ref double h, ref dmatrix X){
+  void getMLSoln(ref LMM2 lmmobject,ref double h, ref dmatrix X){
 
-//      //"""
-//      //   Obtains the maximum-likelihood estimates for the covariate coefficients (beta),
-//      //   the total variance of the trait (sigma) and also passes intermediates that can
-//      //   be utilized in other functions. The input parameter h is a value between 0 and 1 and represents
-//      //   the heritability or the proportion of the total variance attributed to genetics.  The X is the
-//      //   covariate matrix.
-//      //"""
+    //"""
+    //   Obtains the maximum-likelihood estimates for the covariate coefficients (beta),
+    //   the total variance of the trait (sigma) and also passes intermediates that can
+    //   be utilized in other functions. The input parameter h is a value between 0 and 1 and represents
+    //   the heritability or the proportion of the total variance attributed to genetics.  The X is the
+    //   covariate matrix.
+    //"""
 
-//      S = 1.0/(h*lmmobject.Kva + (1.0 - h));
-//      Xt = X.T*S;
-//      XX = matrixMult(Xt,X);
-//      XX_i = inv(XX);
-//      beta =  matrixMult(matrixMult(XX_i,Xt),lmmobject.Yt);
-//      Yt = lmmobject.Yt - matrixMult(X,beta);
-//      Q = np.dot(Yt.T*S,Yt);
-//      sigma = Q * 1.0 / (float(lmmobject.N) - float(X.shape[1]));
-//      //return beta,sigma,Q,XX_i,XX;
-//  }
+    double S = 1.0/(h*lmmobject.Kva + (1.0 - h));
+    dmatrix Xt = X.T*S;
+    dmatrix XX = matrixMult(Xt,X);
+    dmatrix XX_i = inv(XX);
+    beta =  matrixMult(matrixMult(XX_i,Xt),lmmobject.Yt);
+    Yt = lmmobject.Yt - matrixMult(X,beta);
+    Q = np.dot(Yt.T*S,Yt);
+    sigma = Q * 1.0 / (float(lmmobject.N) - float(X.shape[1]));
+    //return beta,sigma,Q,XX_i,XX;
+  }
 
 //  void LL_brent(ref LMM2 lmmobject, ref double h, ref dmatrix X, ref bool REML){
 //      //#brent will not be bounded by the specified bracket.
@@ -281,7 +208,7 @@ struct LMM2{
 //    //return -lmmobject.LL(h,X,stack=False,REML=REML)[0];
 //  }
 
-  void LL(ref LMM2 lmmobject, ref double h, ref dmatrix X, bool stack=true, bool REML=false){
+  void getLL(ref LMM2 lmmobject, ref double h, ref dmatrix X, bool stack=true, bool REML=false){
       //"""
       //   Computes the log-likelihood for a given heritability (h).  If X==None, then the
       //   default X0t will be used.  If X is set and stack=True, then X0t will be matrix concatenated with
@@ -290,14 +217,14 @@ struct LMM2{
       //"""
 
       if(X is None){
-        X = lmmobject.X0t;
+        double X = lmmobject.X0t;
       }
       else if(stack){
         lmmobject.X0t_stack[sval,(lmmobject.q)] = matrixMult(lmmobject.Kve.T,X)[sval,0];
         X = lmmobject.X0t_stack;
       }
-      n = float(lmmobject.N);
-      q = float(X.shape[1]);
+      double n = cast(double)lmmobject.N;
+      double q = cast(double)X.shape[1];
       //beta,sigma,Q,XX_i,XX = 
       lmmobject.getMLSoln(h,X);
       double LL = 0;//n*np.log(2*np.pi) + np.log(h*lmmobject.Kva + (1.0-h)).sum() + n + n*np.log(1.0/n * Q);
@@ -308,47 +235,48 @@ struct LMM2{
         //q*np.log(2.0*np.pi*sigma) + np.log(det(matrixMultT(X.T))) - np.log(det(XX));
         LL = LL + 0.5*LL_REML_part;
       }
-      double LLsum = LL.sum();
+      double LLsum = sumArray(LL);
       //# info(["beta=",beta[0][0]," sigma=",sigma[0][0]," LL=",LLsum])
       //return LLsum,beta,sigma,XX_i;
   }
 
-//  void getMax(ref LMM2 lmmobject, ref dmatrix H, ref dmatrix X, bool REML=false){
+  double getMax(ref LMM2 lmmobject, ref dmatrix H, ref dmatrix X, bool REML=false){
 
-//    //"""
-//    //   Helper functions for .fit(...).
-//    //   This function takes a set of LLs computed over a grid and finds possible regions
-//    //   containing a maximum.  Within these regions, a Brent search is performed to find the
-//    //   optimum.
+    //"""
+    //   Helper functions for .fit(...).
+    //   This function takes a set of LLs computed over a grid and finds possible regions
+    //   containing a maximum.  Within these regions, a Brent search is performed to find the
+    //   optimum.
 
-//    //"""
-//    n = len(lmmobject.LLs);
-//    auto HOpt = [];
-//    foreach(i; range(1,n-2)){
-//      if(lmmobject.LLs[i-1] < lmmobject.LLs[i] && lmmobject.LLs[i] > lmmobject.LLs[i+1]){
-//        HOpt.append(optimize.brent(lmmobject.LL_brent,args=(X,REML),brack=(H[i-1],H[i+1])));
-//        if(np.isnan(HOpt[-1])){
-//          HOpt[-1] = H[i-1];
-//        }
-//        //#if np.isnan(HOpt[-1]): HOpt[-1] = lmmobject.LLs[i-1]
-//        //#if np.isnan(HOpt[-1][0]): HOpt[-1][0] = [lmmobject.LLs[i-1]]
-//      }
-//    }
+    //"""
+    n = len(lmmobject.LLs);
+    auto HOpt = [];
+    foreach(i; range(1,n-2)){
+      if(lmmobject.LLs[i-1] < lmmobject.LLs[i] && lmmobject.LLs[i] > lmmobject.LLs[i+1]){
+        HOpt.append(optimize.brent(lmmobject.LL_brent,args=(X,REML),brack=(H[i-1],H[i+1])));
+        if(np.isnan(HOpt[-1])){
+          HOpt[-1] = H[i-1];
+        }
+        //#if np.isnan(HOpt[-1]): HOpt[-1] = lmmobject.LLs[i-1]
+        //#if np.isnan(HOpt[-1][0]): HOpt[-1][0] = [lmmobject.LLs[i-1]]
+      }
+    }
 
-//    if(len(HOpt) > 1){
-//      if(self.verbose){sys.stderr.write("NOTE: Found multiple optima.  Returning first...\n");}
-//      return HOpt[0];
-//    }
-//    else if(len(HOpt) == 1){
-//      return HOpt[0];
-//    }
-//    else if(self.LLs[0] > self.LLs[n-1]){
-//      return H[0];
-//    }
-//    else{
-//      return H[n-1];
-//    }
-//  }
+    if(len(HOpt) > 1){
+      if(self.verbose){sys.stderr.write("NOTE: Found multiple optima.  Returning first...\n");}
+      return HOpt[0];
+    }
+    else if(len(HOpt) == 1){
+      return HOpt[0];
+    }
+    else if(self.LLs[0] > self.LLs[n-1]){
+      return H[0];
+    }
+    else{
+      return H[n-1];
+    }
+    return 1;
+  }
 
   void lmm2fit(ref LMM2 lmmobject,ref dmatrix X, double ngrids=100, bool REML=true){
 
@@ -370,18 +298,23 @@ struct LMM2{
       X = lmmobject.X0t_stack;
     }
 
-    H = np.array(range(ngrids)) / float(ngrids);
-    //L = np.array([lmmobject.LL(h,X,stack=False,REML=REML)[0] for h in H]);
+    dmatrix H;
+    //= np.array(range(ngrids)) / float(ngrids);
+    dmatrix L;
+    //  L= np.array([lmmobject.LL(h,X,stack=False,REML=REML)[0] for h in H]);
     lmmobject.LLs = L;
 
-    hmax = lmmobject.getMax(H,X,REML);
-    L,beta,sigma,betaSTDERR = lmmobject.LL(hmax,X,stack=False,REML=REML);
+    double hmax = lmmobject.getMax(H,X,REML);
+    //L,beta,sigma,betaSTDERR = 
+    double beta;
+    double[] sigma;
+    getLL(lmmobject,hmax,X,false,REML);
 
     lmmobject.H = H;
     //false.optH = hmax.sum();
     lmmobject.optLL = L;
     lmmobject.optBeta = beta;
-    lmmobject.optSigma = sigma.sum();
+    lmmobject.optSigma = sumArray(sigma);
 
     //# debug(["hmax",hmax,"beta",beta,"sigma",sigma,"LL",L])
     //return hmax,beta,sigma,L;

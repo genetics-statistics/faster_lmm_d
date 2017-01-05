@@ -57,3 +57,11 @@ dmatrix zerosMatrix(int rows, int cols){
   }
   return dmatrix([rows, cols], elements);
 }
+
+double gethstack(dmatrix a, dmatrix b){
+  return 1;
+}
+
+double sumArray(double[] arr){
+  return 1;  
+}
