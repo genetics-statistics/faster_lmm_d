@@ -122,9 +122,37 @@ void normalize_along_row(ref dmatrix G, dmatrix input){
   G = dmatrix(input.shape, largeArr);
 }
 
-//dmatrix eigh(dmatrix input){
+void eigh(dmatrix input,ref double eigenvalue, ref dmatrix dvl, ref dmatrix dvr){
+  writeln(input.shape[0] * input.shape[1]);
+  double[] vl = new double[input.shape[0] * input.shape[1]];
+  double[] vr = new double[input.shape[0] * input.shape[1]];
+  // Check : No need for duplication
+  double[] elements = input.elements.dup;
+  double w;
+  double wi;
+  int n = input.shape[0];
+  LAPACKE_dgeev(101, 'V', 'V', n, elements.ptr, n, &w, &wi, vl.ptr, n, vr.ptr, n);
+//  writeln(vl);
+//  writeln(vr);
+//  writeln(w);
+//  writeln(wi);
+  eigenvalue = w;
+  dvl = dmatrix(input.shape, vl);
+  dvr = dmatrix(input.shape, vr);
+}
 
-//}
+//jobvl, # compute left eigenvectors of A?
+//                                     jobvr, # compute right eigenvectors of A? (left eigenvectors of A**T)
+//                                     n, # order of the matrix
+//                                     temporary_matrix,# input matrix (used as work)
+//                                     n, # leading dimension of matrix
+//                                     eigenvalues,# real part of computed eigenvalues
+//                                     imag_eigenvalues,# imag part of computed eigenvalues
+//                                     left_output,     # left eigenvectors, if applicable
+//                                     n, # leading dimension of left_output
+//                                     right_output,    # right eigenvectors, if applicable
+//                                     n, # leading dimension of right_output
+//                                     2*n)
 
 double det(dmatrix input){
   double[] narr = input.elements.dup;

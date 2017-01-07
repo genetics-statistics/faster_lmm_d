@@ -43,7 +43,11 @@ void main(string[] args)
   writeln(dm);
   z = matrixMult(dp,dm);
   writeln(z);
-  writeln(det(x));
+  //writeln(det(x));
+  double eigenVal;
+  dmatrix l;
+  dmatrix r;
+  eigh(x, eigenVal, l ,r);
 
   string ocontrol;
   string okinship;
