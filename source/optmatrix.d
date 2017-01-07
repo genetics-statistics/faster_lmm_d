@@ -127,7 +127,35 @@ void normalize_along_row(ref dmatrix G, dmatrix input){
 //}
 
 double det(dmatrix input){
+  double[] narr = input.elements.dup;
+  int[] pivot = getrf(narr, input.shape.dup);
 
+  int num_perm = 0;
+  int j = 0;
+  foreach(swap; pivot){
+    if(swap-1 != j){num_perm += 1;}
+    j++;
+  }
+  double prod;
+  if(num_perm % 2 == 1){
+    prod = 1;
+  }else{
+   prod = -1; //# odd permutations => negative
+  }
+  int min = input.shape[0];
+  if(input.shape[0]> input.shape[1]){min = input.shape[1];}
+  //writeln(pivot);
+  //writeln("min is", min);
+  for(int i =0;i< min; i++){
+    prod *= narr[input.shape[0]*i + i];
+  }
+  return prod;
+}
+
+int[] getrf(double[] arr, int[] shape){
+  auto ipiv = new int[shape[0]+1];
+  LAPACKE_dgetrf(101, shape[0],shape[0],arr.ptr,shape[0],ipiv.ptr);
+  return ipiv;
 }
 
 dmatrix inverse(dmatrix input){
