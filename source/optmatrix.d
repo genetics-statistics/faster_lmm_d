@@ -3,6 +3,7 @@ import simplelmm.dmatrix;
 import simplelmm.helpers;
 import std.stdio;
 import cblas;
+import lapack;
 
 dmatrix matrixMult(ref dmatrix lha, ref dmatrix rha){
 	writeln("In matMul");
@@ -121,14 +122,32 @@ void normalize_along_row(ref dmatrix G, dmatrix input){
   G = dmatrix(input.shape, largeArr);
 }
 
-dmatrix eigh(dmatrix input){
+//dmatrix eigh(dmatrix input){
 
-}
+//}
 
 double det(dmatrix input){
 
 }
 
 dmatrix inverse(dmatrix input){
-  
+
+    //int *IPIV = new int[N+1];
+  double[] elements= input.elements.dup;
+  //writeln(input.elements);
+  int LWORK = input.shape[0]*input.shape[0];      
+  double[] WORK = new double[input.shape[0]*input.shape[0]];
+  auto ipiv = new int[input.shape[0]+1];
+  //writeln("In matrix inverse");
+  auto result = new double[input.shape[0]*input.shape[1]];
+  int info;
+  int output = LAPACKE_dgetrf(101, input.shape[0],input.shape[0],elements.ptr,input.shape[0],ipiv.ptr);
+  int[] resshape = [input.shape[0],input.shape[0]];
+  //writeln("After getrf");
+  //writeln(output);
+  writeln(ipiv);
+  LAPACKE_dgetri(101, input.shape[0],elements.ptr, input.shape[0], ipiv.ptr);
+  //writeln("After getri");
+  //writeln(input.elements);
+  return dmatrix(input.shape, elements);
 } 

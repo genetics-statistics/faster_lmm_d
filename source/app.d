@@ -22,7 +22,7 @@ void main(string[] args)
   //auto k;
   //auto y;
   //auto g;
-
+  dmatrix dm = dmatrix([2,2],[4,3,3,2]);
   dmatrix d = dmatrix([4,3],[1,2,3,4,5,6,7,8,9,10,11,12]);
   dmatrix e = dmatrix([3,4],[2e-1,3,4,5,3,2,2e-1,3,4,5,3,2]);
   writeln(d.shape);
@@ -34,6 +34,12 @@ void main(string[] args)
   writeln(z.elements);
   prettyPrint(d);
   prettyPrint(z);
+  writeln("skfoissssssssssssssss============");
+  dmatrix dp = inverse(dm);
+  //dmatrix dp = dmatrix([2,2],[4,3,3,2]);
+  writeln(dm);
+  z = matrixMult(dp,dm);
+  writeln(z);
 
   string ocontrol;
   string okinship;
