@@ -3,6 +3,7 @@
 	"versions": {
 		"dyaml": "0.5.3",
 		"tinyendian": "0.1.2",
+		"lapack": "0.1.0",
 		"cblas": "1.0.0"
 	}
 }

@@ -137,6 +137,7 @@ import simplelmm.optmatrix;
 
 struct LMM2{
   double[] Y;
+  dmatrix Y1;
   dmatrix K;
   dmatrix Kva;
   dmatrix Kve;
@@ -145,7 +146,7 @@ struct LMM2{
   dmatrix Yt;
   dmatrix X0t;
   dmatrix X0t_stack;
-  dmatrix q;
+  int q;
   dmatrix H;
   double N;
 
@@ -173,9 +174,9 @@ struct LMM2{
     //   The transformation is obtained by left multiplying each parameter by the transpose of the
     //   eigenvector matrix of K (the kinship).
     //"""
-
-    lmmobject.Yt = matrixMult(matrixTranspose(lmmobject.Kve), lmmobject.Y);
-    lmmobject.X0t = matrixMult(matrixTranspose(lmmobject.Kve), lmmobject.X0);
+    dmatrix KveT = matrixTranspose(lmmobject.Kve);
+    lmmobject.Yt = matrixMult(KveT, lmmobject.Y1);
+    lmmobject.X0t = matrixMult(KveT, lmmobject.X0);
     //lmmobject.X0t_stack = gethstack([lmmobject.X0t, np.ones((lmmobject.N,1))]);
     lmmobject.q = lmmobject.X0t.shape[1];
   }
@@ -190,14 +191,20 @@ struct LMM2{
     //   covariate matrix.
     //"""
 
-    double S = 1.0/(h*lmmobject.Kva + (1.0 - h));
-    dmatrix Xt = X.T*S;
+    //double S = 1.0/ divideDmatrixNum(multiplyDmatrixNum(lmmobject.Kva,h),(1.0 - h));
+    double S = 1.0;
+    dmatrix XtT = matrixTranspose(X);
+    dmatrix Xt = multiplyDmatrixNum(XtT, S);
     dmatrix XX = matrixMult(Xt,X);
-    dmatrix XX_i = inv(XX);
-    beta =  matrixMult(matrixMult(XX_i,Xt),lmmobject.Yt);
-    Yt = lmmobject.Yt - matrixMult(X,beta);
-    Q = np.dot(Yt.T*S,Yt);
-    sigma = Q * 1.0 / (float(lmmobject.N) - float(X.shape[1]));
+    dmatrix XX_i = inverse(XX);
+    dmatrix temp = matrixMult(XX_i,Xt);
+    dmatrix beta =  matrixMult(temp,lmmobject.Yt);
+    dmatrix temp2 = matrixMult(X,beta);
+    dmatrix Yt = subDmatrix(lmmobject.Yt, temp2);
+    dmatrix YtT = matrixTranspose(Yt);
+    //dmatrix YtTS = multiplyDmatrix(YtT, S);  
+    //dmatrix Q = matrixMult(YtTS,Yt);
+    //sigma = Q * 1.0 / (float(lmmobject.N) - float(X.shape[1]));
     //return beta,sigma,Q,XX_i,XX;
   }
 
@@ -216,11 +223,11 @@ struct LMM2{
       //   REML is computed by adding additional terms to the standard LL and can be computed by setting REML=True.
       //"""
 
-      if(X is None){
-        double X = lmmobject.X0t;
+      if(X.init == true){
+        X = lmmobject.X0t;
       }
       else if(stack){
-        lmmobject.X0t_stack[sval,(lmmobject.q)] = matrixMult(lmmobject.Kve.T,X)[sval,0];
+        //lmmobject.X0t_stack[sval,(lmmobject.q)] = matrixMult(lmmobject.Kve.T,X)[sval,0];
         X = lmmobject.X0t_stack;
       }
       double n = cast(double)lmmobject.N;
@@ -235,7 +242,7 @@ struct LMM2{
         //q*np.log(2.0*np.pi*sigma) + np.log(det(matrixMultT(X.T))) - np.log(det(XX));
         LL = LL + 0.5*LL_REML_part;
       }
-      double LLsum = sumArray(LL);
+      //double LLsum = sumArray(LL);
       //# info(["beta=",beta[0][0]," sigma=",sigma[0][0]," LL=",LLsum])
       //return LLsum,beta,sigma,XX_i;
   }
@@ -249,33 +256,34 @@ struct LMM2{
     //   optimum.
 
     //"""
-    n = len(lmmobject.LLs);
+    int n = cast(int)lmmobject.LLs;
+    //.length;
     auto HOpt = [];
-    foreach(i; range(1,n-2)){
-      if(lmmobject.LLs[i-1] < lmmobject.LLs[i] && lmmobject.LLs[i] > lmmobject.LLs[i+1]){
-        HOpt.append(optimize.brent(lmmobject.LL_brent,args=(X,REML),brack=(H[i-1],H[i+1])));
-        if(np.isnan(HOpt[-1])){
-          HOpt[-1] = H[i-1];
-        }
-        //#if np.isnan(HOpt[-1]): HOpt[-1] = lmmobject.LLs[i-1]
-        //#if np.isnan(HOpt[-1][0]): HOpt[-1][0] = [lmmobject.LLs[i-1]]
-      }
+    for(int i=1; i< n-2; i++){
+      //if(lmmobject.LLs[i-1] < lmmobject.LLs[i] && lmmobject.LLs[i] > lmmobject.LLs[i+1]){
+      //  HOpt.append(optimize.brent(lmmobject.LL_brent,args=(X,REML),brack=(H[i-1],H[i+1])));
+      //  if(np.isnan(HOpt[-1])){
+      //    HOpt[-1] = H[i-1];
+      //  }
+      //  //#if np.isnan(HOpt[-1]): HOpt[-1] = lmmobject.LLs[i-1]
+      //  //#if np.isnan(HOpt[-1][0]): HOpt[-1][0] = [lmmobject.LLs[i-1]]
+      //}
     }
 
-    if(len(HOpt) > 1){
-      if(self.verbose){sys.stderr.write("NOTE: Found multiple optima.  Returning first...\n");}
-      return HOpt[0];
+    if(HOpt.length > 1){
+      //if(self.verbose){sys.stderr.write("NOTE: Found multiple optima.  Returning first...\n");}
+      return 1;//HOpt[0];
     }
-    else if(len(HOpt) == 1){
-      return HOpt[0];
+    else if(HOpt.length == 1){
+      return 1;//HOpt[0];
     }
-    else if(self.LLs[0] > self.LLs[n-1]){
-      return H[0];
-    }
+    //else if(self.LLs[0] > self.LLs[n-1]){
+    //  return 0;//H[0];
+    //}
     else{
-      return H[n-1];
+      return 0;//H[n-1];
     }
-    return 1;
+    //return 1;
   }
 
   void lmm2fit(ref LMM2 lmmobject,ref dmatrix X, double ngrids=100, bool REML=true){
@@ -289,12 +297,12 @@ struct LMM2{
     //   Given this optimum, the function computes the LL and associated ML solutions.
     //"""
 
-    if(X is None){ 
+    if(X.init == false){ 
       X = lmmobject.X0t;
     }
     else{
        //#X = np.hstack([lmmobject.X0t,matrixMult(lmmobject.Kve.T, X)])
-      lmmobject.X0t_stack[sval,(lmmobject.q)] = matrixMult(lmmobject.Kve.T,X)[sval,0];
+      //lmmobject.X0t_stack[sval,(lmmobject.q)] = matrixMult(lmmobject.Kve.T,X)[sval,0];
       X = lmmobject.X0t_stack;
     }
 
@@ -302,7 +310,7 @@ struct LMM2{
     //= np.array(range(ngrids)) / float(ngrids);
     dmatrix L;
     //  L= np.array([lmmobject.LL(h,X,stack=False,REML=REML)[0] for h in H]);
-    lmmobject.LLs = L;
+    //lmmobject.LLs = L;
 
     double hmax = lmmobject.getMax(H,X,REML);
     //L,beta,sigma,betaSTDERR = 
