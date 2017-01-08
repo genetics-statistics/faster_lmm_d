@@ -2,8 +2,9 @@ module simplelmm.lmm2;
 
 import simplelmm.dmatrix;
 import simplelmm.optmatrix;
+import simplelmm.helpers;
+import std.stdio;
 
-//import std.stdio;
 ////void calculateKinship(W,center=False){
 ////  //"""
 ////  //   W is an n x m matrix encoding SNP minor alleles.
@@ -136,13 +137,14 @@ import simplelmm.optmatrix;
 ////}
 
 struct LMM2{
+  bool init = false;
   double[] Y;
   dmatrix Y1;
   dmatrix K;
   dmatrix Kva;
   dmatrix Kve;
   dmatrix X0;
-  bool verbose;
+  bool verbose = false;
   dmatrix Yt;
   dmatrix X0t;
   dmatrix X0t_stack;
@@ -155,14 +157,46 @@ struct LMM2{
   double optSigma;
   double LLs;
 
-  this(double[] Y, dmatrix K, dmatrix Kva, dmatrix Kve, double X0,bool verbose){
-    this.Y = Y;
+  this(double[] Y, dmatrix K, dmatrix Kva, dmatrix Kve, dmatrix X0,bool verbose){
+    if(X0.init == false){
+      writeln("Initializing LMM2...");
+      //X0 = np.ones(len(Y)).reshape(len(Y),1)
+    }
+    this.verbose = verbose;
+
+  //  Y = y;
+  //bool[] v;
+  //v = isnan(y);
+  //writeln(v);
+  //keep = negateBool(v);
+    bool[] v = isnan(Y);
+    bool[] x = negateBool(v);
+
+    //if not x.sum() == len(Y):
+    //     if self.verbose: sys.stderr.write("Removing %d missing values from Y\n" % ((True - x).sum()))
+    //     Y = Y[x]
+    //     K = K[x,:][:,x]
+    //     X0 = X0[x,:]
+    //     Kva = []
+    //     Kve = []
+    //  self.nonmissing = x
+
+    writeln("this K is:", K.shape, K);
+    this.init = true;
     this.K = K;
     this.Kva = Kva;
     this.Kve = Kve;
-    //this.X0 = null;
-    this.verbose = false;
+    this.N = K.shape[0];
+    this.Y =  Y; // .reshape((self.N,1))
+    this.X0 = X0;
     //lmm2transform();
+    //bool[] com = compareGt(self.Kva, 1e-6);
+    //if(sumBool(com)){
+      //if self.verbose: sys.stderr.write("Cleaning %d eigen values\n" % (sum(self.Kva < 0)))
+      //self.Kva[self.Kva < 1e-6] = 1e-6
+    //}
+    lmm2transform(this);
+
   }
 }
 
@@ -174,11 +208,12 @@ struct LMM2{
     //   The transformation is obtained by left multiplying each parameter by the transpose of the
     //   eigenvector matrix of K (the kinship).
     //"""
-    dmatrix KveT = matrixTranspose(lmmobject.Kve);
-    lmmobject.Yt = matrixMult(KveT, lmmobject.Y1);
-    lmmobject.X0t = matrixMult(KveT, lmmobject.X0);
-    //lmmobject.X0t_stack = gethstack([lmmobject.X0t, np.ones((lmmobject.N,1))]);
-    lmmobject.q = lmmobject.X0t.shape[1];
+    writeln("In lmm2transform");
+    //dmatrix KveT = matrixTranspose(lmmobject.Kve);
+    //lmmobject.Yt = matrixMult(KveT, lmmobject.Y1);
+    //lmmobject.X0t = matrixMult(KveT, lmmobject.X0);
+    ////lmmobject.X0t_stack = gethstack([lmmobject.X0t, np.ones((lmmobject.N,1))]);
+    //lmmobject.q = lmmobject.X0t.shape[1];
   }
 
   void getMLSoln(ref LMM2 lmmobject,ref double h, ref dmatrix X){
@@ -193,19 +228,20 @@ struct LMM2{
 
     //double S = 1.0/ divideDmatrixNum(multiplyDmatrixNum(lmmobject.Kva,h),(1.0 - h));
     double S = 1.0;
-    dmatrix XtT = matrixTranspose(X);
-    dmatrix Xt = multiplyDmatrixNum(XtT, S);
-    dmatrix XX = matrixMult(Xt,X);
-    dmatrix XX_i = inverse(XX);
-    dmatrix temp = matrixMult(XX_i,Xt);
-    dmatrix beta =  matrixMult(temp,lmmobject.Yt);
-    dmatrix temp2 = matrixMult(X,beta);
-    dmatrix Yt = subDmatrix(lmmobject.Yt, temp2);
-    dmatrix YtT = matrixTranspose(Yt);
+    //dmatrix XtT = matrixTranspose(X);
+    //dmatrix Xt = multiplyDmatrixNum(XtT, S);
+    //dmatrix XX = matrixMult(Xt,X);
+    //dmatrix XX_i = inverse(XX);
+    //dmatrix temp = matrixMult(XX_i,Xt);
+    //dmatrix beta =  matrixMult(temp,lmmobject.Yt);
+    //dmatrix temp2 = matrixMult(X,beta);
+    //dmatrix Yt = subDmatrix(lmmobject.Yt, temp2);
+    //dmatrix YtT = matrixTranspose(Yt);
     //dmatrix YtTS = multiplyDmatrix(YtT, S);  
     //dmatrix Q = matrixMult(YtTS,Yt);
     //sigma = Q * 1.0 / (float(lmmobject.N) - float(X.shape[1]));
     //return beta,sigma,Q,XX_i,XX;
+    writeln("Out of getMLSoln");
   }
 
 //  void LL_brent(ref LMM2 lmmobject, ref double h, ref dmatrix X, ref bool REML){
@@ -231,7 +267,7 @@ struct LMM2{
         X = lmmobject.X0t_stack;
       }
       double n = cast(double)lmmobject.N;
-      double q = cast(double)X.shape[1];
+      //double q = cast(double)X.shape[1];
       //beta,sigma,Q,XX_i,XX = 
       lmmobject.getMLSoln(h,X);
       double LL = 0;//n*np.log(2*np.pi) + np.log(h*lmmobject.Kva + (1.0-h)).sum() + n + n*np.log(1.0/n * Q);
@@ -326,6 +362,7 @@ struct LMM2{
 
     //# debug(["hmax",hmax,"beta",beta,"sigma",sigma,"LL",L])
     //return hmax,beta,sigma,L;
+    writeln("Lmm2 fit done");
   }
 
 //  void association(ref LMM2 lmmobject, ref dmatrix X, ref dmatrix h, bool stack=true, bool REML=true, bool returnBeta=false){

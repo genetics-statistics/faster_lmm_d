@@ -78,6 +78,14 @@ dmatrix zerosMatrix(int rows, int cols){
   return dmatrix([rows, cols], elements);
 }
 
+dmatrix onesMatrix(int rows, int cols){
+  double[] elements;
+  for(int i = 0; i < rows*cols; i++){
+    elements ~= 1;
+  }
+  return dmatrix([rows, cols], elements);
+}
+
 double gethstack(dmatrix a, dmatrix b){
   return 1;
 }
