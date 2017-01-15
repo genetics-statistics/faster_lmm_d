@@ -254,28 +254,28 @@ struct LMM2{
 
     //double S = 1.0/ divideDmatrixNum(multiplyDmatrixNum(lmmobject.Kva,h),(1.0 - h));
     double S = 1.0;
-    //dmatrix XtT = matrixTranspose(X);
-    //dmatrix Xt = multiplyDmatrixNum(XtT, S);
-    //dmatrix XX = matrixMult(Xt,X);
-    //dmatrix XX_i = inverse(XX);
-    //dmatrix temp = matrixMult(XX_i,Xt);
-    //dmatrix beta =  matrixMult(temp,lmmobject.Yt);
-    //dmatrix temp2 = matrixMult(X,beta);
-    //dmatrix Yt = subDmatrix(lmmobject.Yt, temp2);
-    //dmatrix YtT = matrixTranspose(Yt);
-    //dmatrix YtTS = multiplyDmatrix(YtT, S);  
-    //dmatrix Q = matrixMult(YtTS,Yt);
+    dmatrix XtT = matrixTranspose(X);
+    dmatrix Xt = multiplyDmatrixNum(XtT, S);
+    dmatrix XX = matrixMult(Xt,X);
+    dmatrix XX_i = inverse(XX);
+    dmatrix temp = matrixMult(XX_i,Xt);
+    dmatrix beta =  matrixMult(temp,lmmobject.Yt);
+    dmatrix temp2 = matrixMult(X,beta);
+    dmatrix Yt = subDmatrix(lmmobject.Yt, temp2);
+    dmatrix YtT = matrixTranspose(Yt);
+    dmatrix YtTS = multiplyDmatrixNum(YtT, S);  
+    dmatrix Q = matrixMult(YtTS,Yt);
     //sigma = Q * 1.0 / (float(lmmobject.N) - float(X.shape[1]));
     //return beta,sigma,Q,XX_i,XX;
     writeln("Out of getMLSoln");
   }
 
-//  void LL_brent(ref LMM2 lmmobject, ref double h, ref dmatrix X, ref bool REML){
-//      //#brent will not be bounded by the specified bracket.
-//      //# I return a large number if we encounter h < 0 to avoid errors in LL computation during the search.
-//    if(h < 0){return 1e6;}
-//    //return -lmmobject.LL(h,X,stack=False,REML=REML)[0];
-//  }
+  void LL_brent(ref LMM2 lmmobject, ref double h, ref dmatrix X, ref bool REML){
+      //#brent will not be bounded by the specified bracket.
+      //# I return a large number if we encounter h < 0 to avoid errors in LL computation during the search.
+    //if(h < 0){return 1e6;}
+    //return -lmmobject.LL(h,X,stack=False,REML=REML)[0];
+  }
 
   void getLL(ref LMM2 lmmobject, ref double h, ref dmatrix X, bool stack=true, bool REML=false){
       //"""

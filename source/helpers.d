@@ -24,6 +24,16 @@ double sum(double[] vector){
 	return result;
 }
 
+int sum(bool[] vector){
+  int result = 0;
+  foreach(element;vector){
+    if(element == true){
+      result +=1;
+    }
+  }
+  return result;
+}
+
 double[] array(int n){
   return [];
 }
@@ -56,11 +66,12 @@ double[] getNumArray(double[] arr,bool[] valuesArr){
 
 void replaceNaN(ref double[] arr, bool[] valuesArr, double mean){
   int index = 0;
-  foreach(element; valuesArr){
+  foreach(ref element; valuesArr){
     if(element == true){
       index++;
     }else{
       arr[index] = mean;
+      index++;
     }
   }
 }
