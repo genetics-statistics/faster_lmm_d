@@ -122,21 +122,21 @@ void normalize_along_row(ref dmatrix G, dmatrix input){
   G = dmatrix(input.shape, largeArr);
 }
 
-void eigh(dmatrix input,ref double eigenvalue, ref dmatrix dvl, ref dmatrix dvr){
+void eigh(dmatrix input,ref dmatrix eigenvalue, ref dmatrix dvl, ref dmatrix dvr){
   writeln(input.shape[0] * input.shape[1]);
   double[] vl = new double[input.shape[0] * input.shape[1]];
   double[] vr = new double[input.shape[0] * input.shape[1]];
   // Check : No need for duplication
   double[] elements = input.elements.dup;
-  double w;
-  double wi;
+  double[] w = new double[input.shape[0]];
+  double[] wi = new double[input.shape[0]];
   int n = input.shape[0];
-  LAPACKE_dgeev(101, 'V', 'V', n, elements.ptr, n, &w, &wi, vl.ptr, n, vr.ptr, n);
+  LAPACKE_dgeev(101, 'V', 'V', n, elements.ptr, n, w.ptr, wi.ptr, vl.ptr, n, vr.ptr, n);
 //  writeln(vl);
 //  writeln(vr);
-//  writeln(w);
-//  writeln(wi);
-  eigenvalue = w;
+  //writeln(w);
+  //writeln(wi);
+  eigenvalue = dmatrix([input.shape[0],1], w);
   dvl = dmatrix(input.shape, vl);
   dvr = dmatrix(input.shape, vr);
 }

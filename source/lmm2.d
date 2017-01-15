@@ -139,7 +139,7 @@ import std.stdio;
 
 struct LMM2{
   bool init = false;
-  double[] Y;
+  dmatrix Y;
   dmatrix Y1;
   dmatrix K;
   dmatrix Kva;
@@ -156,7 +156,7 @@ struct LMM2{
   dmatrix optLL;
   double optBeta;
   double optSigma;
-  double LLs;
+  dmatrix LLs;
 
   //The constructor takes a phenotype vector or array Y of size n. It
   //takes a kinship matrix K of size n x n.  Kva and Kve can be
@@ -211,7 +211,7 @@ struct LMM2{
     this.Kva = Kva;
     this.Kve = Kve;
     this.N = K.shape[0];
-    this.Y =  Y; // .reshape((self.N,1))
+    this.Y =  dmatrix([K.shape[0],1] ,Y); // .reshape((self.N,1))
     this.X0 = X0;
     //lmm2transform();
     //bool[] com = compareGt(self.Kva, 1e-6);
@@ -234,12 +234,14 @@ struct LMM2{
     //"""
     writeln("In lmm2transform");
     dmatrix KveT = matrixTranspose(lmmobject.Kve);
-    writeln("here goes kve");
+    writeln("here goes kveT");
     writeln(KveT);
-    //lmmobject.Yt = matrixMult(KveT, lmmobject.Y);
-    //lmmobject.X0t = matrixMult(KveT, lmmobject.X0);
+    lmmobject.Yt = matrixMult(KveT, lmmobject.Y);
+    lmmobject.X0t = matrixMult(KveT, lmmobject.X0);
+    //writeln(lmmobject.q);
+    writeln(lmmobject.X0t);
     lmmobject.X0t_stack = horizontallystack(lmmobject.X0t, onesMatrix(cast(int)lmmobject.N,1));
-    //lmmobject.q = lmmobject.X0t.shape[1];
+    lmmobject.q = lmmobject.X0t.shape[1];
   }
 
   void getMLSoln(ref LMM2 lmmobject,ref double h, ref dmatrix X){
@@ -265,7 +267,10 @@ struct LMM2{
     dmatrix YtT = matrixTranspose(Yt);
     dmatrix YtTS = multiplyDmatrixNum(YtT, S);  
     dmatrix Q = matrixMult(YtTS,Yt);
-    //sigma = Q * 1.0 / (float(lmmobject.N) - float(X.shape[1]));
+    writeln("Q goes here");
+    writeln(Q);
+    double sigma = Q.elements[0] * 1.0 / (cast(double)(lmmobject.N) - cast(double)(X.shape[1]));
+    writeln(sigma);
     //return beta,sigma,Q,XX_i,XX;
     writeln("Out of getMLSoln");
   }
@@ -277,7 +282,7 @@ struct LMM2{
     //return -lmmobject.LL(h,X,stack=False,REML=REML)[0];
   }
 
-  void getLL(ref LMM2 lmmobject, ref double h, ref dmatrix X, bool stack=true, bool REML=false){
+  double getLL(ref LMM2 lmmobject, ref double h, ref dmatrix X, bool stack=true, bool REML=false){
       //"""
       //   Computes the log-likelihood for a given heritability (h).  If X==None, then the
       //   default X0t will be used.  If X is set and stack=True, then X0t will be matrix concatenated with
@@ -307,6 +312,7 @@ struct LMM2{
       //double LLsum = sumArray(LL);
       //# info(["beta=",beta[0][0]," sigma=",sigma[0][0]," LL=",LLsum])
       //return LLsum,beta,sigma,XX_i;
+      return LL;
   }
 
   double getMax(ref LMM2 lmmobject, ref dmatrix H, ref dmatrix X, bool REML=false){
@@ -318,7 +324,7 @@ struct LMM2{
     //   optimum.
 
     //"""
-    int n = cast(int)lmmobject.LLs;
+    int n = cast(int)lmmobject.LLs.shape[0];
     //.length;
     auto HOpt = [];
     for(int i=1; i< n-2; i++){
@@ -367,12 +373,22 @@ struct LMM2{
       //lmmobject.X0t_stack[sval,(lmmobject.q)] = matrixMult(lmmobject.Kve.T,X)[sval,0];
       X = lmmobject.X0t_stack;
     }
-
     dmatrix H;
+    double[] Harr;
     //= np.array(range(ngrids)) / float(ngrids);
+    for(int m = 0; m < ngrids; m++){
+      Harr ~= m / cast(double)ngrids;
+    }
+    writeln("This is H");
+    writeln(Harr);
     dmatrix L;
-    //  L= np.array([lmmobject.LL(h,X,stack=False,REML=REML)[0] for h in H]);
-    //lmmobject.LLs = L;
+    //L= np.array([lmmobject.LL(h,X,stack=False,REML=REML)[0] for h in H]);a
+    double[] elm;
+    foreach(h; Harr){
+      elm ~= getLL(lmmobject,h,X,false,REML);
+    }
+    L = dmatrix([cast(int)elm.length,1],elm);
+    lmmobject.LLs = L;
 
     double hmax = getMax(lmmobject, H, X, REML);
     //L,beta,sigma,betaSTDERR = 

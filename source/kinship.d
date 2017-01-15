@@ -155,10 +155,10 @@ void kvakve(dmatrix K, ref dmatrix Kva, ref dmatrix Kve){
   writeln(K);
   //assert (K.T == K).all(); //# raise "K is not symmetric"
   //(dmatrix input,ref double eigenvalue, ref dmatrix dvl, ref dmatrix dvr)
-  double ev;
-  //eigh(K, ev, Kva, Kve);
-  writeln("Kva",Kva);
-  writeln("Kve",Kve);
+  dmatrix ev;
+  eigh(K, ev, Kva, Kve);
+  writeln("Kva", Kva);
+  writeln("Kve", Kve);
 
   //if(sum(Kva) < 0){
     //writefln("Cleaning %d eigen values (Kva<0)",(sum(Kva < 0)));
