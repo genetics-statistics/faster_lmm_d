@@ -326,16 +326,16 @@ struct LMM2{
     //"""
     int n = cast(int)lmmobject.LLs.shape[0];
     //.length;
-    auto HOpt = [];
+    double[] HOpt;
     for(int i=1; i< n-2; i++){
-      //if(lmmobject.LLs[i-1] < lmmobject.LLs[i] && lmmobject.LLs[i] > lmmobject.LLs[i+1]){
-      //  HOpt.append(optimize.brent(lmmobject.LL_brent,args=(X,REML),brack=(H[i-1],H[i+1])));
-      //  if(np.isnan(HOpt[-1])){
-      //    HOpt[-1] = H[i-1];
-      //  }
-      //  //#if np.isnan(HOpt[-1]): HOpt[-1] = lmmobject.LLs[i-1]
-      //  //#if np.isnan(HOpt[-1][0]): HOpt[-1][0] = [lmmobject.LLs[i-1]]
-      //}
+      if(lmmobject.LLs.elements[i-1] < lmmobject.LLs.elements[i] && lmmobject.LLs.elements[i] > lmmobject.LLs.elements[i+1]){
+        //HOpt.append ~= optimize.brent(lmmobject.LL_brent,args=(X,REML),brack=(H[i-1],H[i+1])));
+        if(std.math.isNaN(HOpt[$])){
+          HOpt[$] = H.elements[i-1];
+        }
+        //#if np.isnan(HOpt[-1]): HOpt[-1] = lmmobject.LLs[i-1]
+        //#if np.isnan(HOpt[-1][0]): HOpt[-1][0] = [lmmobject.LLs[i-1]]
+      }
     }
 
     if(HOpt.length > 1){
@@ -369,7 +369,8 @@ struct LMM2{
       X = lmmobject.X0t;
     }
     else{
-       //#X = np.hstack([lmmobject.X0t,matrixMult(lmmobject.Kve.T, X)])
+      dmatrix kveT = matrixTranspose(lmmobject.Kve);
+      dmatrix alall = horizontallystack(lmmobject.X0t,matrixMult(kveT , X));
       //lmmobject.X0t_stack[sval,(lmmobject.q)] = matrixMult(lmmobject.Kve.T,X)[sval,0];
       X = lmmobject.X0t_stack;
     }
