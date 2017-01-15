@@ -3,6 +3,7 @@ module simplelmm.lmm2;
 import simplelmm.dmatrix;
 import simplelmm.optmatrix;
 import simplelmm.helpers;
+import simplelmm.kinship;
 import std.stdio;
 
 ////void calculateKinship(W,center=False){
@@ -157,10 +158,19 @@ struct LMM2{
   double optSigma;
   double LLs;
 
+  //The constructor takes a phenotype vector or array Y of size n. It
+  //takes a kinship matrix K of size n x n.  Kva and Kve can be
+  //computed as Kva,Kve = linalg.eigh(K) and cached.  If they are
+  //not provided, the constructor will calculate them.  X0 is an
+  //optional covariate matrix of size n x q, where there are q
+  //covariates.  When this parameter is not provided, the
+  //constructor will set X0 to an n x 1 matrix of all ones to
+  //represent a mean effect.
+
   this(double[] Y, dmatrix K, dmatrix Kva, dmatrix Kve, dmatrix X0,bool verbose){
     if(X0.init == false){
       writeln("Initializing LMM2...");
-      //X0 = np.ones(len(Y)).reshape(len(Y),1)
+      X0 = onesMatrix(cast(int)Y.length,1);
     }
     this.verbose = verbose;
 
@@ -171,6 +181,7 @@ struct LMM2{
   //keep = negateBool(v);
     bool[] v = isnan(Y);
     bool[] x = negateBool(v);
+    
 
     //if not x.sum() == len(Y):
     //     if self.verbose: sys.stderr.write("Removing %d missing values from Y\n" % ((True - x).sum()))
@@ -182,6 +193,19 @@ struct LMM2{
     //  self.nonmissing = x
 
     writeln("this K is:", K.shape, K);
+
+    //if len(Kva) == 0 or len(Kve) == 0:
+    //      # if self.verbose: sys.stderr.write("Obtaining eigendecomposition for %dx%d matrix\n" % (K.shape[0],K.shape[1]) )
+    //      begin = time.time()
+    //      # Kva,Kve = linalg.eigh(K)
+    //      Kva,Kve = kinship.kvakve(K)
+    //      end = time.time()
+    //      if self.verbose: sys.stderr.write("Total time: %0.3f\n" % (end - begin))
+    //      print("sum(Kva),sum(Kve)=",sum(Kva),sum(Kve))
+
+    //dmatrix Kva,Kve; 
+    kvakve(K, Kva, Kve);
+
     this.init = true;
     this.K = K;
     this.Kva = Kva;
@@ -209,10 +233,12 @@ struct LMM2{
     //   eigenvector matrix of K (the kinship).
     //"""
     writeln("In lmm2transform");
-    //dmatrix KveT = matrixTranspose(lmmobject.Kve);
-    //lmmobject.Yt = matrixMult(KveT, lmmobject.Y1);
+    dmatrix KveT = matrixTranspose(lmmobject.Kve);
+    writeln("here goes kve");
+    writeln(KveT);
+    //lmmobject.Yt = matrixMult(KveT, lmmobject.Y);
     //lmmobject.X0t = matrixMult(KveT, lmmobject.X0);
-    ////lmmobject.X0t_stack = gethstack([lmmobject.X0t, np.ones((lmmobject.N,1))]);
+    lmmobject.X0t_stack = horizontallystack(lmmobject.X0t, onesMatrix(cast(int)lmmobject.N,1));
     //lmmobject.q = lmmobject.X0t.shape[1];
   }
 
@@ -348,7 +374,7 @@ struct LMM2{
     //  L= np.array([lmmobject.LL(h,X,stack=False,REML=REML)[0] for h in H]);
     //lmmobject.LLs = L;
 
-    double hmax = lmmobject.getMax(H,X,REML);
+    double hmax = getMax(lmmobject, H, X, REML);
     //L,beta,sigma,betaSTDERR = 
     double beta;
     double[] sigma;

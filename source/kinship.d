@@ -144,3 +144,26 @@ int compute_matrixMult(int job, dmatrix W){
   writeln(res);
   return job;
 }
+
+void kvakve(dmatrix K, ref dmatrix Kva, ref dmatrix Kve){
+  //"""
+
+  //Obtain eigendecomposition for K and return Kva,Kve where Kva is cleaned
+  //of small values < 1e-6 (notably smaller than zero)
+  //"""
+  writefln("Obtaining eigendecomposition for %dx%d matrix",K.shape[0],K.shape[1]);
+  writeln(K);
+  //assert (K.T == K).all(); //# raise "K is not symmetric"
+  //(dmatrix input,ref double eigenvalue, ref dmatrix dvl, ref dmatrix dvr)
+  double ev;
+  eigh(K, ev, Kva, Kve);
+  writeln("Kva",Kva);
+  writeln("Kve",Kve);
+
+  //if sum(Kva < 0){
+    //writefln("Cleaning %d eigen values (Kva<0)",(sum(Kva < 0)));
+    //Kva[Kva < 1e-6] = 1e-6;
+  //}
+      
+   //return Kva,Kve
+}

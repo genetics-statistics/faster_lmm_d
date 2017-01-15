@@ -93,3 +93,13 @@ double gethstack(dmatrix a, dmatrix b){
 double sumArray(double[] arr){
   return 1;  
 }
+
+dmatrix horizontallystack(dmatrix a, dmatrix b){
+  int n = a.shape[0];
+  double[] arr;
+  for(int i = 0; i < n; i++){
+    arr ~= a.elements[(a.shape[1]*i)..(a.shape[1]*(i+1))];
+    arr ~= b.elements[(b.shape[1]*i)..(b.shape[1]*(i+1))];
+  }
+  return dmatrix([a.shape[0], a.shape[1]+b.shape[1]], arr);
+}
