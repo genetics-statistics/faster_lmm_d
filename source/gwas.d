@@ -5,6 +5,8 @@ import simplelmm.lmm2;
 import simplelmm.dmatrix;
 
 void compute_snp(int j,int n,double[] snp_ids,LMM2 lmmobject, bool REML,double q){
+  writeln("In compute_snp");
+  //writeln(snp_ids);
   double[] result;
   foreach(snp_id;snp_ids){
     //snp,id = snp_id;
@@ -83,20 +85,26 @@ void gwas(double[] Y, ref dmatrix G, ref dmatrix K, bool restricted_max_likeliho
   double q = 0;
        
   double[] collect; //# container for SNPs to be processed in one batch
-
+  writeln(collect);
   int count = 0;
   int job = 0;
   int jobs_running = 0;
   int jobs_completed = 0;
+   writeln(collect);
   foreach(snp; G.elements){
+    
+
+    writeln(collect);
     double snp_id = snp;//(snp,"SNPID");
     count += 1;
     if(count % 1000 == 0){
+
       job += 1;
       writefln("Job %d At SNP %d" ,job,count);
       if(cpu_num == 1){
-        //debug("Running on 1 THREAD");
-        compute_snp(job,n,collect,lmm2,reml,q);
+        writeln("Running on 1 THREAD");
+
+        //compute_snp(job,n,collect,lmm2,reml,q);
         //double[] collect;
         //j,lst = q.get();
         double j;
@@ -132,31 +140,32 @@ void gwas(double[] Y, ref dmatrix G, ref dmatrix K, bool restricted_max_likeliho
     }
     collect~=snp_id; // add SNP to process in batch
   }
-      
+  //writeln("Here goes res");
+  //writeln(res);
 
-  ////debug("count=%i running=%i collect=%i" % (count,jobs_running,len(collect)))
-  if (collect.length>0){
-    job += 1;
-    //debug("Collect final batch size %i job %i @%i: " % (len(collect), job, count));
-    if(cpu_num == 1){
-      compute_snp(job,n,collect,lmm2,reml,q);
-    }
-    else{
-      //p.apply_async(compute_snp,(job,n,collect,lmm2,reml));
-    }
+  //////debug("count=%i running=%i collect=%i" % (count,jobs_running,len(collect)))
+  //if (collect.length>0){
+  //  job += 1;
+  //  //debug("Collect final batch size %i job %i @%i: " % (len(collect), job, count));
+  //  if(cpu_num == 1){
+  //    //compute_snp(job,n,collect,lmm2,reml,q);
+  //  }
+  //  else{
+  //    //p.apply_async(compute_snp,(job,n,collect,lmm2,reml));
+  //  }
         
-    jobs_running += 1;
-    for(int j=0; j < jobs_running; j++){
-      double[] lst;
-      //j,lst = q.get(True,15);// time out
-      writeln("Job "," finished");
-      jobs_running -= 1;
-      //debug("jobs_running cleanup (-) %d" % jobs_running);
-      jobs_completed += 1;
-      //progress("GWAS2",jobs_completed,snps/1000);
-      res~=lst;
-    }
-  }
+  //  jobs_running += 1;
+  //  for(int j=0; j < jobs_running; j++){
+  //    double[] lst;
+  //    //j,lst = q.get(True,15);// time out
+  //    writeln("Job "," finished");
+  //    jobs_running -= 1;
+  //    //debug("jobs_running cleanup (-) %d" % jobs_running);
+  //    jobs_completed += 1;
+  //    //progress("GWAS2",jobs_completed,snps/1000);
+  //    res~=lst;
+  //  }
+  //}
   ////mprint("Before sort",[res1[0] for res1 in res]);
   ////res = sorted(res,key=lambda x: x[0]);
   ////mprint("After sort",[res1[0] for res1 in res]);

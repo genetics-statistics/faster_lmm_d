@@ -157,6 +157,7 @@ struct LMM2{
   double optBeta;
   double optSigma;
   dmatrix LLs;
+  double optH;
 
   //The constructor takes a phenotype vector or array Y of size n. It
   //takes a kinship matrix K of size n x n.  Kva and Kve can be
@@ -213,7 +214,6 @@ struct LMM2{
     this.N = K.shape[0];
     this.Y =  dmatrix([K.shape[0],1] ,Y); // .reshape((self.N,1))
     this.X0 = X0;
-    //lmm2transform();
     //bool[] com = compareGt(self.Kva, 1e-6);
     //if(sumBool(com)){
       //if self.verbose: sys.stderr.write("Cleaning %d eigen values\n" % (sum(self.Kva < 0)))
@@ -267,12 +267,12 @@ struct LMM2{
     dmatrix YtT = matrixTranspose(Yt);
     dmatrix YtTS = multiplyDmatrixNum(YtT, S);  
     dmatrix Q = matrixMult(YtTS,Yt);
-    writeln("Q goes here");
-    writeln(Q);
+    //writeln("Q goes here");
+    //writeln(Q);
     double sigma = Q.elements[0] * 1.0 / (cast(double)(lmmobject.N) - cast(double)(X.shape[1]));
     writeln(sigma);
     //return beta,sigma,Q,XX_i,XX;
-    writeln("Out of getMLSoln");
+    //writeln("Out of getMLSoln");
   }
 
   void LL_brent(ref LMM2 lmmobject, ref double h, ref dmatrix X, ref bool REML){
@@ -349,7 +349,8 @@ struct LMM2{
     //  return 0;//H[0];
     //}
     else{
-      return 0;//H[n-1];
+      //return H.elements[n-1];
+      return 0;
     }
     //return 1;
   }
@@ -380,8 +381,8 @@ struct LMM2{
     for(int m = 0; m < ngrids; m++){
       Harr ~= m / cast(double)ngrids;
     }
-    writeln("This is H");
-    writeln(Harr);
+    //writeln("This is H");
+    //writeln(Harr);
     dmatrix L;
     //L= np.array([lmmobject.LL(h,X,stack=False,REML=REML)[0] for h in H]);a
     double[] elm;
@@ -408,60 +409,63 @@ struct LMM2{
     writeln("Lmm2 fit done");
   }
 
-//  void association(ref LMM2 lmmobject, ref dmatrix X, ref dmatrix h, bool stack=true, bool REML=true, bool returnBeta=false){
-//    //"""
-//    //  Calculates association statitics for the SNPs encoded in the vector X of size n.
-//    //  If h is None, the optimal h stored in optH is used.
+  void association(ref LMM2 lmmobject, ref dmatrix X, ref double h, bool stack=true, bool REML=true, bool returnBeta=false){
+    //"""
+    //  Calculates association statitics for the SNPs encoded in the vector X of size n.
+    //  If h is None, the optimal h stored in optH is used.
 
-//    //"""
-//    if(false){
-//      writeln("X=",X);
-//      writeln("h=",h);
-//      writeln("q=",lmmobject.q);
-//      writeln("lmmobject.Kve=",lmmobject.Kve);
-//      writeln("X0t_stack=",lmmobject.X0t_stack.shape,lmmobject.X0t_stack);
-//    }
+    //"""
+    if(false){
+      writeln("X=",X);
+      writeln("h=",h);
+      writeln("q=",lmmobject.q);
+      writeln("lmmobject.Kve=",lmmobject.Kve);
+      writeln("X0t_stack=",lmmobject.X0t_stack);
+    }
 
-//    if(stack){
-//      //# X = np.hstack([lmmobject.X0t,matrixMult(lmmobject.Kve.T, X)])
-//      m = matrixMult(lmmobject.Kve.T,X);
-//      //# writeln( "m=",m);
-//      m = m[sval,0];
-//      lmmobject.X0t_stack[sval,(lmmobject.q)] = m;
-//      X = lmmobject.X0t_stack;
-//    }
-//    if(h is None){h = lmmobject.optH;}
+    if(stack){
+      //# X = np.hstack([lmmobject.X0t,matrixMult(lmmobject.Kve.T, X)])
+      dmatrix kvet = matrixTranspose(lmmobject.Kve);
+      dmatrix m = matrixMult(kvet,X);
+      //# writeln( "m=",m);
+      //m = m[sval,0];
+      //lmmobject.X0t_stack[sval,(lmmobject.q)] = m;
+      X = lmmobject.X0t_stack;
+    }
+    if(h.init == false){h = lmmobject.optH;}
 
-//    L,beta,sigma,betaVAR = lmmobject.LL(h,X,stack=False,REML=REML);
-//    q  = len(beta);
-//    ts,ps = lmmobject.tstat(beta[q-1],betaVAR[q-1,q-1],sigma,q);
+    //L,beta,sigma,betaVAR = 
+    getLL(lmmobject,h,X,false,REML);
+    //q  = len(beta);
+    //ts,ps = lmmobject.tstat(beta[q-1],betaVAR[q-1,q-1],sigma,q);
 
-//    //debug("ts=%0.3f, ps=%0.3f, heritability=%0.3f, sigma=%0.3f, LL=%0.5f" % (ts,ps,h,sigma,L))
-//    if(returnBeta){return ts,ps,beta[q-1].sum(),betaVAR[q-1,q-1].sum()*sigma;}
-//    //return ts,ps;
-//  }
+    //debug("ts=%0.3f, ps=%0.3f, heritability=%0.3f, sigma=%0.3f, LL=%0.5f" % (ts,ps,h,sigma,L))
+    //if(returnBeta){return ts,ps,beta[q-1].sum(),betaVAR[q-1,q-1].sum()*sigma;}
+    //return ts,ps;
+  }
 
-//  void tstat(ref LMM2 lmmobject, double beta, double var, double sigma, double q, bool log=false){
+  void tstat(ref LMM2 lmmobject, double beta, double var, double sigma, double q, bool log=false){
 
-//    //"""
-//    //   Calculates a t-statistic and associated p-value given the estimate of beta and its standard error.
-//    //   This is actually an F-test, but when only one hypothesis is being performed, it reduces to a t-test.
-//    //"""
+    //"""
+    //   Calculates a t-statistic and associated p-value given the estimate of beta and its standard error.
+    //   This is actually an F-test, but when only one hypothesis is being performed, it reduces to a t-test.
+    //"""
 
-//    ts = beta / np.sqrt(var * sigma);
-//    //#ps = 2.0*(1.0 - stats.t.cdf(np.abs(ts), lmmobject.N-q))
-//    //# sf == survival function - this is more accurate -- could also use logsf if the precision is not good enough
-//    if(log){
-//      ps = 2.0 + (stats.t.logsf(np.abs(ts), lmmobject.N-q));
-//    }
-//    else{
-//      ps = 2.0*(stats.t.sf(np.abs(ts), lmmobject.N-q));
-//    }
-//    if(!(len(ts) == 1) || !(len(ps) == 1)){
-//      //raise Exception("Something bad happened :(");
-//    }
-//    return ts.sum(),ps.sum();
-//  }
+    double[] ts; //= beta / std.math.sqrt(var * sigma);
+    //#ps = 2.0*(1.0 - stats.t.cdf(np.abs(ts), lmmobject.N-q))
+    //# sf == survival function - this is more accurate -- could also use logsf if the precision is not good enough
+    double[] ps;
+    if(log){
+      //ps;// = 2.0 + (stats.t.logsf(np.abs(ts), lmmobject.N-q));
+    }
+    else{
+      //ps;// = 2.0*(stats.t.sf(np.abs(ts), lmmobject.N-q));
+    }
+    if(!(ts.length == 1) || !(ps.length == 1)){
+      writeln("Something bad happened :(");
+    }
+    //return ts.sum(),ps.sum();
+  }
 
 ////  void plotFit(lmmobject,color="b-",title=""){
 

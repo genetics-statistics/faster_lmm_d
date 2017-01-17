@@ -6,7 +6,6 @@ import cblas;
 import lapack;
 
 dmatrix matrixMult(ref dmatrix lha, ref dmatrix rha){
-	writeln("In matMul");
   auto C = new double[lha.shape[0]*rha.shape[1]];
   gemm(Order.RowMajor, Transpose.NoTrans, Transpose.NoTrans, lha.shape[0], rha.shape[1], lha.shape[1], /*no scaling*/
     1,lha.elements.ptr, lha.shape[1], rha.elements.ptr, rha.shape[1], /*no addition*/0, C.ptr, rha.shape[1]);
@@ -15,7 +14,6 @@ dmatrix matrixMult(ref dmatrix lha, ref dmatrix rha){
 }
 
 dmatrix matrixMultT(ref dmatrix lha, ref dmatrix rha){
-  writeln("In matMulTranspose");
   double[] A = [1, 0, 0,
                   0, 1, 1];
   double[] B = [1, 0,
@@ -29,7 +27,6 @@ dmatrix matrixMultT(ref dmatrix lha, ref dmatrix rha){
 }
 
 dmatrix matrixTranspose(dmatrix input){
-  writeln("In matrixTranspose");
   auto matrix = new double[input.shape[0]*input.shape[1]];
   double[] output = new double[input.shape[0]*input.shape[1]];
   int index = 0;
@@ -201,7 +198,7 @@ dmatrix inverse(dmatrix input){
   int[] resshape = [input.shape[0],input.shape[0]];
   //writeln("After getrf");
   //writeln(output);
-  writeln(ipiv);
+  //writeln(ipiv);
   LAPACKE_dgetri(101, input.shape[0],elements.ptr, input.shape[0], ipiv.ptr);
   //writeln("After getri");
   //writeln(input.elements);
