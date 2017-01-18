@@ -4,22 +4,20 @@ import std.stdio;
 import simplelmm.lmm2;
 import simplelmm.dmatrix;
 
-void compute_snp(int j,int n,double[] snp_ids,LMM2 lmmobject, bool REML,double q){
+void compute_snp(int j,int n,double[] snps,LMM2 lmmobject, bool REML,double q){
   writeln("In compute_snp");
   //writeln(snp_ids);
   double[] result;
-  foreach(snp_id;snp_ids){
+  int rows = cast(int)(snps.length)/n;
+  for(int i = 0; i< rows; i++){
+    double[] snp = snps[i*j..(i+1)*j];
     //snp,id = snp_id;
-    //dmatrix x = snp.reshape((n,1)); //all the SNPs
-    //ts,ps,beta,betaVar = lmm2.association(x,REML=REML,returnBeta=True);
+    dmatrix x = dmatrix([n,1], snp); //all the SNPs
+    //ts,ps,beta,betaVar = 
+    double a = 0;
+    lmm2association(lmmobject, x, a, REML,true);
     //result.append( (ts,ps) );
   }
-  //if(!q){
-  //  q = compute_snp.q;
-  //}
-  //q.put([j,result]);
-  //return j;
-
 }
 
 //void f_init(q){
@@ -91,11 +89,9 @@ void gwas(double[] Y, ref dmatrix G, ref dmatrix K, bool restricted_max_likeliho
   int jobs_running = 0;
   int jobs_completed = 0;
    writeln(collect);
-  foreach(snp; G.elements){
-    
-
-    writeln(collect);
-    double snp_id = snp;//(snp,"SNPID");
+  for(int i = 0; i< cast(int)G.shape[0]; i++){
+    double[] snp = G.elements[cast(int)i*G.shape[1]..cast(int)(i+1)*G.shape[1]];
+    string snp_id = "SNPID";
     count += 1;
     if(count % 1000 == 0){
 
@@ -104,14 +100,14 @@ void gwas(double[] Y, ref dmatrix G, ref dmatrix K, bool restricted_max_likeliho
       if(cpu_num == 1){
         writeln("Running on 1 THREAD");
 
-        //compute_snp(job,n,collect,lmm2,reml,q);
+        compute_snp(job,n,collect,lmm2,reml,q);
         //double[] collect;
         //j,lst = q.get();
         double j;
         double[] lst;
         //info("Job "+str(j)+" finished");
         jobs_completed += 1;
-        writeln("GWAS2",jobs_completed,snps/1000);
+        writeln("GWAS2 ",jobs_completed, " ", snps/1000);
         res~=lst;
       }
   //    else{
@@ -138,7 +134,7 @@ void gwas(double[] Y, ref dmatrix G, ref dmatrix K, bool restricted_max_likeliho
       //}
           
     }
-    collect~=snp_id; // add SNP to process in batch
+    collect~=snp; // add SNP to process in batch
   }
   //writeln("Here goes res");
   //writeln(res);

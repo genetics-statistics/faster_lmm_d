@@ -312,6 +312,8 @@ struct LMM2{
       //double LLsum = sumArray(LL);
       //# info(["beta=",beta[0][0]," sigma=",sigma[0][0]," LL=",LLsum])
       //return LLsum,beta,sigma,XX_i;
+      writeln("Here goes LL");
+      writeln(LL);
       return LL;
   }
 
@@ -409,7 +411,7 @@ struct LMM2{
     writeln("Lmm2 fit done");
   }
 
-  void association(ref LMM2 lmmobject, ref dmatrix X, ref double h, bool stack=true, bool REML=true, bool returnBeta=false){
+  void lmm2association(ref LMM2 lmmobject, ref dmatrix X, ref double h, bool stack=true, bool REML=true, bool returnBeta=false){
     //"""
     //  Calculates association statitics for the SNPs encoded in the vector X of size n.
     //  If h is None, the optimal h stored in optH is used.
@@ -428,13 +430,14 @@ struct LMM2{
       dmatrix kvet = matrixTranspose(lmmobject.Kve);
       dmatrix m = matrixMult(kvet,X);
       //# writeln( "m=",m);
-      //m = m[sval,0];
-      //lmmobject.X0t_stack[sval,(lmmobject.q)] = m;
+      //m = getDfromAcc(m,[sval,0]);
+      //getDfromAcc(lmmobject.X0t_stack[sval,(lmmobject.q)]) = m;
       X = lmmobject.X0t_stack;
     }
     if(h.init == false){h = lmmobject.optH;}
 
     //L,beta,sigma,betaVAR = 
+    writeln("In lmm2association");
     getLL(lmmobject,h,X,false,REML);
     //q  = len(beta);
     //ts,ps = lmmobject.tstat(beta[q-1],betaVAR[q-1,q-1],sigma,q);
