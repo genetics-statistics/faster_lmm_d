@@ -6,12 +6,10 @@ import simplelmm.dmatrix;
 
 void compute_snp(int j,int n,double[] snps,LMM2 lmmobject, bool REML,double q){
   writeln("In compute_snp");
-  //writeln(snp_ids);
   double[] result;
   int rows = cast(int)(snps.length)/n;
   for(int i = 0; i< rows; i++){
     double[] snp = snps[i*j..(i+1)*j];
-    //snp,id = snp_id;
     dmatrix x = dmatrix([n,1], snp); //all the SNPs
     //ts,ps,beta,betaVar = 
     double a = 0;

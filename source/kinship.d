@@ -112,7 +112,7 @@ dmatrix kinshipComp(dmatrix G, int computeSize=1000){
     //j,x = q.get()
     dmatrix x;
     dmatrix K_j = x;
-    //K = addDmatrix(K,K_j);
+    K = addDmatrix(K,K_j);
   }
 
 

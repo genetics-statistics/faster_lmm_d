@@ -129,27 +129,11 @@ void eigh(dmatrix input,ref dmatrix eigenvalue, ref dmatrix dvl, ref dmatrix dvr
   double[] wi = new double[input.shape[0]];
   int n = input.shape[0];
   LAPACKE_dgeev(101, 'V', 'V', n, elements.ptr, n, w.ptr, wi.ptr, vl.ptr, n, vr.ptr, n);
-//  writeln(vl);
-//  writeln(vr);
-  //writeln(w);
-  //writeln(wi);
   eigenvalue = dmatrix([input.shape[0],1], w);
   dvl = dmatrix(input.shape, vl);
   dvr = dmatrix(input.shape, vr);
 }
 
-//jobvl, # compute left eigenvectors of A?
-//                                     jobvr, # compute right eigenvectors of A? (left eigenvectors of A**T)
-//                                     n, # order of the matrix
-//                                     temporary_matrix,# input matrix (used as work)
-//                                     n, # leading dimension of matrix
-//                                     eigenvalues,# real part of computed eigenvalues
-//                                     imag_eigenvalues,# imag part of computed eigenvalues
-//                                     left_output,     # left eigenvectors, if applicable
-//                                     n, # leading dimension of left_output
-//                                     right_output,    # right eigenvectors, if applicable
-//                                     n, # leading dimension of right_output
-//                                     2*n)
 
 double det(dmatrix input){
   double[] narr = input.elements.dup;
@@ -169,8 +153,6 @@ double det(dmatrix input){
   }
   int min = input.shape[0];
   if(input.shape[0]> input.shape[1]){min = input.shape[1];}
-  //writeln(pivot);
-  //writeln("min is", min);
   for(int i =0;i< min; i++){
     prod *= narr[input.shape[0]*i + i];
   }
@@ -184,23 +166,14 @@ int[] getrf(double[] arr, int[] shape){
 }
 
 dmatrix inverse(dmatrix input){
-
-    //int *IPIV = new int[N+1];
   double[] elements= input.elements.dup;
-  //writeln(input.elements);
   int LWORK = input.shape[0]*input.shape[0];      
   double[] WORK = new double[input.shape[0]*input.shape[0]];
   auto ipiv = new int[input.shape[0]+1];
-  //writeln("In matrix inverse");
   auto result = new double[input.shape[0]*input.shape[1]];
   int info;
   int output = LAPACKE_dgetrf(101, input.shape[0],input.shape[0],elements.ptr,input.shape[0],ipiv.ptr);
   int[] resshape = [input.shape[0],input.shape[0]];
-  //writeln("After getrf");
-  //writeln(output);
-  //writeln(ipiv);
   LAPACKE_dgetri(101, input.shape[0],elements.ptr, input.shape[0], ipiv.ptr);
-  //writeln("After getri");
-  //writeln(input.elements);
   return dmatrix(input.shape, elements);
-} 
+}

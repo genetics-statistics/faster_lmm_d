@@ -204,7 +204,6 @@ struct LMM2{
     //      if self.verbose: sys.stderr.write("Total time: %0.3f\n" % (end - begin))
     //      print("sum(Kva),sum(Kve)=",sum(Kva),sum(Kve))
 
-    //dmatrix Kva,Kve; 
     kvakve(K, Kva, Kve);
 
     this.init = true;
@@ -275,11 +274,11 @@ struct LMM2{
     //writeln("Out of getMLSoln");
   }
 
-  void LL_brent(ref LMM2 lmmobject, ref double h, ref dmatrix X, ref bool REML){
+  double LL_brent(ref LMM2 lmmobject, ref double h, ref dmatrix X, ref bool REML){
       //#brent will not be bounded by the specified bracket.
       //# I return a large number if we encounter h < 0 to avoid errors in LL computation during the search.
-    //if(h < 0){return 1e6;}
-    //return -lmmobject.LL(h,X,stack=False,REML=REML)[0];
+    if(h < 0){return 1e6;}
+    return -lmmobject.getLL(h,X,false,REML);
   }
 
   double getLL(ref LMM2 lmmobject, ref double h, ref dmatrix X, bool stack=true, bool REML=false){
@@ -317,6 +316,10 @@ struct LMM2{
       return LL;
   }
 
+  double optimizeBrent(){
+    return 0;
+  }
+
   double getMax(ref LMM2 lmmobject, ref dmatrix H, ref dmatrix X, bool REML=false){
 
     //"""
@@ -327,34 +330,30 @@ struct LMM2{
 
     //"""
     int n = cast(int)lmmobject.LLs.shape[0];
-    //.length;
     double[] HOpt;
     for(int i=1; i< n-2; i++){
       if(lmmobject.LLs.elements[i-1] < lmmobject.LLs.elements[i] && lmmobject.LLs.elements[i] > lmmobject.LLs.elements[i+1]){
-        //HOpt.append ~= optimize.brent(lmmobject.LL_brent,args=(X,REML),brack=(H[i-1],H[i+1])));
+        //HOpt ~= optimizeBrent(lmmobject.LL_brent,X,REML);
+          //,brack=(H[i-1],H[i+1])));
         if(std.math.isNaN(HOpt[$])){
           HOpt[$] = H.elements[i-1];
         }
-        //#if np.isnan(HOpt[-1]): HOpt[-1] = lmmobject.LLs[i-1]
-        //#if np.isnan(HOpt[-1][0]): HOpt[-1][0] = [lmmobject.LLs[i-1]]
       }
     }
 
     if(HOpt.length > 1){
       //if(self.verbose){sys.stderr.write("NOTE: Found multiple optima.  Returning first...\n");}
-      return 1;//HOpt[0];
+      return HOpt[0];
     }
     else if(HOpt.length == 1){
-      return 1;//HOpt[0];
+      return HOpt[0];
     }
-    //else if(self.LLs[0] > self.LLs[n-1]){
-    //  return 0;//H[0];
-    //}
+    else if(lmmobject.LLs.elements[0] > lmmobject.LLs.elements[n-1]){
+      return H.elements[0];
+    }
     else{
-      //return H.elements[n-1];
-      return 0;
+      return H.elements[n-1];
     }
-    //return 1;
   }
 
   void lmm2fit(ref LMM2 lmmobject,ref dmatrix X, double ngrids=100, bool REML=true){
@@ -470,36 +469,35 @@ struct LMM2{
     //return ts.sum(),ps.sum();
   }
 
-////  void plotFit(lmmobject,color="b-",title=""){
+  void plotFit( LMM2 lmmobject, string color="b-", string title=""){
 
-////    //"""
-////    //   Simple function to visualize the likelihood space.  It takes the LLs
-////    //   calcualted over a grid and normalizes them by subtracting off the mean and exponentiating.
-////    //   The resulting "probabilities" are normalized to one and plotted against heritability.
-////    //   This can be seen as an approximation to the posterior distribuiton of heritability.
+    //"""
+    //   Simple function to visualize the likelihood space.  It takes the LLs
+    //   calcualted over a grid and normalizes them by subtracting off the mean and exponentiating.
+    //   The resulting "probabilities" are normalized to one and plotted against heritability.
+    //   This can be seen as an approximation to the posterior distribuiton of heritability.
 
-////    //   For diagnostic purposes this lets you see if there is one distinct maximum or multiple
-////    //   and what the variance of the parameter looks like.
-////    //"""
+    //   For diagnostic purposes this lets you see if there is one distinct maximum or multiple
+    //   and what the variance of the parameter looks like.
+    //"""
 
-////    mx = lmmobject.LLs.max();
-////    p = np.exp(lmmobject.LLs - mx);
-////    p = p/p.sum();
+    //mx = lmmobject.LLs.max();
+    //p = np.exp(lmmobject.LLs - mx);
+    //p = p/p.sum();
 
-////    pl.plot(lmmobject.H,p,color);
-////    pl.xlabel("Heritability");
-////    pl.ylabel("Probability of data");
-////    pl.title(title);
-////  }
+    //pl.plot(lmmobject.H,p,color);
+    //pl.xlabel("Heritability");
+    //pl.ylabel("Probability of data");
+    //pl.title(title);
+  }
 
-//  void meanAndVar(ref LMM2 lmmobject){
-//    mx = lmmobject.LLs.max();
-//    p = np.exp(lmmobject.LLs - mx);
-//    p = p/p.sum();
+  void meanAndVar(ref LMM2 lmmobject){
+    //mx = lmmobject.LLs.max();
+    //p = np.exp(lmmobject.LLs - mx);
+    //p = p/p.sum();
 
-//    mn = (lmmobject.H * p).sum();
-//    vx = ((lmmobject.H - mn)**2 * p).sum();
+    //mn = (lmmobject.H * p).sum();
+    //vx = ((lmmobject.H - mn)**2 * p).sum();
 
-//    return mn,vx;
-//  }
-////}
+    //return mn,vx;
+  }
