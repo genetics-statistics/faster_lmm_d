@@ -140,35 +140,36 @@ void gwas(double[] Y, ref dmatrix G, ref dmatrix K, bool restricted_max_likeliho
   //writeln(res);
 
   //////debug("count=%i running=%i collect=%i" % (count,jobs_running,len(collect)))
-  //if (collect.length>0){
-  //  job += 1;
-  //  //debug("Collect final batch size %i job %i @%i: " % (len(collect), job, count));
-  //  if(cpu_num == 1){
-  //    //compute_snp(job,n,collect,lmm2,reml,q);
-  //  }
-  //  else{
-  //    //p.apply_async(compute_snp,(job,n,collect,lmm2,reml));
-  //  }
+  if (collect.length>0){
+    job += 1;
+    //debug("Collect final batch size %i job %i @%i: " % (len(collect), job, count));
+    if(cpu_num == 1){
+      compute_snp(job,n,collect,lmm2,reml,q);
+    }
+    else{
+      //p.apply_async(compute_snp,(job,n,collect,lmm2,reml));
+    }
         
-  //  jobs_running += 1;
-  //  for(int j=0; j < jobs_running; j++){
-  //    double[] lst;
-  //    //j,lst = q.get(True,15);// time out
-  //    writeln("Job "," finished");
-  //    jobs_running -= 1;
-  //    //debug("jobs_running cleanup (-) %d" % jobs_running);
-  //    jobs_completed += 1;
-  //    //progress("GWAS2",jobs_completed,snps/1000);
-  //    res~=lst;
-  //  }
-  //}
+    jobs_running += 1;
+    for(int j=0; j < jobs_running; j++){
+      double[] lst;
+      //j,lst = q.get(True,15);// time out
+      writeln("Job "," finished");
+      jobs_running -= 1;
+      //debug("jobs_running cleanup (-) %d" % jobs_running);
+      jobs_completed += 1;
+      writeln("GWAS2 ",jobs_completed," ", snps/1000);
+      res~=lst;
+    }
+  }
   ////mprint("Before sort",[res1[0] for res1 in res]);
   ////res = sorted(res,key=lambda x: x[0]);
   ////mprint("After sort",[res1[0] for res1 in res]);
   ////info([len(res1[1]) for res1 in res]);
   double[] ts;
   double[] ps;
+  //foreach
   ////ts = [item[0] for j,res1 in res for item in res1];
   ////ps = [item[1] for j,res1 in res for item in res1];
-  //return ts,ps;
+  //writeln(ts,ps);
 }
