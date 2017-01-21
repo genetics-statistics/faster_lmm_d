@@ -213,11 +213,11 @@ struct LMM2{
     this.N = K.shape[0];
     this.Y =  dmatrix([K.shape[0],1] ,Y); // .reshape((self.N,1))
     this.X0 = X0;
-    //bool[] com = compareGt(self.Kva, 1e-6);
-    //if(sumBool(com)){
+    bool[] com = compareGt(Kva, 1e-6);
+    if(sum(com)){
       //if self.verbose: sys.stderr.write("Cleaning %d eigen values\n" % (sum(self.Kva < 0)))
-      //self.Kva[self.Kva < 1e-6] = 1e-6
-    //}
+      //Kva[self.Kva < 1e-6] = 1e-6
+    }
     lmm2transform(this);
 
   }
@@ -308,7 +308,7 @@ struct LMM2{
         //q*np.log(2.0*np.pi*sigma) + np.log(det(matrixMultT(X.T))) - np.log(det(XX));
         LL = LL + 0.5*LL_REML_part;
       }
-      //double LLsum = sumArray(LL);
+      //double LLsum = sum(LL);
       //# info(["beta=",beta[0][0]," sigma=",sigma[0][0]," LL=",LLsum])
       //return LLsum,beta,sigma,XX_i;
       writeln("Here goes LL");

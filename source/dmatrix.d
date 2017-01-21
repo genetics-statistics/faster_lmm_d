@@ -86,10 +86,6 @@ dmatrix onesMatrix(int rows, int cols){
   return dmatrix([rows, cols], elements);
 }
 
-double gethstack(dmatrix a, dmatrix b){
-  return 1;
-}
-
 double sumArray(double[] arr){
   return 1;  
 }
@@ -102,4 +98,17 @@ dmatrix horizontallystack(dmatrix a, dmatrix b){
     arr ~= b.elements[(b.shape[1]*i)..(b.shape[1]*(i+1))];
   }
   return dmatrix([a.shape[0], a.shape[1]+b.shape[1]], arr);
+}
+
+bool[] compareGt(dmatrix lha, double val){
+  bool[] result;
+  foreach(element; lha.elements){
+    if(element > val){
+      result ~= true;
+    }
+    else{
+      result ~= false;
+    }
+  }
+  return result;
 }
