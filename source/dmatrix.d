@@ -10,6 +10,10 @@ struct dmatrix{
     elements = e;
     init = true;
   }
+
+  double acc(int row, int col){
+    return this.elements[row*this.shape[0]+col];
+  }
 }
 
 dmatrix newDmatrix(dmatrix inDmat, int start, int end){

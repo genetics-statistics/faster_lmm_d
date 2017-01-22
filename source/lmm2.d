@@ -352,6 +352,7 @@ struct LMM2{
       return H.elements[0];
     }
     else{
+      writeln(H);
       return H.elements[n-1];
     }
   }
@@ -392,14 +393,14 @@ struct LMM2{
     }
     L = dmatrix([cast(int)elm.length,1],elm);
     lmmobject.LLs = L;
-
-    double hmax = getMax(lmmobject, H, X, REML);
+    lmmobject.H = dmatrix([cast(int)Harr.length,1],Harr);
+    double hmax = getMax(lmmobject, lmmobject.H, X, REML);
     //L,beta,sigma,betaSTDERR = 
     double beta;
     double[] sigma;
     getLL(lmmobject,hmax,X,false,REML);
 
-    lmmobject.H = H;
+    
     //false.optH = hmax.sum();
     lmmobject.optLL = L;
     lmmobject.optBeta = beta;
@@ -429,8 +430,10 @@ struct LMM2{
       dmatrix kvet = matrixTranspose(lmmobject.Kve);
       dmatrix m = matrixMult(kvet,X);
       //# writeln( "m=",m);
-      //m = getDfromAcc(m,[sval,0]);
+      m.shape = [m.shape[1], m.shape[0]];
       //getDfromAcc(lmmobject.X0t_stack[sval,(lmmobject.q)]) = m;
+      writeln("X0t_stack goes herw");
+      writeln(lmmobject.X0t_stack);
       X = lmmobject.X0t_stack;
     }
     if(h.init == false){h = lmmobject.optH;}
