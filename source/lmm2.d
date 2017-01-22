@@ -154,7 +154,7 @@ struct LMM2{
   double N;
 
   dmatrix optLL;
-  double optBeta;
+  dmatrix optBeta;
   double optSigma;
   dmatrix LLs;
   double optH;
@@ -243,7 +243,7 @@ struct LMM2{
     lmmobject.q = lmmobject.X0t.shape[1];
   }
 
-  void getMLSoln(ref LMM2 lmmobject,ref double h, ref dmatrix X){
+  void getMLSoln(ref dmatrix beta, ref double sigma,ref dmatrix Q, ref dmatrix XX_i, ref dmatrix XX, ref LMM2 lmmobject,ref double h, ref dmatrix X){
 
     //"""
     //   Obtains the maximum-likelihood estimates for the covariate coefficients (beta),
@@ -257,18 +257,18 @@ struct LMM2{
     double S = 1.0;
     dmatrix XtT = matrixTranspose(X);
     dmatrix Xt = multiplyDmatrixNum(XtT, S);
-    dmatrix XX = matrixMult(Xt,X);
-    dmatrix XX_i = inverse(XX);
+    XX = matrixMult(Xt,X);
+    XX_i = inverse(XX);
     dmatrix temp = matrixMult(XX_i,Xt);
-    dmatrix beta =  matrixMult(temp,lmmobject.Yt);
+    beta =  matrixMult(temp,lmmobject.Yt);
     dmatrix temp2 = matrixMult(X,beta);
     dmatrix Yt = subDmatrix(lmmobject.Yt, temp2);
     dmatrix YtT = matrixTranspose(Yt);
     dmatrix YtTS = multiplyDmatrixNum(YtT, S);  
-    dmatrix Q = matrixMult(YtTS,Yt);
+    Q = matrixMult(YtTS,Yt);
     //writeln("Q goes here");
     //writeln(Q);
-    double sigma = Q.elements[0] * 1.0 / (cast(double)(lmmobject.N) - cast(double)(X.shape[1]));
+    sigma = Q.elements[0] * 1.0 / (cast(double)(lmmobject.N) - cast(double)(X.shape[1]));
     writeln(sigma);
     //return beta,sigma,Q,XX_i,XX;
     //writeln("Out of getMLSoln");
@@ -278,12 +278,13 @@ struct LMM2{
       //#brent will not be bounded by the specified bracket.
       //# I return a large number if we encounter h < 0 to avoid errors in LL computation during the search.
     if(h < 0){return 1e6;}
-    double beta,sigma,betaVAR;
-    double ll2;
-    return -getLL(ll2, beta,sigma,betaVAR, lmmobject, h,X,false,REML);
+    dmatrix beta;
+    double sigma,betaVAR;
+    dmatrix l;
+    return -getLL(l, beta,sigma,betaVAR, lmmobject, h,X,false,REML);
   }
 
-  double getLL(double L, double beta, double sigma, double betaVAR, ref LMM2 lmmobject, ref double h, ref dmatrix X, bool stack=true, bool REML=false){
+  double getLL(ref dmatrix L, ref dmatrix beta, ref double sigma, ref double betaVAR, ref LMM2 lmmobject, ref double h, ref dmatrix X, bool stack=true, bool REML=false){
       //"""
       //   Computes the log-likelihood for a given heritability (h).  If X==None, then the
       //   default X0t will be used.  If X is set and stack=True, then X0t will be matrix concatenated with
@@ -299,9 +300,10 @@ struct LMM2{
         X = lmmobject.X0t_stack;
       }
       double n = cast(double)lmmobject.N;
-      //double q = cast(double)X.shape[1];
-      //beta,sigma,Q,XX_i,XX = 
-      lmmobject.getMLSoln(h,X);
+      double q = cast(double)X.shape[1];
+      //beta,sigma,Q, = 
+      dmatrix Q,XX_i,XX;
+      getMLSoln(beta,sigma,Q,XX_i,XX, lmmobject, h,X);
       double LL  = n*std.math.log(2*std.math.PI) + sum(logDmatrix((addDMatrixNum(multiplyDmatrixNum(lmmobject.Kva,h),(1-h)))).elements)+ n 
       + std.math.log(1.0/n * 1); //Q
       writeln("Here goes LL");
@@ -312,7 +314,8 @@ struct LMM2{
 
       if(REML){
         double LL_REML_part = 0;
-        //LL = q*std.math.log(2.0*std.math.PI*sigma) + det(matrixMultT(X.T)) - std.math.log(det(XX));
+        dmatrix XT = matrixTranspose(X);
+        LL = q*std.math.log(2.0*std.math.PI*sigma) + det(matrixMult(X,XT)) - std.math.log(det(XX));
         LL = LL + 0.5*LL_REML_part;
       }
       //double LLsum = sum(LL);
@@ -396,20 +399,20 @@ struct LMM2{
     //L= np.array([lmmobject.LL(h,X,stack=False,REML=REML)[0] for h in H]);a
     double[] elm;
     foreach(h; Harr){
-      double L2, beta,sigma,betaVAR;
-      elm ~= getLL(L2, beta,sigma,betaVAR,lmmobject,h,X,false,REML);
+      dmatrix  beta;
+      double sigma,betaVAR;
+      elm ~= getLL(L, beta,sigma,betaVAR,lmmobject,h,X,false,REML);
     }
     L = dmatrix([cast(int)elm.length,1],elm);
     lmmobject.LLs = L;
     lmmobject.H = dmatrix([cast(int)Harr.length,1],Harr);
     double hmax = getMax(lmmobject, lmmobject.H, X, REML);
     //L,beta,sigma,betaSTDERR = 
-    double beta;
+    dmatrix beta;
     double[] sigma2;
     double sigma;
     double betaVAR;
-    double L2;
-    getLL(L2, beta,sigma,betaVAR,lmmobject,hmax,X,false,REML);
+    getLL(L, beta,sigma,betaVAR,lmmobject,hmax,X,false,REML);
 
     
     //false.optH = hmax.sum();
@@ -447,7 +450,9 @@ struct LMM2{
     }
     if(h.init == false){h = lmmobject.optH;}
 
-    double L,beta,sigma,betaVAR; 
+    dmatrix beta;
+    double sigma,betaVAR; 
+    dmatrix L;
     writeln("In lmm2association");
     getLL(L,beta,sigma,betaVAR, lmmobject,h,X,false,REML);
     //q  = len(beta);
@@ -458,7 +463,7 @@ struct LMM2{
     //return ts,ps;
   }
 
-  void tstat(ref LMM2 lmmobject, double beta, double var, double sigma, double q, bool log=false){
+  void tstat(ref LMM2 lmmobject, dmatrix beta, double var, double sigma, double q, bool log=false){
 
     //"""
     //   Calculates a t-statistic and associated p-value given the estimate of beta and its standard error.
