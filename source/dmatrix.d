@@ -1,4 +1,5 @@
 module simplelmm.dmatrix;
+import std.math;
 
 struct dmatrix{
   int[] shape;
@@ -18,6 +19,13 @@ struct dmatrix{
 
 dmatrix newDmatrix(dmatrix inDmat, int start, int end){
   return inDmat;
+}
+dmatrix logDmatrix(dmatrix inDmat){
+  double[] elements;
+  for(int i = 0; i < inDmat.shape[0]*inDmat.shape[1]; i++){
+    elements ~= log(inDmat.elements[i]);
+  }
+  return dmatrix(inDmat.shape, elements);
 }
 
 dmatrix addDmatrix(dmatrix lha, dmatrix rha){
@@ -62,6 +70,14 @@ dmatrix multiplyDmatrixNum(dmatrix input, double num){
   double[] elements;
   for(int i = 0; i < input.shape[0]*input.shape[1]; i++){
     elements ~= input.elements[i] * num;
+  }
+  return dmatrix(input.shape, elements);
+}
+
+dmatrix addDMatrixNum(dmatrix input, double num){
+  double[] elements;
+  for(int i = 0; i < input.shape[0]*input.shape[1]; i++){
+    elements ~= input.elements[i] + num;
   }
   return dmatrix(input.shape, elements);
 }
