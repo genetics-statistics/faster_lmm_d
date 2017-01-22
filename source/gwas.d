@@ -65,9 +65,10 @@ void gwas(double[] Y, ref dmatrix G, ref dmatrix K, bool restricted_max_likeliho
   dmatrix X;
   if(!refit){
     writeln("Computing fit for null model");
-    // = 
-    lmm2fit(lmm2, X,100,true); // # follow GN model in run_other;
-    //writefln("heritability=%0.3f, sigma=%0.3f, LL=%0.5f" % (lmm2.optH,lmm2.optSigma, fit_LL));
+    double fit_hmax,fit_sigma;
+    dmatrix fit_beta, fit_LL;
+    lmm2fit(fit_hmax,fit_beta,fit_sigma,fit_LL, lmm2, X,100,true); // # follow GN model in run_other;
+    writefln("heritability= ", lmm2.optH, " sigma= ", lmm2.optSigma, " LL= ", fit_LL);
   }
 
   double[] res;

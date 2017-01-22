@@ -319,7 +319,7 @@ struct LMM2{
         LL = LL + 0.5*LL_REML_part;
       }
       //double LLsum = sum(LL);
-      //# info(["beta=",beta[0][0]," sigma=",sigma[0][0]," LL=",LLsum])
+      writeln("beta=",beta.acc(0,0)," sigma=",sigma," LL=",LL);
       //return LLsum,beta,sigma,XX_i;
       writeln("Here goes LL");
       writeln(LL);
@@ -367,7 +367,7 @@ struct LMM2{
     }
   }
 
-  void lmm2fit(ref LMM2 lmmobject,ref dmatrix X, double ngrids=100, bool REML=true){
+  void lmm2fit(ref double fit_hmax, ref dmatrix fit_beta, ref double fit_sigma, ref dmatrix fit_LL, ref LMM2 lmmobject,ref dmatrix X, double ngrids=100, bool REML=true){
 
     //"""
     //   Finds the maximum-likelihood solution for the heritability (h) given the current parameters.
@@ -389,14 +389,10 @@ struct LMM2{
     }
     dmatrix H;
     double[] Harr;
-    //= np.array(range(ngrids)) / float(ngrids);
     for(int m = 0; m < ngrids; m++){
       Harr ~= m / cast(double)ngrids;
     }
-    //writeln("This is H");
-    //writeln(Harr);
     dmatrix L;
-    //L= np.array([lmmobject.LL(h,X,stack=False,REML=REML)[0] for h in H]);a
     double[] elm;
     foreach(h; Harr){
       dmatrix  beta;
@@ -422,6 +418,9 @@ struct LMM2{
 
     //# debug(["hmax",hmax,"beta",beta,"sigma",sigma,"LL",L])
     //return hmax,beta,sigma,L;
+    fit_beta = beta;
+    fit_sigma = sigma;
+    fit_LL = L;
     writeln("Lmm2 fit done");
   }
 
@@ -455,32 +454,34 @@ struct LMM2{
     dmatrix L;
     writeln("In lmm2association");
     getLL(L,beta,sigma,betaVAR, lmmobject,h,X,false,REML);
-    //q  = len(beta);
-    //ts,ps = lmmobject.tstat(beta[q-1],betaVAR[q-1,q-1],sigma,q);
+    int q  = cast(int)beta.elements.length;
+
+    dmatrix ts,ps;
+    //tstat(ts, ps, beta[q-1],betaVAR.acc(q-1,q-1),sigma,q);
+    tstat(ts, ps, lmmobject, beta, betaVAR,sigma,q);
 
     //debug("ts=%0.3f, ps=%0.3f, heritability=%0.3f, sigma=%0.3f, LL=%0.5f" % (ts,ps,h,sigma,L))
     //if(returnBeta){return ts,ps,beta[q-1].sum(),betaVAR[q-1,q-1].sum()*sigma;}
     //return ts,ps;
   }
 
-  void tstat(ref LMM2 lmmobject, dmatrix beta, double var, double sigma, double q, bool log=false){
+  void tstat(ref dmatrix ts, ref dmatrix ps, ref LMM2 lmmobject, dmatrix beta, double var, double sigma, double q, bool log=false){
 
     //"""
     //   Calculates a t-statistic and associated p-value given the estimate of beta and its standard error.
     //   This is actually an F-test, but when only one hypothesis is being performed, it reduces to a t-test.
     //"""
 
-    double[] ts; //= beta / std.math.sqrt(var * sigma);
+    ts = divideDmatrixNum( beta ,std.math.sqrt(var*sigma));
     //#ps = 2.0*(1.0 - stats.t.cdf(np.abs(ts), lmmobject.N-q))
     //# sf == survival function - this is more accurate -- could also use logsf if the precision is not good enough
-    double[] ps;
     if(log){
       //ps;// = 2.0 + (stats.t.logsf(np.abs(ts), lmmobject.N-q));
     }
     else{
       //ps;// = 2.0*(stats.t.sf(np.abs(ts), lmmobject.N-q));
     }
-    if(!(ts.length == 1) || !(ps.length == 1)){
+    if(!(ts.elements.length == 1) || !(ps.elements.length == 1)){
       writeln("Something bad happened :(");
     }
     //return ts.sum(),ps.sum();
