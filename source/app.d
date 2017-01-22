@@ -13,10 +13,13 @@ import simplelmm.gwas;
 //import simplelmm.phenotype;
 import simplelmm.dmatrix;
 import simplelmm.optmatrix;
+import simplelmm.opencl.add;
 
 void main(string[] args)
 {
   // Main routine
+  tryAdd();
+
   dmatrix x = dmatrix([3,3],[-2,2,-3,
                              -1,1,3,
                               2,0,-1 ]);
