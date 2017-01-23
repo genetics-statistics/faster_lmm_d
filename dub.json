@@ -7,7 +7,8 @@
 		"dyaml": "~>0.5.0",
 		"cblas": "~>1.0.0",
 		"lapack": "~>0.1.0",
-		"opencl": "~>1.1.3"
+		"opencl": "~>1.1.3",
+		"dstats": "~>1.0.3"
 	},
 	"description": "Experiment lmm",
 	"copyright": "Copyright © 2016, prasun",

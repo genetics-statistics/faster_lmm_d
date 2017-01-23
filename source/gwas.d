@@ -3,6 +3,7 @@ import std.parallelism : taskPool;
 import std.stdio;
 import simplelmm.lmm2;
 import simplelmm.dmatrix;
+import dstats.distrib;
 
 void compute_snp(int j,int n,double[] snps,LMM2 lmmobject, bool REML,double q){
   writeln("In compute_snp");
