@@ -21,7 +21,7 @@ bool[] negateBool(bool[] vector){
 double sum(double[] vector){
   double result = 0;
   foreach(element;vector){result+=element;}
-	return result;
+  return result;
 }
 
 int sum(bool[] vector){
@@ -82,4 +82,13 @@ double[] rangeArray(int count){
     arr ~= i;
   }
   return arr;
+}
+
+unittest{
+  double[] arr = [4,3,4,5];
+  bool[] arr2 = [true, false, true, true];
+
+  assert(sum(arr) == 16);
+  assert(sum(arr2) == 3);
+  assert(globalMean(arr) == 4); 
 }
