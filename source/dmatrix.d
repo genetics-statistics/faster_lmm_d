@@ -153,5 +153,11 @@ unittest{
   assert(divideDMatrixNum(d2,0) == d2);
   assert(multiplyDmatrixNum(d2,1) == d2);
   assert(divideDmatrixNum(d2,1) == d2);
+  
+  dmatrix zeroMat = dmatrix([3,3], [0,0,0, 0,0,0, 0,0,0]);
+  assert(zerosMatrix(3,3) == zeroMat);
+  
+  dmatrix onesMat = dmatrix([3,3], [1,1,1, 1,1,1, 1,1,1]);
+  assert(onesMatrix(3,3) == onesMat);
 
 }
