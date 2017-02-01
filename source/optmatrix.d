@@ -183,3 +183,5 @@ unittest{
   dmatrix d2 = dmatrix([4,2],[2,7,8,9, -5,2,-1,-4]);
   dmatrix d3 = dmatrix([3,2], [5,36,23, 99,13,-15]);
   assert(matrixMult(d1,d2) == d3);
+}
+
