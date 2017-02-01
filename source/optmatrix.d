@@ -195,5 +195,15 @@ unittest{
   assert(matrixMultT(d2, d6) == d7);
   
   assert(det(d4) == 2);
+  
+  dmatrix eigenvalue, dvl, dvr;
+  dmatrix mat = dmatrix([3,3], [2,0,0, 0,3,2, 0,1,2]);
+  eigh(mat, eigenvalue, dvl, dvr);
+  // dmatrix ev = dmatrix([3,1], []);
+  // dmatrix vl = dmatrix([3,3], []);
+  // dmatrix vr = dmatrix([3,1], []);
+  // assert(checkval(ev, eigehnvalue));
+  // assert(checkval(vl, dvl));
+  // assert(checkval(vr, dvr));
 }
 
