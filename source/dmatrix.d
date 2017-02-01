@@ -20,6 +20,7 @@ struct dmatrix{
 dmatrix newDmatrix(dmatrix inDmat, int start, int end){
   return inDmat;
 }
+
 dmatrix logDmatrix(dmatrix inDmat){
   double[] elements;
   for(int i = 0; i < inDmat.shape[0]*inDmat.shape[1]; i++){
@@ -131,4 +132,18 @@ bool[] compareGt(dmatrix lha, double val){
     }
   }
   return result;
+}
+
+unittest{
+  dmatrix d = dmatrix([2,2],[1,2,3,4]);
+
+  // Test the fields of a dmatrix
+  assert(d.shape == [2,2]);
+  assert(d.elements == [1,2,3,4]);
+
+  // Test
+  dmatrix d2 = dmatrix([2,2],[2,4,5,6]);
+  dmatrix d3 = dmatrix([2,2],[3,6,8,10]);
+  assert(addDmatrix(d, d2) == d3);
+
 }

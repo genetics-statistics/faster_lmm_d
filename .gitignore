@@ -5,3 +5,4 @@ __dummy.html
 *.obj
 simplelmm
 out
+__test__library__

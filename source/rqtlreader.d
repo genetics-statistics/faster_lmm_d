@@ -5,7 +5,7 @@ import std.string;
 import std.array;
 import std.csv;
 import std.regex;
-import dyaml.all;
+//import dyaml.all;
 import std.getopt;
 import std.typecons;
 import std.json;
@@ -45,45 +45,45 @@ int kinship(string fn){
   return 1;
 }
 
-int pheno(string fn,  ref double[] y, ref string[] ynames, int p_column= 0){
-  // read recla_geno.csv
-  //writeln(fn);
+//int pheno(string fn,  ref double[] y, ref string[] ynames, int p_column= 0){
+//  // read recla_geno.csv
+//  //writeln(fn);
 
-  Regex!char Pattern = regex("\\.json$", "i");
+//  Regex!char Pattern = regex("\\.json$", "i");
 
-  if(!match(fn, Pattern).empty)
-  {
-    Node gn2_pheno = Loader(fn).load();
-    foreach(Node strain; gn2_pheno){
-      //writeln(strain.as!string);
-      y ~= strain[2].as!double;
-      ynames ~= strain[1].as!string;
-    }
-    writeln("interest");
-    writeln(y);
-    writeln(ynames);
-    writeln("interest");
-    return 2;
-  }
-
-
-  //string input = cast(string)std.file.read(fn);
-  ////auto tsv = csvReader!(string[string])(input, null);
-  //auto tsv = csvReader!(string)(input, null);
-  //writeln(tsv[0]);
-  //auto ynames = tsv[1..$];
-
-  //auto p = ctRegex!(`^.+\.$`);
-  //foreach(n;ynames){
-  //  assert!match(n,p);
-  //}
-  //foreach(row; tsv){
-
-  //}
+//  if(!match(fn, Pattern).empty)
+//  {
+//    Node gn2_pheno = Loader(fn).load();
+//    foreach(Node strain; gn2_pheno){
+//      //writeln(strain.as!string);
+//      y ~= strain[2].as!double;
+//      ynames ~= strain[1].as!string;
+//    }
+//    writeln("interest");
+//    writeln(y);
+//    writeln(ynames);
+//    writeln("interest");
+//    return 2;
+//  }
 
 
-  return 5;
-}
+//  //string input = cast(string)std.file.read(fn);
+//  ////auto tsv = csvReader!(string[string])(input, null);
+//  //auto tsv = csvReader!(string)(input, null);
+//  //writeln(tsv[0]);
+//  //auto ynames = tsv[1..$];
+
+//  //auto p = ctRegex!(`^.+\.$`);
+//  //foreach(n;ynames){
+//  //  assert!match(n,p);
+//  //}
+//  //foreach(row; tsv){
+
+//  //}
+
+
+//  return 5;
+//}
 
 void geno(string fn, JSONValue ctrl, ref dmatrix g, ref string[] gnames){
 
