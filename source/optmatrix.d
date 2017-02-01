@@ -177,3 +177,9 @@ dmatrix inverse(dmatrix input){
   LAPACKE_dgetri(101, input.shape[0],elements.ptr, input.shape[0], ipiv.ptr);
   return dmatrix(input.shape, elements);
 }
+
+unittest{
+  dmatrix d1 = dmatrix([3,4],[2,4,5,6, 7,8,9,10, 2,-1,-4,3]);
+  dmatrix d2 = dmatrix([4,2],[2,7,8,9, -5,2,-1,-4]);
+  dmatrix d3 = dmatrix([3,2], [5,36,23, 99,13,-15]);
+  assert(matrixMult(d1,d2) == d3);
