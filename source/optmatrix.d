@@ -183,5 +183,17 @@ unittest{
   dmatrix d2 = dmatrix([4,2],[2,7,8,9, -5,2,-1,-4]);
   dmatrix d3 = dmatrix([3,2], [5,36,23, 99,13,-15]);
   assert(matrixMult(d1,d2) == d3);
+  
+  dmatrix d4 = dmatrix([2,2], [2, -1, -4, 3]);
+  dmatrix d5 = dmatrix([2,2], [1.5, 0.5, 2, 1]);
+  assert(inverse(d4) == d5);
+  
+  dmatrix d6 = dmatrix([2,2],[2, -4, -1, 3]);
+  assert(matrixTranspose(d4) = d6);
+  
+  dmatrix d7 = dmatrix([4,2],[-3,13,7, -5, -12, 26, 2, -8]);
+  assert(matrixMultT(d2, d6) == d7);
+  
+  assert(det(d4) == 2);
 }
 
