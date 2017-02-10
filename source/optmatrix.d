@@ -201,9 +201,9 @@ unittest{
   eigh(mat, eigenvalue, dvl, dvr);
   // dmatrix ev = dmatrix([3,1], []);
   // dmatrix vl = dmatrix([3,3], []);
-  // dmatrix vr = dmatrix([3,1], []);
-  // assert(checkval(ev, eigehnvalue));
-  // assert(checkval(vl, dvl));
-  // assert(checkval(vr, dvr));
+  //dmatrix vr = dmatrix([3,1], []);
+  // assert(eqeq(ev, eigehnvalue));
+  // assert(eqeq(vl, dvl));
+  // assert(eqeq(vr, dvr));
 }
 
