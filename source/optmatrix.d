@@ -189,7 +189,7 @@ unittest{
   assert(inverse(d4) == d5);
   
   dmatrix d6 = dmatrix([2,2],[2, -4, -1, 3]);
-  assert(matrixTranspose(d4) = d6);
+  assert(matrixTranspose(d4) == d6);
   
   dmatrix d7 = dmatrix([4,2],[-3,13,7, -5, -12, 26, 2, -8]);
   assert(matrixMultT(d2, d6) == d7);

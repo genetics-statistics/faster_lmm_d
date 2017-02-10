@@ -145,12 +145,11 @@ unittest{
   dmatrix d2 = dmatrix([2,2],[2,4,5,6]);
   dmatrix d3 = dmatrix([2,2],[3,6,8,10]);
   assert(addDmatrix(d, d2) == d3);
-  assert(subDmatrix(d3, d2) == d1);
+  assert(subDmatrix(d3, d2) == d);
   
   dmatrix d4 = dmatrix([2,2],[6,24,40,60]);
   assert(multiplyDmatrix(d2,d3) == d4);
   
-  assert(divideDMatrixNum(d2,0) == d2);
   assert(multiplyDmatrixNum(d2,1) == d2);
   assert(divideDmatrixNum(d2,1) == d2);
   
