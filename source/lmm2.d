@@ -1,5 +1,5 @@
 module simplelmm.lmm2;
-
+import dstats.distrib;
 import simplelmm.dmatrix;
 import simplelmm.optmatrix;
 import simplelmm.helpers;
@@ -214,7 +214,7 @@ struct LMM2{
     this.Y =  dmatrix([K.shape[0],1] ,Y); // .reshape((self.N,1))
     this.X0 = X0;
     bool[] com = compareGt(Kva, 1e-6);
-    if(sum(com)){
+    if(simplelmm.helpers.sum(com)){
       //if self.verbose: sys.stderr.write("Cleaning %d eigen values\n" % (sum(self.Kva < 0)))
       //Kva[self.Kva < 1e-6] = 1e-6
     }
@@ -473,13 +473,16 @@ struct LMM2{
     //"""
 
     ts = divideDmatrixNum( beta ,std.math.sqrt(var*sigma));
+    writeln("TS is here");
+    writeln(ts);
     //#ps = 2.0*(1.0 - stats.t.cdf(np.abs(ts), lmmobject.N-q))
     //# sf == survival function - this is more accurate -- could also use logsf if the precision is not good enough
     if(log){
-      //ps;// = 2.0 + (stats.t.logsf(np.abs(ts), lmmobject.N-q));
+      //double psNum = 2.0 + (stats.t.logsf(np.abs(ts), lmmobject.N-q));
     }
     else{
-      //ps;// = 2.0*(stats.t.sf(np.abs(ts), lmmobject.N-q));
+      //check the sign of ts.elements[0]
+      double psNum = 2.0*(normalCDF(-ts.elements[0], lmmobject.N-q));
     }
     if(!(ts.elements.length == 1) || !(ps.elements.length == 1)){
       writeln("Something bad happened :(");
