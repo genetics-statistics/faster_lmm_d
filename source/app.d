@@ -3,7 +3,6 @@ import std.string;
 import std.array;
 import std.csv;
 import std.regex;
-import dyaml.all;
 import std.getopt;
 import std.json;
 import simplelmm.rqtlreader;
@@ -18,7 +17,7 @@ import simplelmm.opencl.add;
 void main(string[] args)
 {
   // Main routine
-  tryAdd();
+  //tryAdd();
 
   dmatrix x = dmatrix([3,3],[-2,2,-3,
                              -1,1,3,
@@ -66,8 +65,8 @@ void main(string[] args)
   string[] ynames;
 
   if(opheno){
-    pheno(opheno, y, ynames, pheno_column);
-    writeln(y.sizeof);
+    //pheno(opheno, y, ynames, pheno_column);
+    //writeln(y.sizeof);
   }
   dmatrix g;
   string[] gnames;
@@ -265,4 +264,9 @@ int m;
 
  // //Dump the loaded document to output.yaml.
  // Dumper("output.yaml").dump(root);
+}
+
+unittest{
+
+
 }

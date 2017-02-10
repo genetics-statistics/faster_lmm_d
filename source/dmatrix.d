@@ -1,5 +1,6 @@
 module simplelmm.dmatrix;
 import std.math;
+import std.stdio;
 
 struct dmatrix{
   int[] shape;
@@ -134,14 +135,40 @@ bool[] compareGt(dmatrix lha, double val){
   return result;
 }
 
+bool eqeq(dmatrix lha, dmatrix rha){
+  int index = 0;
+  foreach(s; lha.shape){
+    if(s != rha.shape[index]){
+      return false;
+    }
+    index++;
+  }
+  index = 0;
+  foreach(s; lha.elements){
+    double rem = s -rha.elements[index];
+    if(rem < 0){rem *= -1;}
+    if(rem > 0.001){
+      return false;
+    }
+    index++;
+  }
+  return true;
+}
+
+
 unittest{
   dmatrix d = dmatrix([2,2],[1,2,3,4]);
+
+  // Test equality of two dmatrixes
+  dmatrix lha = dmatrix([3,3], [1,2,3, 4,5,6, 7,8,9]);
+  dmatrix rha = dmatrix([3,3], [1.001,2,3, 4,5,6, 7,8,9]);
+  assert(eqeq(lha, rha));
 
   // Test the fields of a dmatrix
   assert(d.shape == [2,2]);
   assert(d.elements == [1,2,3,4]);
 
-  // Test
+  // Test elementwise operations
   dmatrix d2 = dmatrix([2,2],[2,4,5,6]);
   dmatrix d3 = dmatrix([2,2],[3,6,8,10]);
   assert(addDmatrix(d, d2) == d3);
