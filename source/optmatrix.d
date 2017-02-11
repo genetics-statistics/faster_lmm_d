@@ -134,16 +134,15 @@ void eigh(dmatrix input,ref dmatrix kva, ref dmatrix kve){
   //Output Parameters
   // get the diagonal elements
   double[] d = new double[input.shape[0]*input.shape[1]];
-  for(int x=0; x< input.shape[0]; x++){
-    for(int y=0; y< input.shape[0]; y++){
-      if(y>=x){
-        d[input.shape[1]*x +y] = input.elements[input.shape[1]*x +y];
-      }else{
-        d[input.shape[1]*x +y] = 0;
-      }
-    }
-  }
-  dmatrix lol = dmatrix(input.shape, d);
+  //for(int x=0; x< input.shape[0]; x++){
+  //  for(int y=0; y < input.shape[1]; y++){
+  //    if(y>=x){
+  //      d[input.shape[1]*x +y] = input.elements[input.shape[1]*x +y];
+  //    }else{
+  //      d[input.shape[1]*x +y] = 0;
+  //    }
+  //  }
+  //}
   writeln(d);
   double[] e = new double[input.shape[0]-1];
   for(int x=0; x< input.shape[0]-1; x++){
@@ -152,19 +151,19 @@ void eigh(dmatrix input,ref dmatrix kva, ref dmatrix kve){
   double[] z = new double[input.shape[0] * input.shape[1]]; //eigenvalues
   double[] w = new double[input.shape[0]];  // eigenvectors
   double[] elements = input.elements.dup;
-  //double[] wi = new double[input.shape[0]];
+
   double wi;
   int n = input.shape[0];
   double vu, vl;
-  vl = 0;
-  vu = 1.0;
+  //vl = 0;
+  //vu = 1.0;
   int[] m = new int[input.shape[0]];
   int[] isuppz = new int[2*input.shape[0]];
   int il = 1;
-  int iu = 0;
+  int iu = input.shape[1];
   int ldz = n;
   double abstol = -1;
-  LAPACKE_dsyevr(101, 'V', 'A', 'U', n, d.ptr, n, vl, vu, il, iu, abstol, m.ptr, w.ptr, z.ptr, ldz, isuppz.ptr);
+  LAPACKE_dsyevr(101, 'V', 'A', 'L', n, input.elements.ptr, n, vl, vu, il, iu, abstol, m.ptr, w.ptr, z.ptr, ldz, isuppz.ptr);
   
 
   kve = dmatrix([input.shape[0],1], w);

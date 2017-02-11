@@ -73,13 +73,6 @@ void gwas(double[] Y, ref dmatrix G, ref dmatrix K, bool restricted_max_likeliho
   }
 
   double[] res;
-
-  // Set up the pool
-  // mp.set_start_method('spawn')
-  //q = mp.Queue();
-  //if(cpu_num > 1){
-  //  p = mp.Pool(cpu_num, f_init, [q]);
-  //}
   double q = 0;
        
   double[] collect; //# container for SNPs to be processed in one batch
@@ -110,28 +103,6 @@ void gwas(double[] Y, ref dmatrix G, ref dmatrix K, bool restricted_max_likeliho
         writeln("GWAS2 ",jobs_completed, " ", snps/1000);
         res~=lst;
       }
-  //    else{
-  //      p.apply_async(compute_snp,(job,n,collect,lmm2,reml));
-  //      jobs_running += 1;
-  //      //debug("jobs_running (+) %d", jobs_running);
-  //      collect = [];
-  //      while(jobs_running >= cpu_num){// throttle maximum jobs
-  //         //try:
-  //          j,lst = q.get(false,3);
-  //          info("Job "+str(j)+" finished");
-  //          jobs_completed += 1;
-  //          progress("GWAS2",jobs_completed,snps/1000);
-  //          res.append((j,lst));
-  //          jobs_running -= 1;
-  //          //debug("jobs_running (-) %d" % jobs_running);
-  //        //except Queue.Empty:
-  //          //debug("Queue is empty count=%i running=%i completed=%i collect=%i" % (count,jobs_running,jobs_completed,len(collect)));
-  //          //time.sleep(1.0);
-  //        if(jobs_running > cpu_num*2){// # sleep longer if many jobs
-  //          time.sleep(1.0);
-  //        }
-  //      }
-      //}
           
     }
     collect~=snp; // add SNP to process in batch

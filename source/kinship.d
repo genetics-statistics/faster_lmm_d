@@ -156,7 +156,7 @@ void kvakve(dmatrix K, ref dmatrix Kva, ref dmatrix Kve){
   //assert (K.T == K).all(); //# raise "K is not symmetric"
   //(dmatrix input,ref double eigenvalue, ref dmatrix dvl, ref dmatrix dvr)
   dmatrix ev;
-  eigh(K, ev, Kva, Kve);
+  eigh(K, Kva, Kve);
   writeln("Kva", Kva);
   writeln("Kve", Kve);
 
