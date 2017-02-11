@@ -121,19 +121,29 @@ void normalize_along_row(ref dmatrix G, dmatrix input){
 
 void eigh(dmatrix input,ref dmatrix eigenvalue, ref dmatrix dvl, ref dmatrix dvr){
   writeln(input.shape[0] * input.shape[1]);
-  double[] vl = new double[input.shape[0] * input.shape[1]];
-  double[] vr = new double[input.shape[0] * input.shape[1]];
-  // Check : No need for duplication
-  double[] elements = input.elements.dup;
+  //Output Parameters
+  double[] z = new double[input.shape[0] * input.shape[1]];
   double[] w = new double[input.shape[0]];
-  double[] wi = new double[input.shape[0]];
+  double[] elements = input.elements.dup;
+  double[] e = new double[input.shape[0]];
+  //double[] wi = new double[input.shape[0]];
+  double wi;
   int n = input.shape[0];
-  LAPACKE_dgeev(101, 'V', 'V', n, elements.ptr, n, w.ptr, wi.ptr, vl.ptr, n, vr.ptr, n);
+  double vu, vl;
+  int[] m = new int[input.shape[0]];
+  int[] isuppz = new int[2*input.shape[0]];
+  int il = 1;
+  int iu = n;
+  int ldz = n;
+  double abstol = 0;
+  LAPACKE_dstevr(101, 'V', 'V', n, elements.ptr, e.ptr, vl, vu, il, iu, abstol, m.ptr, w.ptr, z.ptr, ldz, isuppz.ptr);
+  
+  writeln("m= ", m);
   eigenvalue = dmatrix([input.shape[0],1], w);
+  
   dvl = dmatrix(input.shape, vl);
-  dvr = dmatrix(input.shape, vr);
+  dvr = dmatrix(input.shape, z);
 }
-
 
 double det(dmatrix input){
   double[] narr = input.elements.dup;
