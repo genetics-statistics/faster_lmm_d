@@ -141,7 +141,7 @@ void eigh(dmatrix input,ref dmatrix eigenvalue, ref dmatrix dvl, ref dmatrix dvr
   writeln("m= ", m);
   eigenvalue = dmatrix([input.shape[0],1], w);
   
-  dvl = dmatrix(input.shape, vl);
+  dvl = dmatrix(input.shape, z);
   dvr = dmatrix(input.shape, z);
 }
 
