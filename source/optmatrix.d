@@ -130,24 +130,7 @@ void normalize_along_row(ref dmatrix G, dmatrix input){
 
 
 void eigh(dmatrix input,ref dmatrix kva, ref dmatrix kve){
-  //writeln(input.shape[0] * input.shape[1]);
-  //Output Parameters
-  // get the diagonal elements
-  double[] d = new double[input.shape[0]*input.shape[1]];
-  //for(int x=0; x< input.shape[0]; x++){
-  //  for(int y=0; y < input.shape[1]; y++){
-  //    if(y>=x){
-  //      d[input.shape[1]*x +y] = input.elements[input.shape[1]*x +y];
-  //    }else{
-  //      d[input.shape[1]*x +y] = 0;
-  //    }
-  //  }
-  //}
-  writeln(d);
-  double[] e = new double[input.shape[0]-1];
-  for(int x=0; x< input.shape[0]-1; x++){
-    e[x] = input.elements[input.shape[1]*x +x+1];
-  }
+
   double[] z = new double[input.shape[0] * input.shape[1]]; //eigenvalues
   double[] w = new double[input.shape[0]];  // eigenvectors
   double[] elements = input.elements.dup;
@@ -162,12 +145,11 @@ void eigh(dmatrix input,ref dmatrix kva, ref dmatrix kve){
   int il = 1;
   int iu = input.shape[1];
   int ldz = n;
-  double abstol = -1;
+  double abstol = -1; //default value for abstol
+  
   LAPACKE_dsyevr(101, 'V', 'A', 'L', n, input.elements.ptr, n, vl, vu, il, iu, abstol, m.ptr, w.ptr, z.ptr, ldz, isuppz.ptr);
   
-
   kve = dmatrix([input.shape[0],1], w);
-  
   kva = dmatrix(input.shape, z);
 }
 

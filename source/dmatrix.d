@@ -60,6 +60,14 @@ dmatrix multiplyDmatrix(dmatrix lha, dmatrix rha){
   return dmatrix(lha.shape, elements);
 }
 
+dmatrix addDmatrixNum(dmatrix input, double num){
+  double[] elements;
+  for(int i = 0; i < input.shape[0]*input.shape[1]; i++){
+    elements ~= input.elements[i] + num;
+  }
+  return dmatrix(input.shape, elements);
+}
+
 dmatrix subDmatrixNum(dmatrix input, double num){
   double[] elements;
   for(int i = 0; i < input.shape[0]*input.shape[1]; i++){
@@ -72,6 +80,14 @@ dmatrix multiplyDmatrixNum(dmatrix input, double num){
   double[] elements;
   for(int i = 0; i < input.shape[0]*input.shape[1]; i++){
     elements ~= input.elements[i] * num;
+  }
+  return dmatrix(input.shape, elements);
+}
+
+dmatrix divideNumDmatrix(double num, dmatrix input){
+  double[] elements;
+  for(int i = 0; i < input.shape[0]*input.shape[1]; i++){
+    elements ~=  num /input.elements[i];
   }
   return dmatrix(input.shape, elements);
 }

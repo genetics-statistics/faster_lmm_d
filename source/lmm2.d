@@ -204,7 +204,7 @@ struct LMM2{
     //      if self.verbose: sys.stderr.write("Total time: %0.3f\n" % (end - begin))
     //      print("sum(Kva),sum(Kve)=",sum(Kva),sum(Kve))
 
-    kvakve(K, Kva, Kve);
+    kvakve(K, Kve, Kva);
 
     this.init = true;
     this.K = K;
@@ -214,10 +214,17 @@ struct LMM2{
     this.Y =  dmatrix([K.shape[0],1] ,Y); // .reshape((self.N,1))
     this.X0 = X0;
     bool[] com = compareGt(Kva, 1e-6);
-    if(simplelmm.helpers.sum(com)){
-      //if self.verbose: sys.stderr.write("Cleaning %d eigen values\n" % (sum(self.Kva < 0)))
-      //Kva[self.Kva < 1e-6] = 1e-6
-    }
+    //if(simplelmm.helpers.sum(com)){
+    //  writeln("Cleaning eigen values");
+    //  foreach(ref double element; Kva.elements){
+    //    if(element < 1e-6)
+    //    {
+    //      element = 1e-6;
+    //    }
+    //  }
+      
+    //}
+    //pPrint(Kva);
     lmm2transform(this);
 
   }
@@ -233,14 +240,18 @@ struct LMM2{
     //"""
     writeln("In lmm2transform");
     dmatrix KveT = matrixTranspose(lmmobject.Kve);
-    writeln("here goes kveT");
-    writeln(KveT);
     lmmobject.Yt = matrixMult(KveT, lmmobject.Y);
     lmmobject.X0t = matrixMult(KveT, lmmobject.X0);
     //writeln(lmmobject.q);
-    writeln(lmmobject.X0t);
+    //writeln(lmmobject.X0t);
     lmmobject.X0t_stack = horizontallystack(lmmobject.X0t, onesMatrix(cast(int)lmmobject.N,1));
     lmmobject.q = lmmobject.X0t.shape[1];
+    //writeln("======= Yt   ================");
+    //pPrint(lmmobject.Yt);
+    // writeln("======= X0t   ================");
+    //pPrint(lmmobject.X0t);
+    // writeln("======= X0tstack   ================");
+    //pPrint(lmmobject.X0t_stack);
   }
 
   void getMLSoln(ref dmatrix beta, ref double sigma,ref dmatrix Q, ref dmatrix XX_i, ref dmatrix XX, ref LMM2 lmmobject,ref double h, ref dmatrix X){
@@ -253,10 +264,12 @@ struct LMM2{
     //   covariate matrix.
     //"""
 
-    //double S = 1.0/ divideDmatrixNum(multiplyDmatrixNum(lmmobject.Kva,h),(1.0 - h));
-    double S = 1.0;
-    dmatrix XtT = matrixTranspose(X);
-    dmatrix Xt = multiplyDmatrixNum(XtT, S);
+    dmatrix S;
+    dmatrix temppp = addDmatrixNum(multiplyDmatrixNum(lmmobject.Kva,h),(1.0 - h));
+
+    S = divideNumDmatrix(1,temppp);
+    dmatrix Xt = multiplyDmatrix(X, S);
+    Xt = matrixTranspose(Xt);
     XX = matrixMult(Xt,X);
     XX_i = inverse(XX);
     dmatrix temp = matrixMult(XX_i,Xt);
@@ -264,14 +277,10 @@ struct LMM2{
     dmatrix temp2 = matrixMult(X,beta);
     dmatrix Yt = subDmatrix(lmmobject.Yt, temp2);
     dmatrix YtT = matrixTranspose(Yt);
-    dmatrix YtTS = multiplyDmatrixNum(YtT, S);  
+    S = matrixTranspose(S);
+    dmatrix YtTS = multiplyDmatrix(YtT, S);
     Q = matrixMult(YtTS,Yt);
-    //writeln("Q goes here");
-    //writeln(Q);
     sigma = Q.elements[0] * 1.0 / (cast(double)(lmmobject.N) - cast(double)(X.shape[1]));
-    writeln(sigma);
-    //return beta,sigma,Q,XX_i,XX;
-    //writeln("Out of getMLSoln");
   }
 
   double LL_brent(ref LMM2 lmmobject, ref double h, ref dmatrix X, ref bool REML){
@@ -304,25 +313,22 @@ struct LMM2{
       //beta,sigma,Q, = 
       dmatrix Q,XX_i,XX;
       getMLSoln(beta,sigma,Q,XX_i,XX, lmmobject, h,X);
-      double LL  = n*std.math.log(2*std.math.PI) + sum(logDmatrix((addDMatrixNum(multiplyDmatrixNum(lmmobject.Kva,h),(1-h)))).elements)+ n 
-      + std.math.log(1.0/n * 1); //Q
-      writeln("Here goes LL");
-      //writeln(lmmobject.Kva);
-      //double[] ll;
-      //writeln(ll[5]);
+      double LL  = n * std.math.log(2*std.math.PI) + sum(logDmatrix((addDMatrixNum( multiplyDmatrixNum(lmmobject.Kva,h),(1-h) ) )).elements)+
+      + n + n * std.math.log((1.0/n) * Q.elements[0]); //Q
+
       LL = -0.5 * LL;
 
       if(REML){
         double LL_REML_part = 0;
         dmatrix XT = matrixTranspose(X);
-        LL = q*std.math.log(2.0*std.math.PI*sigma) + det(matrixMult(X,XT)) - std.math.log(det(XX));
+        double aloo = det(matrixMult(XT, X));
+
+        LL_REML_part = q*std.math.log(2.0*std.math.PI*sigma) + std.math.log(aloo) - std.math.log(det(XX));
         LL = LL + 0.5*LL_REML_part;
       }
       //double LLsum = sum(LL);
-      writeln("beta=",beta.acc(0,0)," sigma=",sigma," LL=",LL);
-      //return LLsum,beta,sigma,XX_i;
-      writeln("Here goes LL");
-      writeln(LL);
+      //writeln("beta=",beta.acc(0,0)," sigma=",sigma," LL=",LL);
+      
       return LL;
   }
 
@@ -362,12 +368,11 @@ struct LMM2{
       return H.elements[0];
     }
     else{
-      writeln(H);
       return H.elements[n-1];
     }
   }
 
-  void lmm2fit(ref double fit_hmax, ref dmatrix fit_beta, ref double fit_sigma, ref dmatrix fit_LL, ref LMM2 lmmobject,ref dmatrix X, double ngrids=100, bool REML=true){
+  void lmm2fit(ref double fit_hmax, ref dmatrix fit_beta, ref double fit_sigma, ref double fit_LL, ref LMM2 lmmobject,ref dmatrix X, double ngrids=100, bool REML=true){
 
     //"""
     //   Finds the maximum-likelihood solution for the heritability (h) given the current parameters.
@@ -383,45 +388,42 @@ struct LMM2{
     }
     else{
       dmatrix kveT = matrixTranspose(lmmobject.Kve);
-      dmatrix alall = horizontallystack(lmmobject.X0t,matrixMult(kveT , X));
+      dmatrix KveTX = matrixMult(kveT , X);
       //lmmobject.X0t_stack[sval,(lmmobject.q)] = matrixMult(lmmobject.Kve.T,X)[sval,0];
       X = lmmobject.X0t_stack;
+      //self.X0t_stack[:,(self.q)] = matrixMult(self.Kve.T,X)[:,0]
+      //   X = self.X0t_stack
     }
-    dmatrix H;
     double[] Harr;
     for(int m = 0; m < ngrids; m++){
       Harr ~= m / cast(double)ngrids;
     }
+
+    dmatrix  beta;
+    double sigma,betaVAR;
     dmatrix L;
     double[] elm;
     foreach(h; Harr){
-      dmatrix  beta;
-      double sigma,betaVAR;
       elm ~= getLL(L, beta,sigma,betaVAR,lmmobject,h,X,false,REML);
     }
     L = dmatrix([cast(int)elm.length,1],elm);
     lmmobject.LLs = L;
     lmmobject.H = dmatrix([cast(int)Harr.length,1],Harr);
     double hmax = getMax(lmmobject, lmmobject.H, X, REML);
-    //L,beta,sigma,betaSTDERR = 
-    dmatrix beta;
-    double[] sigma2;
-    double sigma;
-    double betaVAR;
-    getLL(L, beta,sigma,betaVAR,lmmobject,hmax,X,false,REML);
+
+    double sum = getLL(L, beta,sigma,betaVAR,lmmobject,hmax,X,false,REML);
 
     
-    //false.optH = hmax.sum();
+    lmmobject.optH = hmax;
     lmmobject.optLL = L;
     lmmobject.optBeta = beta;
-    lmmobject.optSigma = sumArray(sigma2);
+    lmmobject.optSigma = sigma;
 
     //# debug(["hmax",hmax,"beta",beta,"sigma",sigma,"LL",L])
     //return hmax,beta,sigma,L;
     fit_beta = beta;
     fit_sigma = sigma;
-    fit_LL = L;
-    writeln("Lmm2 fit done");
+    fit_LL = sum;
   }
 
   void lmm2association(ref LMM2 lmmobject, ref dmatrix X, ref double h, bool stack=true, bool REML=true, bool returnBeta=false){
