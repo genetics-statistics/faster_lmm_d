@@ -14,7 +14,7 @@ struct dmatrix{
   }
 
   double acc(int row, int col){
-    return this.elements[row*this.shape[0]+col];
+    return this.elements[row*this.shape[1]+col];
   }
 }
 
@@ -52,11 +52,19 @@ dmatrix subDmatrix(dmatrix lha, dmatrix rha){
 
 dmatrix multiplyDmatrix(dmatrix lha, dmatrix rha){
   assert(lha.shape[0] == rha.shape[0]);
-  assert(lha.shape[1] == rha.shape[1]);
   double[] elements;
-  for(int i = 0; i < lha.shape[0]*lha.shape[1]; i++){
-    elements ~= lha.elements[i] * rha.elements[i];
+  if(lha.shape[1] == rha.shape[1]){
+    
+    for(int i = 0; i < lha.shape[0]*lha.shape[1]; i++){
+      elements ~= lha.elements[i] * rha.elements[i];
+    }
   }
+  else{
+    for(int i = 0; i < lha.shape[0]*lha.shape[1]; i++){
+      elements ~= lha.elements[i] * rha.elements[i%(rha.shape[0]*rha.shape[1])];
+    }
+  }
+  
   return dmatrix(lha.shape, elements);
 }
 
@@ -202,4 +210,37 @@ unittest{
   dmatrix onesMat = dmatrix([3,3], [1,1,1, 1,1,1, 1,1,1]);
   assert(onesMatrix(3,3) == onesMat);
 
+}
+
+dmatrix getCol(dmatrix input, int colNo){
+  //writeln(input.shape);
+  double[] arr;
+  for(int i=0; i<input.shape[0]; i++){
+    arr ~= input.elements[i*input.shape[1]+colNo];
+  }
+  return dmatrix([input.shape[0],1],arr);
+}
+
+dmatrix getRow(dmatrix input, int rowNo){
+  //writeln(input.shape);
+  double[] arr;
+  arr = input.elements[rowNo*input.shape[1]..(rowNo+1)*input.shape[1]];
+  return dmatrix([1,input.shape[1]],arr);
+}
+
+
+void setCol(ref dmatrix input, int colNo, dmatrix arr){
+  for(int i=0; i<input.shape[0]; i++){
+    input.elements[i*input.shape[1]+colNo] = arr.elements[i];
+  }
+}
+
+void setRow(ref dmatrix input, int rowNo, dmatrix arr){
+  int index =  rowNo*input.shape[1];
+  int end =  (rowNo+1)*input.shape[1];
+  int k = 0;
+  for(int i=index; i<end; i++){
+    input.elements[i] = arr.elements[k];
+    k++;
+  }
 }

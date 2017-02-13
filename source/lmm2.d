@@ -9,7 +9,6 @@ import std.stdio;
 ////void calculateKinship(W,center=False){
 ////  //"""
 ////  //   W is an n x m matrix encoding SNP minor alleles.
-
 ////  //   This function takes a matrix oF SNPs, imputes missing values with the maf,
 ////  //   normalizes the resulting vectors and returns the RRM matrix.
 ////  //"""
@@ -21,11 +20,9 @@ import std.stdio;
 ////    W[np.isnan(W[0..i]),i] = mn;
 ////    vr = W[0..i].var();
 ////    if(vr == 0){continue;}
-
 ////    keep.append(i);
 ////    W[0..i] = (W[0..i] - mn) / np.sqrt(vr);
 ////  }
-
 ////  W = W[0..keep];
 ////  K = matrixMult(W,W.T) * 1.0/float(m);
 ////  if(center){
@@ -36,16 +33,12 @@ import std.stdio;
 ////  }
 ////  return K;
 ////}
-  
-
 ////void GWAS(Y, X, K, Kva=[], Kve=[], X0=None, REML=true, refit=False){
 ////  //"""
-
 ////  //  Performs a basic GWAS scan using the LMM.  This function
 ////  //  uses the LMM module to assess association at each SNP and
 ////  //  does some simple cleanup, such as removing missing individuals
 ////  //  per SNP and re-computing the eigen-decomp
-
 ////  //  Y - n x 1 phenotype vector
 ////  //  X - n x m SNP matrix (genotype matrix)
 ////  //  K - n x n kinship matrix
@@ -53,18 +46,15 @@ import std.stdio;
 ////  //  X0 - n x q covariate matrix
 ////  //  REML - use restricted maximum likelihood
 ////  //  refit - refit the variance component fors each SNP
-
 ////  //"""
 ////  n = X.shape[0];
 ////  m = X.shape[1];
 ////  writeln("Initialize GWAS");
 ////  writeln("genotype matrix n is:", n);
 ////  writeln("genotype matrix m is:", m);
-
 ////  if(X0 is None){
 ////    X0 = np.ones((n,1));
 ////  }
-
 ////  //# Remove missing values in Y and adjust associated parameters
 ////  v = np.isnan(Y);
 ////  if(v.sum()){
@@ -77,23 +67,17 @@ import std.stdio;
 ////    Kva = [];
 ////    Kve = [];
 ////  }
-
 ////  if(len(Y) == 0){
 ////    return np.ones(m)*np.nan,np.ones(m)*np.nan;
 ////  }
-     
-
 ////  L = LMM(Y,K,Kva,Kve,X0);
 ////  if(!refit){
 ////    L.fit();
 ////  } 
-
 ////  PS = [];
 ////  TS = [];
-
 ////  n = X.shape[0];
 ////  m = X.shape[1];
-
 ////  foreach(i; range(m)){
 ////    x = X[la,i].reshape((n,1));
 ////    v = np.isnan(x).reshape((-1,ra));
@@ -128,12 +112,9 @@ import std.stdio;
 ////      }
 ////      ts,ps = L.association(x,REML=REML);
 ////    }
-
 ////    PS.append(ps);
 ////    TS.append(ts);
 ////  }
-    
-
 ////  return TS,PS;
 ////}
 
@@ -242,16 +223,8 @@ struct LMM2{
     dmatrix KveT = matrixTranspose(lmmobject.Kve);
     lmmobject.Yt = matrixMult(KveT, lmmobject.Y);
     lmmobject.X0t = matrixMult(KveT, lmmobject.X0);
-    //writeln(lmmobject.q);
-    //writeln(lmmobject.X0t);
     lmmobject.X0t_stack = horizontallystack(lmmobject.X0t, onesMatrix(cast(int)lmmobject.N,1));
     lmmobject.q = lmmobject.X0t.shape[1];
-    //writeln("======= Yt   ================");
-    //pPrint(lmmobject.Yt);
-    // writeln("======= X0t   ================");
-    //pPrint(lmmobject.X0t);
-    // writeln("======= X0tstack   ================");
-    //pPrint(lmmobject.X0t_stack);
   }
 
   void getMLSoln(ref dmatrix beta, ref double sigma,ref dmatrix Q, ref dmatrix XX_i, ref dmatrix XX, ref LMM2 lmmobject,ref double h, ref dmatrix X){
@@ -265,9 +238,7 @@ struct LMM2{
     //"""
 
     dmatrix S;
-    dmatrix temppp = addDmatrixNum(multiplyDmatrixNum(lmmobject.Kva,h),(1.0 - h));
-
-    S = divideNumDmatrix(1,temppp);
+    dmatrix temppp = addDmatrixNum(multiplyDmatrixNum(lmmobject.Kva,h),(1.0 - h));    S = divideNumDmatrix(1,temppp);
     dmatrix Xt = multiplyDmatrix(X, S);
     Xt = matrixTranspose(Xt);
     XX = matrixMult(Xt,X);
@@ -287,32 +258,34 @@ struct LMM2{
       //#brent will not be bounded by the specified bracket.
       //# I return a large number if we encounter h < 0 to avoid errors in LL computation during the search.
     if(h < 0){return 1e6;}
-    dmatrix beta;
-    double sigma,betaVAR;
+    dmatrix beta, betaVAR;
+    double sigma;
     dmatrix l;
     return -getLL(l, beta,sigma,betaVAR, lmmobject, h,X,false,REML);
   }
 
-  double getLL(ref dmatrix L, ref dmatrix beta, ref double sigma, ref double betaVAR, ref LMM2 lmmobject, ref double h, ref dmatrix X, bool stack=true, bool REML=false){
+  double getLL(ref dmatrix L, ref dmatrix beta, ref double sigma, ref dmatrix betaVAR, ref LMM2 lmmobject, ref double h, ref dmatrix X, bool stack=true, bool REML=false){
       //"""
       //   Computes the log-likelihood for a given heritability (h).  If X==None, then the
       //   default X0t will be used.  If X is set and stack=True, then X0t will be matrix concatenated with
       //   the input X.  If stack is false, then X is used in place of X0t in the LL calculation.
       //   REML is computed by adding additional terms to the standard LL and can be computed by setting REML=True.
       //"""
+      if(X.init != true){
 
-      if(X.init == true){
         X = lmmobject.X0t;
       }
-      else if(stack){
-        //lmmobject.X0t_stack[sval,(lmmobject.q)] = matrixMult(lmmobject.Kve.T,X)[sval,0];
-        X = lmmobject.X0t_stack;
-      }
+      //else if(stack){
+      //  //lmmobject.X0t_stack[sval,(lmmobject.q)] = matrixMult(lmmobject.Kve.T,X)[sval,0];
+      //  X = lmmobject.X0t_stack;
+      //}
       double n = cast(double)lmmobject.N;
       double q = cast(double)X.shape[1];
       //beta,sigma,Q, = 
       dmatrix Q,XX_i,XX;
       getMLSoln(beta,sigma,Q,XX_i,XX, lmmobject, h,X);
+      //writeln(beta);
+      betaVAR=XX_i;
       double LL  = n * std.math.log(2*std.math.PI) + sum(logDmatrix((addDMatrixNum( multiplyDmatrixNum(lmmobject.Kva,h),(1-h) ) )).elements)+
       + n + n * std.math.log((1.0/n) * Q.elements[0]); //Q
 
@@ -328,6 +301,7 @@ struct LMM2{
       }
       //double LLsum = sum(LL);
       //writeln("beta=",beta.acc(0,0)," sigma=",sigma," LL=",LL);
+      L = dmatrix([1,1],[LL]);
       
       return LL;
   }
@@ -399,8 +373,8 @@ struct LMM2{
       Harr ~= m / cast(double)ngrids;
     }
 
-    dmatrix  beta;
-    double sigma,betaVAR;
+    dmatrix  beta, betaVAR;
+    double sigma;
     dmatrix L;
     double[] elm;
     foreach(h; Harr){
@@ -426,7 +400,7 @@ struct LMM2{
     fit_LL = sum;
   }
 
-  void lmm2association(ref LMM2 lmmobject, ref dmatrix X, ref double h, bool stack=true, bool REML=true, bool returnBeta=false){
+  void lmm2association(ref double psNum, ref double tsNum, ref LMM2 lmmobject, ref dmatrix X, ref double h, bool stack=true, bool REML=true, bool returnBeta=false){
     //"""
     //  Calculates association statitics for the SNPs encoded in the vector X of size n.
     //  If h is None, the optimal h stored in optH is used.
@@ -443,40 +417,38 @@ struct LMM2{
     if(stack){
       dmatrix kvet = matrixTranspose(lmmobject.Kve);
       dmatrix m = matrixMult(kvet,X);
-      m.shape = [m.shape[1], m.shape[0]];
-      //getDfromAcc(lmmobject.X0t_stack[sval,(lmmobject.q)]) = m;
-      writeln("X0t_stack goes herw");
-      writeln(lmmobject.X0t_stack);
+      setRow(lmmobject.X0t_stack,lmmobject.q,m);
       X = lmmobject.X0t_stack;
     }
     if(h.init == false){h = lmmobject.optH;}
 
-    dmatrix beta;
-    double sigma,betaVAR; 
+    dmatrix beta, betaVAR;
+    double sigma; 
     dmatrix L;
-    writeln("In lmm2association");
-    getLL(L,beta,sigma,betaVAR, lmmobject,h,X,false,REML);
+    //writeln("In lmm2association");
+    
+    getLL(L,beta,sigma,betaVAR, lmmobject,h, X ,false,REML);
+    //writeln("L is ", L.elements[0],  " sigma is  " ,  sigma, "  betaVAR is" , betaVAR, "h is ", h);
     int q  = cast(int)beta.elements.length;
 
-    dmatrix ts,ps;
-    //tstat(ts, ps, beta[q-1],betaVAR.acc(q-1,q-1),sigma,q);
-    tstat(ts, ps, lmmobject, beta, betaVAR,sigma,q);
+    double ts,ps;
+    //writeln(betaVAR);
+    tstat(ts, ps, lmmobject, beta.elements[q-1], betaVAR.acc(q-1,q-1),sigma,q);
+    tsNum = ts;
+    psNum = ps;
 
     //debug("ts=%0.3f, ps=%0.3f, heritability=%0.3f, sigma=%0.3f, LL=%0.5f" % (ts,ps,h,sigma,L))
     //if(returnBeta){return ts,ps,beta[q-1].sum(),betaVAR[q-1,q-1].sum()*sigma;}
     //return ts,ps;
   }
 
-  void tstat(ref dmatrix ts, ref dmatrix ps, ref LMM2 lmmobject, dmatrix beta, double var, double sigma, double q, bool log=false){
+  void tstat(ref double ts, ref double ps, ref LMM2 lmmobject, double beta, double var, double sigma, double q, bool log=false){
 
     //"""
     //   Calculates a t-statistic and associated p-value given the estimate of beta and its standard error.
     //   This is actually an F-test, but when only one hypothesis is being performed, it reduces to a t-test.
-    //"""
-
-    ts = divideDmatrixNum( beta ,std.math.sqrt(var*sigma));
-    writeln("TS is here");
-    writeln(ts);
+    //"""S
+    ts =  beta / std.math.sqrt(var*sigma);
     //#ps = 2.0*(1.0 - stats.t.cdf(np.abs(ts), lmmobject.N-q))
     //# sf == survival function - this is more accurate -- could also use logsf if the precision is not good enough
     if(log){
@@ -484,12 +456,12 @@ struct LMM2{
     }
     else{
       //check the sign of ts.elements[0]
-      double psNum = 2.0*(normalCDF(-ts.elements[0], lmmobject.N-q));
+      ps = 2.0*(normalCDF(-std.math.abs(ts)));
     }
-    if(!(ts.elements.length == 1) || !(ps.elements.length == 1)){
-      writeln("Something bad happened :(");
-    }
-    //return ts.sum(),ps.sum();
+    //if(!(ts.elements.length == 1) || !(ps.elements.length == 1)){
+    //  writeln("Something bad happened :(");
+    //}
+    //writeln("ts = ", ts, " beta = ", beta,  " var = ", var,  " sigma = ", sigma, " ps = ", ps );
   }
 
   void plotFit( LMM2 lmmobject, string color="b-", string title=""){

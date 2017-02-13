@@ -4,6 +4,7 @@ import std.stdio;
 import simplelmm.lmm2;
 import simplelmm.dmatrix;
 import dstats.distrib;
+import simplelmm.optmatrix;
 
 void compute_snp(int j,int n,double[] snps,LMM2 lmmobject, bool REML,double q){
   writeln("In compute_snp");
@@ -14,7 +15,7 @@ void compute_snp(int j,int n,double[] snps,LMM2 lmmobject, bool REML,double q){
     dmatrix x = dmatrix([n,1], snp); //all the SNPs
     //ts,ps,beta,betaVar = 
     double a = 0;
-    lmm2association(lmmobject, x, a, REML,true);
+    //lmm2association(lmmobject, x, a, REML,true);
     //result.append( (ts,ps) );
   }
 }
@@ -45,13 +46,14 @@ void gwas(double[] Y, ref dmatrix G, ref dmatrix K, bool restricted_max_likeliho
   bool reml = restricted_max_likelihood;
 
   //writeln("G",G);
+  //G = matrixTranspose(G);
   int n = G.shape[1]; // inds
   int inds = n;
   int m = G.shape[0]; // snps
   int snps = m;
   writefln("%d SNPs",snps);
   if(snps<inds){
-    writefln("snps should be larger than inds (snps=%d,inds=%d)", (snps,inds));
+    writefln("snps should be larger than inds (snps=%d,inds=%d)", snps,inds);
   }
 
   //# CREATE LMM object for association
@@ -81,68 +83,23 @@ void gwas(double[] Y, ref dmatrix G, ref dmatrix K, bool restricted_max_likeliho
   int job = 0;
   int jobs_running = 0;
   int jobs_completed = 0;
-  // writeln(collect);
-  for(int i = 0; i< cast(int)G.shape[0]; i++){
-    double[] snp = G.elements[cast(int)i*G.shape[1]..cast(int)(i+1)*G.shape[1]];
-    string snp_id = "SNPID";
-    count += 1;
-    if(count % 1000 == 0){
 
-      job += 1;
-      writefln("Job %d At SNP %d" ,job,count);
-      if(cpu_num == 1){
-        writeln("Running on 1 THREAD");
+  double[] ps;
+  double[] ts;
+  //writeln("n = ", n);
+  //writeln("m = ", m);
 
-        compute_snp(job,n,collect,lmm2,reml,q);
-        //double[] collect;
-        //j,lst = q.get();
-        double j;
-        double[] lst;
-        //info("Job "+str(j)+" finished");
-        jobs_completed += 1;
-        writeln("GWAS2 ",jobs_completed, " ", snps/1000);
-        res~=lst;
-      }
-          
-    }
-    collect~=snp; // add SNP to process in batch
+  for(int i=0; i<m; i++){
+    dmatrix x = getRow(G, i);
+    x.shape = [n,1];
+    double a = 0;
+    double psNum, tsNum;
+    lmm2association(psNum, tsNum,lmm2, x, a, true,true);
+    a++;
+    ps ~= psNum;
+    ts ~= tsNum;
   }
-  writeln("here goes collect");
-  writeln(collect);
-  ////writeln("Here goes res");
-  ////writeln(res);
+  writeln(ts);
+  //writeln(ps);
 
-  ////////debug("count=%i running=%i collect=%i" % (count,jobs_running,len(collect)))
-  if (collect.length>0){
-    job += 1;
-    //debug("Collect final batch size %i job %i @%i: " % (len(collect), job, count));
-    if(cpu_num == 1){
-      compute_snp(job,n,collect,lmm2,reml,q);
-    }
-    else{
-      //p.apply_async(compute_snp,(job,n,collect,lmm2,reml));
-    }
-        
-  //  jobs_running += 1;
-  //  for(int j=0; j < jobs_running; j++){
-  //    double[] lst;
-  //    //j,lst = q.get(True,15);// time out
-  //    writeln("Job "," finished");
-  //    jobs_running -= 1;
-  //    //debug("jobs_running cleanup (-) %d" % jobs_running);
-  //    jobs_completed += 1;
-  //    writeln("GWAS2 ",jobs_completed," ", snps/1000);
-  //    res~=lst;
-  //  }
-  }
-  //////mprint("Before sort",[res1[0] for res1 in res]);
-  //////res = sorted(res,key=lambda x: x[0]);
-  //////mprint("After sort",[res1[0] for res1 in res]);
-  //////info([len(res1[1]) for res1 in res]);
-  //double[] ts;
-  //double[] ps;
-  //foreach
-  ////ts = [item[0] for j,res1 in res for item in res1];
-  ////ps = [item[1] for j,res1 in res for item in res1];
-  //writeln(ts,ps);
 }
