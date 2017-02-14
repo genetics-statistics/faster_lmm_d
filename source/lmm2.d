@@ -417,7 +417,7 @@ struct LMM2{
     if(stack){
       dmatrix kvet = matrixTranspose(lmmobject.Kve);
       dmatrix m = matrixMult(kvet,X);
-      setRow(lmmobject.X0t_stack,lmmobject.q,m);
+      setCol(lmmobject.X0t_stack,lmmobject.q,m);
       X = lmmobject.X0t_stack;
     }
     if(h.init == false){h = lmmobject.optH;}
@@ -428,7 +428,6 @@ struct LMM2{
     //writeln("In lmm2association");
     
     getLL(L,beta,sigma,betaVAR, lmmobject,h, X ,false,REML);
-    //writeln("L is ", L.elements[0],  " sigma is  " ,  sigma, "  betaVAR is" , betaVAR, "h is ", h);
     int q  = cast(int)beta.elements.length;
 
     double ts,ps;

@@ -100,6 +100,6 @@ void gwas(double[] Y, ref dmatrix G, ref dmatrix K, bool restricted_max_likeliho
     ts ~= tsNum;
   }
   writeln(ts);
-  //writeln(ps);
+  writeln(ps);
 
 }
