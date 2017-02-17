@@ -6,6 +6,7 @@ import std.regex;
 import std.getopt;
 import std.json;
 import simplelmm.rqtlreader;
+import simplelmm.tsvreader;
 import simplelmm.lmm;
 import simplelmm.gwas;
 //import simplelmm.genotype;
@@ -60,7 +61,7 @@ void main(string[] args)
   string[] ynames;
 
   if(opheno){
-    pheno(opheno, y, ynames, pheno_column);
+    tsvpheno(opheno, y, ynames, pheno_column);
     writeln(y.sizeof);
   }
   dmatrix g;

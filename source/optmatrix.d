@@ -5,7 +5,7 @@ import std.stdio;
 import cblas;
 import lapack;
 
-dmatrix matrixMult(ref dmatrix lha, ref dmatrix rha){
+dmatrix matrixMult(dmatrix lha, dmatrix rha){
   auto C = new double[lha.shape[0]*rha.shape[1]];
   gemm(Order.RowMajor, Transpose.NoTrans, Transpose.NoTrans, lha.shape[0], rha.shape[1], lha.shape[1], /*no scaling*/
     1,lha.elements.ptr, lha.shape[1], rha.elements.ptr, rha.shape[1], /*no addition*/0, C.ptr, rha.shape[1]);
@@ -13,7 +13,7 @@ dmatrix matrixMult(ref dmatrix lha, ref dmatrix rha){
   return dmatrix(resshape, C);
 }
 
-dmatrix matrixMultT(ref dmatrix lha, ref dmatrix rha){
+dmatrix matrixMultT(dmatrix lha, dmatrix rha){
   double[] A = [1, 0, 0,
                   0, 1, 1];
   double[] B = [1, 0,

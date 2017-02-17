@@ -25,3 +25,9 @@ if options.geno == 'data/small_na.geno':
 if options.geno == 'data/test8000.geno':
     assert k3==1.4352, "k3=%f" % k3
     
+and for a more extensive test
+
+    ./bin/runlmm.py \
+      --geno=../test_gn_pylmm/data/test8000.geno \
+      --pheno=../test_gn_pylmm/data/test8000.pheno run
+
