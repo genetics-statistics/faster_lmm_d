@@ -67,7 +67,7 @@ void main(string[] args)
   dmatrix g;
   string[] gnames;
   if(ogeno && cmd != "iterator"){
-    geno(ogeno, ctrl, g, gnames);
+    tsvgeno(ogeno, ctrl, g, gnames);
     writeln(g.shape);
   }
 
@@ -126,11 +126,11 @@ int m;
     writeln(gidx);
     //g2 = g.T[(gidx)].T;
     dmatrix gTranspose = matrixTranspose(g);
-    writeln(gTranspose.shape);
+    //writeln(gTranspose.shape);
     dmatrix slicedMatrix = sliceDmatrix(gTranspose, gidx);
     writeln(slicedMatrix.shape);
     dmatrix g2 = matrixTranspose(slicedMatrix);
-    prettyPrint(g2);
+    //prettyPrint(g2);
     //prettyPrint(gTranspose);
     writeln("geno matrix ",g.shape," reshaped to ",g2.shape);
     g = g2;
