@@ -156,11 +156,6 @@ struct LMM2{
     }
     this.verbose = verbose;
 
-  //  Y = y;
-  //bool[] v;
-  //v = isnan(y);
-  //writeln(v);
-  //keep = negateBool(v);
     bool[] v = isnan(Y);
     bool[] x = negateBool(v);
     
@@ -404,7 +399,6 @@ struct LMM2{
     //"""
     //  Calculates association statitics for the SNPs encoded in the vector X of size n.
     //  If h is None, the optimal h stored in optH is used.
-
     //"""
     if(false){
       writeln("X=",X);

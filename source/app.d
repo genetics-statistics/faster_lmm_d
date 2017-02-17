@@ -9,8 +9,6 @@ import simplelmm.rqtlreader;
 import simplelmm.tsvreader;
 import simplelmm.lmm;
 import simplelmm.gwas;
-//import simplelmm.genotype;
-//import simplelmm.phenotype;
 import simplelmm.dmatrix;
 import simplelmm.optmatrix;
 import simplelmm.opencl.add;
@@ -18,18 +16,6 @@ import simplelmm.opencl.add;
 void main(string[] args)
 {
   // Main routine
-  //tryAdd();
-
-  dmatrix a = dmatrix([5,5],[   0.67,  0.00,  0.00,  0.00,  0.00,
-                               -0.20,  3.82,  0.00,  0.00,  0.00,
-                                0.19, -0.13,  3.27,  0.00,  0.00,
-                               -1.06,  1.06,  0.11,  5.86,  0.00,
-                                0.46, -0.48,  1.10, -0.98,  3.54
-                            ]);
-  dmatrix b,c;
-  eigh(a, b,c);
-  pPrint(b);
-  writeln(c);
 
   string ocontrol, okinship, opheno, ogeno, useBLAS, noBLAS, noCUDA;
   int pheno_column;
@@ -61,13 +47,13 @@ void main(string[] args)
   string[] ynames;
 
   if(opheno){
-    tsvpheno(opheno, y, ynames, pheno_column);
+    pheno(opheno, y, ynames, pheno_column);
     writeln(y.sizeof);
   }
   dmatrix g;
   string[] gnames;
   if(ogeno && cmd != "iterator"){
-    tsvgeno(ogeno, ctrl, g, gnames);
+    geno(ogeno, ctrl, g, gnames);
     writeln(g.shape);
   }
 
@@ -105,8 +91,6 @@ int m;
 //# If there are less phenotypes than strains, reduce the genotype matrix
   if(g.shape[0] != y.sizeof){
     writeln("Reduce geno matrix to match phenotype strains");
-    
-    //run_gwas();
     writeln("gnames and ynames");
     writeln(gnames);
     writeln(ynames);
@@ -124,14 +108,10 @@ int m;
       gnames.popFront;
     }
     writeln(gidx);
-    //g2 = g.T[(gidx)].T;
     dmatrix gTranspose = matrixTranspose(g);
-    //writeln(gTranspose.shape);
     dmatrix slicedMatrix = sliceDmatrix(gTranspose, gidx);
     writeln(slicedMatrix.shape);
     dmatrix g2 = matrixTranspose(slicedMatrix);
-    //prettyPrint(g2);
-    //prettyPrint(gTranspose);
     writeln("geno matrix ",g.shape," reshaped to ",g2.shape);
     g = g2;
   }
@@ -148,79 +128,38 @@ int m;
     //ts = gwas["ts"];
     //check_results(ps,ts);
   }
-//else if(cmd == "rqtl"){
+  else if(cmd == "rqtl"){
 //    if options.remove_missing_phenotypes:
 //        raise Exception('Can not use --remove-missing-phenotypes with R/qtl2 LMM2')
 //    n = len(y)
 //    m = g.shape[1]
 //    ps, ts = run_gwas('other',n,m,k,y,g)  # <--- pass in geno by SNP
 //    check_results(ps,ts)
-//  }
-//  else if(cmd == "iterator"){
+  }
+  else if(cmd == "iterator"){
 //     if options.remove_missing_phenotypes:
 //          raise Exception('Can not use --remove-missing-phenotypes with LMM2')
 //      geno_iterator =  reader.geno_iter(options.geno)
 //      ps, ts = gn2_load_redis_iter('testrun_iter','other',k,y,geno_iterator)
 //      check_results(ps,ts)
-
+  }
   else{
     writeln("Doing nothing");
   }
 
 
-  //int a = pheno("./data/rqtl/iron_covar.csv");
- // writeln(a);
-	//writeln("Edit source/app.d to start your project.");
+  if(ogeno =="data/test8000.geno" && opheno == "data/test8000.pheno"){
+    //K = kinship_full(G);
+    //auto k1 = std.math.round(K[0][0],4);
+    //auto k2 = std.math.round(K2[0][0],4);
 
-
-  //Node root = control("./source/input.yaml");
-  //writeln("The answer is ", root["crosstype"].as!int);
-
-  //kinship("./data/rqtl/iron_covar.csv");
-
- // //Dump the loaded document to output.yaml.
- // Dumper("output.yaml").dump(root);
-}
-
-unittest{
-  double[] y;
-  string[] ynames;
-
-  pheno(opheno, y, ynames, pheno_column);
-  writeln(y.sizeof);
-
-  dmatrix g;
-  string[] gnames;
-
-
-  // geno tests
-
-  geno(ogeno, ctrl, g, gnames);
-  writeln(g.shape);
-
-  G = matrixTranspose(g);
-  //G = np.apply_along_axis( genotype.normalize, axis=1, arr=G)
-  K = kinship_full(G);
-
-  //print "Genotype",G.shape, "\n", G
-  //print "first Kinship method",K.shape,"\n",K
-  k1 = round(K[0][0],4);
-  //K2,G = calculate_kinship_new(np.copy(G))
-  //print "Genotype",G.shape, "\n", G
-  //print "GN2 Kinship method",K2.shape,"\n",K2
-  k2 = round(K2[0][0],4);
-
-  if(filname==""){
-    assert(k1 == 0.8333);
-    assert(k2==0.9375);
-    assert(k3==0.9375);
+    //writeln("Genotype",G.shape, "\n", G);
+    //auto K3 = kinship(G);
+    //writeln("third Kinship method",K3.shape,"\n",K3);
+    //sys.stderr.write(options.geno+"\n");
+    //auto k3 = std.math.round(K3[0][0],4);
+    //assert(k3 == 1.4352);
   }
-  if(filname==""){
-    assert(k1 == 0.8333);
-    assert(k2 == 0.7172);
-    assert(k3 == 0.7172);
-  }
-  if(filname==""){
-    assert(k3 == 1.4352);
-  }
+ 
+
 }

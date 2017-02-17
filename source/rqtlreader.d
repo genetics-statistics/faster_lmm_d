@@ -16,12 +16,8 @@ import std.file;
 import simplelmm.dmatrix;
 
 JSONValue control(string fn){
-  //Node root = Loader(fn).load();
-  //writeln("in control function");
   string input = cast(string)std.file.read(fn);
   JSONValue j = parseJSON(input);
-  //writeln(j);
-
   return j;
 }
 
@@ -46,9 +42,6 @@ int kinship(string fn){
 }
 
 void pheno(string fn,  ref double[] y, ref string[] ynames, int p_column= 0){
-  // read recla_geno.csv
-  //writeln(fn);
-
   Regex!char Pattern = regex("\\.json$", "i");
 
   if(!match(fn, Pattern).empty)
@@ -64,30 +57,11 @@ void pheno(string fn,  ref double[] y, ref string[] ynames, int p_column= 0){
     writeln(ynames);
     writeln("interest");
   }
-
-
-  //string input = cast(string)std.file.read(fn);
-  ////auto tsv = csvReader!(string[string])(input, null);
-  //auto tsv = csvReader!(string)(input, null);
-  //writeln(tsv[0]);
-  //auto ynames = tsv[1..$];
-
-  //auto p = ctRegex!(`^.+\.$`);
-  //foreach(n;ynames){
-  //  assert!match(n,p);
-  //}
-  //foreach(row; tsv){
-
-  //}
 }
 
 void geno(string fn, JSONValue ctrl, ref dmatrix g, ref string[] gnames){
 
   writeln("in geno function");
-  //writeln(ctrl["genotypes"].object);
-  //string ptr = ("na-strings" in ctrl.object).str;
-  //writeln(ctrl.object);
-  //string s = `{"-" : "0","NA": "0"}`;
   //FIXME
   string s = `{"-" : "0","NA": "0", "U": "0"}`;
   ctrl["na-strings"] = parseJSON(s);
@@ -101,7 +75,6 @@ void geno(string fn, JSONValue ctrl, ref dmatrix g, ref string[] gnames){
     int c = to!int(b);
     hab_mapper[a] = c;
     writeln(hab_mapper);
-    //writeln(a);
     writeln(b);
 
     idx++;
@@ -119,21 +92,17 @@ void geno(string fn, JSONValue ctrl, ref dmatrix g, ref string[] gnames){
   }
   writeln("hab_mapper", hab_mapper);
   writeln("simplelmm_mapper", simplelmm_mapper);
-  //writeln(fn);
 
   string input = cast(string)std.file.read(fn);
   auto tsv = csvReader!(string, Malformed.ignore)(input, null);
 
-  //writeln(tsv.header[1..$]);
   gnames = tsv.header[1..$];
   double[] gs2;
   int rowCount = 0;
   int colCount;
   string[] gs;
-  int allal= 0;
   foreach(row; tsv){
     string id = row.front;
-    //writeln(id);
     row.popFront();
     gs = [];
     colCount = 0;
@@ -141,43 +110,12 @@ void geno(string fn, JSONValue ctrl, ref dmatrix g, ref string[] gnames){
       gs ~= item;
       gs2 ~= simplelmm_mapper[hab_mapper[item]];
       colCount++;
-      allal++;
     }
-    //writeln(rowCount);
-    //writeln(gs2);
     rowCount++;
-
-
-    //writeln(gs);
-    ////# print id,gs
-    ////# Convert all items to genotype values
-    //gs2 = [simplelmm_mapper[hab_mapper[g]] for g in gs]
-    //core.exception.RangeError@source/rqtlreader.d(137): Range violation
-    //foreach(gval;gs){
-    //  gs2 ~= simplelmm_mapper[hab_mapper[gval]];
-    //}
-    //# print id,gs2
-    //# ns = np.genfromtxt(row[1:])
-    //G1.append(gs2) # <--- slow
-    //G = np.array(G1)
   }
   writeln("MATRIX CREATED");
   g = dmatrix([rowCount, colCount], gs2);
-    //writeln(y);
-  ////# print(row)
-
-  //string* ptr;
-
-  //ptr = ("na.strings" in ctrl);
-  //if(ptr !is null && ctrl['geno_transposed']){
-  //  //return G,gnames
-  //}
-  ////return G.T,gnames
-
-
-
-  //return 5;
- writeln("leaving geno function");
+  writeln("leaving geno function");
 }
 
 
@@ -202,12 +140,7 @@ int geno_callback(string fn){
   string input = cast(string)std.file.read(fn);
   auto tsv = csvReader!(string, Malformed.ignore)(input, '\t');
   writeln(tsv);
-  //      for row in tsv:
-  //          id = row[0]
-  //          gs = list(row[1])
-  //          gs2 = [simplelmm_mapper[hab_mapper[g]] for g in gs]
-  //          func(id,gs2)
-  return 5;
+  return 1;
 }
 
 int geno_iter(string fn){
@@ -233,5 +166,5 @@ int geno_iter(string fn){
   auto tsv = csvReader!(string, Malformed.ignore)(input, '\t');
   writeln(tsv);
 
-  return 5;
+  return 1;
 }

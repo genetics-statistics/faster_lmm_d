@@ -86,8 +86,6 @@ void gwas(double[] Y, ref dmatrix G, ref dmatrix K, bool restricted_max_likeliho
 
   double[] ps;
   double[] ts;
-  //writeln("n = ", n);
-  //writeln("m = ", m);
 
   for(int i=0; i<m; i++){
     dmatrix x = getRow(G, i);

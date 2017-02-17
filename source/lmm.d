@@ -93,9 +93,9 @@ void run_human(ref double[] pheno_vector, ref dmatrix covariate_matrix, string p
 
     int n = kinship_matrix.shape[0];
     writeln("n is:", n);
-    LMM lmm_ob = LMM(pheno_vector, kinship_matrix, covariate_matrix);
+    //LMM lmm_ob = LMM(pheno_vector, kinship_matrix, covariate_matrix);
     dmatrix a;
-    fit(lmm_ob, a , 100, true);
+    //fit(lmm_ob, a , 100, true);
 
 
     //# Buffers for pvalues and t-stats
@@ -237,79 +237,6 @@ void run_other_new(ref int n, ref int m, ref double[] pheno_vector, ref dmatrix 
         
     //Bench().report();
     //return p_values, t_stats;
-}
-
-
-struct LMM{
-  double[] Y;
-  dmatrix K;
-  dmatrix Kva;
-  dmatrix Kve;
-  dmatrix X0;
-  bool verbose;
-  dmatrix Yt;
-  dmatrix X0t;
-  dmatrix X0t_stack;
-  dmatrix q;
-  double[] H;
-  double[] L;
-  double[] LLs;
-  double optLL;
-  double optBeta;
-  double optSigma;
-
-  this(double[] Y, dmatrix K, dmatrix Kva,dmatrix Kve,double X0,bool verbose){
-    this.Y = Y;
-    this.K = K;
-    this.Kva = Kva;
-    this.Kve = Kve;
-    this.verbose = false;
-  }
-
-  this(double[] Y, dmatrix K, dmatrix Kva,){
-    this.Y = Y;
-    this.K = K;
-    this.Kva = Kva;
-    this.verbose = false;
-  }
-}
-
-void fit(ref LMM lmmobject,ref dmatrix X, double ngrids=100, bool REML=true){
-
-  //"""
-  //   Finds the maximum-likelihood solution for the heritability (h) given the current parameters.
-  //   X can be passed and will transformed and concatenated to X0t.  Otherwise, X0t is used as
-  //   the covariate matrix.
-
-  //   This function calculates the LLs over a grid and then uses .getMax(...) to find the optimum.
-  //   Given this optimum, the function computes the LL and associated ML solutions.
-  //"""
-
-    //if(X is None){ 
-    //  X = lmmobject.X0t;
-    //}
-    //else{
-    //   //#X = np.hstack([lmmobject.X0t,matrixMult(lmmobject.Kve.T, X)])
-    //  lmmobject.X0t_stack[sval,(lmmobject.q)] = matrixMult(lmmobject.Kve.T,X)[sval,0];
-    //  X = lmmobject.X0t_stack;
-    //}
-
-    //auto H = array(range(ngrids)) / float(ngrids);
-    //auto L = array(range(ngrids)) / float(ngrids);
-    //np.array([lmmobject.LL(h,X,stack=False,REML=REML)[0] for h in H]);
-    //lmmobject.LLs = L;
-
-    //hmax = getMax(H,X,REML);
-    //getLL( L, beta,  sigma, betaSTDERR, hmax, X, false, REML);
-
-    //lmmobject.H = H;
-    ////false.optH = hmax.sum();
-    //lmmobject.optLL = L;
-    //lmmobject.optBeta = beta;
-    //lmmobject.optSigma = sigma.sum();
-
-    //# debug(["hmax",hmax,"beta",beta,"sigma",sigma,"LL",L])
-    //return hmax,beta,sigma,L;
 }
 
 void calculate_kinship_new(ref dmatrix K, ref dmatrix G, ref dmatrix genotype_matrix){
