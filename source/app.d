@@ -13,6 +13,7 @@ import simplelmm.dmatrix;
 import simplelmm.optmatrix;
 import simplelmm.opencl.add;
 import simplelmm.helpers;
+import std.typecons;
 
 void main(string[] args)
 {
@@ -90,16 +91,36 @@ void main(string[] args)
   }
 
   //geno_callback("data/small.geno");
-int n;
-int m;
-//if(y!=null){
-//  n = y[0];//.sizeof;
-//}
+  
+  int n;
+  int m;
 
-//lmmoptions.set(options)
-//writeln lmmoptions.get()
+  void check_results(double[] ps, double[] ts){
+    writeln(ps);
+    writeln(ps.length, "\n", sum(ps));
+    double p1 = ps[0];
+    double p2 = ps[$-1];
+    if(ogeno == "data/small.geno"){
+      writeln("Validating results for ", ogeno);
+      assert(modDiff(p1,0.7387)<0.001);
+      assert(modDiff(p2,0.7387)<0.001);
+    } 
+    if(ogeno == "data/small_na.geno"){
+      writeln("Validating results for ", ogeno);
+      assert(modDiff(p1,0.062)<0.001);
+      assert(modDiff(p2,0.062)<0.001);
+    }
+    if(ogeno == "data/test8000.geno"){
+      writeln("Validating results for ",ogeno);
+      assert(std.math.round(sum(ps)) == 4070);
+      assert(ps.length == 8000);
+    }
+    writeln("Run completed");
+  }
 
-//# If there are less phenotypes than strains, reduce the genotype matrix
+
+  // If there are less phenotypes than strains, reduce the genotype matrix
+  
   if(g.shape[0] != y.sizeof){
     writeln("Reduce geno matrix to match phenotype strains");
     writeln("gnames and ynames");
@@ -135,7 +156,9 @@ int m;
     m = g.shape[1];
     dmatrix k;
     //ps, ts = 
-    run_gwas("other",n,m,k,y,g); //<--- pass in geno by SNP
+    auto aloo = run_gwas("other",n,m,k,y,g); //<--- pass in geno by SNP
+    writeln("Here is aloo");
+    writeln(aloo[0]);
     //check_results(ps,ts)
   }
   else if(cmd == "rqtl"){
@@ -145,18 +168,12 @@ int m;
     n = cast(int)y.length;
     m = g.shape[1];
     dmatrix k;
-    run_gwas("other",n,m,k,y,g);
-    //ps = gwas["ps"];
-    //ts = gwas["ts"];
-    //check_results(ps,ts);
-  }
-  else if(cmd == "rqtl"){
-//    if options.remove_missing_phenotypes:
-//        raise Exception('Can not use --remove-missing-phenotypes with R/qtl2 LMM2')
-//    n = len(y)
-//    m = g.shape[1]
-//    ps, ts = run_gwas('other',n,m,k,y,g)  # <--- pass in geno by SNP
-//    check_results(ps,ts)
+    auto gwas = run_gwas("other",n,m,k,y,g);
+    double[] ts = gwas[0];
+    double[] ps = gwas[1];
+    writeln(ts);
+    writeln(ps);
+    check_results(ps,ts);
   }
   else if(cmd == "iterator"){
 //     if options.remove_missing_phenotypes:
@@ -181,29 +198,6 @@ int m;
     //sys.stderr.write(options.geno+"\n");
     //auto k3 = std.math.round(K3[0][0],4);
     //assert(k3 == 1.4352);
-  }
- 
-  void check_results(double[] ps, double[] ts){
-    writeln(ps);
-    writeln(ps.length, sum(ps));
-    double p1 = ps[0];
-    double p2 = ps[$];
-    if(ogeno == "data/small.geno"){
-      writeln("Validating results for ", ogeno);
-      assert(modDiff(p1,0.7387)<0.001);
-      assert(modDiff(p2,0.7387)<0.001);
-    } 
-    if(ogeno == "data/small_na.geno"){
-      writeln("Validating results for ", ogeno);
-      assert(modDiff(p1,0.062)<0.001);
-      assert(modDiff(p2,0.062)<0.001);
-    }
-    if(ogeno == "data/test8000.geno"){
-      writeln("Validating results for ",ogeno);
-      assert(std.math.round(sum(ps)) == 4070);
-      assert(ps.length == 8000);
-    }
-    writeln("Run completed");
   }
 
 }

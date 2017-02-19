@@ -5,12 +5,13 @@ import std.stdio;
 import simplelmm.helpers;
 import simplelmm.optmatrix;
 import simplelmm.kinship;
+import std.typecons;
 
 //void formatResult(id,beta,betaSD,ts,ps){
 //  //return "\t".join([str(x) for x in [id,beta,betaSD,ts,ps]]) + "\n";
 //}
 
-void run_gwas(string species,int n,int m,ref dmatrix k, ref double[] y, ref dmatrix geno){
+auto run_gwas(string species,int n,int m,ref dmatrix k, ref double[] y, ref dmatrix geno){
     //int cov, bool reml = true,bool refit = false, string inputfn = "", bool new_code = true){
 //  //"""
 //  //Invoke pylmm using genotype as a matrix or as a (SNP) iterator.
@@ -41,17 +42,17 @@ void run_gwas(string species,int n,int m,ref dmatrix k, ref double[] y, ref dmat
     writeln("kinship", k );
     //ps, ts = 
     //run_human(y, cov, inputfn, k, refit);
+    return Tuple!(double[], double[])([-1],[-1]);
   }
   else{
     writeln("geno");
     double ps, ts;
     if(new_code){ 
-      run_other_new(n, m, y, geno, reml, refit);
+      return run_other_new(n, m, y, geno, reml, refit);
     }else{
-      run_other_new(n, m, y, geno, reml, refit);
+      return run_other_new(n, m, y, geno, reml, refit);
     }
-}
-
+  }
 }
 
 void run_human(ref double[] pheno_vector, ref dmatrix covariate_matrix, string plink_input_file, ref dmatrix kinship_matrix, bool refit=false){
@@ -196,69 +197,62 @@ void run_human(ref double[] pheno_vector, ref dmatrix covariate_matrix, string p
 //    return p_values, t_stats;
 //}
 
-void run_other_new(ref int n, ref int m, ref double[] pheno_vector, ref dmatrix geno, bool restricted_max_likelihood= true, bool refit = false){
+auto run_other_new(ref int n, ref int m, ref double[] pheno_vector, ref dmatrix geno, bool restricted_max_likelihood= true, bool refit = false){
 
-    //"""Takes the phenotype vector and genotype matrix and returns a set of p-values and t-statistics
+  //"""Takes the phenotype vector and genotype matrix and returns a set of p-values and t-statistics
 
-    //restricted_max_likelihood -- whether to use restricted max likelihood; True or False
-    //refit -- whether to refit the variance component for each marker
+  //restricted_max_likelihood -- whether to use restricted max likelihood; True or False
+  //refit -- whether to refit the variance component for each marker
 
-    //"""
+  //"""
 
-    writeln("Running the new LMM2 engine in run_other_new");
-    writeln("REML=",restricted_max_likelihood," REFIT=",refit);
+  writeln("Running the new LMM2 engine in run_other_new");
+  writeln("REML=",restricted_max_likelihood," REFIT=",refit);
 
-    //# Adjust phenotypes
-    double[] Y;
-    bool[] keep;
-    simplelmm.phenotype.remove_missing_new(Y,keep,n,pheno_vector);
-    writeln("Keep goes here");
-    writeln(keep);
-    writeln("Keep goes here");
+  //# Adjust phenotypes
+  double[] Y;
+  bool[] keep;
+  simplelmm.phenotype.remove_missing_new(Y,keep,n,pheno_vector);
+  writeln("Keep goes here");
+  writeln(keep);
+  writeln("Keep goes here");
 
-    //geno = geno[:,keep];
-    dmatrix K, G;
-    writeln("Calculate Kinship");
-      //K,G = 
-    calculate_kinship_new(K,G,geno);
-    
+  //geno = geno[:,keep];
+  dmatrix K, G;
+  writeln("Calculate Kinship");
+    //K,G = 
+  calculate_kinship_new(K,G,geno);
+  
 
-    writeln("kinship_matrix: ", K);
-    writeln("kinship_matrix.shape: ", K.shape);
+  writeln("kinship_matrix: ", K);
+  writeln("kinship_matrix.shape: ", K.shape);
 
-    writeln("run_other_new genotype_matrix: ", G.shape);
-    //writeln(G);
+  writeln("run_other_new genotype_matrix: ", G.shape);
+  //writeln(G);
 
-    ////with(Bench("Doing GWAS")){
-    //  //t_stats, p_values = 
-    //  //gwas(Y, G, K, restricted_max_likelihood=True, refit=False,verbose=True);
-    gwas(Y, G, K, true, false, true);
-    //}
-        
-    //Bench().report();
-    //return p_values, t_stats;
+  return gwas(Y, G, K, true, false, true);
 }
 
 void calculate_kinship_new(ref dmatrix K, ref dmatrix G, ref dmatrix genotype_matrix){
-    //"""
-    //Call the new kinship calculation where genotype_matrix contains
-    //inds (columns) by snps (rows).
-    //"""
-    //assert type(genotype_matrix) is np.ndarray;
-    writeln(genotype_matrix.shape);
-    prettyPrint(genotype_matrix);
-    writeln("call genotype.normalize");
-    //G = np.apply_along_axis( genotype.normalize, axis=1, arr=genotype_matrix);
-    normalize_along_row(G, genotype_matrix);
-    //writeln("G",genotype_matrix);
-    //K = kinshipComp(G);
-    K = kinship_full(G);
-    //writeln("call calculate_kinship_new");
-    //kinship(G);
-    //if kinship_useCUDA(G) or kinship_doCalcFull(G):
-    //    try:
-    //        return kinship_full(G),G
-    //    except:
-    //        pass # when out of memory try the iterator version
-    //return kinship(G),G
+  //"""
+  //Call the new kinship calculation where genotype_matrix contains
+  //inds (columns) by snps (rows).
+  //"""
+  //assert type(genotype_matrix) is np.ndarray;
+  writeln(genotype_matrix.shape);
+  prettyPrint(genotype_matrix);
+  writeln("call genotype.normalize");
+  //G = np.apply_along_axis( genotype.normalize, axis=1, arr=genotype_matrix);
+  normalize_along_row(G, genotype_matrix);
+  //writeln("G",genotype_matrix);
+  //K = kinshipComp(G);
+  K = kinship_full(G);
+  //writeln("call calculate_kinship_new");
+  //kinship(G);
+  //if kinship_useCUDA(G) or kinship_doCalcFull(G):
+  //    try:
+  //        return kinship_full(G),G
+  //    except:
+  //        pass # when out of memory try the iterator version
+  //return kinship(G),G
 }

@@ -294,8 +294,6 @@ struct LMM2{
         LL_REML_part = q*std.math.log(2.0*std.math.PI*sigma) + std.math.log(aloo) - std.math.log(det(XX));
         LL = LL + 0.5*LL_REML_part;
       }
-      //double LLsum = sum(LL);
-      //writeln("beta=",beta.acc(0,0)," sigma=",sigma," LL=",LL);
       L = dmatrix([1,1],[LL]);
       
       return LL;

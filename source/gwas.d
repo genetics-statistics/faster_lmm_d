@@ -1,6 +1,7 @@
 module simplelmm.gwas;
 import std.parallelism : taskPool;
 import std.stdio;
+import std.typecons;
 import simplelmm.lmm2;
 import simplelmm.dmatrix;
 import dstats.distrib;
@@ -24,7 +25,7 @@ void compute_snp(int j,int n,double[] snps,LMM2 lmmobject, bool REML,double q){
 //  compute_snp.q = q;
 //}
 
-void gwas(double[] Y, ref dmatrix G, ref dmatrix K, bool restricted_max_likelihood = true, bool refit=false, bool verbose = true){
+auto gwas(double[] Y, ref dmatrix G, ref dmatrix K, bool restricted_max_likelihood = true, bool refit=false, bool verbose = true){
   //"""
   //GWAS. The G matrix should be n inds (cols) x m snps (rows)
   //"""
@@ -97,7 +98,5 @@ void gwas(double[] Y, ref dmatrix G, ref dmatrix K, bool restricted_max_likeliho
     ps ~= psNum;
     ts ~= tsNum;
   }
-  writeln(ts);
-  writeln(ps);
-
+  return Tuple!(double[], double[])(ts,ps);
 }
