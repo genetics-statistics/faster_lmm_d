@@ -1,6 +1,11 @@
 module simplelmm.helpers;
 import std.math;
 
+double modDiff(double x, double y){
+  double rem = y - x;
+  if(rem<0){return -rem;}
+  return rem;
+}
 
 bool[] isnan(double[] vector){
   bool[] result;

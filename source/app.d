@@ -12,6 +12,7 @@ import simplelmm.gwas;
 import simplelmm.dmatrix;
 import simplelmm.optmatrix;
 import simplelmm.opencl.add;
+import simplelmm.helpers;
 
 void main(string[] args)
 {
@@ -47,13 +48,23 @@ void main(string[] args)
   string[] ynames;
 
   if(opheno){
-    pheno(opheno, y, ynames, pheno_column);
+    if(cmd == "rqtl"){
+      pheno(opheno, y, ynames, pheno_column);
+    }
+    else{
+      tsvpheno(opheno, y, ynames, pheno_column);
+    }
     writeln(y.sizeof);
   }
   dmatrix g;
   string[] gnames;
   if(ogeno && cmd != "iterator"){
-    geno(ogeno, ctrl, g, gnames);
+    if(cmd == "rqtl"){
+      geno(ogeno, ctrl, g, gnames);
+    }
+    else{
+      tsvgeno(ogeno, ctrl, g, gnames);
+    }
     writeln(g.shape);
   }
 
@@ -86,7 +97,7 @@ int m;
 //}
 
 //lmmoptions.set(options)
-//print lmmoptions.get()
+//writeln lmmoptions.get()
 
 //# If there are less phenotypes than strains, reduce the genotype matrix
   if(g.shape[0] != y.sizeof){
@@ -116,7 +127,18 @@ int m;
     g = g2;
   }
 
-  if(cmd == "run" || cmd == "rqtl"){
+  if(cmd == "run"){
+    //if options.remove_missing_phenotypes{
+    //  raise Exception('Can not use --remove-missing-phenotypes with LMM2')
+    //}
+    n = cast(int)y.length;
+    m = g.shape[1];
+    dmatrix k;
+    //ps, ts = 
+    run_gwas("other",n,m,k,y,g); //<--- pass in geno by SNP
+    //check_results(ps,ts)
+  }
+  else if(cmd == "rqtl"){
     //if options.remove_missing_phenotypes{
     //  raise Exception('Can not use --remove-missing-phenotypes with LMM2')
     //}
@@ -161,5 +183,28 @@ int m;
     //assert(k3 == 1.4352);
   }
  
+  void check_results(double[] ps, double[] ts){
+    writeln(ps);
+    writeln(ps.length, sum(ps));
+    double p1 = ps[0];
+    double p2 = ps[$];
+    if(ogeno == "data/small.geno"){
+      writeln("Validating results for ", ogeno);
+      assert(modDiff(p1,0.7387)<0.001);
+      assert(modDiff(p2,0.7387)<0.001);
+    } 
+    if(ogeno == "data/small_na.geno"){
+      writeln("Validating results for ", ogeno);
+      assert(modDiff(p1,0.062)<0.001);
+      assert(modDiff(p2,0.062)<0.001);
+    }
+    if(ogeno == "data/test8000.geno"){
+      writeln("Validating results for ",ogeno);
+      assert(std.math.round(sum(ps)) == 4070);
+      assert(ps.length == 8000);
+    }
+    writeln("Run completed");
+  }
 
 }
+    

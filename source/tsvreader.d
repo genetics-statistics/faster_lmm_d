@@ -90,7 +90,6 @@ void tsvgeno(string fn, JSONValue ctrl, ref dmatrix g, ref string[] gnames){
   foreach(line; rows[1..$]){
   	if(line != ""){
 	  	string[] row = line.split("\t");
-	  	writeln(row);
 	    string id = row[0];
 	    //writeln(id);
 	    //gs = [];
