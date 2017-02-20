@@ -241,7 +241,7 @@ void calculate_kinship_new(ref dmatrix K, ref dmatrix G, ref dmatrix genotype_ma
   //prettyPrint(genotype_matrix);
   writeln("call genotype.normalize");
   //G = np.apply_along_axis( genotype.normalize, axis=1, arr=genotype_matrix);
-  normalize_along_row(G, genotype_matrix);
+  G = normalize_along_row(genotype_matrix);
   //writeln("G",genotype_matrix);
   //K = kinshipComp(G);
   K = kinship_full(G);

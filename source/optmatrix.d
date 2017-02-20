@@ -97,7 +97,7 @@ dmatrix sliceDmatrixKeep(dmatrix input, bool[] along){
   return dmatrix([shape0,input.shape[1]],output);
 }
 
-void normalize_along_row(ref dmatrix G, dmatrix input){
+dmatrix normalize_along_row(dmatrix input){
   double[] largeArr;
   double[] arr;
   writeln(input.shape);
@@ -122,7 +122,7 @@ void normalize_along_row(ref dmatrix G, dmatrix input){
     }
     largeArr ~= arr;
   }
-  G = dmatrix(input.shape, largeArr);
+  return dmatrix(input.shape, largeArr);
 }
 
 
