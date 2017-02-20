@@ -244,3 +244,14 @@ void setRow(ref dmatrix input, int rowNo, dmatrix arr){
     k++;
   }
 }
+
+void nanCounter(dmatrix input){
+  int nanCounter = 0;
+  foreach(ref ele; input.elements){
+    if(std.math.isNaN(ele)){
+      writeln("I got a NaN");
+      nanCounter++;
+    }
+  }
+  writeln(nanCounter);
+}

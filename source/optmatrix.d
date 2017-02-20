@@ -67,8 +67,8 @@ void pPrint(dmatrix input){
 
 dmatrix sliceDmatrix(dmatrix input, int[] along){
   writeln("In sliceDmatrix");
-  writeln(along.length);
-  writeln(along);
+  //writeln(along.length);
+  //writeln(along);
   double[] output;
   foreach(int rowIndex; along){
     for(int i=rowIndex*input.shape[1]; i < (rowIndex+1)*input.shape[1]; i++){
@@ -100,6 +100,7 @@ dmatrix sliceDmatrixKeep(dmatrix input, bool[] along){
 void normalize_along_row(ref dmatrix G, dmatrix input){
   double[] largeArr;
   double[] arr;
+  writeln(input.shape);
   for(int i = 0; i < input.shape[0]; i++){
     arr = input.elements[(input.shape[1]*i)..(input.shape[1]*(i+1))];
     bool[] missing = isnan(arr);
@@ -108,6 +109,7 @@ void normalize_along_row(ref dmatrix G, dmatrix input){
     double mean = globalMean(values);
     double variation = getVariation(values, mean);
     double stddev = std.math.sqrt(variation);
+
     replaceNaN(arr, valuesArr, mean);
     if(stddev == 0){
       foreach(ref elem; arr){

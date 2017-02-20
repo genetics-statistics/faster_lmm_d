@@ -1,5 +1,6 @@
 module simplelmm.helpers;
 import std.math;
+import std.stdio;
 
 double modDiff(double x, double y){
   double rem = y - x;
@@ -58,12 +59,10 @@ double getVariation(double[] vector, double mean){
 }
 
 double[] getNumArray(double[] arr,bool[] valuesArr){
-  double[] result;
-  int index = 0;
-  foreach(element; arr){
-    if(valuesArr[index] == true){
-      result ~= element;
-      index++;
+  double[] result = [];
+  for(int k = 0 ; k < arr.length; k++){
+    if(valuesArr[k] == true){
+      result ~= arr[k];
     }
   }
   return result;

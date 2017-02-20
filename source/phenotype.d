@@ -33,11 +33,11 @@ void remove_missing_new(ref double[] Y, ref bool[] keep, int n, ref double[] y){
   Y = y;
   bool[] v;
   v = isnan(y);
-  writeln(v);
+  //writeln(v);
   keep = negateBool(v);
-  writeln(keep);
+  //writeln(keep);
   //if v.sum():
   //    info("runlmm.py: Cleaning the phenotype vector by removing %d individuals" % (v.sum()))
   //    Y = y[keep]
-    n = cast(int)Y.length;
+  n = cast(int)Y.length;
 }

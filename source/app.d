@@ -5,6 +5,7 @@ import std.csv;
 import std.regex;
 import std.getopt;
 import std.json;
+import std.typecons;
 import simplelmm.rqtlreader;
 import simplelmm.tsvreader;
 import simplelmm.lmm;
@@ -13,7 +14,6 @@ import simplelmm.dmatrix;
 import simplelmm.optmatrix;
 import simplelmm.opencl.add;
 import simplelmm.helpers;
-import std.typecons;
 
 void main(string[] args)
 {
@@ -155,11 +155,12 @@ void main(string[] args)
     n = cast(int)y.length;
     m = g.shape[1];
     dmatrix k;
-    //ps, ts = 
-    auto aloo = run_gwas("other",n,m,k,y,g); //<--- pass in geno by SNP
-    writeln("Here is aloo");
-    writeln(aloo[0]);
-    //check_results(ps,ts)
+    auto gwas = run_gwas("other",n,m,k,y,g); //<--- pass in geno by SNP
+    double[] ts = gwas[0];
+    double[] ps = gwas[1];
+    writeln(ts);
+    writeln(ps);
+    check_results(ps,ts);
   }
   else if(cmd == "rqtl"){
     //if options.remove_missing_phenotypes{

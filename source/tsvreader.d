@@ -12,6 +12,7 @@ import std.csv;
 import std.regex;
 
 import simplelmm.dmatrix;
+import simplelmm.optmatrix;
 
 void tsvpheno(string fn,  ref double[] y, ref string[] ynames, int p_column= 0){
 	writeln("In tsvpheno");
@@ -32,8 +33,8 @@ void tsvpheno(string fn,  ref double[] y, ref string[] ynames, int p_column= 0){
   	
   }
   y = Y1;
-  writeln("ynames");
-  writeln(y,ynames);
+  //writeln("ynames");
+  //writeln(y,ynames);
 }// # FIXME: column not used
 
 void tsvgeno(string fn, JSONValue ctrl, ref dmatrix g, ref string[] gnames){
@@ -44,13 +45,13 @@ void tsvgeno(string fn, JSONValue ctrl, ref dmatrix g, ref string[] gnames){
   //writeln(ctrl.object);
   //string s = `{"-" : "0","NA": "0"}`;
   //FIXME
-  string s = `{"-" : "0","NA": "0", "U": "0", "A":"1"}`;
+  string s = `{"A":0,"H":1,"B":2,"-":3}`;
   ctrl["na-strings"] = parseJSON(s);
   //writeln(ctrl.object);
   int[string] hab_mapper;
   int idx = 0;
 
-  foreach( key, value; ctrl["genotypes"].object){
+  foreach( key, value; ctrl["na-strings"].object){
     string a  = to!string(key);
     string b = to!string(value);
     int c = to!int(b);
@@ -62,16 +63,9 @@ void tsvgeno(string fn, JSONValue ctrl, ref dmatrix g, ref string[] gnames){
     idx++;
   }
   //writeln(hab_mapper);
-  writeln(idx);
-  assert(idx == 3);
-  double[] simplelmm_mapper = [double.nan, 0.0, 0.5, 1.0];
+  double[] simplelmm_mapper = [ 0.0, 0.5, 1.0, double.nan,];
   //foreach(s; ctrl["na.strings"]){
 
-  foreach( key,value; ctrl["na-strings"].object){
-    idx += 1;
-    hab_mapper[to!string(key)] = idx;
-    simplelmm_mapper ~= double.nan;
-  }
   writeln("hab_mapper", hab_mapper);
   writeln("simplelmm_mapper", simplelmm_mapper);
   //writeln(fn);
@@ -121,6 +115,7 @@ void tsvgeno(string fn, JSONValue ctrl, ref dmatrix g, ref string[] gnames){
   }
   writeln("MATRIX CREATED");
   g = dmatrix([rowCount, colCount], gs2);
+  //pPrint(g);
     //writeln(y);
   ////# print(row)
 

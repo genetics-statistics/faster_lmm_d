@@ -152,10 +152,6 @@ void kvakve(dmatrix K, ref dmatrix Kva, ref dmatrix Kve){
   //of small values < 1e-6 (notably smaller than zero)
   //"""
   writefln("Obtaining eigendecomposition for %dx%d matrix",K.shape[0],K.shape[1]);
-  //writeln(K);
-  //assert (K.T == K).all(); //# raise "K is not symmetric"
-  //(dmatrix input,ref double eigenvalue, ref dmatrix dvl, ref dmatrix dvr)
-  dmatrix ev;
   eigh(K, Kva, Kve);
 
   //if(sum(Kva) < 0){

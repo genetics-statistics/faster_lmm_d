@@ -213,9 +213,7 @@ auto run_other_new(ref int n, ref int m, ref double[] pheno_vector, ref dmatrix 
   double[] Y;
   bool[] keep;
   simplelmm.phenotype.remove_missing_new(Y,keep,n,pheno_vector);
-  writeln("Keep goes here");
   writeln(keep);
-  writeln("Keep goes here");
 
   //geno = geno[:,keep];
   dmatrix K, G;
@@ -240,7 +238,7 @@ void calculate_kinship_new(ref dmatrix K, ref dmatrix G, ref dmatrix genotype_ma
   //"""
   //assert type(genotype_matrix) is np.ndarray;
   writeln(genotype_matrix.shape);
-  prettyPrint(genotype_matrix);
+  //prettyPrint(genotype_matrix);
   writeln("call genotype.normalize");
   //G = np.apply_along_axis( genotype.normalize, axis=1, arr=genotype_matrix);
   normalize_along_row(G, genotype_matrix);
