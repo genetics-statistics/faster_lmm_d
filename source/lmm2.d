@@ -5,6 +5,7 @@ import simplelmm.optmatrix;
 import simplelmm.helpers;
 import simplelmm.kinship;
 import std.stdio;
+import std.typecons;
 
 ////void calculateKinship(W,center=False){
 ////  //"""
@@ -398,7 +399,7 @@ struct LMM2{
     fit_LL = sum;
   }
 
-  void lmm2association(ref double psNum, ref double tsNum, ref LMM2 lmmobject, ref dmatrix X, ref double h, bool stack=true, bool REML=true, bool returnBeta=false){
+  auto lmm2association(ref LMM2 lmmobject, ref dmatrix X, ref double h, bool stack=true, bool REML=true, bool returnBeta=false){
     //"""
     //  Calculates association statitics for the SNPs encoded in the vector X of size n.
     //  If h is None, the optimal h stored in optH is used.
@@ -430,24 +431,23 @@ struct LMM2{
 
     double ts,ps;
     //writeln(betaVAR);
-    tstat(ts, ps, lmmobject, beta.elements[q-1], betaVAR.acc(q-1,q-1),sigma,q);
-    tsNum = ts;
-    psNum = ps;
+    return tstat(lmmobject, beta.elements[q-1], betaVAR.acc(q-1,q-1),sigma,q);
 
     //debug("ts=%0.3f, ps=%0.3f, heritability=%0.3f, sigma=%0.3f, LL=%0.5f" % (ts,ps,h,sigma,L))
     //if(returnBeta){return ts,ps,beta[q-1].sum(),betaVAR[q-1,q-1].sum()*sigma;}
     //return ts,ps;
   }
 
-  void tstat(ref double ts, ref double ps, ref LMM2 lmmobject, double beta, double var, double sigma, double q, bool log=false){
+  auto tstat(ref LMM2 lmmobject, double beta, double var, double sigma, double q, bool log=false){
 
     //"""
     //   Calculates a t-statistic and associated p-value given the estimate of beta and its standard error.
     //   This is actually an F-test, but when only one hypothesis is being performed, it reduces to a t-test.
     //"""S
-    ts =  beta / std.math.sqrt(var*sigma);
+    double ts =  beta / std.math.sqrt(var*sigma);
     //#ps = 2.0*(1.0 - stats.t.cdf(np.abs(ts), lmmobject.N-q))
     //# sf == survival function - this is more accurate -- could also use logsf if the precision is not good enough
+    double ps;
     if(log){
       //double psNum = 2.0 + (stats.t.logsf(np.abs(ts), lmmobject.N-q));
     }
@@ -455,6 +455,8 @@ struct LMM2{
       //check the sign of ts.elements[0]
       ps = 2.0*(normalCDF(-std.math.abs(ts)));
     }
+
+    return Tuple!(double, double)(ts, ps);
     //if(!(ts.elements.length == 1) || !(ps.elements.length == 1)){
     //  writeln("Something bad happened :(");
     //}

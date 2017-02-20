@@ -93,11 +93,11 @@ auto gwas(double[] Y, ref dmatrix G, ref dmatrix K, bool restricted_max_likeliho
     dmatrix x = getRow(G, i);
     x.shape = [n,1];
     double a = 0;
-    double psNum, tsNum;
-    lmm2association(psNum, tsNum,lmm2, x, a, true,true);
+    auto tsps = lmm2association(lmm2, x, a, true,true);
     a++;
-    ps ~= psNum;
-    ts ~= tsNum;
+    ps ~= tsps[1];
+    ts ~= tsps[0];
   }
+
   return Tuple!(double[], double[])(ts,ps);
 }
