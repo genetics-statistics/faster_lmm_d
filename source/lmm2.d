@@ -150,6 +150,9 @@ struct LMM2{
   //represent a mean effect.
 
   this(double[] Y, dmatrix K, dmatrix Kva, dmatrix Kve, dmatrix X0,bool verbose){
+    writeln("This is Y");
+    writeln(Y);
+
     if(X0.init == false){
       writeln("Initializing LMM2...");
       X0 = onesMatrix(cast(int)Y.length,1);
@@ -169,7 +172,7 @@ struct LMM2{
     //     Kve = []
     //  self.nonmissing = x
 
-    writeln("this K is:", K.shape, K);
+    //writeln("this K is:", K.shape, K);
 
     //if len(Kva) == 0 or len(Kve) == 0:
     //      # if self.verbose: sys.stderr.write("Obtaining eigendecomposition for %dx%d matrix\n" % (K.shape[0],K.shape[1]) )
@@ -188,6 +191,7 @@ struct LMM2{
     this.Kve = Kve;
     this.N = K.shape[0];
     this.Y =  dmatrix([K.shape[0],1] ,Y); // .reshape((self.N,1))
+    nanCounter(this.Y);
     this.X0 = X0;
     bool[] com = compareGt(Kva, 1e-6);
     //if(simplelmm.helpers.sum(com)){
@@ -217,6 +221,7 @@ struct LMM2{
     writeln("In lmm2transform");
     dmatrix KveT = matrixTranspose(lmmobject.Kve);
     lmmobject.Yt = matrixMult(KveT, lmmobject.Y);
+    //prettyPrint(lmmobject.Yt);
     lmmobject.X0t = matrixMult(KveT, lmmobject.X0);
     lmmobject.X0t_stack = horizontallystack(lmmobject.X0t, onesMatrix(cast(int)lmmobject.N,1));
     lmmobject.q = lmmobject.X0t.shape[1];
@@ -421,6 +426,7 @@ struct LMM2{
     
     getLL(L,beta,sigma,betaVAR, lmmobject,h, X ,false,REML);
     int q  = cast(int)beta.elements.length;
+    writeln("heritability= ", lmmobject.optH, " sigma= ", lmmobject.optSigma, " LL= ", L);
 
     double ts,ps;
     //writeln(betaVAR);
