@@ -320,15 +320,15 @@ struct LMM2{
     //"""
     int n = cast(int)lmmobject.LLs.shape[0];
     double[] HOpt;
-    for(int i=1; i< n-2; i++){
-      if(lmmobject.LLs.elements[i-1] < lmmobject.LLs.elements[i] && lmmobject.LLs.elements[i] > lmmobject.LLs.elements[i+1]){
-        //HOpt ~= optimizeBrent(lmmobject.LL_brent,X,REML);
-          //,brack=(H[i-1],H[i+1])));
-        if(std.math.isNaN(HOpt[$])){
-          HOpt[$] = H.elements[i-1];
-        }
-      }
-    }
+    //for(int i=1; i< n-2; i++){
+    //  if(lmmobject.LLs.elements[i-1] < lmmobject.LLs.elements[i] && lmmobject.LLs.elements[i] > lmmobject.LLs.elements[i+1]){
+    //    //HOpt ~= optimizeBrent(lmmobject.LL_brent,X,REML);
+    //      //,brack=(H[i-1],H[i+1])));
+    //    if(std.math.isNaN(HOpt[$-1])){
+    //      HOpt[$-1] = H.elements[i-1];
+    //    }
+    //  }
+    //}
 
     if(HOpt.length > 1){
       //if(self.verbose){sys.stderr.write("NOTE: Found multiple optima.  Returning first...\n");}
@@ -427,7 +427,7 @@ struct LMM2{
     
     getLL(L,beta,sigma,betaVAR, lmmobject,h, X ,false,REML);
     int q  = cast(int)beta.elements.length;
-    writeln("heritability= ", lmmobject.optH, " sigma= ", lmmobject.optSigma, " LL= ", L);
+    //writeln("heritability= ", lmmobject.optH, " sigma= ", lmmobject.optSigma, " LL= ", L);
 
     double ts,ps;
     //writeln(betaVAR);

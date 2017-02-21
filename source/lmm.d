@@ -215,7 +215,8 @@ auto run_other_new(ref int n, ref int m, ref double[] pheno_vector, ref dmatrix 
   simplelmm.phenotype.remove_missing_new(Y,keep,n,pheno_vector);
   writeln(keep);
 
-  //geno = geno[:,keep];
+  geno = removeCols(geno,keep);
+
   dmatrix K, G;
   writeln("Calculate Kinship");
     //K,G = 

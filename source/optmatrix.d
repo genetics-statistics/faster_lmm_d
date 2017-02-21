@@ -125,6 +125,22 @@ dmatrix normalize_along_row(dmatrix input){
   return dmatrix(input.shape, largeArr);
 }
 
+dmatrix removeCols(dmatrix input, bool[] keep){
+  double[] arr;
+  for(int i= 0; i < input.shape[0]; i++){
+    writeln(i);
+    double[] tempArr;
+    for(int j = i*input.shape[1]; j < (i+1)*input.shape[1]; j++){
+      double[] y = input.elements[i*input.shape[1]..(i+1)*input.shape[1]];
+      tempArr = getNumArray(y,keep);
+    }
+    writeln(tempArr.length);
+    arr ~= tempArr;
+  }
+  int[] shape = [input.shape[0], sum(keep)];
+  return dmatrix(shape, arr);
+}
+
 
 void eigh(dmatrix input,ref dmatrix kva, ref dmatrix kve){
 
