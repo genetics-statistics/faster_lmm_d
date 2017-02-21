@@ -3,6 +3,6 @@ docs.json
 __dummy.html
 *.o
 *.obj
-simplelmm
+faster_lmm_d
 out
 __test__library__
