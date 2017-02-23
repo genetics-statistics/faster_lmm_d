@@ -256,7 +256,7 @@ struct LMM2{
     sigma = Q.elements[0] * 1.0 / (cast(double)(lmmobject.N) - cast(double)(X.shape[1]));
   }
 
-  double LL_brent(ref LMM2 lmmobject, ref double h, ref dmatrix X, ref bool REML){
+  double LL_brent(LMM2 lmmobject, double h, dmatrix X, bool stack = true, bool REML = false){
       //#brent will not be bounded by the specified bracket.
       //# I return a large number if we encounter h < 0 to avoid errors in LL computation during the search.
     if(h < 0){return 1e6;}
@@ -323,8 +323,7 @@ struct LMM2{
     double[] HOpt;
     //for(int i=1; i< n-2; i++){
     //  if(lmmobject.LLs.elements[i-1] < lmmobject.LLs.elements[i] && lmmobject.LLs.elements[i] > lmmobject.LLs.elements[i+1]){
-    //    //HOpt ~= optimizeBrent(lmmobject.LL_brent,X,REML);
-    //      //,brack=(H[i-1],H[i+1])));
+    //    HOpt ~= optimizeBrent(LL_brent,X,REML,[H.elements[i-1],H.elements[i+1]]);
     //    if(std.math.isNaN(HOpt[$-1])){
     //      HOpt[$-1] = H.elements[i-1];
     //    }
