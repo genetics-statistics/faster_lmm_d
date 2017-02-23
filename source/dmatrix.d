@@ -23,9 +23,9 @@ dmatrix newDmatrix(dmatrix inDmat, int start, int end){
 }
 
 dmatrix logDmatrix(dmatrix inDmat){
-  double[] elements;
+  double[] elements = new double[inDmat.shape[0] * inDmat.shape[1]];
   for(int i = 0; i < inDmat.shape[0]*inDmat.shape[1]; i++){
-    elements ~= log(inDmat.elements[i]);
+    elements[i] = log(inDmat.elements[i]);
   }
   return dmatrix(inDmat.shape, elements);
 }
@@ -33,9 +33,9 @@ dmatrix logDmatrix(dmatrix inDmat){
 dmatrix addDmatrix(dmatrix lha, dmatrix rha){
   assert(lha.shape[0] == rha.shape[0]);
   assert(lha.shape[1] == rha.shape[1]);
-  double[] elements;
+  double[] elements = new double[lha.shape[0] * lha.shape[1]];
   for(int i = 0; i < lha.shape[0]*lha.shape[1]; i++){
-    elements ~= lha.elements[i] + rha.elements[i];
+    elements[i] = lha.elements[i] + rha.elements[i];
   }
   return dmatrix(lha.shape, elements);
 }
@@ -43,25 +43,24 @@ dmatrix addDmatrix(dmatrix lha, dmatrix rha){
 dmatrix subDmatrix(dmatrix lha, dmatrix rha){
   assert(lha.shape[0] == rha.shape[0]);
   assert(lha.shape[1] == rha.shape[1]);
-  double[] elements;
+  double[] elements = new double[lha.shape[0] * lha.shape[1]];
   for(int i = 0; i < lha.shape[0]*lha.shape[1]; i++){
-    elements ~= lha.elements[i] - rha.elements[i];
+    elements[i] = lha.elements[i] - rha.elements[i];
   }
   return dmatrix(lha.shape, elements);
 }
 
 dmatrix multiplyDmatrix(dmatrix lha, dmatrix rha){
   assert(lha.shape[0] == rha.shape[0]);
-  double[] elements;
-  if(lha.shape[1] == rha.shape[1]){
-    
+  double[] elements = new double[lha.shape[0] * lha.shape[1]];
+  if(lha.shape[1] == rha.shape[1]){    
     for(int i = 0; i < lha.shape[0]*lha.shape[1]; i++){
-      elements ~= lha.elements[i] * rha.elements[i];
+      elements[i] = lha.elements[i] * rha.elements[i];
     }
   }
   else{
     for(int i = 0; i < lha.shape[0]*lha.shape[1]; i++){
-      elements ~= lha.elements[i] * rha.elements[i%(rha.shape[0]*rha.shape[1])];
+      elements[i] = lha.elements[i] * rha.elements[i%(rha.shape[0]*rha.shape[1])];
     }
   }
   
@@ -69,65 +68,65 @@ dmatrix multiplyDmatrix(dmatrix lha, dmatrix rha){
 }
 
 dmatrix addDmatrixNum(dmatrix input, double num){
-  double[] elements;
+  double[] elements = new double[input.shape[0] * input.shape[1]];
   for(int i = 0; i < input.shape[0]*input.shape[1]; i++){
-    elements ~= input.elements[i] + num;
+    elements[i] = input.elements[i] + num;
   }
   return dmatrix(input.shape, elements);
 }
 
 dmatrix subDmatrixNum(dmatrix input, double num){
-  double[] elements;
+  double[] elements = new double[input.shape[0] * input.shape[1]];
   for(int i = 0; i < input.shape[0]*input.shape[1]; i++){
-    elements ~= input.elements[i] - num;
+    elements[i] = input.elements[i] - num;
   }
   return dmatrix(input.shape, elements);
 }
 
 dmatrix multiplyDmatrixNum(dmatrix input, double num){
-  double[] elements;
+  double[] elements = new double[input.shape[0] * input.shape[1]];
   for(int i = 0; i < input.shape[0]*input.shape[1]; i++){
-    elements ~= input.elements[i] * num;
+    elements[i] = input.elements[i] * num;
   }
   return dmatrix(input.shape, elements);
 }
 
 dmatrix divideNumDmatrix(double num, dmatrix input){
-  double[] elements;
+  double[] elements = new double[input.shape[0] * input.shape[1]];
   for(int i = 0; i < input.shape[0]*input.shape[1]; i++){
-    elements ~=  num /input.elements[i];
+    elements[i] =  num /input.elements[i];
   }
   return dmatrix(input.shape, elements);
 }
 
 dmatrix addDMatrixNum(dmatrix input, double num){
-  double[] elements;
+  double[] elements = new double[input.shape[0] * input.shape[1]];
   for(int i = 0; i < input.shape[0]*input.shape[1]; i++){
-    elements ~= input.elements[i] + num;
+    elements[i] = input.elements[i] + num;
   }
   return dmatrix(input.shape, elements);
 }
 
 dmatrix divideDmatrixNum(dmatrix input, double factor){
-  double[] elements;
+  double[] elements = new double[input.shape[0] * input.shape[1]];
   for(int i = 0; i < input.shape[0]*input.shape[1]; i++){
-    elements ~= input.elements[i]/factor;
+    elements[i] = input.elements[i]/factor;
   }
   return dmatrix(input.shape, elements);
 }
 
 dmatrix zerosMatrix(int rows, int cols){
-  double[] elements;
+  double[] elements = new double[rows * cols];
   for(int i = 0; i < rows*cols; i++){
-    elements ~= 0;
+    elements[i] = 0;
   }
   return dmatrix([rows, cols], elements);
 }
 
 dmatrix onesMatrix(int rows, int cols){
-  double[] elements;
+  double[] elements = new double[rows * cols];
   for(int i = 0; i < rows*cols; i++){
-    elements ~= 1;
+    elements[i] = 1;
   }
   return dmatrix([rows, cols], elements);
 }
@@ -147,13 +146,13 @@ dmatrix horizontallystack(dmatrix a, dmatrix b){
 }
 
 bool[] compareGt(dmatrix lha, double val){
-  bool[] result;
-  foreach(element; lha.elements){
-    if(element > val){
-      result ~= true;
+  bool[] result = new bool[lha.shape[0] * lha.shape[1]];
+  for(int i = 0; i < lha.shape[0] * lha.shape[1]; i++){
+    if(lha.elements[i] > val){
+      result[i] = true;
     }
     else{
-      result ~= false;
+      result[i] = false;
     }
   }
   return result;
@@ -223,8 +222,11 @@ dmatrix getCol(dmatrix input, int colNo){
 
 dmatrix getRow(dmatrix input, int rowNo){
   //writeln(input.shape);
-  double[] arr;
-  arr = input.elements[rowNo*input.shape[1]..(rowNo+1)*input.shape[1]];
+  double[] arr = new double[input.shape[1]];
+  for(int i=0; i < input.shape[1]; i++){
+    arr[i] = input.elements[rowNo*input.shape[1]+i]; 
+  }
+  //arr = input.elements[rowNo*input.shape[1]..(rowNo+1)*input.shape[1]];
   return dmatrix([1,input.shape[1]],arr);
 }
 

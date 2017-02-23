@@ -59,10 +59,11 @@ double getVariation(double[] vector, double mean){
 }
 
 double[] getNumArray(double[] arr,bool[] valuesArr){
-  double[] result = [];
-  for(int k = 0 ; k < arr.length; k++){
+  double[] result = new double[sum(valuesArr)];
+  for(int k = 0, index = 0 ; k < arr.length; k++){
     if(valuesArr[k] == true){
-      result ~= arr[k];
+      result[index] = arr[k];
+      index++;
     }
   }
   return result;

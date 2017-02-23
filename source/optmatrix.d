@@ -6,7 +6,7 @@ import cblas;
 import lapack;
 
 dmatrix matrixMult(dmatrix lha, dmatrix rha){
-  auto C = new double[lha.shape[0]*rha.shape[1]];
+  double[] C = new double[lha.shape[0]*rha.shape[1]];
   gemm(Order.RowMajor, Transpose.NoTrans, Transpose.NoTrans, lha.shape[0], rha.shape[1], lha.shape[1], /*no scaling*/
     1,lha.elements.ptr, lha.shape[1], rha.elements.ptr, rha.shape[1], /*no addition*/0, C.ptr, rha.shape[1]);
   int[] resshape = [lha.shape[0],rha.shape[1]];
@@ -14,7 +14,7 @@ dmatrix matrixMult(dmatrix lha, dmatrix rha){
 }
 
 dmatrix matrixMultT(dmatrix lha, dmatrix rha){
-  auto C = new double[lha.shape[0]*rha.shape[0]];
+  double[] C = new double[lha.shape[0]*rha.shape[0]];
   gemm(Order.RowMajor, Transpose.NoTrans, Transpose.NoTrans, lha.shape[0], rha.shape[0], lha.shape[1], /*no scaling*/
     1,lha.elements.ptr, lha.shape[1], rha.elements.ptr, rha.shape[0], /*no addition*/0, C.ptr, rha.shape[0]);
   int[] resshape = [lha.shape[0],rha.shape[0]];
@@ -22,7 +22,7 @@ dmatrix matrixMultT(dmatrix lha, dmatrix rha){
 }
 
 dmatrix matrixTranspose(dmatrix input){
-  auto matrix = new double[input.shape[0]*input.shape[1]];
+  double[] matrix = new double[input.shape[0]*input.shape[1]];
   double[] output = new double[input.shape[0]*input.shape[1]];
   int index = 0;
   for(int i=0; i< input.shape[1]; i++){
@@ -126,16 +126,19 @@ dmatrix normalize_along_row(dmatrix input){
 }
 
 dmatrix removeCols(dmatrix input, bool[] keep){
-  double[] arr;
+  int colLength = sum(keep);
+  double[] arr = new double[input.shape[0]*colLength];
+  int index = 0;
   for(int i= 0; i < input.shape[0]; i++){
     writeln(i);
-    double[] tempArr;
-    for(int j = i*input.shape[1]; j < (i+1)*input.shape[1]; j++){
-      double[] y = input.elements[i*input.shape[1]..(i+1)*input.shape[1]];
-      tempArr = getNumArray(y,keep);
+    writeln(index);
+    for(int j = i*input.shape[1], count = 0; j < (i+1)*input.shape[1]; j++){
+        if(keep[count] == true){
+          arr[index] = input.elements[j];
+          index++;
+        }
+        count++;
     }
-    writeln(tempArr.length);
-    arr ~= tempArr;
   }
   int[] shape = [input.shape[0], sum(keep)];
   return dmatrix(shape, arr);

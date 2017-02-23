@@ -239,7 +239,8 @@ struct LMM2{
     //"""
 
     dmatrix S;
-    dmatrix temppp = addDmatrixNum(multiplyDmatrixNum(lmmobject.Kva,h),(1.0 - h));    S = divideNumDmatrix(1,temppp);
+    dmatrix temppp = addDmatrixNum(multiplyDmatrixNum(lmmobject.Kva,h),(1.0 - h));
+    S = divideNumDmatrix(1,temppp);
     dmatrix Xt = multiplyDmatrix(X, S);
     Xt = matrixTranspose(Xt);
     XX = matrixMult(Xt,X);
@@ -295,9 +296,9 @@ struct LMM2{
       if(REML){
         double LL_REML_part = 0;
         dmatrix XT = matrixTranspose(X);
-        double aloo = det(matrixMult(XT, X));
+        double XTX = det(matrixMult(XT, X));
 
-        LL_REML_part = q*std.math.log(2.0*std.math.PI*sigma) + std.math.log(aloo) - std.math.log(det(XX));
+        LL_REML_part = q*std.math.log(2.0*std.math.PI*sigma) + std.math.log(XTX) - std.math.log(det(XX));
         LL = LL + 0.5*LL_REML_part;
       }
       L = dmatrix([1,1],[LL]);

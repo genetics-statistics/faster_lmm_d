@@ -85,19 +85,19 @@ auto gwas(double[] Y, ref dmatrix G, ref dmatrix K, bool restricted_max_likeliho
   int jobs_running = 0;
   int jobs_completed = 0;
 
-  double[] ps;
-  double[] ts;
+  double[] ps = new double[m];
+  double[] ts = new double[m];
   writeln(G.shape);
   writeln("m is ", m);
   for(int i=0; i<m; i++){
-    writeln("Counter ", i);
+    writeln(i);
     dmatrix x = getRow(G, i);
     x.shape = [n,1];
     double a = 0;
     auto tsps = lmm2association(lmm2, x, a, true,true);
     a++;
-    ps ~= tsps[1];
-    ts ~= tsps[0];
+    ps[i] = tsps[1];
+    ts[i] = tsps[0];
   }
 
   return Tuple!(double[], double[])(ts,ps);
