@@ -163,40 +163,6 @@ void run_human(ref double[] pheno_vector, ref dmatrix covariate_matrix, string p
     //return p_values, t_stats;
 }
 
-//def run_other_old(pheno_vector, genotype_matrix, restricted_max_likelihood=True, refit=False){
-
-//    //"""Takes the phenotype vector and genotype matrix and returns a set of p-values and t-statistics
-
-//    //restricted_max_likelihood -- whether to use restricted max likelihood; True or False
-//    //refit -- whether to refit the variance component for each marker
-
-//    //"""
-
-//    writeln("Running the original LMM engine in run_other (old)");
-//    writeln("REML=",restricted_max_likelihood," REFIT=",refit);
-//    //with Bench("Calculate Kinship"):
-//        //kinship_matrix,genotype_matrix = calculate_kinship_new(genotype_matrix)
-
-//    writeln("kinship_matrix: ", pf(kinship_matrix));
-//    writeln("kinship_matrix.shape: ", pf(kinship_matrix.shape));
-
-//    //# with Bench("Create LMM object"):
-//    //#     lmm_ob = LMM(pheno_vector, kinship_matrix)
-
-//    //# with Bench("LMM_ob fitting"):
-//    //#     lmm_ob.fit()
-
-//    writeln("run_other_old genotype_matrix: ", genotype_matrix.shape);
-//    writeln(genotype_matrix);
-
-//    with(Bench("Doing GWAS")){
-//      t_stats, p_values = GWAS(pheno_vector, genotype_matrix.T, kinship_matrix, restricted_max_likelihood=True, refit=False);
-//    }
-        
-//    Bench().report();
-//    return p_values, t_stats;
-//}
-
 auto run_other_new(ref int n, ref int m, ref double[] pheno_vector, ref dmatrix geno, bool restricted_max_likelihood= true, bool refit = false){
 
   //"""Takes the phenotype vector and genotype matrix and returns a set of p-values and t-statistics
