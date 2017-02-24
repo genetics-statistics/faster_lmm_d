@@ -1,11 +1,11 @@
-module simplelmm.gwas;
+module faster_lmm_d.gwas;
 import std.parallelism : taskPool;
 import std.stdio;
 import std.typecons;
-import simplelmm.lmm2;
-import simplelmm.dmatrix;
+import faster_lmm_d.lmm2;
+import faster_lmm_d.dmatrix;
 import dstats.distrib;
-import simplelmm.optmatrix;
+import faster_lmm_d.optmatrix;
 
 void compute_snp(int j,int n,double[] snps,LMM2 lmmobject, bool REML,double q){
   writeln("In compute_snp");

@@ -1,7 +1,7 @@
-module simplelmm.kinship;
-import simplelmm.dmatrix;
-import simplelmm.optmatrix;
-import simplelmm.helpers;
+module faster_lmm_d.kinship;
+import faster_lmm_d.dmatrix;
+import faster_lmm_d.optmatrix;
+import faster_lmm_d.helpers;
 import std.stdio;
 
 dmatrix compute_W(int job, dmatrix G, int n, int snps, int compute_size){

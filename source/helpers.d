@@ -1,4 +1,4 @@
-module simplelmm.helpers;
+module faster_lmm_d.helpers;
 import std.math;
 import std.stdio;
 

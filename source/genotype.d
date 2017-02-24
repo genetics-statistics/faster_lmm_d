@@ -1,6 +1,6 @@
-module simplelmm.genotype;
-import simplelmm.helpers;
-import simplelmm.dmatrix;
+module faster_lmm_d.genotype;
+import faster_lmm_d.helpers;
+import faster_lmm_d.dmatrix;
 import std.math;
 
 int replace_missing_with_MAF(string snp_g){

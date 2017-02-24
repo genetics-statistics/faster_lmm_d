@@ -6,14 +6,14 @@ import std.regex;
 import std.getopt;
 import std.json;
 import std.typecons;
-import simplelmm.rqtlreader;
-import simplelmm.tsvreader;
-import simplelmm.lmm;
-import simplelmm.gwas;
-import simplelmm.dmatrix;
-import simplelmm.optmatrix;
-import simplelmm.opencl.add;
-import simplelmm.helpers;
+import faster_lmm_d.rqtlreader;
+import faster_lmm_d.tsvreader;
+import faster_lmm_d.lmm;
+import faster_lmm_d.gwas;
+import faster_lmm_d.dmatrix;
+import faster_lmm_d.optmatrix;
+import faster_lmm_d.opencl.add;
+import faster_lmm_d.helpers;
 
 void main(string[] args)
 {

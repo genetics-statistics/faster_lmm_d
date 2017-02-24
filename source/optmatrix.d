@@ -1,6 +1,6 @@
-module simplelmm.optmatrix;
-import simplelmm.dmatrix;
-import simplelmm.helpers;
+module faster_lmm_d.optmatrix;
+import faster_lmm_d.dmatrix;
+import faster_lmm_d.helpers;
 import std.stdio;
 import cblas;
 import lapack;

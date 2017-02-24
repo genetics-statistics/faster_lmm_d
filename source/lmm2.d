@@ -1,9 +1,9 @@
-module simplelmm.lmm2;
+module faster_lmm_d.lmm2;
 import dstats.distrib;
-import simplelmm.dmatrix;
-import simplelmm.optmatrix;
-import simplelmm.helpers;
-import simplelmm.kinship;
+import faster_lmm_d.dmatrix;
+import faster_lmm_d.optmatrix;
+import faster_lmm_d.helpers;
+import faster_lmm_d.kinship;
 import std.stdio;
 import std.typecons;
 
@@ -83,7 +83,7 @@ struct LMM2{
     nanCounter(this.Y);
     this.X0 = X0;
     bool[] com = compareGt(Kva, 1e-6);
-    //if(simplelmm.helpers.sum(com)){
+    //if(faster_lmm_d.helpers.sum(com)){
     //  writeln("Cleaning eigen values");
     //  foreach(ref double element; Kva.elements){
     //    if(element < 1e-6)

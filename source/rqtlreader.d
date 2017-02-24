@@ -1,4 +1,4 @@
-module simplelmm.rqtlreader;
+module faster_lmm_d.rqtlreader;
 
 import std.stdio;
 import std.string;
@@ -13,7 +13,7 @@ import std.conv;
 import std.range;
 import std.file;
 
-import simplelmm.dmatrix;
+import faster_lmm_d.dmatrix;
 
 JSONValue control(string fn){
   string input = cast(string)std.file.read(fn);
@@ -82,16 +82,16 @@ void geno(string fn, JSONValue ctrl, ref dmatrix g, ref string[] gnames){
   //writeln(hab_mapper);
   writeln(idx);
   assert(idx == 3);
-  double[] simplelmm_mapper = [double.nan, 0.0, 0.5, 1.0];
+  double[] faster_lmm_d_mapper = [double.nan, 0.0, 0.5, 1.0];
   //foreach(s; ctrl["na.strings"]){
 
   foreach( key,value; ctrl["na-strings"].object){
     idx += 1;
     hab_mapper[to!string(key)] = idx;
-    simplelmm_mapper ~= double.nan;
+    faster_lmm_d_mapper ~= double.nan;
   }
   writeln("hab_mapper", hab_mapper);
-  writeln("simplelmm_mapper", simplelmm_mapper);
+  writeln("faster_lmm_d_mapper", faster_lmm_d_mapper);
 
   string input = cast(string)std.file.read(fn);
   auto tsv = csvReader!(string, Malformed.ignore)(input, null);
@@ -108,7 +108,7 @@ void geno(string fn, JSONValue ctrl, ref dmatrix g, ref string[] gnames){
     colCount = 0;
     foreach(item; row){
       gs ~= item;
-      gs2 ~= simplelmm_mapper[hab_mapper[item]];
+      gs2 ~= faster_lmm_d_mapper[hab_mapper[item]];
       colCount++;
     }
     rowCount++;
@@ -125,7 +125,7 @@ int geno_callback(string fn){
   hab_mapper["H"] = 1;
   hab_mapper["B"] = 2;
   hab_mapper["-"] = 3;
-  auto simplelmm_mapper = [ 0.0, 0.5, 1.0, double.nan];
+  auto faster_lmm_d_mapper = [ 0.0, 0.5, 1.0, double.nan];
 
   //  raise "NYI"
   writeln(fn);
@@ -149,7 +149,7 @@ int geno_iter(string fn){
   hab_mapper["H"] = 1;
   hab_mapper["B"] = 2;
   hab_mapper["-"] = 3;
-  auto simplelmm_mapper = [ 0.0, 0.5, 1.0, double.nan];
+  auto faster_lmm_d_mapper = [ 0.0, 0.5, 1.0, double.nan];
 
   writeln(fn);
 

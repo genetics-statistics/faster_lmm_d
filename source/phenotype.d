@@ -1,6 +1,6 @@
-module simplelmm.phenotype;
-import simplelmm.dmatrix;
-import simplelmm.helpers;
+module faster_lmm_d.phenotype;
+import faster_lmm_d.dmatrix;
+import faster_lmm_d.helpers;
 import std.stdio;
 
 int remove_missing(ref dmatrix n, ref dmatrix y, ref dmatrix g){

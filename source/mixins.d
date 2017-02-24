@@ -1,5 +1,5 @@
-module simplelmm.mixins;
-import simplelmm.dmatrix;
+module faster_lmm_d.mixins;
+import faster_lmm_d.dmatrix;
 
 auto calculate(string op, T)(T lhs, T rhs)
 {

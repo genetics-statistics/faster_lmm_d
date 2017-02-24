@@ -1,4 +1,4 @@
-module simplelmm.opencl.add;
+module faster_lmm_d.opencl.add;
 
 import std.array;
 import std.stdio;

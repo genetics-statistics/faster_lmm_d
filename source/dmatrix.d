@@ -1,4 +1,4 @@
-module simplelmm.dmatrix;
+module faster_lmm_d.dmatrix;
 import std.math;
 import std.stdio;
 

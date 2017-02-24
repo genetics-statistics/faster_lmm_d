@@ -1,10 +1,10 @@
-module simplelmm.lmm;
-import simplelmm.dmatrix;
-import simplelmm.gwas;
+module faster_lmm_d.lmm;
+import faster_lmm_d.dmatrix;
+import faster_lmm_d.gwas;
 import std.stdio;
-import simplelmm.helpers;
-import simplelmm.optmatrix;
-import simplelmm.kinship;
+import faster_lmm_d.helpers;
+import faster_lmm_d.optmatrix;
+import faster_lmm_d.kinship;
 import std.typecons;
 
 //void formatResult(id,beta,betaSD,ts,ps){
@@ -178,7 +178,7 @@ auto run_other_new(ref int n, ref int m, ref double[] pheno_vector, ref dmatrix 
   //# Adjust phenotypes
   double[] Y;
   bool[] keep;
-  simplelmm.phenotype.remove_missing_new(Y,keep,n,pheno_vector);
+  faster_lmm_d.phenotype.remove_missing_new(Y,keep,n,pheno_vector);
   writeln(keep);
 
   geno = removeCols(geno,keep);

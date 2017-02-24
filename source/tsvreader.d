@@ -1,4 +1,4 @@
-module simplelmm.tsvreader;
+module faster_lmm_d.tsvreader;
 
 import std.stdio;
 import std.json;
@@ -11,8 +11,8 @@ import std.array;
 import std.csv;
 import std.regex;
 
-import simplelmm.dmatrix;
-import simplelmm.optmatrix;
+import faster_lmm_d.dmatrix;
+import faster_lmm_d.optmatrix;
 
 void tsvpheno(string fn,  ref double[] y, ref string[] ynames, int p_column= 0){
 	writeln("In tsvpheno");
@@ -63,11 +63,11 @@ void tsvgeno(string fn, JSONValue ctrl, ref dmatrix g, ref string[] gnames){
     idx++;
   }
   //writeln(hab_mapper);
-  double[] simplelmm_mapper = [ 0.0, 0.5, 1.0, double.nan,];
+  double[] faster_lmm_d_mapper = [ 0.0, 0.5, 1.0, double.nan,];
   //foreach(s; ctrl["na.strings"]){
 
   writeln("hab_mapper", hab_mapper);
-  writeln("simplelmm_mapper", simplelmm_mapper);
+  writeln("faster_lmm_d_mapper", faster_lmm_d_mapper);
   //writeln(fn);
 
   string input = cast(string)std.file.read(fn);
@@ -90,7 +90,7 @@ void tsvgeno(string fn, JSONValue ctrl, ref dmatrix g, ref string[] gnames){
 	    colCount = 0;
 	    foreach(dchar item; row[1]){
 	      gs ~= to!string(item);
-	      gs2 ~= simplelmm_mapper[hab_mapper[to!string(item)]];
+	      gs2 ~= faster_lmm_d_mapper[hab_mapper[to!string(item)]];
 	      colCount++;
 	      allal++;
 	    }
@@ -102,10 +102,10 @@ void tsvgeno(string fn, JSONValue ctrl, ref dmatrix g, ref string[] gnames){
 	    //writeln(gs);
 	    ////# print id,gs
 	    ////# Convert all items to genotype values
-	    //gs2 = [simplelmm_mapper[hab_mapper[g]] for g in gs]
+	    //gs2 = [faster_lmm_d_mapper[hab_mapper[g]] for g in gs]
 	    //core.exception.RangeError@source/rqtlreader.d(137): Range violation
 	    //foreach(gval;gs){
-	    //  gs2 ~= simplelmm_mapper[hab_mapper[gval]];
+	    //  gs2 ~= faster_lmm_d_mapper[hab_mapper[gval]];
 	    //}
 	    //# print id,gs2
 	    //# ns = np.genfromtxt(row[1:])

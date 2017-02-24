@@ -1,4 +1,4 @@
-module simplelmm.optimize;
+module faster_lmm_d.optimize;
 
 //returns
 //xmin : ndarray
