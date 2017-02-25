@@ -19,7 +19,6 @@ import faster_lmm_d.optimize;
 void main(string[] args)
 {
   // Main routine
-  checkGSL();
   string ocontrol, okinship, opheno, ogeno, useBLAS, noBLAS, noCUDA;
   int pheno_column;
   string cmd;

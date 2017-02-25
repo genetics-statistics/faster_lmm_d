@@ -64,6 +64,29 @@ void pPrint(dmatrix input){
   writeln("]");
 }
 
+void pPrint2(dmatrix input){
+  writeln("[");
+  for(int i=0; i < input.shape[0]; i++){
+    writeln(input.elements[(input.shape[1]*i)..(input.shape[1]*i+3)],"...", input.elements[(input.shape[1]*(i+1)-3)..(input.shape[1]*(i+1))]);
+  }
+  writeln("]");
+}
+
+void pPrint3(dmatrix input){
+  writeln("[");
+  if(input.shape[0]>6){
+    for(int i=0; i < 3; i++){
+      writeln(input.elements[(input.shape[1]*i)..(input.shape[1]*i+3)],"...", input.elements[(input.shape[1]*(i+1)-3)..(input.shape[1]*(i+1))]);
+    }
+    writeln("...");
+    for(int i=input.shape[0]-3; i < input.shape[0]; i++){
+      writeln(input.elements[(input.shape[1]*i)..(input.shape[1]*i+3)],"...", input.elements[(input.shape[1]*(i+1)-3)..(input.shape[1]*(i+1))]);
+    }
+  }
+  
+  writeln("]");
+}
+
 
 dmatrix sliceDmatrix(dmatrix input, int[] along){
   writeln("In sliceDmatrix");

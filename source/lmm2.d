@@ -4,6 +4,11 @@ import faster_lmm_d.dmatrix;
 import faster_lmm_d.optmatrix;
 import faster_lmm_d.helpers;
 import faster_lmm_d.kinship;
+//import faster_lmm_d.optimize;
+import gsl.errno;
+import gsl.math;
+import gsl.min;
+
 import std.stdio;
 import std.typecons;
 
@@ -143,6 +148,24 @@ struct LMM2{
     Q = matrixMult(YtTS,Yt);
     sigma = Q.elements[0] * 1.0 / (cast(double)(lmmobject.N) - cast(double)(X.shape[1]));
   }
+  LMM2 LMMglob;
+  dmatrix Xglob;
+
+
+  //extern(C) double fn1(double h, LMM2 lmmobject, dmatrix X, bool stack = true, bool REML = false){
+  extern(C) double fn1(double h, void *params){
+      //#brent will not be bounded by the specified bracket.
+      //# I return a large number if we encounter h < 0 to avoid errors in LL computation during the search.
+    if(h < 0){return 1e6;}
+    //struct my_f * params = (struct my_f_params *)p;
+    dmatrix beta, betaVAR;
+    //LMM2 lmmobject = cast(LMM2)(params);
+    bool REML = false;
+    
+    double sigma;
+    dmatrix l;
+    return -getLL(l, beta,sigma,betaVAR, LMMglob, h,Xglob,false,REML);
+  }
 
   double LL_brent(LMM2 lmmobject, double h, dmatrix X, bool stack = true, bool REML = false){
       //#brent will not be bounded by the specified bracket.
@@ -194,8 +217,43 @@ struct LMM2{
       return LL;
   }
 
-  double optimizeBrent(){
-    return 0;
+  double optimizeBrent(LMM2 lmmobject, ref dmatrix X, bool REML, double lower, double upper){
+    int status;
+    int iter = 0, max_iter = 100;
+    const(gsl_min_fminimizer_type) *T;
+    gsl_min_fminimizer *s;
+    double a = lower, b = upper;
+    double m = (a+b)/2, m_expected = (a+b)/2;
+    gsl_function F;
+    F.function_ = &fn1;
+    //F.params = &lmmobject;
+    Xglob = X;
+    LMMglob = lmmobject;
+    T = gsl_min_fminimizer_brent;
+    s = gsl_min_fminimizer_alloc (T);
+    gsl_min_fminimizer_set (s, &F, m, a, b);
+
+    do
+    {
+      iter++;
+      status = gsl_min_fminimizer_iterate (s);
+
+      m = gsl_min_fminimizer_x_minimum (s);
+      a = gsl_min_fminimizer_x_lower (s);
+      b = gsl_min_fminimizer_x_upper (s);
+
+      status = gsl_min_test_interval (a, b, 0.0001, 0.0);
+
+      if (status == GSL_SUCCESS)
+        writeln("Converged:\n");
+
+      writeln(iter, "\t",a, "\t", b, "\t",
+          m, "\t", m - m_expected, "\t", b - a);
+    }
+    while (status == GSL_CONTINUE && iter < max_iter);
+
+    gsl_min_fminimizer_free (s);
+    return m;
   }
 
   double getMax(ref LMM2 lmmobject, ref dmatrix H, ref dmatrix X, bool REML=false){
@@ -207,19 +265,20 @@ struct LMM2{
     //   optimum.
 
     //"""
+    writeln("in Get Max");
     int n = cast(int)lmmobject.LLs.shape[0];
     double[] HOpt;
-    //for(int i=1; i< n-2; i++){
-    //  if(lmmobject.LLs.elements[i-1] < lmmobject.LLs.elements[i] && lmmobject.LLs.elements[i] > lmmobject.LLs.elements[i+1]){
-    //    HOpt ~= optimizeBrent(LL_brent,X,REML,[H.elements[i-1],H.elements[i+1]]);
-    //    if(std.math.isNaN(HOpt[$-1])){
-    //      HOpt[$-1] = H.elements[i-1];
-    //    }
-    //  }
-    //}
+    for(int i=1; i< n-2; i++){
+      if(lmmobject.LLs.elements[i-1] < lmmobject.LLs.elements[i] && lmmobject.LLs.elements[i] > lmmobject.LLs.elements[i+1]){
+        HOpt ~= optimizeBrent(lmmobject, X, REML, H.elements[i-1],H.elements[i+1]);
+        if(std.math.isNaN(HOpt[$-1])){
+          HOpt[$-1] = H.elements[i-1];
+        }
+      }
+    }
 
     if(HOpt.length > 1){
-      //if(self.verbose){sys.stderr.write("NOTE: Found multiple optima.  Returning first...\n");}
+      writeln("NOTE: Found multiple optima.  Returning first...\n");
       return HOpt[0];
     }
     else if(HOpt.length == 1){
@@ -282,19 +341,19 @@ struct LMM2{
 
     //# debug(["hmax",hmax,"beta",beta,"sigma",sigma,"LL",L])
     //return hmax,beta,sigma,L;
+    fit_hmax = hmax;
     fit_beta = beta;
     fit_sigma = sigma;
     fit_LL = sum;
   }
 
-  auto lmm2association(ref LMM2 lmmobject, ref dmatrix X, ref double h, bool stack=true, bool REML=true, bool returnBeta=false){
+  auto lmm2association(ref LMM2 lmmobject, ref dmatrix X, bool stack=true, bool REML=true, bool returnBeta=false){
     //"""
     //  Calculates association statitics for the SNPs encoded in the vector X of size n.
     //  If h is None, the optimal h stored in optH is used.
     //"""
     if(false){
       writeln("X=",X);
-      writeln("h=",h);
       writeln("q=",lmmobject.q);
       writeln("lmmobject.Kve=",lmmobject.Kve);
       writeln("X0t_stack=",lmmobject.X0t_stack);
@@ -306,8 +365,7 @@ struct LMM2{
       setCol(lmmobject.X0t_stack,lmmobject.q,m);
       X = lmmobject.X0t_stack;
     }
-    if(h.init == false){h = lmmobject.optH;}
-
+    double h = lmmobject.optH;
     dmatrix beta, betaVAR;
     double sigma; 
     dmatrix L;

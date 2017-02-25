@@ -93,9 +93,7 @@ auto gwas(double[] Y, ref dmatrix G, ref dmatrix K, bool restricted_max_likeliho
     writeln(i);
     dmatrix x = getRow(G, i);
     x.shape = [n,1];
-    double a = 0;
-    auto tsps = lmm2association(lmm2, x, a, true,true);
-    a++;
+    auto tsps = lmm2association(lmm2, x, true,true);
     ps[i] = tsps[1];
     ts[i] = tsps[0];
   }
