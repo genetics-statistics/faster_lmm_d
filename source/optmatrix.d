@@ -164,29 +164,35 @@ dmatrix removeCols(dmatrix input, bool[] keep){
   return dmatrix(shape, arr);
 }
 
+double[] roundedNearest(double[] input){
+  double[] arr = new double[input.length];
+  for(int i = 0; i < input.length; i++){
+    arr[i] = std.math.round(input[i]*1000)/1000;
+  }
+  return arr;
+}
 
 void eigh(dmatrix input,ref dmatrix kva, ref dmatrix kve){
 
   double[] z = new double[input.shape[0] * input.shape[1]]; //eigenvalues
   double[] w = new double[input.shape[0]];  // eigenvectors
-  double[] elements = input.elements.dup;
+  double[] elements = roundedNearest(input.elements.dup);
 
   double wi;
   int n = input.shape[0];
   double vu, vl;
-  //vl = 0;
-  //vu = 1.0;
   int[] m = new int[input.shape[0]];
   int[] isuppz = new int[2*input.shape[0]];
   int il = 1;
   int iu = input.shape[1];
   int ldz = n;
-  double abstol = -1; //default value for abstol
+  double abstol = 0.001; //default value for abstol
   
-  LAPACKE_dsyevr(101, 'V', 'A', 'L', n, input.elements.ptr, n, vl, vu, il, iu, abstol, m.ptr, w.ptr, z.ptr, ldz, isuppz.ptr);
+  LAPACKE_dsyevr(101, 'V', 'A', 'L', n, elements.ptr, n, vl, vu, il, iu, abstol, m.ptr, w.ptr, z.ptr, ldz, isuppz.ptr);
   
   kve = dmatrix([input.shape[0],1], w);
   kva = dmatrix(input.shape, z);
+  pPrint3(kva);
 }
 
 
