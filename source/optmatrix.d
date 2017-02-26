@@ -22,7 +22,6 @@ dmatrix matrixMultT(dmatrix lha, dmatrix rha){
 }
 
 dmatrix matrixTranspose(dmatrix input){
-  double[] matrix = new double[input.shape[0]*input.shape[1]];
   double[] output = new double[input.shape[0]*input.shape[1]];
   int index = 0;
   for(int i=0; i< input.shape[1]; i++){
@@ -125,7 +124,7 @@ dmatrix normalize_along_row(dmatrix input){
   double[] arr;
   writeln(input.shape);
   for(int i = 0; i < input.shape[0]; i++){
-    arr = input.elements[(input.shape[1]*i)..(input.shape[1]*(i+1))];
+    arr = input.elements[(input.shape[1]*i)..(input.shape[1]*(i+1))].dup;
     bool[] missing = isnan(arr);
     bool[] valuesArr = negateBool(missing);
     double[] values = getNumArray(arr,valuesArr);
@@ -153,14 +152,12 @@ dmatrix removeCols(dmatrix input, bool[] keep){
   double[] arr = new double[input.shape[0]*colLength];
   int index = 0;
   for(int i= 0; i < input.shape[0]; i++){
-    writeln(i);
-    writeln(index);
     for(int j = i*input.shape[1], count = 0; j < (i+1)*input.shape[1]; j++){
-        if(keep[count] == true){
-          arr[index] = input.elements[j];
-          index++;
-        }
-        count++;
+      if(keep[count] == true){
+        arr[index] = input.elements[j];
+        index++;
+      }
+      count++;
     }
   }
   int[] shape = [input.shape[0], sum(keep)];

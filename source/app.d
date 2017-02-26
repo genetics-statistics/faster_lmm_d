@@ -96,7 +96,6 @@ void main(string[] args)
   int m;
 
   void check_results(double[] ps, double[] ts){
-    writeln(ps);
     writeln(ps.length, "\n", sum(ps));
     double p1 = ps[0];
     double p2 = ps[$-1];

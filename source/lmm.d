@@ -179,21 +179,12 @@ auto run_other_new(ref int n, ref int m, ref double[] pheno_vector, ref dmatrix 
   double[] Y;
   bool[] keep;
   faster_lmm_d.phenotype.remove_missing_new(Y,keep,n,pheno_vector);
-  writeln(keep);
-
   geno = removeCols(geno,keep);
-
   dmatrix K, G;
   writeln("Calculate Kinship");
-    //K,G = 
   calculate_kinship_new(K,G,geno);
-  
-
-  writeln("kinship_matrix: ", K);
   writeln("kinship_matrix.shape: ", K.shape);
-
   writeln("run_other_new genotype_matrix: ", G.shape);
-  //writeln(G);
 
   return gwas(Y, G, K, true, false, true);
 }
@@ -203,21 +194,8 @@ void calculate_kinship_new(ref dmatrix K, ref dmatrix G, ref dmatrix genotype_ma
   //Call the new kinship calculation where genotype_matrix contains
   //inds (columns) by snps (rows).
   //"""
-  //assert type(genotype_matrix) is np.ndarray;
+  writeln("call calculate_kinship_new");
   writeln(genotype_matrix.shape);
-  //prettyPrint(genotype_matrix);
-  writeln("call genotype.normalize");
-  //G = np.apply_along_axis( genotype.normalize, axis=1, arr=genotype_matrix);
   G = normalize_along_row(genotype_matrix);
-  //writeln("G",genotype_matrix);
-  //K = kinshipComp(G);
   K = kinship_full(G);
-  //writeln("call calculate_kinship_new");
-  //kinship(G);
-  //if kinship_useCUDA(G) or kinship_doCalcFull(G):
-  //    try:
-  //        return kinship_full(G),G
-  //    except:
-  //        pass # when out of memory try the iterator version
-  //return kinship(G),G
 }

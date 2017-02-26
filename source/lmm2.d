@@ -4,7 +4,6 @@ import faster_lmm_d.dmatrix;
 import faster_lmm_d.optmatrix;
 import faster_lmm_d.helpers;
 import faster_lmm_d.kinship;
-//import faster_lmm_d.optimize;
 import gsl.errno;
 import gsl.math;
 import gsl.min;
@@ -78,7 +77,6 @@ struct LMM2{
     //      print("sum(Kva),sum(Kve)=",sum(Kva),sum(Kve))
 
     kvakve(K, Kve, Kva);
-
     this.init = true;
     this.K = K;
     this.Kva = Kva;
@@ -98,7 +96,6 @@ struct LMM2{
     //  }
       
     //}
-    //pPrint(Kva);
     lmm2transform(this);
 
   }
@@ -115,7 +112,6 @@ struct LMM2{
     writeln("In lmm2transform");
     dmatrix KveT = matrixTranspose(lmmobject.Kve);
     lmmobject.Yt = matrixMult(KveT, lmmobject.Y);
-    //prettyPrint(lmmobject.Yt);
     lmmobject.X0t = matrixMult(KveT, lmmobject.X0);
     lmmobject.X0t_stack = horizontallystack(lmmobject.X0t, onesMatrix(cast(int)lmmobject.N,1));
     lmmobject.q = lmmobject.X0t.shape[1];
@@ -148,20 +144,17 @@ struct LMM2{
     Q = matrixMult(YtTS,Yt);
     sigma = Q.elements[0] * 1.0 / (cast(double)(lmmobject.N) - cast(double)(X.shape[1]));
   }
+
   LMM2 LMMglob;
   dmatrix Xglob;
 
-
-  //extern(C) double fn1(double h, LMM2 lmmobject, dmatrix X, bool stack = true, bool REML = false){
   extern(C) double fn1(double h, void *params){
       //#brent will not be bounded by the specified bracket.
       //# I return a large number if we encounter h < 0 to avoid errors in LL computation during the search.
     if(h < 0){return 1e6;}
     //struct my_f * params = (struct my_f_params *)p;
     dmatrix beta, betaVAR;
-    //LMM2 lmmobject = cast(LMM2)(params);
-    bool REML = false;
-    
+    bool REML = false;  
     double sigma;
     dmatrix l;
     return -getLL(l, beta,sigma,betaVAR, LMMglob, h,Xglob,false,REML);
@@ -194,10 +187,8 @@ struct LMM2{
       //}
       double n = cast(double)lmmobject.N;
       double q = cast(double)X.shape[1];
-      //beta,sigma,Q, = 
       dmatrix Q,XX_i,XX;
       getMLSoln(beta,sigma,Q,XX_i,XX, lmmobject, h,X);
-      //writeln(beta);
       betaVAR=XX_i;
       double LL  = n * std.math.log(2*std.math.PI) + sum(logDmatrix((addDMatrixNum( multiplyDmatrixNum(lmmobject.Kva,h),(1-h) ) )).elements)+
       + n + n * std.math.log((1.0/n) * Q.elements[0]); //Q
@@ -246,9 +237,6 @@ struct LMM2{
 
       if (status == GSL_SUCCESS)
         writeln("Converged:\n");
-
-      writeln(iter, "\t",a, "\t", b, "\t",
-          m, "\t", m - m_expected, "\t", b - a);
     }
     while (status == GSL_CONTINUE && iter < max_iter);
 
@@ -369,11 +357,8 @@ struct LMM2{
     dmatrix beta, betaVAR;
     double sigma; 
     dmatrix L;
-    //writeln("In lmm2association");
-    
     getLL(L,beta,sigma,betaVAR, lmmobject,h, X ,false,REML);
     int q  = cast(int)beta.elements.length;
-    //writeln("heritability= ", lmmobject.optH, " sigma= ", lmmobject.optSigma, " LL= ", L);
 
     double ts,ps;
     //writeln(betaVAR);
@@ -403,10 +388,6 @@ struct LMM2{
     }
 
     return Tuple!(double, double)(ts, ps);
-    //if(!(ts.elements.length == 1) || !(ps.elements.length == 1)){
-    //  writeln("Something bad happened :(");
-    //}
-    //writeln("ts = ", ts, " beta = ", beta,  " var = ", var,  " sigma = ", sigma, " ps = ", ps );
   }
 
   void plotFit( LMM2 lmmobject, string color="b-", string title=""){

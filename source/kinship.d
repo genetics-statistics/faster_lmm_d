@@ -36,15 +36,13 @@ dmatrix kinship_full(dmatrix G){
   //# mprint("kinship_full G",G)
   int m = G.shape[0]; // snps
   int n = G.shape[1]; // inds
-  writeln("%d SNPs",m);
-  //assert m>n, "n should be larger than m (%d snps > %d inds)" % (m,n)
+  writeln(m," SNPs");
+  assert(m>n);//, "n should be larger than m (%d snps > %d inds)" % (m,n)
   //# m = np.dot(G.T,G)
   dmatrix temp = matrixTranspose(G);
   dmatrix l = matrixMult(temp, G);
   l = divideDmatrixNum(l, G.shape[0]);
   writeln("kinship_full K");
-  writeln(l.shape);
-  prettyPrint(l);
   return l;
 }
 

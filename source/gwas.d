@@ -90,7 +90,9 @@ auto gwas(double[] Y, ref dmatrix G, ref dmatrix K, bool restricted_max_likeliho
   writeln(G.shape);
   writeln("m is ", m);
   for(int i=0; i<m; i++){
-    writeln(i);
+    if(i%1000 == 0){
+      writeln("1000 snps processed");
+    }
     dmatrix x = getRow(G, i);
     x.shape = [n,1];
     auto tsps = lmm2association(lmm2, x, true,true);
