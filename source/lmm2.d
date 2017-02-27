@@ -23,6 +23,18 @@ struct LLtuple{
   }
 }
 
+struct fitTuple{
+  double fit_hmax, fit_sigma, fit_LL;
+  dmatrix fit_beta;
+
+  this(double fit_hmax, dmatrix fit_beta, double fit_sigma, double fit_LL){
+    this.fit_hmax = fit_hmax;
+    this.fit_beta = fit_beta;
+    this.fit_sigma = fit_sigma;
+    this.fit_LL = fit_LL;
+  }
+}
+
 struct LMM2{
   int q;
   double N, optH, optSigma;
@@ -245,60 +257,50 @@ double getMax(LMM2 lmmobject, dmatrix H, dmatrix X, bool REML=false){
   }
 }
 
-  void lmm2fit(ref double fit_hmax, ref dmatrix fit_beta, ref double fit_sigma, ref double fit_LL, ref LMM2 lmmobject,ref dmatrix X, double ngrids=100, bool REML=true){
+fitTuple lmm2fit(ref LMM2 lmmobject, dmatrix X, int ngrids=100, bool REML=true){
 
-    //"""
-    //   Finds the maximum-likelihood solution for the heritability (h) given the current parameters.
-    //   X can be passed and will transformed and concatenated to X0t.  Otherwise, X0t is used as
-    //   the covariate matrix.
+  //"""
+  //   Finds the maximum-likelihood solution for the heritability (h) given the current parameters.
+  //   X can be passed and will transformed and concatenated to X0t.  Otherwise, X0t is used as
+  //   the covariate matrix.
 
-    //   This function calculates the LLs over a grid and then uses .getMax(...) to find the optimum.
-    //   Given this optimum, the function computes the LL and associated ML solutions.
-    //"""
+  //   This function calculates the LLs over a grid and then uses .getMax(...) to find the optimum.
+  //   Given this optimum, the function computes the LL and associated ML solutions.
+  //"""
 
-    if(X.init == false){ 
-      X = lmmobject.X0t;
-    }
-    else{
-      dmatrix kveT = matrixTranspose(lmmobject.Kve);
-      dmatrix KveTX = matrixMult(kveT , X);
-      //lmmobject.X0t_stack[sval,(lmmobject.q)] = matrixMult(lmmobject.Kve.T,X)[sval,0];
-      X = lmmobject.X0t_stack;
-      //self.X0t_stack[:,(self.q)] = matrixMult(self.Kve.T,X)[:,0]
-      //   X = self.X0t_stack
-    }
-    double[] Harr;
-    for(int m = 0; m < ngrids; m++){
-      Harr ~= m / cast(double)ngrids;
-    }
-
-    dmatrix  beta, betaVAR;
-    double sigma;
-    dmatrix L;
-    double[] elm;
-    foreach(h; Harr){
-      elm ~= getLL(lmmobject,h,X,false,REML).LL;
-    }
-    L = dmatrix([cast(int)elm.length,1],elm);
-    lmmobject.LLs = L;
-    lmmobject.H = dmatrix([cast(int)Harr.length,1],Harr);
-    double hmax = getMax(lmmobject, lmmobject.H, X, REML);
-
-    double sum = getLL(lmmobject, hmax, X, false, REML).LL;
-
-    
-    lmmobject.optH = hmax;
-    lmmobject.optLL = L;
-    lmmobject.optBeta = beta;
-    lmmobject.optSigma = sigma;
-
-    fit_hmax = hmax;
-    fit_beta = beta;
-    fit_sigma = sigma;
-    fit_LL = sum;
+  if(X.init == false){ 
+    X = lmmobject.X0t;
+  }
+  else{
+    dmatrix kveT = matrixTranspose(lmmobject.Kve);
+    dmatrix KveTX = matrixMult(kveT , X);
+    X = lmmobject.X0t_stack;
+  }
+  double[] Harr = new double[ngrids];
+  for(int m = 0; m < ngrids; m++){
+    Harr[m] = m / cast(double)ngrids;
   }
 
-auto lmm2association(LMM2 lmmobject, ref dmatrix X, bool stack=true, bool REML=true, bool returnBeta=false){
+  double[] elm = new double[ngrids];
+  for(int h = 0; h < ngrids; h++){
+    elm[h] = getLL(lmmobject, Harr[h], X, false, REML).LL;
+  }
+  dmatrix L = dmatrix([cast(int)elm.length,1],elm);
+  lmmobject.LLs = L;
+  lmmobject.H = dmatrix([cast(int)Harr.length,1],Harr);
+  double hmax = getMax(lmmobject, lmmobject.H, X, REML);
+
+  LLtuple ll = getLL(lmmobject, hmax, X, false, REML);
+  
+  lmmobject.optH = hmax;
+  lmmobject.optLL = L;
+  lmmobject.optBeta = ll.beta;
+  lmmobject.optSigma = ll.sigma;
+
+  return fitTuple(hmax, ll.beta, ll.sigma, ll.LL);
+}
+
+auto lmm2association(LMM2 lmmobject, dmatrix X, bool stack=true, bool REML=true, bool returnBeta=false){
   //"""
   //  Calculates association statitics for the SNPs encoded in the vector X of size n.
   //  If h is None, the optimal h stored in optH is used.
@@ -327,26 +329,26 @@ auto lmm2association(LMM2 lmmobject, ref dmatrix X, bool stack=true, bool REML=t
   return tstat(lmmobject, ll.beta.elements[q-1], ll.betaVAR.acc(q-1,q-1), ll.sigma, q);
 }
 
-  auto tstat(ref LMM2 lmmobject, double beta, double var, double sigma, double q, bool log=false){
+auto tstat( LMM2 lmmobject, double beta, double var, double sigma, double q, bool log=false){
 
-    //"""
-    //   Calculates a t-statistic and associated p-value given the estimate of beta and its standard error.
-    //   This is actually an F-test, but when only one hypothesis is being performed, it reduces to a t-test.
-    //"""S
-    double ts =  beta / std.math.sqrt(var*sigma);
-    //#ps = 2.0*(1.0 - stats.t.cdf(np.abs(ts), lmmobject.N-q))
-    //# sf == survival function - this is more accurate -- could also use logsf if the precision is not good enough
-    double ps;
-    if(log){
-      //double psNum = 2.0 + (stats.t.logsf(np.abs(ts), lmmobject.N-q));
-    }
-    else{
-      //check the sign of ts.elements[0]
-      ps = 2.0*(normalCDF(-std.math.abs(ts)));
-    }
-
-    return Tuple!(double, double)(ts, ps);
+  //"""
+  //   Calculates a t-statistic and associated p-value given the estimate of beta and its standard error.
+  //   This is actually an F-test, but when only one hypothesis is being performed, it reduces to a t-test.
+  //"""S
+  double ts =  beta / std.math.sqrt(var*sigma);
+  //#ps = 2.0*(1.0 - stats.t.cdf(np.abs(ts), lmmobject.N-q))
+  //# sf == survival function - this is more accurate -- could also use logsf if the precision is not good enough
+  double ps;
+  if(log){
+    //double psNum = 2.0 + (stats.t.logsf(np.abs(ts), lmmobject.N-q));
   }
+  else{
+    //check the sign of ts.elements[0]
+    ps = 2.0*(normalCDF(-std.math.abs(ts)));
+  }
+
+  return Tuple!(double, double)(ts, ps);
+}
 
   void plotFit( LMM2 lmmobject, string color="b-", string title=""){
 
