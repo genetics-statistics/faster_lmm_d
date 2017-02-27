@@ -99,8 +99,7 @@ LMM2 lmm2transform(ref LMM2 lmmobject){
     //   covariate matrix.
     //"""
 
-    dmatrix temppp = addDmatrixNum(multiplyDmatrixNum(lmmobject.Kva,h),(1.0 - h));
-    dmatrix S = divideNumDmatrix(1,temppp);
+    dmatrix S = divideNumDmatrix(1,addDmatrixNum(multiplyDmatrixNum(lmmobject.Kva,h),(1.0 - h)));
     dmatrix Xt = multiplyDmatrix(X, S);
     Xt = matrixTranspose(Xt);
     XX = matrixMult(Xt,X);
@@ -116,20 +115,19 @@ LMM2 lmm2transform(ref LMM2 lmmobject){
     sigma = Q.elements[0] * 1.0 / (cast(double)(lmmobject.N) - cast(double)(X.shape[1]));
   }
 
-  LMM2 LMMglob;
-  dmatrix Xglob;
+LMM2 LMMglob;
+dmatrix Xglob;
 
-  extern(C) double fn1(double h, void *params){
-      //#brent will not be bounded by the specified bracket.
-      //# I return a large number if we encounter h < 0 to avoid errors in LL computation during the search.
-    if(h < 0){return 1e6;}
-    //struct my_f * params = (struct my_f_params *)p;
-    dmatrix beta, betaVAR;
-    bool REML = false;  
-    double sigma;
-    dmatrix l;
-    return -getLL(l, beta,sigma,betaVAR, LMMglob, h,Xglob,false,REML);
-  }
+extern(C) double fn1(double h, void *params){
+    //#brent will not be bounded by the specified bracket.
+    //# I return a large number if we encounter h < 0 to avoid errors in LL computation during the search.
+  if(h < 0){return 1e6;}
+  dmatrix beta, betaVAR;
+  bool REML = false;  
+  double sigma;
+  dmatrix l;
+  return -getLL(l, beta,sigma,betaVAR, LMMglob, h,Xglob,false,REML);
+}
 
   double LL_brent(LMM2 lmmobject, double h, dmatrix X, bool stack = true, bool REML = false){
       //#brent will not be bounded by the specified bracket.
@@ -178,41 +176,41 @@ LMM2 lmm2transform(ref LMM2 lmmobject){
       return LL;
   }
 
-  double optimizeBrent(LMM2 lmmobject, ref dmatrix X, bool REML, double lower, double upper){
-    int status;
-    int iter = 0, max_iter = 100;
-    const(gsl_min_fminimizer_type) *T;
-    gsl_min_fminimizer *s;
-    double a = lower, b = upper;
-    double m = (a+b)/2, m_expected = (a+b)/2;
-    gsl_function F;
-    F.function_ = &fn1;
-    //F.params = &lmmobject;
-    Xglob = X;
-    LMMglob = lmmobject;
-    T = gsl_min_fminimizer_brent;
-    s = gsl_min_fminimizer_alloc (T);
-    gsl_min_fminimizer_set (s, &F, m, a, b);
+double optimizeBrent(LMM2 lmmobject, dmatrix X, bool REML, double lower, double upper){
+  int status;
+  int iter = 0, max_iter = 100;
+  const(gsl_min_fminimizer_type) *T;
+  gsl_min_fminimizer *s;
+  double a = lower, b = upper;
+  double m = (a+b)/2, m_expected = (a+b)/2;
+  gsl_function F;
+  F.function_ = &fn1;
 
-    do
-    {
-      iter++;
-      status = gsl_min_fminimizer_iterate (s);
+  Xglob = X;
+  LMMglob = lmmobject;
+  T = gsl_min_fminimizer_brent;
+  s = gsl_min_fminimizer_alloc (T);
+  gsl_min_fminimizer_set (s, &F, m, a, b);
 
-      m = gsl_min_fminimizer_x_minimum (s);
-      a = gsl_min_fminimizer_x_lower (s);
-      b = gsl_min_fminimizer_x_upper (s);
+  do
+  {
+    iter++;
+    status = gsl_min_fminimizer_iterate (s);
 
-      status = gsl_min_test_interval (a, b, 0.0001, 0.0);
+    m = gsl_min_fminimizer_x_minimum (s);
+    a = gsl_min_fminimizer_x_lower (s);
+    b = gsl_min_fminimizer_x_upper (s);
 
-      if (status == GSL_SUCCESS)
-        writeln("Converged:\n");
-    }
-    while (status == GSL_CONTINUE && iter < max_iter);
+    status = gsl_min_test_interval (a, b, 0.0001, 0.0);
 
-    gsl_min_fminimizer_free (s);
-    return m;
+    if (status == GSL_SUCCESS)
+      writeln("Converged:\n");
   }
+  while (status == GSL_CONTINUE && iter < max_iter);
+
+  gsl_min_fminimizer_free (s);
+  return m;
+}
 
   double getMax(ref LMM2 lmmobject, ref dmatrix H, ref dmatrix X, bool REML=false){
 
@@ -328,7 +326,6 @@ LMM2 lmm2transform(ref LMM2 lmmobject){
     int q  = cast(int)beta.elements.length;
 
     double ts,ps;
-    //writeln(betaVAR);
     return tstat(lmmobject, beta.elements[q-1], betaVAR.acc(q-1,q-1),sigma,q);
 
     //debug("ts=%0.3f, ps=%0.3f, heritability=%0.3f, sigma=%0.3f, LL=%0.5f" % (ts,ps,h,sigma,L))
