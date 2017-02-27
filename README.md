@@ -21,6 +21,7 @@ Get the source-code
 ```sh
 git clone https://github.com/prasunanand/faster_lmm_d
 cd faster_lmm_d
+```
 
 Compiling
 ```sh

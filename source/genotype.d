@@ -16,25 +16,3 @@ int replace_missing_with_MAF(string snp_g){
   //return res
   return 1;
 }
-
-
-double[] normalize(double[] ind_g){
-  //"""
-  //Run for every SNP list (for one individual) and return
-  //normalized SNP genotype values with missing data filled in
-  //"""
-  auto g = ind_g;                        // copy to avoid side effects
-  bool[] missing = isnan(g);
-  bool[] along = negateBool(missing);
-  double[] values;
-   //= g[along];
-  //double mean = globalMean(values);      // Global mean value
-  //double stddev = sqrt(values.var());    // Global stddev
-  //g[missing] = mean;                     // Plug-in mean values for missing data
-  //if(stddev == 0){
-  //  g = g - mean;                        // Subtract the mean
-  //}else{
-  //  g = (g - mean) / stddev;             // Normalize the deviation
-  //}
-  return g;
-}
