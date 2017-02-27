@@ -130,7 +130,7 @@ LMM2 lmm2transform(ref LMM2 lmmobject){
 LMM2 LMMglob;
 dmatrix Xglob;
 
-extern(C) double fn1(double h, void *params){
+extern(C) double LL_brent(double h, void *params){
     //#brent will not be bounded by the specified bracket.
     //# I return a large number if we encounter h < 0 to avoid errors in LL computation during the search.
   if(h < 0){return 1e6;}
@@ -141,17 +141,7 @@ extern(C) double fn1(double h, void *params){
   return -getLL(LMMglob, h, Xglob, false, REML).LL;
 }
 
-  double LL_brent(LMM2 lmmobject, double h, dmatrix X, bool stack = true, bool REML = false){
-      //#brent will not be bounded by the specified bracket.
-      //# I return a large number if we encounter h < 0 to avoid errors in LL computation during the search.
-    if(h < 0){return 1e6;}
-    dmatrix beta, betaVAR;
-    double sigma;
-    dmatrix l;
-    return -getLL(lmmobject, h, X, false, REML).LL;
-  }
-
-LLtuple getLL(ref LMM2 lmmobject, ref double h, ref dmatrix X, bool stack=true, bool REML=false){
+LLtuple getLL(LMM2 lmmobject, double h, dmatrix X, bool stack=true, bool REML=false){
   //"""
   //   Computes the log-likelihood for a given heritability (h).  If X==None, then the
   //   default X0t will be used.  If X is set and stack=True, then X0t will be matrix concatenated with
@@ -161,7 +151,7 @@ LLtuple getLL(ref LMM2 lmmobject, ref double h, ref dmatrix X, bool stack=true, 
   if(X.init != true){
     X = lmmobject.X0t;
   }
-  
+
   double n = cast(double)lmmobject.N;
   double q = cast(double)X.shape[1];
   dmatrix Q,XX_i,XX, beta, L;
@@ -192,7 +182,7 @@ double optimizeBrent(LMM2 lmmobject, dmatrix X, bool REML, double lower, double 
   double a = lower, b = upper;
   double m = (a+b)/2, m_expected = (a+b)/2;
   gsl_function F;
-  F.function_ = &fn1;
+  F.function_ = &LL_brent;
 
   Xglob = X;
   LMMglob = lmmobject;
@@ -220,7 +210,7 @@ double optimizeBrent(LMM2 lmmobject, dmatrix X, bool REML, double lower, double 
   return m;
 }
 
-double getMax(ref LMM2 lmmobject, ref dmatrix H, ref dmatrix X, bool REML=false){
+double getMax(LMM2 lmmobject, dmatrix H, dmatrix X, bool REML=false){
 
   //"""
   //   Helper functions for .fit(...).
