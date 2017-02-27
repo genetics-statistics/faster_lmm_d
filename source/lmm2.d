@@ -98,7 +98,7 @@ struct LMM2{
   }
 }
 
-LMM2 lmm2transform(ref LMM2 lmmobject){
+LMM2 lmm2transform(LMM2 lmmobject){
   //"""
   //   Computes a transformation on the phenotype vector and the covariate matrix.
   //   The transformation is obtained by left multiplying each parameter by the transpose of the
@@ -349,36 +349,3 @@ auto tstat( LMM2 lmmobject, double beta, double var, double sigma, double q, boo
 
   return Tuple!(double, double)(ts, ps);
 }
-
-  void plotFit( LMM2 lmmobject, string color="b-", string title=""){
-
-    //"""
-    //   Simple function to visualize the likelihood space.  It takes the LLs
-    //   calcualted over a grid and normalizes them by subtracting off the mean and exponentiating.
-    //   The resulting "probabilities" are normalized to one and plotted against heritability.
-    //   This can be seen as an approximation to the posterior distribuiton of heritability.
-
-    //   For diagnostic purposes this lets you see if there is one distinct maximum or multiple
-    //   and what the variance of the parameter looks like.
-    //"""
-
-    //mx = lmmobject.LLs.max();
-    //p = np.exp(lmmobject.LLs - mx);
-    //p = p/p.sum();
-
-    //pl.plot(lmmobject.H,p,color);
-    //pl.xlabel("Heritability");
-    //pl.ylabel("Probability of data");
-    //pl.title(title);
-  }
-
-  void meanAndVar(ref LMM2 lmmobject){
-    //mx = lmmobject.LLs.max();
-    //p = np.exp(lmmobject.LLs - mx);
-    //p = p/p.sum();
-
-    //mn = (lmmobject.H * p).sum();
-    //vx = ((lmmobject.H - mn)**2 * p).sum();
-
-    //return mn,vx;
-  }
