@@ -35,6 +35,19 @@ struct fitTuple{
   }
 }
 
+struct mlSol{
+  double sigma;
+  dmatrix beta, Q, XX_i, XX;
+
+  this(dmatrix beta, double sigma, dmatrix Q, dmatrix XX_i, dmatrix XX){
+    this.beta = beta;
+    this.sigma = sigma;
+    this.Q = Q;
+    this.XX_i = XX_i;
+    this.XX = XX;
+  }
+}
+
 struct LMM2{
   int q;
   double N, optH, optSigma;
@@ -113,31 +126,28 @@ LMM2 lmm2transform(LMM2 lmmobject){
   return LMM2(lmmobject, Yt, X0t, X0t_stack, q);
 }
 
-  void getMLSoln(ref dmatrix beta, ref double sigma,ref dmatrix Q, ref dmatrix XX_i, ref dmatrix XX, ref LMM2 lmmobject,ref double h, ref dmatrix X){
+mlSol getMLSoln(LMM2 lmmobject, double h, dmatrix X){
 
-    //"""
-    //   Obtains the maximum-likelihood estimates for the covariate coefficients (beta),
-    //   the total variance of the trait (sigma) and also passes intermediates that can
-    //   be utilized in other functions. The input parameter h is a value between 0 and 1 and represents
-    //   the heritability or the proportion of the total variance attributed to genetics.  The X is the
-    //   covariate matrix.
-    //"""
+  //"""
+  //   Obtains the maximum-likelihood estimates for the covariate coefficients (beta),
+  //   the total variance of the trait (sigma) and also passes intermediates that can
+  //   be utilized in other functions. The input parameter h is a value between 0 and 1 and represents
+  //   the heritability or the proportion of the total variance attributed to genetics.  The X is the
+  //   covariate matrix.
+  //"""
 
-    dmatrix S = divideNumDmatrix(1,addDmatrixNum(multiplyDmatrixNum(lmmobject.Kva,h),(1.0 - h)));
-    dmatrix Xt = multiplyDmatrix(X, S);
-    Xt = matrixTranspose(Xt);
-    XX = matrixMult(Xt,X);
-    XX_i = inverse(XX);
-    dmatrix temp = matrixMult(XX_i,Xt);
-    beta =  matrixMult(temp,lmmobject.Yt);
-    dmatrix temp2 = matrixMult(X,beta);
-    dmatrix Yt = subDmatrix(lmmobject.Yt, temp2);
-    dmatrix YtT = matrixTranspose(Yt);
-    S = matrixTranspose(S);
-    dmatrix YtTS = multiplyDmatrix(YtT, S);
-    Q = matrixMult(YtTS,Yt);
-    sigma = Q.elements[0] * 1.0 / (cast(double)(lmmobject.N) - cast(double)(X.shape[1]));
-  }
+  dmatrix S = divideNumDmatrix(1,addDmatrixNum(multiplyDmatrixNum(lmmobject.Kva,h),(1.0 - h)));
+  dmatrix Xt = matrixTranspose(multiplyDmatrix(X, S));
+  dmatrix XX = matrixMult(Xt,X);
+  dmatrix XX_i = inverse(XX);
+  dmatrix beta =  matrixMult(matrixMult(XX_i,Xt),lmmobject.Yt);
+  dmatrix Yt = subDmatrix(lmmobject.Yt, matrixMult(X,beta));
+  dmatrix YtT = matrixTranspose(Yt);
+  dmatrix YtTS = multiplyDmatrix(YtT, matrixTranspose(S));
+  dmatrix Q = matrixMult(YtTS,Yt);
+  double sigma = Q.elements[0] * 1.0 / (cast(double)(lmmobject.N) - cast(double)(X.shape[1]));
+  return mlSol(beta, sigma, Q, XX_i, XX);
+}
 
 LMM2 LMMglob;
 dmatrix Xglob;
@@ -166,11 +176,11 @@ LLtuple getLL(LMM2 lmmobject, double h, dmatrix X, bool stack=true, bool REML=fa
 
   double n = cast(double)lmmobject.N;
   double q = cast(double)X.shape[1];
-  dmatrix Q,XX_i,XX, beta, L;
-  double sigma;
-  getMLSoln(beta,sigma,Q,XX_i,XX, lmmobject, h,X);
+
+  mlSol ml = getMLSoln(lmmobject, h, X);
+
   double LL  = n * std.math.log(2*std.math.PI) + sum(logDmatrix((addDMatrixNum( multiplyDmatrixNum(lmmobject.Kva,h),(1-h) ) )).elements)+
-  + n + n * std.math.log((1.0/n) * Q.elements[0]); //Q
+  + n + n * std.math.log((1.0/n) * ml.Q.elements[0]); //Q
 
   LL = -0.5 * LL;
 
@@ -179,11 +189,11 @@ LLtuple getLL(LMM2 lmmobject, double h, dmatrix X, bool stack=true, bool REML=fa
     dmatrix XT = matrixTranspose(X);
     double XTX = det(matrixMult(XT, X));
 
-    LL_REML_part = q*std.math.log(2.0*std.math.PI*sigma) + std.math.log(XTX) - std.math.log(det(XX));
+    LL_REML_part = q*std.math.log(2.0*std.math.PI* ml.sigma) + std.math.log(XTX) - std.math.log(det(ml.XX));
     LL = LL + 0.5*LL_REML_part;
   }
-  L = dmatrix([1,1],[LL]);
-  return LLtuple(LL,beta,sigma,XX_i);
+  dmatrix L = dmatrix([1,1],[LL]);
+  return LLtuple(LL, ml.beta, ml.sigma, ml.XX_i);
 }
 
 double optimizeBrent(LMM2 lmmobject, dmatrix X, bool REML, double lower, double upper){
