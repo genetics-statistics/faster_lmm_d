@@ -65,6 +65,7 @@ auto gwas(double[] Y, ref dmatrix G, ref dmatrix K, bool restricted_max_likeliho
   dmatrix X0;
 
   LMM2 lmm2 = LMM2(Y,K,Kva,Kve,X0, true);
+  lmm2 = lmm2transform(lmm2);
   //writeln(lmm2);
   dmatrix X;
   if(!refit){

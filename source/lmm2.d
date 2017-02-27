@@ -12,26 +12,13 @@ import std.stdio;
 import std.typecons;
 
 struct LMM2{
-  bool init = false;
-  dmatrix Y;
-  dmatrix Y1;
-  dmatrix K;
-  dmatrix Kva;
-  dmatrix Kve;
-  dmatrix X0;
-  bool verbose = false;
-  dmatrix Yt;
-  dmatrix X0t;
-  dmatrix X0t_stack;
   int q;
-  dmatrix H;
-  double N;
-
-  dmatrix optLL;
-  dmatrix optBeta;
-  double optSigma;
-  dmatrix LLs;
-  double optH;
+  double N, optH, optSigma;
+  bool init = false;
+  bool verbose = false;
+  dmatrix X0, Y, K, Kva, Kve;
+  dmatrix Yt, X0t, X0t_stack;
+  dmatrix H, optLL, optBeta, LLs;
 
   //The constructor takes a phenotype vector or array Y of size n. It
   //takes a kinship matrix K of size n x n.  Kva and Kve can be
@@ -42,7 +29,7 @@ struct LMM2{
   //constructor will set X0 to an n x 1 matrix of all ones to
   //represent a mean effect.
 
-  this(double[] Y, dmatrix K, dmatrix Kva, dmatrix Kve, dmatrix X0,bool verbose){
+  this(double[] Y, dmatrix K, dmatrix Kva, dmatrix Kve, dmatrix X0, bool verbose){
     writeln("This is Y");
     writeln(Y);
 
@@ -50,72 +37,57 @@ struct LMM2{
       writeln("Initializing LMM2...");
       X0 = onesMatrix(cast(int)Y.length,1);
     }
-    this.verbose = verbose;
 
+    this.verbose = verbose;
     bool[] v = isnan(Y);
     bool[] x = negateBool(v);
-    
-
-    //if not x.sum() == len(Y):
-    //     if self.verbose: sys.stderr.write("Removing %d missing values from Y\n" % ((True - x).sum()))
-    //     Y = Y[x]
-    //     K = K[x,:][:,x]
-    //     X0 = X0[x,:]
-    //     Kva = []
-    //     Kve = []
-    //  self.nonmissing = x
-
-    //writeln("this K is:", K.shape, K);
-
-    //if len(Kva) == 0 or len(Kve) == 0:
-    //      # if self.verbose: sys.stderr.write("Obtaining eigendecomposition for %dx%d matrix\n" % (K.shape[0],K.shape[1]) )
-    //      begin = time.time()
-    //      # Kva,Kve = linalg.eigh(K)
-    //      Kva,Kve = kinship.kvakve(K)
-    //      end = time.time()
-    //      if self.verbose: sys.stderr.write("Total time: %0.3f\n" % (end - begin))
-    //      print("sum(Kva),sum(Kve)=",sum(Kva),sum(Kve))
-
     kvakve(K, Kve, Kva);
     this.init = true;
     this.K = K;
     this.Kva = Kva;
     this.Kve = Kve;
     this.N = K.shape[0];
-    this.Y =  dmatrix([K.shape[0],1] ,Y); // .reshape((self.N,1))
+    this.Y =  dmatrix([K.shape[0],1] ,Y);
     nanCounter(this.Y);
     this.X0 = X0;
-    bool[] com = compareGt(Kva, 1e-6);
-    //if(faster_lmm_d.helpers.sum(com)){
-    //  writeln("Cleaning eigen values");
-    //  foreach(ref double element; Kva.elements){
-    //    if(element < 1e-6)
-    //    {
-    //      element = 1e-6;
-    //    }
-    //  }
-      
-    //}
-    lmm2transform(this);
 
+   
+  }
+
+  //this(int q, double N, double optH, double optSigma, dmatrix X0, dmatrix Y, dmatrix K, dmatrix Kva, dmatrix Kve, dmatrix Yt,
+  // dmatrix X0t, dmatrix X0t_stack, dmatrix H, dmatrix optLL, dmatrix optBeta, dmatrix LLs){
+
+  this(LMM2 lmmobject, dmatrix Yt, dmatrix X0t, dmatrix X0t_stack, int q){
+    this.verbose = lmmobject.verbose;
+    this.init = true;
+    this.K = lmmobject.K;
+    this.Kve = lmmobject.Kve;
+    this.Kva = lmmobject.Kva;
+    this.N = lmmobject.N;
+    this.Y = lmmobject.Y;
+    this.Yt = Yt;
+    this.X0 = X0;
+    this.X0t = X0t;
+    writeln(X0t);
+    this.X0t_stack = X0t_stack;
+    this.q = q;
   }
 }
 
-
-
-  void lmm2transform(ref LMM2 lmmobject){
-    //"""
-    //   Computes a transformation on the phenotype vector and the covariate matrix.
-    //   The transformation is obtained by left multiplying each parameter by the transpose of the
-    //   eigenvector matrix of K (the kinship).
-    //"""
-    writeln("In lmm2transform");
-    dmatrix KveT = matrixTranspose(lmmobject.Kve);
-    lmmobject.Yt = matrixMult(KveT, lmmobject.Y);
-    lmmobject.X0t = matrixMult(KveT, lmmobject.X0);
-    lmmobject.X0t_stack = horizontallystack(lmmobject.X0t, onesMatrix(cast(int)lmmobject.N,1));
-    lmmobject.q = lmmobject.X0t.shape[1];
-  }
+LMM2 lmm2transform(ref LMM2 lmmobject){
+  //"""
+  //   Computes a transformation on the phenotype vector and the covariate matrix.
+  //   The transformation is obtained by left multiplying each parameter by the transpose of the
+  //   eigenvector matrix of K (the kinship).
+  //"""
+  writeln("In lmm2transform");
+  dmatrix KveT = matrixTranspose(lmmobject.Kve);
+  dmatrix Yt = matrixMult(KveT, lmmobject.Y);
+  dmatrix X0t = matrixMult(KveT, lmmobject.X0);
+  dmatrix X0t_stack = horizontallystack(X0t, onesMatrix(cast(int)lmmobject.N,1));
+  int q = X0t.shape[1];
+  return LMM2(lmmobject, Yt, X0t, X0t_stack, q);
+}
 
   void getMLSoln(ref dmatrix beta, ref double sigma,ref dmatrix Q, ref dmatrix XX_i, ref dmatrix XX, ref LMM2 lmmobject,ref double h, ref dmatrix X){
 
@@ -127,9 +99,8 @@ struct LMM2{
     //   covariate matrix.
     //"""
 
-    dmatrix S;
     dmatrix temppp = addDmatrixNum(multiplyDmatrixNum(lmmobject.Kva,h),(1.0 - h));
-    S = divideNumDmatrix(1,temppp);
+    dmatrix S = divideNumDmatrix(1,temppp);
     dmatrix Xt = multiplyDmatrix(X, S);
     Xt = matrixTranspose(Xt);
     XX = matrixMult(Xt,X);
@@ -178,7 +149,6 @@ struct LMM2{
       //   REML is computed by adding additional terms to the standard LL and can be computed by setting REML=True.
       //"""
       if(X.init != true){
-
         X = lmmobject.X0t;
       }
       //else if(stack){
@@ -253,7 +223,6 @@ struct LMM2{
     //   optimum.
 
     //"""
-    writeln("in Get Max");
     int n = cast(int)lmmobject.LLs.shape[0];
     double[] HOpt;
     for(int i=1; i< n-2; i++){
@@ -327,8 +296,6 @@ struct LMM2{
     lmmobject.optBeta = beta;
     lmmobject.optSigma = sigma;
 
-    //# debug(["hmax",hmax,"beta",beta,"sigma",sigma,"LL",L])
-    //return hmax,beta,sigma,L;
     fit_hmax = hmax;
     fit_beta = beta;
     fit_sigma = sigma;
