@@ -178,7 +178,7 @@ auto run_other_new(int n, int m, double[] pheno_vector, dmatrix geno, bool restr
 
   //# Adjust phenotypes
   
-  phenoStruct pheno = remove_missing_new(n,pheno_vector);
+  phenoStruct pheno = remove_missing(n,pheno_vector);
   n = pheno.n;
   double[] Y = pheno.Y;
   bool[] keep = pheno.keep;
