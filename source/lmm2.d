@@ -26,12 +26,15 @@ struct LLtuple{
 struct fitTuple{
   double fit_hmax, fit_sigma, fit_LL;
   dmatrix fit_beta;
+  LMM2 lmmobj;
 
-  this(double fit_hmax, dmatrix fit_beta, double fit_sigma, double fit_LL){
+  this(LMM2 lmmobj, double fit_hmax, dmatrix fit_beta, double fit_sigma, double fit_LL){
+    this.lmmobj = lmmobj;
     this.fit_hmax = fit_hmax;
     this.fit_beta = fit_beta;
     this.fit_sigma = fit_sigma;
     this.fit_LL = fit_LL;
+    this.lmmobj = lmmobj;
   }
 }
 
@@ -50,12 +53,12 @@ struct mlSol{
 
 struct LMM2{
   int q;
-  double N, optH, optSigma;
+  double N, optH, optSigma, optLL;
   bool init = false;
   bool verbose = false;
   dmatrix X0, Y, K, Kva, Kve;
   dmatrix Yt, X0t, X0t_stack;
-  dmatrix H, optLL, optBeta, LLs;
+  dmatrix H, optBeta, LLs;
 
   //The constructor takes a phenotype vector or array Y of size n. It
   //takes a kinship matrix K of size n x n.  Kva and Kve can be
@@ -105,9 +108,30 @@ struct LMM2{
     this.Yt = Yt;
     this.X0 = X0;
     this.X0t = X0t;
-    writeln(X0t);
     this.X0t_stack = X0t_stack;
     this.q = q;
+  }
+
+  this(LMM2 lmmobject, dmatrix LLs, dmatrix H, double hmax, double optLL, dmatrix optBeta, double optSigma){
+    this.verbose = lmmobject.verbose;
+    this.init = true;
+    this.K = lmmobject.K;
+    this.Kve = lmmobject.Kve;
+    this.Kva = lmmobject.Kva;
+    this.N = lmmobject.N;
+    this.Y = lmmobject.Y;
+    this.Yt = lmmobject.Yt;
+    this.X0 = lmmobject.X0;
+    this.X0t = lmmobject.X0t;
+    this.X0t_stack = lmmobject.X0t_stack;
+    this.q = lmmobject.q;
+
+    this.LLs = LLs;
+    this.H = H;
+    this.optH = hmax;
+    this.optLL = optLL;
+    this.optBeta = optBeta;
+    this.optSigma = optSigma;
   }
 }
 
@@ -232,7 +256,7 @@ double optimizeBrent(LMM2 lmmobject, dmatrix X, bool REML, double lower, double 
   return m;
 }
 
-double getMax(LMM2 lmmobject, dmatrix H, dmatrix X, bool REML=false){
+double getMax(LMM2 lmmobject, dmatrix L, dmatrix H, dmatrix X, bool REML=false){
 
   //"""
   //   Helper functions for .fit(...).
@@ -241,10 +265,10 @@ double getMax(LMM2 lmmobject, dmatrix H, dmatrix X, bool REML=false){
   //   optimum.
 
   //"""
-  int n = cast(int)lmmobject.LLs.shape[0];
+  int n = cast(int)L.shape[0];
   double[] HOpt;
   for(int i=1; i< n-2; i++){
-    if(lmmobject.LLs.elements[i-1] < lmmobject.LLs.elements[i] && lmmobject.LLs.elements[i] > lmmobject.LLs.elements[i+1]){
+    if(L.elements[i-1] < L.elements[i] && L.elements[i] > L.elements[i+1]){
       HOpt ~= optimizeBrent(lmmobject, X, REML, H.elements[i-1],H.elements[i+1]);
       if(std.math.isNaN(HOpt[$-1])){
         HOpt[$-1] = H.elements[i-1];
@@ -259,7 +283,7 @@ double getMax(LMM2 lmmobject, dmatrix H, dmatrix X, bool REML=false){
   else if(HOpt.length == 1){
     return HOpt[0];
   }
-  else if(lmmobject.LLs.elements[0] > lmmobject.LLs.elements[n-1]){
+  else if(L.elements[0] > L.elements[n-1]){
     return H.elements[0];
   }
   else{
@@ -267,7 +291,7 @@ double getMax(LMM2 lmmobject, dmatrix H, dmatrix X, bool REML=false){
   }
 }
 
-fitTuple lmm2fit(ref LMM2 lmmobject, dmatrix X, int ngrids=100, bool REML=true){
+fitTuple lmm2fit(LMM2 lmmobject, dmatrix X, int ngrids=100, bool REML=true){
 
   //"""
   //   Finds the maximum-likelihood solution for the heritability (h) given the current parameters.
@@ -296,18 +320,13 @@ fitTuple lmm2fit(ref LMM2 lmmobject, dmatrix X, int ngrids=100, bool REML=true){
     elm[h] = getLL(lmmobject, Harr[h], X, false, REML).LL;
   }
   dmatrix L = dmatrix([cast(int)elm.length,1],elm);
-  lmmobject.LLs = L;
-  lmmobject.H = dmatrix([cast(int)Harr.length,1],Harr);
-  double hmax = getMax(lmmobject, lmmobject.H, X, REML);
-
+  dmatrix H = dmatrix([cast(int)Harr.length,1],Harr);
+  double hmax = getMax(lmmobject, L, H, X, REML);
   LLtuple ll = getLL(lmmobject, hmax, X, false, REML);
-  
-  lmmobject.optH = hmax;
-  lmmobject.optLL = L;
-  lmmobject.optBeta = ll.beta;
-  lmmobject.optSigma = ll.sigma;
 
-  return fitTuple(hmax, ll.beta, ll.sigma, ll.LL);
+  LMM2 lmmobj = LMM2(lmmobject, L, H, hmax, ll.LL, ll.beta, ll.sigma);
+
+  return fitTuple(lmmobj, hmax, ll.beta, ll.sigma, ll.LL);
 }
 
 auto lmm2association(LMM2 lmmobject, dmatrix X, bool stack=true, bool REML=true, bool returnBeta=false){

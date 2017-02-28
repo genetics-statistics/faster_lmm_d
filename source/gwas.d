@@ -74,6 +74,7 @@ auto gwas(double[] Y, ref dmatrix G, ref dmatrix K, bool restricted_max_likeliho
     dmatrix fit_beta;
     double fit_LL;
     fitTuple fit = lmm2fit(lmm2, X); // # follow GN model in run_other;
+    lmm2 = fit.lmmobj;
     writeln("heritability= ", lmm2.optH, " sigma= ", lmm2.optSigma, " LL= ", fit.fit_LL);
   }
 
