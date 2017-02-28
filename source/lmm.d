@@ -1,10 +1,12 @@
 module faster_lmm_d.lmm;
 import faster_lmm_d.dmatrix;
 import faster_lmm_d.gwas;
-import std.stdio;
 import faster_lmm_d.helpers;
 import faster_lmm_d.optmatrix;
 import faster_lmm_d.kinship;
+import faster_lmm_d.phenotype;
+
+import std.stdio;
 import std.typecons;
 
 //void formatResult(id,beta,betaSD,ts,ps){
@@ -40,8 +42,7 @@ auto run_gwas(string species, int n, int m, dmatrix k, double[] y, dmatrix geno)
 
   if(species == "human"){
     writeln("kinship", k );
-    //ps, ts = 
-    //run_human(y, cov, inputfn, k, refit);
+    //return run_human(y, cov, inputfn, k, refit);
     return Tuple!(double[], double[])([-1],[-1]);
   }
   else{
@@ -163,7 +164,7 @@ void run_human(ref double[] pheno_vector, ref dmatrix covariate_matrix, string p
     //return p_values, t_stats;
 }
 
-auto run_other_new(ref int n, ref int m, ref double[] pheno_vector, ref dmatrix geno, bool restricted_max_likelihood= true, bool refit = false){
+auto run_other_new(int n, int m, double[] pheno_vector, dmatrix geno, bool restricted_max_likelihood= true, bool refit = false){
 
   //"""Takes the phenotype vector and genotype matrix and returns a set of p-values and t-statistics
 
@@ -176,9 +177,12 @@ auto run_other_new(ref int n, ref int m, ref double[] pheno_vector, ref dmatrix 
   writeln("REML=",restricted_max_likelihood," REFIT=",refit);
 
   //# Adjust phenotypes
-  double[] Y;
-  bool[] keep;
-  faster_lmm_d.phenotype.remove_missing_new(Y,keep,n,pheno_vector);
+  
+  phenoStruct pheno = remove_missing_new(n,pheno_vector);
+  n = pheno.n;
+  double[] Y = pheno.Y;
+  bool[] keep = pheno.keep;
+
   geno = removeCols(geno,keep);
   dmatrix K, G;
   writeln("Calculate Kinship");
