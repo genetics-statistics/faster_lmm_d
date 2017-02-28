@@ -9,9 +9,14 @@ import faster_lmm_d.phenotype;
 import std.stdio;
 import std.typecons;
 
-//void formatResult(id,beta,betaSD,ts,ps){
-//  //return "\t".join([str(x) for x in [id,beta,betaSD,ts,ps]]) + "\n";
-//}
+struct KGstruct{
+  dmatrix K, G;
+
+  this(dmatrix K, dmatrix G){
+    this.K = K;
+    this.G = G;
+  }
+}
 
 auto run_gwas(string species, int n, int m, dmatrix k, double[] y, dmatrix geno){
     //int cov, bool reml = true,bool refit = false, string inputfn = "", bool new_code = true){
@@ -184,22 +189,22 @@ auto run_other_new(int n, int m, double[] pheno_vector, dmatrix geno, bool restr
   bool[] keep = pheno.keep;
 
   geno = removeCols(geno,keep);
-  dmatrix K, G;
   writeln("Calculate Kinship");
-  calculate_kinship_new(K,G,geno);
-  writeln("kinship_matrix.shape: ", K.shape);
-  writeln("run_other_new genotype_matrix: ", G.shape);
+  KGstruct KG = calculate_kinship_new(geno);
+  writeln("kinship_matrix.shape: ", KG.K.shape);
+  writeln("run_other_new genotype_matrix: ", KG.G.shape);
 
-  return gwas(Y, G, K, true, false, true);
+  return gwas(Y, KG.G, KG.K, true, false, true);
 }
 
-void calculate_kinship_new(ref dmatrix K, ref dmatrix G, ref dmatrix genotype_matrix){
+KGstruct calculate_kinship_new(dmatrix genotype_matrix){
   //"""
   //Call the new kinship calculation where genotype_matrix contains
   //inds (columns) by snps (rows).
   //"""
   writeln("call calculate_kinship_new");
   writeln(genotype_matrix.shape);
-  G = normalize_along_row(genotype_matrix);
-  K = kinship_full(G);
+  dmatrix G = normalize_along_row(genotype_matrix);
+  dmatrix K = kinship_full(G);
+  return KGstruct(K, G);
 }
