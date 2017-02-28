@@ -5,6 +5,15 @@ import std.stdio;
 import cblas;
 import lapack;
 
+struct eighTuple{
+  dmatrix kva, kve;
+
+  this(dmatrix kva, dmatrix kve){
+    this.kva = kva;
+    this.kve = kve;
+  } 
+}
+
 dmatrix matrixMult(dmatrix lha, dmatrix rha){
   double[] C = new double[lha.shape[0]*rha.shape[1]];
   gemm(Order.RowMajor, Transpose.NoTrans, Transpose.NoTrans, lha.shape[0], rha.shape[1], lha.shape[1], /*no scaling*/
@@ -172,8 +181,7 @@ double[] roundedNearest(double[] input){
   return arr;
 }
 
-void eigh(dmatrix input,ref dmatrix kva, ref dmatrix kve){
-
+eighTuple eigh(dmatrix input){
   double[] z = new double[input.shape[0] * input.shape[1]]; //eigenvalues
   double[] w = new double[input.shape[0]];  // eigenvectors
   double[] elements = roundedNearest(input.elements.dup);
@@ -190,9 +198,9 @@ void eigh(dmatrix input,ref dmatrix kva, ref dmatrix kve){
   
   LAPACKE_dsyevr(101, 'V', 'A', 'L', n, elements.ptr, n, vl, vu, il, iu, abstol, m.ptr, w.ptr, z.ptr, ldz, isuppz.ptr);
   
-  kve = dmatrix([input.shape[0],1], w);
-  kva = dmatrix(input.shape, z);
-  pPrint3(kva);
+  dmatrix kva = dmatrix([input.shape[0],1], w);
+  dmatrix kve = dmatrix(input.shape, z);
+  return eighTuple(kva, kve);
 }
 
 

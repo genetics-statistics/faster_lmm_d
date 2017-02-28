@@ -143,14 +143,14 @@ int compute_matrixMult(int job, dmatrix W){
   return job;
 }
 
-void kvakve(dmatrix K, ref dmatrix Kva, ref dmatrix Kve){
+eighTuple kvakve(dmatrix K){
   //"""
 
   //Obtain eigendecomposition for K and return Kva,Kve where Kva is cleaned
   //of small values < 1e-6 (notably smaller than zero)
   //"""
   writefln("Obtaining eigendecomposition for %dx%d matrix",K.shape[0],K.shape[1]);
-  eigh(K, Kva, Kve);
+  return eigh(K);
 
   //if(sum(Kva) < 0){
     //writefln("Cleaning %d eigen values (Kva<0)",(sum(Kva < 0)));

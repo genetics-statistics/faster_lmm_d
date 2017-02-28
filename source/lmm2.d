@@ -81,11 +81,11 @@ struct LMM2{
     this.verbose = verbose;
     bool[] v = isnan(Y);
     bool[] x = negateBool(v);
-    kvakve(K, Kve, Kva);
+    eighTuple keigh = kvakve(K);
     this.init = true;
     this.K = K;
-    this.Kva = Kva;
-    this.Kve = Kve;
+    this.Kva = keigh.kva;
+    this.Kve = keigh.kve;
     this.N = K.shape[0];
     this.Y =  dmatrix([K.shape[0],1] ,Y);
     nanCounter(this.Y);
