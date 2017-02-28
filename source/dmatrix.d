@@ -212,7 +212,6 @@ unittest{
 }
 
 dmatrix getCol(dmatrix input, int colNo){
-  //writeln(input.shape);
   double[] arr;
   for(int i=0; i<input.shape[0]; i++){
     arr ~= input.elements[i*input.shape[1]+colNo];
@@ -221,10 +220,11 @@ dmatrix getCol(dmatrix input, int colNo){
 }
 
 dmatrix getRow(dmatrix input, int rowNo){
-  double[] arr = new double[input.shape[1]];
-  for(int i=0; i < input.shape[1]; i++){
-    arr[i] = input.elements[rowNo*input.shape[1]+i]; 
-  }
+  //double[] arr = new double[input.shape[1]];
+  //for(int i=0; i < input.shape[1]; i++){
+  //  arr[i] = input.elements[rowNo*input.shape[1]+i]; 
+  //}
+  double[] arr = input.elements[rowNo*input.shape[1]..(rowNo+1)*input.shape[1]];
   return dmatrix([1,input.shape[1]],arr);
 }
 

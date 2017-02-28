@@ -56,7 +56,7 @@ struct LMM2{
   double N, optH, optSigma, optLL;
   bool init = false;
   bool verbose = false;
-  dmatrix X0, Y, K, Kva, Kve;
+  dmatrix X0, Y, K, Kva, Kve, KveT;
   dmatrix Yt, X0t, X0t_stack;
   dmatrix H, optBeta, LLs;
 
@@ -97,7 +97,7 @@ struct LMM2{
   //this(int q, double N, double optH, double optSigma, dmatrix X0, dmatrix Y, dmatrix K, dmatrix Kva, dmatrix Kve, dmatrix Yt,
   // dmatrix X0t, dmatrix X0t_stack, dmatrix H, dmatrix optLL, dmatrix optBeta, dmatrix LLs){
 
-  this(LMM2 lmmobject, dmatrix Yt, dmatrix X0t, dmatrix X0t_stack, int q){
+  this(LMM2 lmmobject, dmatrix Yt, dmatrix X0t, dmatrix X0t_stack, dmatrix KveT, int q){
     this.verbose = lmmobject.verbose;
     this.init = true;
     this.K = lmmobject.K;
@@ -109,6 +109,7 @@ struct LMM2{
     this.X0 = X0;
     this.X0t = X0t;
     this.X0t_stack = X0t_stack;
+    this.KveT = KveT;
     this.q = q;
   }
 
@@ -124,6 +125,7 @@ struct LMM2{
     this.X0 = lmmobject.X0;
     this.X0t = lmmobject.X0t;
     this.X0t_stack = lmmobject.X0t_stack;
+    this.KveT = lmmobject.KveT;
     this.q = lmmobject.q;
 
     this.LLs = LLs;
@@ -147,7 +149,7 @@ LMM2 lmm2transform(LMM2 lmmobject){
   dmatrix X0t = matrixMult(KveT, lmmobject.X0);
   dmatrix X0t_stack = horizontallystack(X0t, onesMatrix(cast(int)lmmobject.N,1));
   int q = X0t.shape[1];
-  return LMM2(lmmobject, Yt, X0t, X0t_stack, q);
+  return LMM2(lmmobject, Yt, X0t, X0t_stack, KveT, q);
 }
 
 mlSol getMLSoln(LMM2 lmmobject, double h, dmatrix X){
@@ -306,8 +308,7 @@ fitTuple lmm2fit(LMM2 lmmobject, dmatrix X, int ngrids=100, bool REML=true){
     X = lmmobject.X0t;
   }
   else{
-    dmatrix kveT = matrixTranspose(lmmobject.Kve);
-    dmatrix KveTX = matrixMult(kveT , X);
+    dmatrix KveTX = matrixMult(lmmobject.KveT , X);
     X = lmmobject.X0t_stack;
   }
   double[] Harr = new double[ngrids];
@@ -342,15 +343,11 @@ auto lmm2association(LMM2 lmmobject, dmatrix X, bool stack=true, bool REML=true,
   }
 
   if(stack){
-    dmatrix kvet = matrixTranspose(lmmobject.Kve);
-    dmatrix m = matrixMult(kvet,X);
+    dmatrix m = matrixMult(lmmobject.KveT,X);
     setCol(lmmobject.X0t_stack,lmmobject.q,m);
     X = lmmobject.X0t_stack;
   }
   double h = lmmobject.optH;
-  dmatrix beta, betaVAR;
-  double sigma; 
-  dmatrix L;
   LLtuple ll = getLL(lmmobject,h, X ,false,REML);
   int q  = cast(int)ll.beta.elements.length;
 
