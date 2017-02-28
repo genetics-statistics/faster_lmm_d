@@ -18,6 +18,15 @@ struct dmatrix{
   }
 }
 
+struct genoObj{
+  dmatrix geno;
+  string[] gnames;
+  this(dmatrix geno, string[] gnames){
+    this.geno = geno;
+    this.gnames = gnames;
+  }
+}
+
 dmatrix newDmatrix(dmatrix inDmat, int start, int end){
   return inDmat;
 }

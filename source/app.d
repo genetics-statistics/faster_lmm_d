@@ -50,22 +50,31 @@ void main(string[] args)
 
   if(opheno){
     if(cmd == "rqtl"){
-      pheno(opheno, y, ynames, pheno_column);
+      auto pTuple = pheno(opheno, pheno_column);
+      y = pTuple[0];
+      ynames = pTuple[1];
     }
     else{
-      tsvpheno(opheno, y, ynames, pheno_column);
+      auto pTuple = tsvpheno(opheno, pheno_column);
+      y = pTuple[0];
+      ynames = pTuple[1];
     }
     writeln(y.sizeof);
   }
+
   dmatrix g;
   string[] gnames;
+
   if(ogeno && cmd != "iterator"){
+    genoObj g1;
     if(cmd == "rqtl"){
-      geno(ogeno, ctrl, g, gnames);
+      g1 = geno(ogeno, ctrl);
     }
     else{
-      tsvgeno(ogeno, ctrl, g, gnames);
+      g1 = tsvgeno(ogeno, ctrl);
     }
+    g = g1.geno;
+    gnames = g1.gnames;
     writeln(g.shape);
   }
 

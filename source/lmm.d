@@ -11,7 +11,7 @@ import std.typecons;
 //  //return "\t".join([str(x) for x in [id,beta,betaSD,ts,ps]]) + "\n";
 //}
 
-auto run_gwas(string species,int n,int m,ref dmatrix k, ref double[] y, ref dmatrix geno){
+auto run_gwas(string species, int n, int m, dmatrix k, double[] y, dmatrix geno){
     //int cov, bool reml = true,bool refit = false, string inputfn = "", bool new_code = true){
 //  //"""
 //  //Invoke pylmm using genotype as a matrix or as a (SNP) iterator.

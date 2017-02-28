@@ -41,8 +41,10 @@ int kinship(string fn){
   return 1;
 }
 
-void pheno(string fn,  ref double[] y, ref string[] ynames, int p_column= 0){
+auto pheno(string fn, int p_column= 0){
   Regex!char Pattern = regex("\\.json$", "i");
+  double[] y;
+  string[] ynames;
 
   if(!match(fn, Pattern).empty)
   {
@@ -57,9 +59,10 @@ void pheno(string fn,  ref double[] y, ref string[] ynames, int p_column= 0){
     writeln(ynames);
     writeln("interest");
   }
+  return Tuple!(double[], string[])(y, ynames);
 }
 
-void geno(string fn, JSONValue ctrl, ref dmatrix g, ref string[] gnames){
+genoObj geno(string fn, JSONValue ctrl){
 
   writeln("in geno function");
   //FIXME
@@ -96,7 +99,7 @@ void geno(string fn, JSONValue ctrl, ref dmatrix g, ref string[] gnames){
   string input = cast(string)std.file.read(fn);
   auto tsv = csvReader!(string, Malformed.ignore)(input, null);
 
-  gnames = tsv.header[1..$];
+  string[] gnames = tsv.header[1..$];
   double[] gs2;
   int rowCount = 0;
   int colCount;
@@ -114,8 +117,8 @@ void geno(string fn, JSONValue ctrl, ref dmatrix g, ref string[] gnames){
     rowCount++;
   }
   writeln("MATRIX CREATED");
-  g = dmatrix([rowCount, colCount], gs2);
   writeln("leaving geno function");
+  return genoObj(dmatrix([rowCount, colCount], gs2), gnames);
 }
 
 

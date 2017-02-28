@@ -14,9 +14,10 @@ import std.regex;
 import faster_lmm_d.dmatrix;
 import faster_lmm_d.optmatrix;
 
-void tsvpheno(string fn,  ref double[] y, ref string[] ynames, int p_column= 0){
+auto tsvpheno(string fn, int p_column= 0){
 	writeln("In tsvpheno");
-	double[] Y1;
+	double[] y;
+  string[] ynames;
   //ynames = None
   string input = cast(string)std.file.read(fn);
 
@@ -27,17 +28,15 @@ void tsvpheno(string fn,  ref double[] y, ref string[] ynames, int p_column= 0){
   foreach(line; lines){
   	if(line != ""){
   		string[] row = line.split("\t");
-	  	Y1 ~=  to!double(row[1]);// <--- slow
+	  	y ~=  to!double(row[1]);// <--- slow
 	  	ynames ~= to!string(row[0]);
   	}
   	
   }
-  y = Y1;
-  //writeln("ynames");
-  //writeln(y,ynames);
+  return Tuple!(double[], string[])(y, ynames);
 }// # FIXME: column not used
 
-void tsvgeno(string fn, JSONValue ctrl, ref dmatrix g, ref string[] gnames){
+genoObj tsvgeno(string fn, JSONValue ctrl){
 
   writeln("in geno function");
   //writeln(ctrl["genotypes"].object);
@@ -74,7 +73,7 @@ void tsvgeno(string fn, JSONValue ctrl, ref dmatrix g, ref string[] gnames){
   string[] rows = input.split("\n");
   rows = rows[4..$];
   //writeln(tsv.header[1..$]);
-  gnames = rows[0].split("\t");
+  string[] gnames = rows[0].split("\t");
   gnames = gnames[1..$];
   double[] gs2;
   int rowCount = 0;
@@ -94,41 +93,10 @@ void tsvgeno(string fn, JSONValue ctrl, ref dmatrix g, ref string[] gnames){
 	      colCount++;
 	      allal++;
 	    }
-	    //writeln(rowCount);
-	    //writeln(gs2);
 	    rowCount++;
-
-
-	    //writeln(gs);
-	    ////# print id,gs
-	    ////# Convert all items to genotype values
-	    //gs2 = [faster_lmm_d_mapper[hab_mapper[g]] for g in gs]
-	    //core.exception.RangeError@source/rqtlreader.d(137): Range violation
-	    //foreach(gval;gs){
-	    //  gs2 ~= faster_lmm_d_mapper[hab_mapper[gval]];
-	    //}
-	    //# print id,gs2
-	    //# ns = np.genfromtxt(row[1:])
-	    //G1.append(gs2) # <--- slow
-	    //G = np.array(G1)
 	  }
   }
   writeln("MATRIX CREATED");
-  g = dmatrix([rowCount, colCount], gs2);
-  //pPrint(g);
-    //writeln(y);
-  ////# print(row)
-
-  //string* ptr;
-
-  //ptr = ("na.strings" in ctrl);
-  //if(ptr !is null && ctrl['geno_transposed']){
-  //  //return G,gnames
-  //}
-  ////return G.T,gnames
-
-
-
-  //return 5;
- writeln("leaving geno function");
+  writeln("leaving geno function");
+  return genoObj(dmatrix([rowCount, colCount], gs2), gnames);
 }

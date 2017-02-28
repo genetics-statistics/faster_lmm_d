@@ -25,7 +25,7 @@ void compute_snp(int j,int n,double[] snps,LMM2 lmmobject, bool REML,double q){
 //  compute_snp.q = q;
 //}
 
-auto gwas(double[] Y, ref dmatrix G, ref dmatrix K, bool restricted_max_likelihood = true, bool refit=false, bool verbose = true){
+auto gwas(double[] Y, dmatrix G, dmatrix K, bool restricted_max_likelihood = true, bool refit=false, bool verbose = true){
   //"""
   //GWAS. The G matrix should be n inds (cols) x m snps (rows)
   //"""
