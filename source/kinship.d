@@ -33,18 +33,16 @@ alias immutable(ulong) iu;
 
 dmatrix kinship_full(dmatrix G)
 {
-  //"""
-  //Calculate the Kinship matrix using a full dot multiplication
-  //"""
   writeln("Full kinship matrix used");
   int m = G.shape[0]; // snps
   int n = G.shape[1]; // inds
   writeln(m," SNPs");
   assert(m>n, "n should be larger than m");
   dmatrix temp = matrixTranspose(G);
-  dmatrix dot = matrixMult(temp, G);
+  dmatrix mmT = matrixMult(temp, G);
   writeln("normalize K");
-  dmatrix K = divideDmatrixNum(dot, G.shape[0]);
+  dmatrix K = divideDmatrixNum(mmT, G.shape[0]);
+
   writeln("kinship_full K sized ",n," ",K.elements.length);
   writeln(K.elements[0],",",K.elements[1],",",K.elements[2],"...",K.elements[n-3],",",K.elements[n-2],",",K.elements[n-1]);
   iu row = n;
