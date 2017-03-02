@@ -4,6 +4,8 @@ A faster lmm for GWAS. GPU support coming soon.
 
 # Install
 
+## Debian/Ubuntu
+
 Install BLAS, LAPACK, GSL, OpenCL.
 
 ```sh
@@ -15,6 +17,14 @@ Install LDC
 ```
 sudo apt-get install ldc2
 ```
+
+## GNU Guix
+
+```sh
+guix package -i ldc dub
+```
+
+## Get the source
 
 Get the source-code
 
