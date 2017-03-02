@@ -17,7 +17,7 @@ dmatrix compute_W(int job, dmatrix G, int n, int snps, int compute_size){
 	  	//W = W[:,range(0,j)];
 	    break;
 	  }
-	     
+
 	  dmatrix snp = G; //[job*compute_size+j];
 	  //if(variation(snp) == 0){
 	  //  continue;
@@ -46,8 +46,8 @@ dmatrix kinship_full(dmatrix G){
   return l;
 }
 
-dmatrix kinshipComp(dmatrix G, int computeSize=1000){
-
+dmatrix kinshipComp(dmatrix G, int computeSize=1000)
+{
   //# matrix_initialize(useBLAS)
   writeln("G => ");
   prettyPrint(G);
@@ -156,6 +156,6 @@ eighTuple kvakve(dmatrix K){
     //writefln("Cleaning %d eigen values (Kva<0)",(sum(Kva < 0)));
     //Kva[Kva < 1e-6] = 1e-6;
   //}
-      
+
    //return Kva,Kve
 }
