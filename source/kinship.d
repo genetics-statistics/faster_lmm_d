@@ -49,7 +49,7 @@ dmatrix kinship_full(dmatrix G)
   iu lr = n*n-1;
   iu ll = (n-1)*n;
   writeln(K.elements[ll],",",K.elements[ll+1],",",K.elements[ll+2],"...",K.elements[lr-2],",",K.elements[lr-1],",",K.elements[lr]);
-  exit(1);
+  debug exit(1);
   return K;
 }
 

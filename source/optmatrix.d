@@ -23,9 +23,11 @@ struct eighTuple{
 
 dmatrix matrixMult(dmatrix lha, dmatrix rha) {
   double[] C = new double[lha.shape[0]*rha.shape[1]];
+  writeln("Call lapack");
   gemm(Order.RowMajor, Transpose.NoTrans, Transpose.NoTrans, lha.shape[0], rha.shape[1], lha.shape[1], /*no scaling*/
     1,lha.elements.ptr, lha.shape[1], rha.elements.ptr, rha.shape[1], /*no addition*/0, C.ptr, rha.shape[1]);
   int[] resshape = [lha.shape[0],rha.shape[1]];
+  writeln("Done lapack");
   return dmatrix(resshape, C);
 }
 
