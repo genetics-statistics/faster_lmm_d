@@ -64,3 +64,9 @@ To run tests
 ```sh
 ./test.sh
 ```
+
+## LICENSE
+
+This software is distributed under the [https://www.gnu.org/copyleft/gpl.html](GPL3 license).
+
+Copyright © 2016, 2017, Prasun Anand and Pjotr Prins

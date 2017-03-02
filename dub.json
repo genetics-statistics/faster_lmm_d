@@ -12,6 +12,6 @@
 	},
 	"description": "Experiment lmm",
 	"copyright": "Copyright © 2016, 2017, Prasun Anand and Pjotr Prins",
-	"license": "MIT",
+	"license": "GPL3",
 	"libs": ["blas", "lapacke", "gsl", "gslcblas"],
 }
