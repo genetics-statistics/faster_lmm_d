@@ -1,19 +1,17 @@
 {
-	"name": "faster_lmm_d",
-	"authors": [
-		"prasunanand"
-	],
-	"dependencies": {
-            "mir-cpuid": "~>0.4.2",
-            "mir-glas": "~>0.1.1",
-	    "dyaml": "~>0.5.0",
-	    "cblas": "~>1.0.0",
-	    "lapack": "~>0.1.0",
-	    "dstats": "~>1.0.3",
-	    "gsl": "~>0.1.7"
-	},
-	"description": "Experiment lmm",
-	"copyright": "Copyright © 2016, 2017, Prasun Anand and Pjotr Prins",
-	"license": "GPL3",
-	"libs": ["blas", "lapacke", "gsl", "gslcblas"],
+    "name": "faster_lmm_d",
+    "authors": [
+	"prasunanand"
+    ],
+    "dependencies": {
+	"dyaml": "~>0.5.0",
+	"cblas": "~>1.0.0",
+	"lapack": "~>0.1.0",
+	"dstats": "~>1.0.3",
+	"gsl": "~>0.1.7"
+    },
+    "description": "Experiment lmm",
+    "copyright": "Copyright © 2016, 2017, Prasun Anand and Pjotr Prins",
+    "license": "GPL3",
+    "libs": ["openblas", "gsl"],
 }
