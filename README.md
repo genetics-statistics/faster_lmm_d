@@ -21,7 +21,7 @@ sudo apt-get install ldc2
 ## GNU Guix
 
 ```sh
-guix package -i ldc dub
+guix package -i ldc dub lapack
 ```
 
 ## Get the source
