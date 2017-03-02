@@ -1,8 +1,11 @@
 module faster_lmm_d.kinship;
+
+import std.stdio;
+import std.exception;
+
 import faster_lmm_d.dmatrix;
 import faster_lmm_d.optmatrix;
 import faster_lmm_d.helpers;
-import std.stdio;
 
 dmatrix compute_W(int job, dmatrix G, int n, int snps, int compute_size)
 {
@@ -33,13 +36,13 @@ dmatrix kinship_full(dmatrix G)
   int m = G.shape[0]; // snps
   int n = G.shape[1]; // inds
   writeln(m," SNPs");
-  assert(m>n); //, "n should be larger than m (%d snps > %d inds)" % (m,n)
-  //# m = np.dot(G.T,G)
+  assert(m>n, "n should be larger than m");
   dmatrix temp = matrixTranspose(G);
-  dmatrix l = matrixMult(temp, G);
-  l = divideDmatrixNum(l, G.shape[0]);
+  dmatrix dot = matrixMult(temp, G);
+  dmatrix K = divideDmatrixNum(dot, G.shape[0]);
   writeln("kinship_full K");
-  return l;
+  writeln(K[0][0]);
+  return K;
 }
 
 dmatrix kinshipComp(dmatrix G, int computeSize=1000)

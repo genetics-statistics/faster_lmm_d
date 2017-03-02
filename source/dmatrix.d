@@ -62,7 +62,7 @@ dmatrix subDmatrix(dmatrix lha, dmatrix rha){
 dmatrix multiplyDmatrix(dmatrix lha, dmatrix rha){
   assert(lha.shape[0] == rha.shape[0]);
   double[] elements = new double[lha.shape[0] * lha.shape[1]];
-  if(lha.shape[1] == rha.shape[1]){    
+  if(lha.shape[1] == rha.shape[1]){
     for(int i = 0; i < lha.shape[0]*lha.shape[1]; i++){
       elements[i] = lha.elements[i] * rha.elements[i];
     }
@@ -72,7 +72,7 @@ dmatrix multiplyDmatrix(dmatrix lha, dmatrix rha){
       elements[i] = lha.elements[i] * rha.elements[i%(rha.shape[0]*rha.shape[1])];
     }
   }
-  
+
   return dmatrix(lha.shape, elements);
 }
 
@@ -141,7 +141,7 @@ dmatrix onesMatrix(int rows, int cols){
 }
 
 double sumArray(double[] arr){
-  return 1;  
+  return 1;
 }
 
 dmatrix horizontallystack(dmatrix a, dmatrix b){
@@ -205,16 +205,16 @@ unittest{
   dmatrix d3 = dmatrix([2,2],[3,6,8,10]);
   assert(addDmatrix(d, d2) == d3);
   assert(subDmatrix(d3, d2) == d);
-  
+
   dmatrix d4 = dmatrix([2,2],[6,24,40,60]);
   assert(multiplyDmatrix(d2,d3) == d4);
-  
+
   assert(multiplyDmatrixNum(d2,1) == d2);
   assert(divideDmatrixNum(d2,1) == d2);
-  
+
   dmatrix zeroMat = dmatrix([3,3], [0,0,0, 0,0,0, 0,0,0]);
   assert(zerosMatrix(3,3) == zeroMat);
-  
+
   dmatrix onesMat = dmatrix([3,3], [1,1,1, 1,1,1, 1,1,1]);
   assert(onesMatrix(3,3) == onesMat);
 
