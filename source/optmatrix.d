@@ -3,7 +3,7 @@ import faster_lmm_d.dmatrix;
 import faster_lmm_d.helpers;
 import std.stdio;
 import cblas;
-import lapack;
+import lapack: LAPACKE_dgetrf, LAPACKE_dsyevr, LAPACKE_dgetrf, LAPACKE_dgetri;
 
 struct eighTuple{
   dmatrix kva, kve;
@@ -11,7 +11,7 @@ struct eighTuple{
   this(dmatrix kva, dmatrix kve){
     this.kva = kva;
     this.kve = kve;
-  } 
+  }
 }
 
 dmatrix matrixMult(dmatrix lha, dmatrix rha){
@@ -60,7 +60,7 @@ void prettyPrint(dmatrix input){
       writeln(input.elements[(input.shape[1]*i)..(input.shape[1]*(i+1))]);
     }
   }
-  
+
   writeln("]");
 }
 
@@ -91,7 +91,7 @@ void pPrint3(dmatrix input){
       writeln(input.elements[(input.shape[1]*i)..(input.shape[1]*i+3)],"...", input.elements[(input.shape[1]*(i+1)-3)..(input.shape[1]*(i+1))]);
     }
   }
-  
+
   writeln("]");
 }
 
@@ -123,7 +123,7 @@ dmatrix sliceDmatrixKeep(dmatrix input, bool[] along){
       shape0++;
     }
     rowIndex++;
-    
+
   }
   return dmatrix([shape0,input.shape[1]],output);
 }
@@ -144,11 +144,11 @@ dmatrix normalize_along_row(dmatrix input){
     replaceNaN(arr, valuesArr, mean);
     if(stddev == 0){
       foreach(ref elem; arr){
-        elem -= mean;      
+        elem -= mean;
       }
     }else{
       foreach(ref elem; arr){
-        elem = (elem - mean) / stddev;      
+        elem = (elem - mean) / stddev;
       }
     }
     largeArr ~= arr;
@@ -195,9 +195,9 @@ eighTuple eigh(dmatrix input){
   int iu = input.shape[1];
   int ldz = n;
   double abstol = 0.001; //default value for abstol
-  
+
   LAPACKE_dsyevr(101, 'V', 'A', 'L', n, elements.ptr, n, vl, vu, il, iu, abstol, m.ptr, w.ptr, z.ptr, ldz, isuppz.ptr);
-  
+
   dmatrix kva = dmatrix([input.shape[0],1], w);
   dmatrix kve = dmatrix(input.shape, z);
   return eighTuple(kva, kve);
@@ -237,7 +237,7 @@ int[] getrf(double[] arr, int[] shape){
 
 dmatrix inverse(dmatrix input){
   double[] elements= input.elements.dup;
-  int LWORK = input.shape[0]*input.shape[0];      
+  int LWORK = input.shape[0]*input.shape[0];
   double[] WORK = new double[input.shape[0]*input.shape[0]];
   auto ipiv = new int[input.shape[0]+1];
   auto result = new double[input.shape[0]*input.shape[1]];
@@ -253,19 +253,19 @@ unittest{
   dmatrix d2 = dmatrix([4,2],[2,7,8,9, -5,2,-1,-4]);
   dmatrix d3 = dmatrix([3,2], [5,36,23, 99,13,-15]);
   assert(matrixMult(d1,d2) == d3);
-  
+
   dmatrix d4 = dmatrix([2,2], [2, -1, -4, 3]);
   dmatrix d5 = dmatrix([2,2], [1.5, 0.5, 2, 1]);
   assert(inverse(d4) == d5);
-  
+
   dmatrix d6 = dmatrix([2,2],[2, -4, -1, 3]);
   assert(matrixTranspose(d4) == d6);
-  
+
   dmatrix d7 = dmatrix([4,2],[-3,13,7, -5, -12, 26, 2, -8]);
   assert(matrixMultT(d2, d6) == d7);
-  
+
   assert(det(d4) == 2);
-  
+
   dmatrix eigenvalue, dvl, dvr;
   dmatrix mat = dmatrix([3,3], [2,0,0, 0,3,2, 0,1,2]);
   eigh(mat, eigenvalue, dvl, dvr);
@@ -276,4 +276,3 @@ unittest{
   // assert(eqeq(vl, dvl));
   // assert(eqeq(vr, dvr));
 }
-
