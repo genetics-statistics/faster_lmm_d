@@ -5,6 +5,7 @@ import std.csv;
 import std.regex;
 import std.getopt;
 import std.json;
+import std.math;
 import std.typecons;
 import faster_lmm_d.rqtlreader;
 import faster_lmm_d.tsvreader;
@@ -120,7 +121,7 @@ void main(string[] args)
     }
     if(ogeno == "data/test8000.geno"){
       writeln("Validating results for ",ogeno);
-      assert(std.math.round(sum(ps)) == 4070);
+      assert(round(sum(ps)) == 4070);
       assert(ps.length == 8000);
     }
     writeln("Run completed");
