@@ -2,6 +2,7 @@ module faster_lmm_d.kinship;
 
 import std.stdio;
 import std.exception;
+import std.c.stdlib: exit;
 
 import faster_lmm_d.dmatrix;
 import faster_lmm_d.optmatrix;
@@ -27,6 +28,9 @@ dmatrix compute_W(int job, dmatrix G, int n, int snps, int compute_size)
   return W;
 }
 
+alias immutable(long) ii;
+alias immutable(ulong) iu;
+
 dmatrix kinship_full(dmatrix G)
 {
   //"""
@@ -39,9 +43,15 @@ dmatrix kinship_full(dmatrix G)
   assert(m>n, "n should be larger than m");
   dmatrix temp = matrixTranspose(G);
   dmatrix dot = matrixMult(temp, G);
+  writeln("normalize K");
   dmatrix K = divideDmatrixNum(dot, G.shape[0]);
-  writeln("kinship_full K");
-  writeln(K[0][0]);
+  writeln("kinship_full K sized ",n," ",K.elements.length);
+  writeln(K.elements[0],",",K.elements[1],",",K.elements[2],"...",K.elements[n-3],",",K.elements[n-2],",",K.elements[n-1]);
+  iu row = n;
+  iu lr = n*n-1;
+  iu ll = (n-1)*n;
+  writeln(K.elements[ll],",",K.elements[ll+1],",",K.elements[ll+2],"...",K.elements[lr-2],",",K.elements[lr-1],",",K.elements[lr]);
+  exit(1);
   return K;
 }
 
