@@ -13,7 +13,7 @@ compiler. At the moment we also use lapacke and gsl libraries.
 
 ## Debian/Ubuntu
 
-Install BLAS, LAPACK, GSL, OpenCL.
+Install
 
 ```sh
 sudo apt-get install liblapacke libgsl2
@@ -28,7 +28,7 @@ sudo apt-get install ldc2
 ## GNU Guix
 
 ```sh
-guix package -i ldc dub lapack gsl
+guix package -i ldc dub openblas gsl lapack
 ```
 
 ## Get the source

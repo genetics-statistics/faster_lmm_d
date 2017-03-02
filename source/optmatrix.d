@@ -2,7 +2,12 @@ module faster_lmm_d.optmatrix;
 
 import std.stdio;
 import cblas;
-import lapack: LAPACKE_dgetrf, LAPACKE_dsyevr, LAPACKE_dgetrf, LAPACKE_dgetri;
+
+extern (C) {
+  int LAPACKE_dgetrf (int matrix_layout, int m, int n, double* a, int lda, int* ipiv);
+  int LAPACKE_dsyevr (int matrix_layout, char jobz, char range, char uplo, int n, double* a, int lda, double vl, double vu, int il, int iu, double abstol, int* m, double* w, double* z, int ldz, int* isuppz);
+  int LAPACKE_dgetri (int matrix_layout, int n, double* a, int lda, const(int)* ipiv);
+}
 
 import faster_lmm_d.dmatrix;
 import faster_lmm_d.helpers;
