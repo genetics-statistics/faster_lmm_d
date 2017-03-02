@@ -5,6 +5,7 @@ import std.csv;
 import std.regex;
 import std.getopt;
 import std.json;
+import std.math;
 import std.typecons;
 import faster_lmm_d.rqtlreader;
 import faster_lmm_d.tsvreader;
@@ -12,7 +13,7 @@ import faster_lmm_d.lmm;
 import faster_lmm_d.gwas;
 import faster_lmm_d.dmatrix;
 import faster_lmm_d.optmatrix;
-import faster_lmm_d.opencl.add;
+// import faster_lmm_d.opencl.add;
 import faster_lmm_d.helpers;
 import faster_lmm_d.optimize;
 
@@ -100,7 +101,7 @@ void main(string[] args)
   }
 
   //geno_callback("data/small.geno");
-  
+
   int n;
   int m;
 
@@ -112,7 +113,7 @@ void main(string[] args)
       writeln("Validating results for ", ogeno);
       assert(modDiff(p1,0.7387)<0.001);
       assert(modDiff(p2,0.7387)<0.001);
-    } 
+    }
     if(ogeno == "data/small_na.geno"){
       writeln("Validating results for ", ogeno);
       assert(modDiff(p1,0.062)<0.001);
@@ -120,7 +121,7 @@ void main(string[] args)
     }
     if(ogeno == "data/test8000.geno"){
       writeln("Validating results for ",ogeno);
-      assert(std.math.round(sum(ps)) == 4070);
+      assert(round(sum(ps)) == 4070);
       assert(ps.length == 8000);
     }
     writeln("Run completed");
@@ -128,7 +129,7 @@ void main(string[] args)
 
 
   // If there are less phenotypes than strains, reduce the genotype matrix
-  
+
   if(g.shape[0] != y.sizeof){
     writeln("Reduce geno matrix to match phenotype strains");
     writeln("gnames and ynames");
@@ -210,4 +211,3 @@ void main(string[] args)
   }
 
 }
-    

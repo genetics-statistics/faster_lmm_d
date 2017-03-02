@@ -7,8 +7,11 @@ import std.c.stdlib;
 import std.c.stdio;
 import core.memory;
 
-import cl;
+/*
 
+Disabled for now - we don't want OpenCL as a standard dependency
+
+import cl;
 
 extern(C) void call_back(const char* e, const void* p, size_t cb, void* u)
 {
@@ -85,7 +88,7 @@ void tryAdd()
 	auto worksize = [VECTOR_SIZE];
 	size_t* localworksize = null;
 	size_t* offset = null;
-	
+
 	ret = clSetKernelArg(set_kernel, 0, cl_mem.sizeof, cast(void*)&memobj1);
 	ret = clSetKernelArg(set_kernel, 1, float.sizeof, cast(void*)(&val1));
 	ret = clEnqueueNDRangeKernel(
@@ -137,3 +140,5 @@ void tryAdd()
 	ret = clReleaseCommandQueue(command_queue);
 	ret = clReleaseContext(context);
 }
+
+*/
