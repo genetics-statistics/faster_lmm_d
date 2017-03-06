@@ -2,6 +2,8 @@ module faster_lmm_d.optmatrix;
 
 import std.stdio;
 import cblas;
+import glas.ndslice;
+import mir.ndslice;
 
 static import std.math;
 
