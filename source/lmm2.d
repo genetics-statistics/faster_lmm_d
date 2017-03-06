@@ -11,6 +11,8 @@ import gsl.min;
 import std.stdio;
 import std.typecons;
 
+static import std.math;
+
 struct LLtuple{
   double sigma, LL;
   dmatrix beta,betaVAR;
@@ -19,7 +21,7 @@ struct LLtuple{
     this.LL = LL;
     this.beta = beta;
     this.sigma = sigma;
-    this.betaVAR = betaVAR; 
+    this.betaVAR = betaVAR;
   }
 }
 
@@ -91,7 +93,7 @@ struct LMM2{
     nanCounter(this.Y);
     this.X0 = X0;
 
-   
+
   }
 
   //this(int q, double N, double optH, double optSigma, dmatrix X0, dmatrix Y, dmatrix K, dmatrix Kva, dmatrix Kve, dmatrix Yt,
@@ -183,7 +185,7 @@ extern(C) double LL_brent(double h, void *params){
     //# I return a large number if we encounter h < 0 to avoid errors in LL computation during the search.
   if(h < 0){return 1e6;}
   dmatrix beta, betaVAR;
-  bool REML = false;  
+  bool REML = false;
   double sigma;
   dmatrix l;
   return -getLL(LMMglob, h, Xglob, false, REML).LL;
@@ -304,7 +306,7 @@ fitTuple lmm2fit(LMM2 lmmobject, dmatrix X, int ngrids=100, bool REML=true){
   //   Given this optimum, the function computes the LL and associated ML solutions.
   //"""
 
-  if(X.init == false){ 
+  if(X.init == false){
     X = lmmobject.X0t;
   }
   else{

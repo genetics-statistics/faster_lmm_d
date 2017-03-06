@@ -1,5 +1,4 @@
 module faster_lmm_d.gwas;
-import std.parallelism : taskPool;
 import std.stdio;
 import std.typecons;
 import faster_lmm_d.lmm2;
@@ -14,7 +13,7 @@ void compute_snp(int j,int n,double[] snps,LMM2 lmmobject, bool REML,double q){
   for(int i = 0; i< rows; i++){
     double[] snp = snps[i*j..(i+1)*j];
     dmatrix x = dmatrix([n,1], snp); //all the SNPs
-    //ts,ps,beta,betaVar = 
+    //ts,ps,beta,betaVar =
     double a = 0;
     //lmm2association(lmmobject, x, a, REML,true);
     //result.append( (ts,ps) );
@@ -33,14 +32,13 @@ auto gwas(double[] Y, dmatrix G, dmatrix K, bool restricted_max_likelihood = tru
   //# matrix_initialize()
   //cpu_num = mp.cpu_count();
   //if(threads.numThreads){
-  int cpu_num = std.parallelism.totalCPUs;
-  cpu_num = 1;
+  int cpu_num = 1;
   //}
-        
+
   //if(gwas_useCUDA(G)){
   //  cpu_num = 1;
   //}
-      
+
   writefln("Using %u threads", cpu_num);
 
   bool kfile2 = false;

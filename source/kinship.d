@@ -2,7 +2,7 @@ module faster_lmm_d.kinship;
 
 import std.stdio;
 import std.exception;
-import std.c.stdlib: exit;
+import core.sys.posix.stdlib: exit;
 
 import faster_lmm_d.dmatrix;
 import faster_lmm_d.optmatrix;
