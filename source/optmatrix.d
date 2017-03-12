@@ -2,8 +2,6 @@ module faster_lmm_d.optmatrix;
 
 import std.stdio;
 import cblas;
-import glas.ndslice;
-import mir.ndslice;
 
 static import std.math;
 
@@ -32,50 +30,6 @@ dmatrix matrixMult(dmatrix lha, dmatrix rha) {
     1,lha.elements.ptr, lha.shape[1], rha.elements.ptr, rha.shape[1], /*no addition*/0, C.ptr, rha.shape[1]);
   int[] resshape = [lha.shape[0],rha.shape[1]];
   writeln("Done lapack");
-  return dmatrix(resshape, C);
-}
-
-dmatrix matrixMult2(dmatrix lha, dmatrix rha) {
-  auto a = slice!double(lha.shape[0], lha.shape[1]).universal;
-  int index = 0;
-  foreach (i; 0 .. lha.shape[0]){
-    foreach (j; 0 .. lha.shape[1]){
-      a[i, j] = lha.elements[index];
-      index++;
-    }
-  }
-
-  auto b = slice!double(rha.shape[0], rha.shape[1]).universal;
-  index = 0;
-  foreach (i; 0 .. rha.shape[0]){
-    foreach (j; 0 .. rha.shape[1]){
-      b[i, j] = rha.elements[index];
-      index++;
-    }
-  }
-
-  auto c = slice!double(lha.shape[0], rha.shape[1]).universal;
-
-  auto alpha = 1.0;
-  auto beta  = 0.0;
-
-  if(auto error_code = validate_gemm(a.structure, b.structure, c.structure))
-  {
-    import core.stdc.stdio;
-    puts(glas_error(error_code).ptr);
-    //return 1;
-  }
-
-  gemm(alpha, a, b, beta, c);
-  double[] C = new double[lha.shape[0]*rha.shape[1]];
-  index = 0;
-  foreach (i; 0 .. lha.shape[0]){
-    foreach (j; 0 .. rha.shape[1]){
-      C[index] = c[i, j];
-      index++;
-    }
-  }
-  int[] resshape = [lha.shape[0],rha.shape[1]];
   return dmatrix(resshape, C);
 }
 
