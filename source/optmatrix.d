@@ -25,7 +25,7 @@ struct eighTuple{
   }
 }
 
-dmatrix matrixMult2(dmatrix lha, dmatrix rha) {
+dmatrix matrixMult(dmatrix lha, dmatrix rha) {
   double[] C = new double[lha.shape[0]*rha.shape[1]];
   writeln("Call lapack");
   gemm(Order.RowMajor, Transpose.NoTrans, Transpose.NoTrans, lha.shape[0], rha.shape[1], lha.shape[1], /*no scaling*/
@@ -35,7 +35,7 @@ dmatrix matrixMult2(dmatrix lha, dmatrix rha) {
   return dmatrix(resshape, C);
 }
 
-dmatrix matrixMult(dmatrix lha, dmatrix rha) {
+dmatrix matrixMult2(dmatrix lha, dmatrix rha) {
   auto a = slice!double(lha.shape[0], lha.shape[1]).universal;
   int index = 0;
   foreach (i; 0 .. lha.shape[0]){
