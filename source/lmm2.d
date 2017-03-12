@@ -163,15 +163,16 @@ mlSol getMLSoln(LMM2 lmmobject, double h, dmatrix X){
   //   the heritability or the proportion of the total variance attributed to genetics.  The X is the
   //   covariate matrix.
   //"""
-
   dmatrix S = divideNumDmatrix(1,addDmatrixNum(multiplyDmatrixNum(lmmobject.Kva,h),(1.0 - h)));
-  dmatrix Xt = matrixTranspose(multiplyDmatrix(X, S));
+  int[] temp = S.shape.dup;
+  S.shape = [temp[1], temp[0]];
+  dmatrix Xt = multiplyDmatrix(matrixTranspose(X), S);
   dmatrix XX = matrixMult(Xt,X);
   dmatrix XX_i = inverse(XX);
   dmatrix beta =  matrixMult(matrixMult(XX_i,Xt),lmmobject.Yt);
   dmatrix Yt = subDmatrix(lmmobject.Yt, matrixMult(X,beta));
   dmatrix YtT = matrixTranspose(Yt);
-  dmatrix YtTS = multiplyDmatrix(YtT, matrixTranspose(S));
+  dmatrix YtTS = multiplyDmatrix(YtT, S);
   dmatrix Q = matrixMult(YtTS,Yt);
   double sigma = Q.elements[0] * 1.0 / (cast(double)(lmmobject.N) - cast(double)(X.shape[1]));
   return mlSol(beta, sigma, Q, XX_i, XX);
@@ -220,6 +221,7 @@ LLtuple getLL(LMM2 lmmobject, double h, dmatrix X, bool stack=true, bool REML=fa
     LL_REML_part = q*std.math.log(2.0*std.math.PI* ml.sigma) + std.math.log(XTX) - std.math.log(det(ml.XX));
     LL = LL + 0.5*LL_REML_part;
   }
+
   dmatrix L = dmatrix([1,1],[LL]);
   return LLtuple(LL, ml.beta, ml.sigma, ml.XX_i);
 }
@@ -352,9 +354,8 @@ auto lmm2association(LMM2 lmmobject, dmatrix X, bool stack=true, bool REML=true,
   double h = lmmobject.optH;
   LLtuple ll = getLL(lmmobject,h, X ,false,REML);
   int q  = cast(int)ll.beta.elements.length;
-
   double ts,ps;
-  return tstat(lmmobject, ll.beta.elements[q-1], ll.betaVAR.acc(q-1,q-1), ll.sigma, q);
+  return tstat(lmmobject, std.math.round(ll.beta.elements[q-1]*1000)/1000, ll.betaVAR.acc(q-1,q-1), ll.sigma, q);
 }
 
 auto tstat( LMM2 lmmobject, double beta, double var, double sigma, double q, bool log=false){
@@ -371,7 +372,7 @@ auto tstat( LMM2 lmmobject, double beta, double var, double sigma, double q, boo
     //double psNum = 2.0 + (stats.t.logsf(np.abs(ts), lmmobject.N-q));
   }
   else{
-    //check the sign of ts.elements[0]
+    //check the sign of ts.elements[0]''
     ps = 2.0*(normalCDF(-std.math.abs(ts)));
   }
 

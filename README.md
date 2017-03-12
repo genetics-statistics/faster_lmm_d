@@ -8,7 +8,7 @@ NOTICE: this software is under active development. YMMV.
 
 ## Requirements
 
-`faster_llm_d` is written in the fast D language and requires a D
+`faster_lmm_d` is written in the fast D language and requires a D
 compiler. At the moment we also use lapacke and gsl libraries.
 
 ## Debian/Ubuntu

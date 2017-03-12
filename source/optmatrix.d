@@ -25,11 +25,9 @@ struct eighTuple{
 
 dmatrix matrixMult(dmatrix lha, dmatrix rha) {
   double[] C = new double[lha.shape[0]*rha.shape[1]];
-  writeln("Call lapack");
   gemm(Order.RowMajor, Transpose.NoTrans, Transpose.NoTrans, lha.shape[0], rha.shape[1], lha.shape[1], /*no scaling*/
     1,lha.elements.ptr, lha.shape[1], rha.elements.ptr, rha.shape[1], /*no addition*/0, C.ptr, rha.shape[1]);
   int[] resshape = [lha.shape[0],rha.shape[1]];
-  writeln("Done lapack");
   return dmatrix(resshape, C);
 }
 
@@ -209,8 +207,13 @@ eighTuple eigh(dmatrix input) {
 
   LAPACKE_dsyevr(101, 'V', 'A', 'L', n, elements.ptr, n, vl, vu, il, iu, abstol, m.ptr, w.ptr, z.ptr, ldz, isuppz.ptr);
 
-  dmatrix kva = dmatrix([input.shape[0],1], w);
+  dmatrix kva = dmatrix([input.shape[0],1], roundedNearest(w));
   dmatrix kve = dmatrix(input.shape, z);
+  for(int zq = 0 ; zq < cast(int)kva.elements.length; zq++){
+    if(kva.elements[zq]< 1e-6){
+      kva.elements[zq] = 0;
+    }
+  }
   return eighTuple(kva, kve);
 }
 

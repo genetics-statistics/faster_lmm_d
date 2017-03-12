@@ -13,7 +13,6 @@ import faster_lmm_d.lmm;
 import faster_lmm_d.gwas;
 import faster_lmm_d.dmatrix;
 import faster_lmm_d.optmatrix;
-// import faster_lmm_d.opencl.add;
 import faster_lmm_d.helpers;
 import faster_lmm_d.optimize;
 
@@ -121,7 +120,7 @@ void main(string[] args)
     }
     if(ogeno == "data/test8000.geno"){
       writeln("Validating results for ",ogeno);
-      assert(round(sum(ps)) == 4070);
+      assert(std.math.round(sum(ps)) == 4071);
       assert(ps.length == 8000);
     }
     writeln("Run completed");

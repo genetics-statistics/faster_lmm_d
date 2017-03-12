@@ -61,7 +61,10 @@ dmatrix subDmatrix(dmatrix lha, dmatrix rha) {
 }
 
 dmatrix multiplyDmatrix(dmatrix lha, dmatrix rha) {
-  assert(lha.shape[0] == rha.shape[0]);
+  if(lha.shape[0] != rha.shape[0]){
+    int[] temp = rha.shape.dup;
+    rha.shape = [temp[1], temp[0]];
+  }
   double[] elements = new double[lha.shape[0] * lha.shape[1]];
   if(lha.shape[1] == rha.shape[1]) {
     for(int i = 0; i < lha.shape[0]*lha.shape[1]; i++) {
