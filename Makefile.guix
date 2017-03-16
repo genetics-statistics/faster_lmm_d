@@ -12,12 +12,24 @@
 D_COMPILER=ldc2
 LDC_LIB_PATH=$(HOME)/.guix-profile/lib
 
-DFLAGS = -wi -I. -IBioD -IundeaD/src
-DLIBS  = $(LDC_LIB_PATH)/libphobos2-ldc.a $(LDC_LIB_PATH)/libdruntime-ldc.a
-DLIBS_DEBUG = $(LDC_LIB_PATH)/libphobos2-ldc-debug.a $(LDC_LIB_PATH)/libdruntime-ldc-debug.a
-RPATH  = -L--rpath=$(dir $(realpath $(LDC_LIB_PATH)/libz.so)):$(dir $(realpath $(LDC_LIB_PATH)/liblz4.so))
-LIBS   = htslib/libhts.a -L-L$(LDC_LIB_PATH) -L-lrt -L-lpthread -L-lm -L-lz -L-llz4
-SRC    = $(wildcard main.d source/*.d)
+DUB_INCLUDE = -I~/.dub/packages/dstats-1.0.3/dstats/source/ -I~/.dub/packages/gsl-0.1.8/gsl/source/ -I~/.dub/packages/cblas-1.0.0/cblas/source/ -I~/.dub/packages/dyaml-0.5.3/dyaml/source/ -I~/.dub/packages/tinyendian-0.1.2/tinyendian/source/
+DUB_LIBS = \
+$(HOME)/.dub/packages/dstats-1.0.3/dstats/libdstats.a \
+$(HOME)/.dub/packages/dyaml-0.5.3/dyaml/libdyaml.a \
+$(HOME)/.dub/packages/gsl-0.1.8/gsl/libgsl.a \
+$(HOME)/.dub/packages/lapack-0.1.2/lapack/liblapack.a \
+$(HOME)/.dub/packages/mir-algorithm-0.0.29/mir-algorithm/libmir-algorithm.a \
+$(HOME)/.dub/packages/mir-cpuid-0.4.2/mir-cpuid/libmir-cpuid.a \
+$(HOME)/.dub/packages/mir-glas-0.1.1/mir-glas/libmir-glas.a \
+$(HOME)/.dub/packages/mir-internal-0.0.2/mir-internal/libmir-internal.a \
+$(HOME)/.dub/packages/tinyendian-0.1.2/tinyendian/libtinyendian.a
+
+DFLAGS = -wi -I./source $(DUB_INCLUDE)
+DLIBS  = $(LDC_LIB_PATH)/libphobos2-ldc.a $(LDC_LIB_PATH)/libdruntime-ldc.a $(DUB_LIBS)
+DLIBS_DEBUG = $(LDC_LIB_PATH)/libphobos2-ldc-debug.a $(LDC_LIB_PATH)/libdruntime-ldc-debug.a $(DUB_LIBS)
+RPATH  =
+LIBS   = -L-L$(LDC_LIB_PATH) -L-lgsl -L-lopenblas -L-llapacke
+SRC    = $(wildcard source/faster_lmm_d/*.d)
 OBJ    = $(SRC:.d=.o)
 OUT    = build/faster_lmm_d
 
@@ -58,17 +70,14 @@ test:
 	./.run_tests.sh
 
 debug-strip: debug
-	objcopy --only-keep-debug build/sambamba sambamba.debug
-	objcopy --strip-debug build/sambamba
-	objcopy --add-gnu-debuglink=sambamba.debug build/sambamba
-	mv sambamba.debug build/
+	objcopy --only-keep-debug build/faster_lmm_d faster_lmm_d.debug
+	objcopy --strip-debug build/faster_lmm_d
+	objcopy --add-gnu-debuglink=faster_lmm_d.debug build/faster_lmm_d
+	mv faster_lmm_d.debug build/
 
 install:
-	install -m 0755 build/sambamba $(prefix)/bin
+	install -m 0755 build/faster_lmm_d $(prefix)/bin
 
-clean: clean-d
-	cd htslib ; make clean
-
-clean-d:
+clean:
 	rm -rf build/*
 	rm -f $(OBJ) $(OUT) trace.{def,log}

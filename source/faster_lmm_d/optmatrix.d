@@ -1,9 +1,9 @@
 module faster_lmm_d.optmatrix;
 
 import std.stdio;
-import cblas;
+import cblas : gemm, Transpose, Order;
 
-static import std.math;
+import std.math;
 
 extern (C) {
   int LAPACKE_dgetrf (int matrix_layout, int m, int n, double* a, int lda, int* ipiv);
