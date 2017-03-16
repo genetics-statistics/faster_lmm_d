@@ -18,10 +18,6 @@ $(HOME)/.dub/packages/dstats-1.0.3/dstats/libdstats.a \
 $(HOME)/.dub/packages/dyaml-0.5.3/dyaml/libdyaml.a \
 $(HOME)/.dub/packages/gsl-0.1.8/gsl/libgsl.a \
 $(HOME)/.dub/packages/lapack-0.1.2/lapack/liblapack.a \
-$(HOME)/.dub/packages/mir-algorithm-0.0.29/mir-algorithm/libmir-algorithm.a \
-$(HOME)/.dub/packages/mir-cpuid-0.4.2/mir-cpuid/libmir-cpuid.a \
-$(HOME)/.dub/packages/mir-glas-0.1.1/mir-glas/libmir-glas.a \
-$(HOME)/.dub/packages/mir-internal-0.0.2/mir-internal/libmir-internal.a \
 $(HOME)/.dub/packages/tinyendian-0.1.2/tinyendian/libtinyendian.a
 
 DFLAGS = -wi -I./source $(DUB_INCLUDE)
