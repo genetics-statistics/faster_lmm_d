@@ -12,12 +12,20 @@
 D_COMPILER=ldc2
 LDC_LIB_PATH=$(HOME)/.guix-profile/lib
 
-DFLAGS = -wi -I. -IBioD -IundeaD/src
-DLIBS  = $(LDC_LIB_PATH)/libphobos2-ldc.a $(LDC_LIB_PATH)/libdruntime-ldc.a
-DLIBS_DEBUG = $(LDC_LIB_PATH)/libphobos2-ldc-debug.a $(LDC_LIB_PATH)/libdruntime-ldc-debug.a
-RPATH  = -L--rpath=$(dir $(realpath $(LDC_LIB_PATH)/libz.so)):$(dir $(realpath $(LDC_LIB_PATH)/liblz4.so))
-LIBS   = htslib/libhts.a -L-L$(LDC_LIB_PATH) -L-lrt -L-lpthread -L-lm -L-lz -L-llz4
-SRC    = $(wildcard main.d source/*.d)
+DUB_INCLUDE = -I~/.dub/packages/dstats-1.0.3/dstats/source/ -I~/.dub/packages/gsl-0.1.8/gsl/source/ -I~/.dub/packages/cblas-1.0.0/cblas/source/ -I~/.dub/packages/dyaml-0.5.3/dyaml/source/ -I~/.dub/packages/tinyendian-0.1.2/tinyendian/source/
+DUB_LIBS = \
+$(HOME)/.dub/packages/dstats-1.0.3/dstats/libdstats.a \
+$(HOME)/.dub/packages/dyaml-0.5.3/dyaml/libdyaml.a \
+$(HOME)/.dub/packages/gsl-0.1.8/gsl/libgsl.a \
+$(HOME)/.dub/packages/lapack-0.1.2/lapack/liblapack.a \
+$(HOME)/.dub/packages/tinyendian-0.1.2/tinyendian/libtinyendian.a
+
+DFLAGS = -wi -I./source $(DUB_INCLUDE)
+DLIBS  = $(LDC_LIB_PATH)/libphobos2-ldc.a $(LDC_LIB_PATH)/libdruntime-ldc.a $(DUB_LIBS)
+DLIBS_DEBUG = $(LDC_LIB_PATH)/libphobos2-ldc-debug.a $(LDC_LIB_PATH)/libdruntime-ldc-debug.a $(DUB_LIBS)
+RPATH  =
+LIBS   = -L-L$(LDC_LIB_PATH) -L-lgsl -L-lopenblas -L-llapacke
+SRC    = $(wildcard source/faster_lmm_d/*.d)
 OBJ    = $(SRC:.d=.o)
 OUT    = build/faster_lmm_d
 
@@ -29,9 +37,9 @@ guix-debug:  DFLAGS += -O0 -g -d-debug
 # The development options are run from ~/.guix-profile and need to inject the RPATH
 debug:       DFLAGS += -O0 -g -d-debug $(RPATH) -link-debuglib
 
-release:     DFLAGS += -O -release -inline -noboundscheck $(RPATH)
+release:     DFLAGS += -O -release $(RPATH)
 
-profile:     DFLAGS += -g -O -profile $(RPATH)
+profile:     DFLAGS += -fprofile-instr-generate=fast_lmm_d-profiler.out $(RPATH)
 
 guix release:             LIBS += $(DLIBS)
 
@@ -55,20 +63,21 @@ $(OUT): build-setup $(OBJ)
 	$(D_COMPILER) $(DFLAGS) -of=build/faster_lmm_d $(OBJ) $(LIBS)
 
 test:
-	./.run_tests.sh
+	env LD_LIBRARY_PATH=$(LDC_LIB_PATH) ./run_tests.sh
 
 debug-strip: debug
-	objcopy --only-keep-debug build/sambamba sambamba.debug
-	objcopy --strip-debug build/sambamba
-	objcopy --add-gnu-debuglink=sambamba.debug build/sambamba
-	mv sambamba.debug build/
+	objcopy --only-keep-debug build/faster_lmm_d faster_lmm_d.debug
+	objcopy --strip-debug build/faster_lmm_d
+	objcopy --add-gnu-debuglink=faster_lmm_d.debug build/faster_lmm_d
+	mv faster_lmm_d.debug build/
+
+# ---- Get profiler info, see https://wiki.dlang.org/LDC_LLVM_profiling_instrumentation
+run-profiler: profile test
+	ldc-profdata merge fast_lmm_d-profiler.out -output fast_lmm_d.profdata
 
 install:
-	install -m 0755 build/sambamba $(prefix)/bin
+	install -m 0755 build/faster_lmm_d $(prefix)/bin
 
-clean: clean-d
-	cd htslib ; make clean
-
-clean-d:
+clean:
 	rm -rf build/*
 	rm -f $(OBJ) $(OUT) trace.{def,log}

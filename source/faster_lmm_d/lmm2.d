@@ -11,7 +11,7 @@ import gsl.min;
 import std.stdio;
 import std.typecons;
 
-static import std.math;
+import std.math;
 
 struct LLtuple{
   double sigma, LL;

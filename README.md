@@ -9,14 +9,15 @@ NOTICE: this software is under active development. YMMV.
 ## Requirements
 
 `faster_lmm_d` is written in the fast D language and requires a D
-compiler. At the moment we also use lapacke and gsl libraries.
+compiler. At the moment we also use openblas, lapacke and gsl
+libraries.
 
-## Debian/Ubuntu
+### On Debian/Ubuntu
 
 Install
 
 ```sh
-sudo apt-get install liblapacke libgsl2
+sudo apt-get install libopenblas liblapacke libgsl2
 ```
 
 Install LDC
@@ -25,7 +26,7 @@ Install LDC
 sudo apt-get install ldc2
 ```
 
-## GNU Guix
+### On GNU Guix
 
 ```sh
 guix package -i ldc dub openblas gsl lapack
@@ -40,13 +41,13 @@ git clone https://github.com/prasunanand/faster_lmm_d
 cd faster_lmm_d
 ```
 
-Compile
+Fetch dependencies and compile
 
 ```sh
 dub --compiler=ldc2
 ```
 
-or in the case of GNU Guix (because dub does not yet honour the
+or in the case of GNU Guix (because dub does not honour the
 LIBRARY_PATH):
 
 ```sh
@@ -62,7 +63,7 @@ Usage example
 To run tests
 
 ```sh
-./test.sh
+./run_tests.sh
 ```
 
 ## LICENSE
