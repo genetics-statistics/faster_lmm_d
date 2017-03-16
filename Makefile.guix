@@ -37,9 +37,9 @@ guix-debug:  DFLAGS += -O0 -g -d-debug
 # The development options are run from ~/.guix-profile and need to inject the RPATH
 debug:       DFLAGS += -O0 -g -d-debug $(RPATH) -link-debuglib
 
-release:     DFLAGS += -O -release -inline -noboundscheck $(RPATH)
+release:     DFLAGS += -O -release $(RPATH)
 
-profile:     DFLAGS += -g -O -profile $(RPATH)
+profile:     DFLAGS += -fprofile-instr-generate=fast_lmm_d-profiler.out $(RPATH)
 
 guix release:             LIBS += $(DLIBS)
 
@@ -63,13 +63,17 @@ $(OUT): build-setup $(OBJ)
 	$(D_COMPILER) $(DFLAGS) -of=build/faster_lmm_d $(OBJ) $(LIBS)
 
 test:
-	./.run_tests.sh
+	env LD_LIBRARY_PATH=$(LDC_LIB_PATH) ./run_tests.sh
 
 debug-strip: debug
 	objcopy --only-keep-debug build/faster_lmm_d faster_lmm_d.debug
 	objcopy --strip-debug build/faster_lmm_d
 	objcopy --add-gnu-debuglink=faster_lmm_d.debug build/faster_lmm_d
 	mv faster_lmm_d.debug build/
+
+# ---- Get profiler info, see https://wiki.dlang.org/LDC_LLVM_profiling_instrumentation
+run-profiler: profile test
+	ldc-profdata merge fast_lmm_d-profiler.out -output fast_lmm_d.profdata
 
 install:
 	install -m 0755 build/faster_lmm_d $(prefix)/bin
