@@ -68,6 +68,6 @@ To run tests
 
 ## LICENSE
 
-This software is distributed under the [https://www.gnu.org/copyleft/gpl.html](GPL3 license).
+This software is distributed under the [GPL3 license](https://www.gnu.org/copyleft/gpl.html).
 
 Copyright © 2016, 2017, Prasun Anand and Pjotr Prins
