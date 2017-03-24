@@ -7,14 +7,11 @@ DUB_LIBS = \
 $(HOME)/.dub/packages/dstats-1.0.3/dstats/libdstats.a \
 $(HOME)/.dub/packages/dyaml-0.5.3/dyaml/libdyaml.a \
 $(HOME)/.dub/packages/gsl-0.1.8/gsl/libgsl.a \
-$(HOME)/.dub/packages/lapack-0.1.2/lapack/liblapack.a \
 $(HOME)/.dub/packages/tinyendian-0.1.2/tinyendian/libtinyendian.a
 
 DFLAGS = -wi -I./source $(DUB_INCLUDE)
-# DLIBS  = $(LDC_LIB_PATH)/libphobos2-ldc.a $(LDC_LIB_PATH)/libdruntime-ldc.a $(DUB_LIBS)
-# DLIBS_DEBUG = $(LDC_LIB_PATH)/libphobos2-ldc-debug.a $(LDC_LIB_PATH)/libdruntime-ldc-debug.a $(DUB_LIBS)
 RPATH  =
-LIBS   = -L-lgsl -L-lopenblas -L-llapacke
+LIBS   = -L=-llapacke -L=-llapack -L=-lblas -L=-lgsl -L=-lgslcblas -L=-lm -L=-lopenblas -L=-lm -L=-lgslcblas
 SRC    = $(wildcard source/faster_lmm_d/*.d)
 OBJ    = $(SRC:.d=.o)
 OUT    = build/faster_lmm_d
@@ -30,30 +27,30 @@ profile:  DFLAGS += -fprofile-instr-generate=fast_lmm_d-profiler.out $(RPATH)
 all: debug
 
 build-setup:
-  mkdir -p build/
+	mkdir -p build/
 
 default debug release profile: $(OUT)
 
 # ---- Compile step
 %.o: %.d
-  $(D_COMPILER) $(DFLAGS) -c $< -od=$(dir $@)
+	$(D_COMPILER) -lib $(DFLAGS) -c $< -od=$(dir $@)
 
 # ---- Link step
 $(OUT): build-setup $(OBJ)
-  $(D_COMPILER) -lib $(DFLAGS) -of=build/faster_lmm_d $(OBJ) $(LIBS) $(DUB_LIBS)
+	$(D_COMPILER) -of=build/faster_lmm_d $(DFLAGS)  $(OBJ) $(LIBS) $(DUB_LIBS)
 
 test:
-  chmod 755 build/faster_lmm_d
-  ./run_tests.sh
+	chmod 755 build/faster_lmm_d
+	./run_tests.sh
 
 debug-strip: debug
 
 run-profiler: profile test
-  ldc-profdata merge fast_lmm_d-profiler.out -output fast_lmm_d.profdata
+	ldc-profdata merge fast_lmm_d-profiler.out -output fast_lmm_d.profdata
 
 install:
-  install -m 0755 build/faster_lmm_d $(prefix)/bin
+	install -m 0755 build/faster_lmm_d $(prefix)/bin
 
 clean:
-  rm -rf build/*
-  rm -f $(OBJ) $(OUT) trace.{def,log}
+	rm -rf build/*
+	rm -f $(OBJ) $(OUT) trace.{def,log}
