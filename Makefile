@@ -22,7 +22,7 @@ debug: DFLAGS += -O0 -g -d-debug $(RPATH) -link-debuglib
 
 release: DFLAGS += -O -release $(RPATH)
 
-profile:  DFLAGS += -fprofile-instr-generate=fast_lmm_d-profiler.out $(RPATH)
+profile:  DFLAGS += -fprofile-instr-generate=faster_lmm_d-profiler.out $(RPATH)
 
 all: debug
 
@@ -46,7 +46,7 @@ test:
 debug-strip: debug
 
 run-profiler: profile test
-	ldc-profdata merge fast_lmm_d-profiler.out -output fast_lmm_d.profdata
+	ldc-profdata merge faster_lmm_d-profiler.out -output faster_lmm_d.profdata
 
 install:
 	install -m 0755 build/faster_lmm_d $(prefix)/bin

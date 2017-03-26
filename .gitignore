@@ -8,3 +8,5 @@ faster_lmm_d
 out
 __test__library__
 build_script.sh
+faster_lmm_d-profiler.out
+faster_lmm_d.profdata
