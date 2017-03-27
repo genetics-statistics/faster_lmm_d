@@ -39,20 +39,24 @@ debug:       DFLAGS += -O0 -g -d-debug $(RPATH) -link-debuglib
 
 release:     DFLAGS += -O -release $(RPATH)
 
-profile:     DFLAGS += -fprofile-instr-generate=faster_lmm_d-profiler.out $(RPATH)
+profile:     DFLAGS += -fprofile-instr-generate=fast_lmm_d-profiler.out $(RPATH)
+
+getIR: DFLAGS += -output-ll
+
+getBC: DFLAGS += -output-bc
 
 guix release:             LIBS += $(DLIBS)
 
 guix-debug debug profile: LIBS += $(DLIBS_DEBUG)
 
-.PHONY: all guix guix-debug debug release profile clean test
+.PHONY: all guix guix-debug debug release profile clean cleanIR cleanBC test
 
 all: debug
 
 build-setup:
 	mkdir -p build/
 
-guix guix-debug default debug release profile: $(OUT)
+guix guix-debug default debug release profile getIR getBC: $(OUT)
 
 # ---- Compile step
 %.o: %.d
@@ -73,7 +77,7 @@ debug-strip: debug
 
 # ---- Get profiler info, see https://wiki.dlang.org/LDC_LLVM_profiling_instrumentation
 run-profiler: profile test
-	ldc-profdata merge faster_lmm_d-profiler.out -output faster_lmm_d.profdata
+	ldc-profdata merge fast_lmm_d-profiler.out -output faster_lmm_d.profdata
 
 install:
 	install -m 0755 build/faster_lmm_d $(prefix)/bin
@@ -81,3 +85,9 @@ install:
 clean:
 	rm -rf build/*
 	rm -f $(OBJ) $(OUT) trace.{def,log}
+
+cleanIR:
+	rm -f $(IR) trace.{def,log}
+
+cleanBC:
+	rm -f $(BC) trace.{def,log}

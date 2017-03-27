@@ -13,23 +13,29 @@ DFLAGS = -wi -I./source $(DUB_INCLUDE)
 RPATH  =
 LIBS   = -L=-llapacke -L=-llapack -L=-lblas -L=-lgsl -L=-lgslcblas -L=-lm -L=-lopenblas -L=-lm -L=-lgslcblas
 SRC    = $(wildcard source/faster_lmm_d/*.d)
+IR     = $(wildcard source/faster_lmm_d/*.ll)
+BC     = $(wildcard source/faster_lmm_d/*.bc)
 OBJ    = $(SRC:.d=.o)
 OUT    = build/faster_lmm_d
 
-.PHONY: profile test clean
-# The development options are run from ~/.guix-profile and need to inject the RPATH
+.PHONY: profile test clean cleanIR cleanBC
+
 debug: DFLAGS += -O0 -g -d-debug $(RPATH) -link-debuglib
 
 release: DFLAGS += -O -release $(RPATH)
 
-profile:  DFLAGS += -fprofile-instr-generate=faster_lmm_d-profiler.out $(RPATH)
+profile:  DFLAGS += -fprofile-instr-generate=fast_lmm_d-profiler.out
+
+getIR: DFLAGS += -output-ll
+
+getBC: DFLAGS += -output-bc
 
 all: debug
 
 build-setup:
 	mkdir -p build/
 
-default debug release profile: $(OUT)
+default debug release profile getIR getBC: $(OUT)
 
 # ---- Compile step
 %.o: %.d
@@ -46,7 +52,7 @@ test:
 debug-strip: debug
 
 run-profiler: profile test
-	ldc-profdata merge faster_lmm_d-profiler.out -output faster_lmm_d.profdata
+	ldc-profdata merge fast_lmm_d-profiler.out -output faster_lmm_d.profdata
 
 install:
 	install -m 0755 build/faster_lmm_d $(prefix)/bin
@@ -54,3 +60,9 @@ install:
 clean:
 	rm -rf build/*
 	rm -f $(OBJ) $(OUT) trace.{def,log}
+
+cleanIR:
+	rm -f $(IR) trace.{def,log}
+
+cleanBC:
+	rm -f $(BC) trace.{def,log}
