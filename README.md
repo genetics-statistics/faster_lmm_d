@@ -66,6 +66,27 @@ To run tests
 ./run_tests.sh
 ```
 
+## Performance Profiling
+
+Install google-perftools and graphviz
+
+```sh
+sudo apt-get install google-perftools libgoogle-perftools-dev graphviz
+```
+
+Install go and then install google-pprof.
+
+```sh
+go get github.com/google/pprof
+```
+
+To profile uncomment out the code import `gperftools_d.profiler;`, `ProfilerStart()` and `ProfilerStop()` in
+the `main` function in `source/faster_lmm_d/app.d`.
+
+```sh
+make run-gperf
+```
+
 ## LICENSE
 
 This software is distributed under the [GPL3 license](https://www.gnu.org/copyleft/gpl.html).

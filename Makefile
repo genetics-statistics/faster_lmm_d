@@ -2,7 +2,13 @@ D_COMPILER=ldc2
 
 LDMD=ldmd2
 
-DUB_INCLUDE = -I~/.dub/packages/dstats-1.0.3/dstats/source/ -I~/.dub/packages/gsl-0.1.8/gsl/source/ -I~/.dub/packages/cblas-1.0.0/cblas/source/ -I~/.dub/packages/dyaml-0.5.3/dyaml/source/ -I~/.dub/packages/tinyendian-0.1.2/tinyendian/source/
+DUB_INCLUDE = \
+-I~/.dub/packages/dstats-1.0.3/dstats/source/ \
+-I~/.dub/packages/gsl-0.1.8/gsl/source/ \
+-I~/.dub/packages/cblas-1.0.0/cblas/source/ \
+-I~/.dub/packages/dyaml-0.5.3/dyaml/source/ \
+-I~/.dub/packages/tinyendian-0.1.2/tinyendian/source/
+
 DUB_LIBS = \
 $(HOME)/.dub/packages/dstats-1.0.3/dstats/libdstats.a \
 $(HOME)/.dub/packages/dyaml-0.5.3/dyaml/libdyaml.a \
@@ -18,24 +24,30 @@ BC     = $(wildcard source/faster_lmm_d/*.bc)
 OBJ    = $(SRC:.d=.o)
 OUT    = build/faster_lmm_d
 
-.PHONY: profile test clean cleanIR cleanBC
-
 debug: DFLAGS += -O0 -g -d-debug $(RPATH) -link-debuglib
 
 release: DFLAGS += -O -release $(RPATH)
 
-profile:  DFLAGS += -fprofile-instr-generate=fast_lmm_d-profiler.out
+profile: DFLAGS += -fprofile-instr-generate=fast_lmm_d-profiler.out
 
 getIR: DFLAGS += -output-ll
 
 getBC: DFLAGS += -output-bc
+
+gperf: LIBS += -L=-lprofiler
+
+gperf: DUB_INCLUDE += -I~/.dub/packages/gperftools_d-0.1.0/gperftools_d/source/
+
+gperf: DUB_LIBS += $(HOME)/.dub/packages/gperftools_d-0.1.0/gperftools_d/libgperftools_d.a
+
+.PHONY: profile test clean cleanIR cleanBC gperf
 
 all: debug
 
 build-setup:
 	mkdir -p build/
 
-default debug release profile getIR getBC: $(OUT)
+default debug release profile getIR getBC gperf: $(OUT)
 
 # ---- Compile step
 %.o: %.d
@@ -56,6 +68,10 @@ run-profiler: profile test
 
 install:
 	install -m 0755 build/faster_lmm_d $(prefix)/bin
+
+run-gperf: gperf
+	$ CPUPROFILE=./prof.out ./run_tests.sh
+	pprof --gv build/faster_lmm_d ./prof.out
 
 clean:
 	rm -rf build/*

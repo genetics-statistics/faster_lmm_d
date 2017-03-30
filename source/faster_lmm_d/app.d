@@ -15,10 +15,13 @@ import faster_lmm_d.dmatrix;
 import faster_lmm_d.optmatrix;
 import faster_lmm_d.helpers;
 import faster_lmm_d.optimize;
+//import gperftools_d.profiler;
 
 void main(string[] args)
 {
   // Main routine
+  //ProfilerStart();
+
   string ocontrol, okinship, opheno, ogeno, useBLAS, noBLAS, noCUDA;
   int pheno_column;
   string cmd;
@@ -208,5 +211,5 @@ void main(string[] args)
     //auto k3 = std.math.round(K3[0][0],4);
     //assert(k3 == 1.4352);
   }
-
+  //ProfilerStop();
 }
