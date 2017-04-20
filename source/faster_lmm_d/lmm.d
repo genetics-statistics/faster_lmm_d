@@ -28,7 +28,7 @@ auto run_gwas(string species, int n, int m, dmatrix k, double[] y, dmatrix geno)
   bool refit = false;
   string inputfn = "";
   bool new_code = true;
-  
+
   writeln("run_gwas");
   writeln("pheno ", y.length," ", y[0..5]);
   writeln(geno.shape);
@@ -53,120 +53,12 @@ auto run_gwas(string species, int n, int m, dmatrix k, double[] y, dmatrix geno)
   else{
     writeln("geno");
     double ps, ts;
-    if(new_code){ 
+    if(new_code){
       return run_other_new(n, m, y, geno, reml, refit);
     }else{
       return run_other_new(n, m, y, geno, reml, refit);
     }
   }
-}
-
-void run_human(ref double[] pheno_vector, ref dmatrix covariate_matrix, string plink_input_file, ref dmatrix kinship_matrix, bool refit=false){
-
-    bool[] v = isnan(pheno_vector);
-    auto keep = 0;
-     //= true - v;
-
-    //  reshape for a vector
-    //double[] keep = keep.reshape(len(keep));
-
-    //identifier = str(uuid.uuid4());
-
-    //writeln("pheno_vector: ", pf(pheno_vector))
-    //writeln("kinship_matrix: ", pf(kinship_matrix))
-    //writeln("kinship_matrix.shape: ", pf(kinship_matrix.shape))
-
-    //lmm_vars = pickle.dumps(dict(
-    //    pheno_vector = pheno_vector,
-    //    covariate_matrix = covariate_matrix,
-    //    kinship_matrix = kinship_matrix
-    //))
-    //Redis.hset(identifier, "lmm_vars", lmm_vars)
-    //Redis.expire(identifier, 60*60)
-
-    // there may be a need to create a vector struct
-
-    //if(sum(v)){
-      //pheno_vector = pheno_vector[keep];
-      //writeln("pheno_vector shape is now: ", pf(pheno_vector.shape));
-      //covariate_matrix = covariate_matrix[keep,$];
-      //writeln("kinship_matrix shape is: ", pf(kinship_matrix.shape));
-      //writeln("keep is: ", pf(keep.shape));
-      //kinship_matrix = kinship_matrix[keep,$][0,keep];
-    //}
-
-
-    writeln("kinship_matrix:", kinship_matrix);
-
-    int n = kinship_matrix.shape[0];
-    writeln("n is:", n);
-    //LMM lmm_ob = LMM(pheno_vector, kinship_matrix, covariate_matrix);
-    dmatrix a;
-    //fit(lmm_ob, a , 100, true);
-
-
-    //# Buffers for pvalues and t-stats
-    double[] p_values = [];
-    double[] t_stats = [];
-
-    //#writeln("input_file: ", plink_input_file)
-
-    //with(writeln("Opening and loading pickle file")){
-    //  //with(gzip.open(plink_input_file, "rb") as input_file)){
-    //    data = pickle.load(input_file);
-    //  //}
-    //}
-        
-
-    //plink_input = data["plink_input"];
-
-    //#plink_input.getSNPIterator()
-    //with Bench("Calculating numSNPs"):
-    //    total_snps = data['numSNPs']
-
-    //with Bench("snp iterator loop"):
-    //    count = 0
-
-    //    with Bench("Create list of inputs"):
-    //        inputs = list(plink_input)
-
-    //    with Bench("Divide into chunks"):
-    //        results = chunks.divide_into_chunks(inputs, 64)
-
-    //    result_store = []
-
-    //    key = "plink_inputs"
-
-    //    //# Todo: Delete below line when done testing
-    //    Redis.delete(key)
-
-    //    timestamp = datetime.datetime.utcnow().isoformat()
-
-    //    //# Pickle chunks of input SNPs (from Plink interator) and compress them
-    //    //#writeln("Starting adding loop")
-    //    for part, result in enumerate(results):
-    //        #data = pickle.dumps(result, pickle.HIGHEST_PROTOCOL)
-    //        holder = pickle.dumps(dict( identifier = identifier, part = part, timestamp = timestamp, result = result), pickle.HIGHEST_PROTOCOL)
-
-    //        //#writeln("Adding:", part)
-    //        Redis.rpush(key, zlib.compress(holder))
-    //    //#writeln("End adding loop")
-    //    //#writeln("***** Added to {} queue *****".format(key))
-    //    for snp, this_id in plink_input:
-    //        //#with Bench("part before association"):
-    //        //#if count > 1000:
-    //        //#    break
-    //        count += 1
-    //        progress("human",count,total_snps)
-
-    //        //#with Bench("actual association"):
-    //        ps, ts = human_association(snp, n, keep, lmm_ob, pheno_vector, covariate_matrix, kinship_matrix, refit);
-
-    //        //#with Bench("after association"):
-    //        p_values.append(ps)
-    //        t_stats.append(ts)
-
-    //return p_values, t_stats;
 }
 
 auto run_other_new(int n, int m, double[] pheno_vector, dmatrix geno, bool restricted_max_likelihood= true, bool refit = false){
@@ -182,7 +74,7 @@ auto run_other_new(int n, int m, double[] pheno_vector, dmatrix geno, bool restr
   writeln("REML=",restricted_max_likelihood," REFIT=",refit);
 
   //# Adjust phenotypes
-  
+
   phenoStruct pheno = remove_missing(n,pheno_vector);
   n = pheno.n;
   double[] Y = pheno.Y;
