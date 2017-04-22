@@ -60,11 +60,20 @@ Usage example
 ./faster_lmm_d --control=data/genenetwork/BXD.json --pheno=data/genenetwork/104617_at.json --geno=data/genenetwork/BXD.csv --cmd=rqtl
 ```
 
+## Testing
+
 To run tests
 
 ```sh
-./run_tests.sh
+time ./run_tests.sh
 ```
+
+On GNU Guix add
+
+```sh
+time env LD_LIBRARY_PATH=$LIBRARY_PATH ./run_tests.sh
+```
+
 
 ## Performance Profiling
 
