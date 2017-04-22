@@ -60,10 +60,24 @@ Usage example
 ./faster_lmm_d --control=data/genenetwork/BXD.json --pheno=data/genenetwork/104617_at.json --geno=data/genenetwork/BXD.csv --cmd=rqtl
 ```
 
+## Testing
+
 To run tests
 
 ```sh
-./run_tests.sh
+time ./run_tests.sh
+```
+
+If you get an error (on GNU Guix)
+
+```sh
+./build/faster_lmm_d: error while loading shared libraries: libgsl.so.19: cannot open shared object file: No such file or directory
+```
+
+try
+
+```sh
+time env LD_LIBRARY_PATH=$LIBRARY_PATH ./run_tests.sh
 ```
 
 ## Performance Profiling

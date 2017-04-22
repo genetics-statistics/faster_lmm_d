@@ -12,6 +12,7 @@ import std.stdio;
 import std.typecons;
 
 import std.math;
+import std.experimental.logger;
 
 struct LLtuple{
   double sigma, LL;
@@ -72,8 +73,8 @@ struct LMM2{
   //represent a mean effect.
 
   this(double[] Y, dmatrix K, dmatrix Kva, dmatrix Kve, dmatrix X0, bool verbose){
-    writeln("This is Y");
-    writeln(Y);
+    log("This is Y");
+    log(Y);
 
     if(X0.init == false){
       writeln("Initializing LMM2...");
