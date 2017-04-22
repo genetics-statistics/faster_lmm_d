@@ -68,12 +68,17 @@ To run tests
 time ./run_tests.sh
 ```
 
-On GNU Guix add
+If you get an error (on GNU Guix)
+
+```sh
+./build/faster_lmm_d: error while loading shared libraries: libgsl.so.19: cannot open shared object file: No such file or directory
+```
+
+try
 
 ```sh
 time env LD_LIBRARY_PATH=$LIBRARY_PATH ./run_tests.sh
 ```
-
 
 ## Performance Profiling
 
