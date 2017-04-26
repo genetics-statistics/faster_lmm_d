@@ -258,9 +258,11 @@ void nanCounter(dmatrix input) {
   int nanCounter = 0;
   foreach(ref ele; input.elements) {
     if(std.math.isNaN(ele)) {
-      writeln("I got a NaN");
+      writeln("Encountered a NaN");
       nanCounter++;
     }
   }
-  writeln(nanCounter);
+  if(nanCounter>0){
+    writefln("NaNs encountered => %d", nanCounter);
+  }
 }

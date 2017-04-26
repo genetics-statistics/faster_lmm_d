@@ -3,10 +3,11 @@ dub.selections.json
 docs.json
 __dummy.html
 *.o
+*.a
 *.obj
 *.bc
 *ll
-faster_lmm_d
+./faster_lmm_d
 out
 __test__library__
 build_script.sh

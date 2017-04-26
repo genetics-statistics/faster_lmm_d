@@ -30,7 +30,7 @@ extern (C) double fn1 (double x, void* params)
 
 void checkGSL()
 {
-  writeln("hello from checkGSL");
+  writeln("In checkGSL");
   int status;
   int iter = 0, max_iter = 100;
   const(gsl_min_fminimizer_type) *T;
@@ -61,7 +61,7 @@ void checkGSL()
       a = gsl_min_fminimizer_x_lower (s);
       b = gsl_min_fminimizer_x_upper (s);
 
-      status 
+      status
         = gsl_min_test_interval (a, b, 0.001, 0.0);
 
       if (status == GSL_SUCCESS)

@@ -17,7 +17,7 @@ $(HOME)/.dub/packages/tinyendian-0.1.2/tinyendian/libtinyendian.a
 
 DFLAGS = -wi -I./source $(DUB_INCLUDE)
 RPATH  =
-LIBS   = -L=-llapacke -L=-llapack -L=-lblas -L=-lgsl -L=-lgslcblas -L=-lm -L=-lopenblas -L=-lm -L=-lgslcblas
+LIBS   = -L=-llapacke -L=-llapack -L=-lblas -L=-lgsl -L=-lgslcblas -L=-lm -L=-lopenblas -L=-lm -L=-lgslcblas -L=-lafcuda
 SRC    = $(wildcard source/faster_lmm_d/*.d)
 IR     = $(wildcard source/faster_lmm_d/*.ll)
 BC     = $(wildcard source/faster_lmm_d/*.bc)

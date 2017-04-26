@@ -25,7 +25,7 @@ void main(string[] args)
   // Main routine
   //ProfilerStart();
 
-  string ocontrol, okinship, opheno, ogeno, useBLAS, noBLAS, noCUDA;
+  string ocontrol, okinship, opheno, ogeno, useBLAS, noBLAS, noCUDA, ologging;
   int pheno_column;
   string cmd;
 
@@ -35,7 +35,8 @@ void main(string[] args)
   f.logLevel = LogLevel.info;
   assert(f.logLevel == LogLevel.info);
 
-  getopt(args, "control", &ocontrol, "kinship", &okinship, "pheno", &opheno, "geno", &ogeno, "useBLAS", &useBLAS, "noBLAS", &noBLAS, "noCUDA", &noCUDA, "pheno_column", &pheno_column, "cmd", &cmd);
+
+  getopt(args, "control", &ocontrol, "kinship", &okinship, "pheno", &opheno, "geno", &ogeno, "useBLAS", &useBLAS, "noBLAS", &noBLAS, "noCUDA", &noCUDA, "pheno_column", &pheno_column, "cmd", &cmd, "logging", &ologging);
 
   trace(cmd);
   JSONValue ctrl;
@@ -57,6 +58,32 @@ void main(string[] args)
     //kinship(kinship);
     log("k.shape");
   }
+
+  if(ologging){
+    switch (ologging){
+      case "debug":
+        globalLogLevel(LogLevel.error);
+        break;
+      case "trace":
+        globalLogLevel(LogLevel.trace);
+        break;
+      case "info":
+        globalLogLevel(LogLevel.info);
+        break;
+      case "warning":
+        globalLogLevel(LogLevel.warning);
+        break;
+      case "critical":
+        globalLogLevel(LogLevel.critical);
+        break;
+      case "fatal":
+        globalLogLevel(LogLevel.fatal);
+        break;
+      default:
+        globalLogLevel(LogLevel.info);
+    }
+  }
+
   double[] y;
   string[] ynames;
 
@@ -71,7 +98,7 @@ void main(string[] args)
       y = pTuple[0];
       ynames = pTuple[1];
     }
-    writeln(y.sizeof);
+    log(y.sizeof);
   }
 
   dmatrix g;
@@ -105,10 +132,6 @@ void main(string[] args)
   if(noCUDA){
     bool cudauseCUDA = false;
     info("Disabling CUDA support");
-  }
-
-  if(cmd){
-    warning("Error: Run command is missing!");
   }
 
   //geno_callback("data/small.geno");
@@ -179,6 +202,7 @@ void main(string[] args)
     double[] ps = gwas[1];
     log(ts);
     log(ps);
+    writeln("ps : ",ps[0],",",ps[1],",",ps[2],"...",ps[n-3],",",ps[n-2],",",ps[n-1]);
     check_results(ps,ts);
   }
   else if(cmd == "rqtl"){
@@ -193,6 +217,7 @@ void main(string[] args)
     double[] ps = gwas[1];
     log(ts);
     log(ps);
+    writeln("ps : ",ps[0],",",ps[1],",",ps[2],"...",ps[n-3],",",ps[n-2],",",ps[n-1]);
     check_results(ps,ts);
   }
   else if(cmd == "iterator"){

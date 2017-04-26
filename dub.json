@@ -13,5 +13,5 @@
   "description": "Experiment lmm",
   "copyright": "Copyright © 2016, 2017, Prasun Anand and Pjotr Prins",
   "license": "GPL3",
-  "libs": ["openblas", "gsl", "lapacke"],
+  "libs": ["openblas", "gsl", "lapacke", "afcuda"],
 }

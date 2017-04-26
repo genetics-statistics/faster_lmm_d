@@ -1,13 +1,15 @@
 module faster_lmm_d.gwas;
 import std.stdio;
 import std.typecons;
+import std.experimental.logger;
+
 import faster_lmm_d.lmm2;
 import faster_lmm_d.dmatrix;
 import dstats.distrib;
 import faster_lmm_d.optmatrix;
 
 void compute_snp(int j,int n,double[] snps,LMM2 lmmobject, bool REML,double q){
-  writeln("In compute_snp");
+  trace("In compute_snp");
   double[] result;
   int rows = cast(int)(snps.length)/n;
   for(int i = 0; i< rows; i++){
@@ -28,7 +30,7 @@ auto gwas(double[] Y, dmatrix G, dmatrix K, bool restricted_max_likelihood = tru
   //"""
   //GWAS. The G matrix should be n inds (cols) x m snps (rows)
   //"""
-  writeln("In gwas.gwas");
+  trace("In gwas.gwas");
   //# matrix_initialize()
   //cpu_num = mp.cpu_count();
   //if(threads.numThreads){
@@ -39,20 +41,20 @@ auto gwas(double[] Y, dmatrix G, dmatrix K, bool restricted_max_likelihood = tru
   //  cpu_num = 1;
   //}
 
-  writefln("Using %u threads", cpu_num);
+  infof("Using %u threads", cpu_num);
 
   bool kfile2 = false;
   bool reml = restricted_max_likelihood;
 
-  //writeln("G",G);
+  //info("G",G);
   //G = matrixTranspose(G);
   int n = G.shape[1]; // inds
   int inds = n;
   int m = G.shape[0]; // snps
   int snps = m;
-  writefln("%d SNPs",snps);
+  infof("%d SNPs",snps);
   if(snps<inds){
-    writefln("snps should be larger than inds (snps=%d,inds=%d)", snps,inds);
+    log("snps should be larger than inds (snps=%d,inds=%d)", snps,inds);
   }
 
   //# CREATE LMM object for association
@@ -64,22 +66,20 @@ auto gwas(double[] Y, dmatrix G, dmatrix K, bool restricted_max_likelihood = tru
 
   LMM2 lmm2 = LMM2(Y,K,Kva,Kve,X0, true);
   lmm2 = lmm2transform(lmm2);
-  //writeln(lmm2);
   dmatrix X;
   if(!refit){
-    writeln("Computing fit for null model");
+    trace("Computing fit for null model");
     double fit_hmax,fit_sigma;
     dmatrix fit_beta;
     double fit_LL;
     fitTuple fit = lmm2fit(lmm2, X); // # follow GN model in run_other;
     lmm2 = fit.lmmobj;
-    writeln("heritability= ", lmm2.optH, " sigma= ", lmm2.optSigma, " LL= ", fit.fit_LL);
+    log("heritability= ", lmm2.optH, " sigma= ", lmm2.optSigma, " LL= ", fit.fit_LL);
   }
 
   double[] res;
   int q;
   double[] collect; //# container for SNPs to be processed in one batch
-  //writeln(collect);
   int count = 0;
   int job = 0;
   int jobs_running = 0;
@@ -87,8 +87,8 @@ auto gwas(double[] Y, dmatrix G, dmatrix K, bool restricted_max_likelihood = tru
 
   double[] ps = new double[m];
   double[] ts = new double[m];
-  writeln(G.shape);
-  writeln("m is ", m);
+  info(G.shape);
+  info("m is ", m);
   for(int i=0; i<m; i++){
     dmatrix x = getRow(G, i);
     x.shape = [n,1];
@@ -96,7 +96,7 @@ auto gwas(double[] Y, dmatrix G, dmatrix K, bool restricted_max_likelihood = tru
     ps[i] = tsps[1];
     ts[i] = tsps[0];
     if(i%1000 == 0){
-      writeln(i, " snps processed");
+      log(i, " snps processed");
     }
   }
 

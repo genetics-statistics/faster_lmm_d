@@ -2,6 +2,7 @@ module faster_lmm_d.kinship;
 
 import std.stdio;
 import std.exception;
+import std.experimental.logger;
 import core.sys.posix.stdlib: exit;
 
 import faster_lmm_d.dmatrix;
@@ -33,22 +34,22 @@ alias immutable(ulong) iu;
 
 dmatrix kinship_full(dmatrix G)
 {
-  writeln("Full kinship matrix used");
+  info("Full kinship matrix used");
   int m = G.shape[0]; // snps
   int n = G.shape[1]; // inds
-  writeln(m," SNPs");
+  log(m," SNPs");
   assert(m>n, "n should be larger than m");
   dmatrix temp = matrixTranspose(G);
   dmatrix mmT = matrixMult(temp, G);
-  writeln("normalize K");
+  info("normalize K");
   dmatrix K = divideDmatrixNum(mmT, G.shape[0]);
 
-  writeln("kinship_full K sized ",n," ",K.elements.length);
-  writeln(K.elements[0],",",K.elements[1],",",K.elements[2],"...",K.elements[n-3],",",K.elements[n-2],",",K.elements[n-1]);
+  log("kinship_full K sized ",n," ",K.elements.length);
+  log(K.elements[0],",",K.elements[1],",",K.elements[2],"...",K.elements[n-3],",",K.elements[n-2],",",K.elements[n-1]);
   iu row = n;
   iu lr = n*n-1;
   iu ll = (n-1)*n;
-  writeln(K.elements[ll],",",K.elements[ll+1],",",K.elements[ll+2],"...",K.elements[lr-2],",",K.elements[lr-1],",",K.elements[lr]);
+  log(K.elements[ll],",",K.elements[ll+1],",",K.elements[ll+2],"...",K.elements[lr-2],",",K.elements[lr-1],",",K.elements[lr]);
   return K;
 }
 
@@ -60,16 +61,16 @@ dmatrix kinshipComp(dmatrix G, int computeSize=1000)
   int inds = n;
   int m = G.shape[0]; // snps
   int snps = m;
-  writeln("%d SNPs",m);
+  log("%d SNPs",m);
   if(snps>=inds) {
-    writeln("WARNING: less snps than inds (%d snps, %d inds)",(snps,inds));
+    info("WARNING: less snps than inds (%d snps, %d inds)",(snps,inds));
   }
   dmatrix K;
 
   int iterations = snps/computeSize + 1;
   K = zerosMatrix(n,n);  // The Kinship matrix has dimension individuals x individuals
   for(int job = 0; job < iterations; job++) {
-    writefln("Processing job %d first %d SNPs",job, ((job+1)*computeSize));
+    logf("Processing job %d first %d SNPs",job, ((job+1)*computeSize));
     dmatrix W = compute_W(job,G,n,snps,computeSize);
     compute_matrixMult(job,W);
     dmatrix x;
@@ -87,7 +88,7 @@ int compute_matrixMult(int job, dmatrix W)
   //For every set of SNPs matrixMult is used to multiply matrices T(W)*W
   //"""
   dmatrix res = matrixMultT(W, W);
-  writeln(res);
+  log(res);
   return job;
 }
 
@@ -97,7 +98,7 @@ eighTuple kvakve(dmatrix K)
   //Obtain eigendecomposition for K and return Kva,Kve where Kva is cleaned
   //of small values < 1e-6 (notably smaller than zero)
   //"""
-  writefln("Obtaining eigendecomposition for %dx%d matrix",K.shape[0],K.shape[1]);
+  trace("Obtaining eigendecomposition for %dx%d matrix",K.shape[0],K.shape[1]);
   return eigh(K);
 
 }

@@ -11,7 +11,6 @@ import gsl.min;
 import std.stdio;
 import std.typecons;
 
-import std.math;
 import std.experimental.logger;
 
 struct LLtuple{
@@ -73,11 +72,11 @@ struct LMM2{
   //represent a mean effect.
 
   this(double[] Y, dmatrix K, dmatrix Kva, dmatrix Kve, dmatrix X0, bool verbose){
-    log("This is Y");
+    log("Y => ");
     log(Y);
 
     if(X0.init == false){
-      writeln("Initializing LMM2...");
+      log("Initializing LMM2...");
       X0 = onesMatrix(cast(int)Y.length,1);
     }
 
@@ -91,7 +90,7 @@ struct LMM2{
     this.Kve = keigh.kve;
     this.N = K.shape[0];
     this.Y =  dmatrix([K.shape[0],1] ,Y);
-    nanCounter(this.Y);
+    //nanCounter(this.Y);  //for debugging
     this.X0 = X0;
 
 
@@ -146,7 +145,7 @@ LMM2 lmm2transform(LMM2 lmmobject){
   //   The transformation is obtained by left multiplying each parameter by the transpose of the
   //   eigenvector matrix of K (the kinship).
   //"""
-  writeln("In lmm2transform");
+  trace("In lmm2transform");
   dmatrix KveT = matrixTranspose(lmmobject.Kve);
   dmatrix Yt = matrixMult(KveT, lmmobject.Y);
   dmatrix X0t = matrixMult(KveT, lmmobject.X0);
@@ -255,7 +254,7 @@ double optimizeBrent(LMM2 lmmobject, dmatrix X, bool REML, double lower, double 
     status = gsl_min_test_interval (a, b, 0.0001, 0.0);
 
     if (status == GSL_SUCCESS)
-      writeln("Converged:\n");
+      log("Converged:\n");
   }
   while (status == GSL_CONTINUE && iter < max_iter);
 
@@ -284,7 +283,7 @@ double getMax(LMM2 lmmobject, dmatrix L, dmatrix H, dmatrix X, bool REML=false){
   }
 
   if(HOpt.length > 1){
-    writeln("NOTE: Found multiple optima.  Returning first...\n");
+    log("NOTE: Found multiple optima.  Returning first...\n");
     return HOpt[0];
   }
   else if(HOpt.length == 1){
@@ -341,10 +340,10 @@ auto lmm2association(LMM2 lmmobject, dmatrix X, bool stack=true, bool REML=true,
   //  If h is None, the optimal h stored in optH is used.
   //"""
   if(false){
-    writeln("X=",X);
-    writeln("q=",lmmobject.q);
-    writeln("lmmobject.Kve=",lmmobject.Kve);
-    writeln("X0t_stack=",lmmobject.X0t_stack);
+    log("X=",X);
+    log("q=",lmmobject.q);
+    log("lmmobject.Kve=",lmmobject.Kve);
+    log("X0t_stack=",lmmobject.X0t_stack);
   }
 
   if(stack){

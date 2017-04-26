@@ -1,9 +1,9 @@
 module faster_lmm_d.optmatrix;
 
 import std.stdio;
+import std.experimental.logger;
 import cblas : gemm, Transpose, Order;
-
-import std.math;
+import faster_lmm_d.arrayfire;
 
 extern (C) {
   int LAPACKE_dgetrf (int matrix_layout, int m, int n, double* a, int lda, int* ipiv);
@@ -106,7 +106,7 @@ void pPrint3(dmatrix input) {
 
 
 dmatrix sliceDmatrix(dmatrix input, int[] along) {
-  writeln("In sliceDmatrix");
+  trace("In sliceDmatrix");
   //writeln(along.length);
   //writeln(along);
   double[] output;
@@ -119,7 +119,7 @@ dmatrix sliceDmatrix(dmatrix input, int[] along) {
 }
 
 dmatrix sliceDmatrixKeep(dmatrix input, bool[] along) {
-  writeln("In sliceDmatrix");
+  trace("In sliceDmatrix");
   assert(along.length == input.shape[0]);
   double[] output;
   int rowIndex = 0;
@@ -140,7 +140,7 @@ dmatrix sliceDmatrixKeep(dmatrix input, bool[] along) {
 dmatrix normalize_along_row(dmatrix input) {
   double[] largeArr;
   double[] arr;
-  writeln(input.shape);
+  log(input.shape);
   for(int i = 0; i < input.shape[0]; i++) {
     arr = input.elements[(input.shape[1]*i)..(input.shape[1]*(i+1))].dup;
     bool[] missing = isnan(arr);
