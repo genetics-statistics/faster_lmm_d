@@ -7,6 +7,7 @@ import std.getopt;
 import std.json;
 import std.math : round;
 import std.typecons;
+import std.exception;
 import core.stdc.stdlib : exit;
 import std.experimental.logger;
 
@@ -137,18 +138,18 @@ void main(string[] args)
     double p2 = ps[$-1];
     if(ogeno == "data/small.geno"){
       info("Validating results for ", ogeno);
-      assert(modDiff(p1,0.7387)<0.001);
-      assert(modDiff(p2,0.7387)<0.001);
+      enforce(modDiff(p1,0.7387)<0.001);
+      enforce(modDiff(p2,0.7387)<0.001);
     }
     if(ogeno == "data/small_na.geno"){
       info("Validating results for ", ogeno);
-      assert(modDiff(p1,0.062)<0.001);
-      assert(modDiff(p2,0.062)<0.001);
+      enforce(modDiff(p1,0.062)<0.001);
+      enforce(modDiff(p2,0.062)<0.001);
     }
     if(ogeno == "data/test8000.geno"){
-      info("Validating results for ",ogeno);
-      assert(round(sum(ps)) == 4071);
-      assert(ps.length == 8000);
+      info("Validating results for ",ogeno,sum(ps));
+      enforce(round(sum(ps)) == 4072);
+      enforce(ps.length == 8000);
     }
     info("Run completed");
   }
