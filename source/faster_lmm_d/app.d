@@ -147,8 +147,8 @@ void main(string[] args)
       enforce(modDiff(p2,0.062)<0.001);
     }
     if(ogeno == "data/test8000.geno"){
-      info("Validating results for ",ogeno,sum(ps));
-      enforce(round(sum(ps)) == 4072);
+      info("Validating results for ",ogeno," ",sum(ps));
+      enforce(round(sum(ps)) == 4071);
       enforce(ps.length == 8000);
     }
     info("Run completed");
