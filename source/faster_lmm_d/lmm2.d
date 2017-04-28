@@ -11,7 +11,11 @@ import gsl.min;
 import std.stdio;
 import std.typecons;
 
+import std.math;
+alias mlog = std.math.log;
+
 import std.experimental.logger;
+alias llog = std.experimental.logger.log;
 
 struct LLtuple{
   double sigma, LL;
@@ -72,11 +76,11 @@ struct LMM2{
   //represent a mean effect.
 
   this(double[] Y, dmatrix K, dmatrix Kva, dmatrix Kve, dmatrix X0, bool verbose){
-    log("Y => ");
-    log(Y);
+    llog("Y => ");
+    llog(Y);
 
     if(X0.init == false){
-      log("Initializing LMM2...");
+      llog("Initializing LMM2...");
       X0 = onesMatrix(cast(int)Y.length,1);
     }
 
@@ -208,8 +212,8 @@ LLtuple getLL(LMM2 lmmobject, double h, dmatrix X, bool stack=true, bool REML=fa
 
   mlSol ml = getMLSoln(lmmobject, h, X);
 
-  double LL  = n * std.math.log(2*std.math.PI) + sum(logDmatrix((addDMatrixNum( multiplyDmatrixNum(lmmobject.Kva,h),(1-h) ) )).elements)+
-  + n + n * std.math.log((1.0/n) * ml.Q.elements[0]); //Q
+  double LL  = n * mlog(2*PI) + sum(logDmatrix((addDMatrixNum( multiplyDmatrixNum(lmmobject.Kva,h),(1-h) ) )).elements)+
+  + n + n * mlog((1.0/n) * ml.Q.elements[0]); //Q
 
   LL = -0.5 * LL;
 
@@ -218,7 +222,7 @@ LLtuple getLL(LMM2 lmmobject, double h, dmatrix X, bool stack=true, bool REML=fa
     dmatrix XT = matrixTranspose(X);
     double XTX = det(matrixMult(XT, X));
 
-    LL_REML_part = q*std.math.log(2.0*std.math.PI* ml.sigma) + std.math.log(XTX) - std.math.log(det(ml.XX));
+    LL_REML_part = q*mlog(2.0*PI* ml.sigma) + mlog(XTX) - mlog(det(ml.XX));
     LL = LL + 0.5*LL_REML_part;
   }
 
@@ -254,7 +258,7 @@ double optimizeBrent(LMM2 lmmobject, dmatrix X, bool REML, double lower, double 
     status = gsl_min_test_interval (a, b, 0.0001, 0.0);
 
     if (status == GSL_SUCCESS)
-      log("Converged:\n");
+      llog("Converged:\n");
   }
   while (status == GSL_CONTINUE && iter < max_iter);
 
@@ -276,14 +280,14 @@ double getMax(LMM2 lmmobject, dmatrix L, dmatrix H, dmatrix X, bool REML=false){
   for(int i=1; i< n-2; i++){
     if(L.elements[i-1] < L.elements[i] && L.elements[i] > L.elements[i+1]){
       HOpt ~= optimizeBrent(lmmobject, X, REML, H.elements[i-1],H.elements[i+1]);
-      if(std.math.isNaN(HOpt[$-1])){
+      if(isNaN(HOpt[$-1])){
         HOpt[$-1] = H.elements[i-1];
       }
     }
   }
 
   if(HOpt.length > 1){
-    log("NOTE: Found multiple optima.  Returning first...\n");
+    llog("NOTE: Found multiple optima.  Returning first...\n");
     return HOpt[0];
   }
   else if(HOpt.length == 1){
@@ -340,10 +344,10 @@ auto lmm2association(LMM2 lmmobject, dmatrix X, bool stack=true, bool REML=true,
   //  If h is None, the optimal h stored in optH is used.
   //"""
   if(false){
-    log("X=",X);
-    log("q=",lmmobject.q);
-    log("lmmobject.Kve=",lmmobject.Kve);
-    log("X0t_stack=",lmmobject.X0t_stack);
+    llog("X=",X);
+    llog("q=",lmmobject.q);
+    llog("lmmobject.Kve=",lmmobject.Kve);
+    llog("X0t_stack=",lmmobject.X0t_stack);
   }
 
   if(stack){
@@ -355,7 +359,7 @@ auto lmm2association(LMM2 lmmobject, dmatrix X, bool stack=true, bool REML=true,
   LLtuple ll = getLL(lmmobject,h, X ,false,REML);
   int q  = cast(int)ll.beta.elements.length;
   double ts,ps;
-  return tstat(lmmobject, std.math.round(ll.beta.elements[q-1]*1000)/1000, ll.betaVAR.acc(q-1,q-1), ll.sigma, q);
+  return tstat(lmmobject, round(ll.beta.elements[q-1]*1000)/1000, ll.betaVAR.acc(q-1,q-1), ll.sigma, q);
 }
 
 auto tstat( LMM2 lmmobject, double beta, double var, double sigma, double q, bool log=false){
@@ -364,7 +368,7 @@ auto tstat( LMM2 lmmobject, double beta, double var, double sigma, double q, boo
   //   Calculates a t-statistic and associated p-value given the estimate of beta and its standard error.
   //   This is actually an F-test, but when only one hypothesis is being performed, it reduces to a t-test.
   //"""S
-  double ts =  beta / std.math.sqrt(var*sigma);
+  double ts =  beta / sqrt(var*sigma);
   //#ps = 2.0*(1.0 - stats.t.cdf(np.abs(ts), lmmobject.N-q))
   //# sf == survival function - this is more accurate -- could also use logsf if the precision is not good enough
   double ps;
@@ -373,7 +377,7 @@ auto tstat( LMM2 lmmobject, double beta, double var, double sigma, double q, boo
   }
   else{
     //check the sign of ts.elements[0]''
-    ps = 2.0*(normalCDF(-std.math.abs(ts)));
+    ps = 2.0*(normalCDF(-abs(ts)));
   }
 
   return Tuple!(double, double)(ts, ps);
