@@ -15,7 +15,6 @@ import std.math;
 alias mlog = std.math.log;
 
 import std.experimental.logger;
-alias llog = std.experimental.logger.log;
 
 struct LLtuple{
   double sigma, LL;
@@ -76,11 +75,11 @@ struct LMM2{
   //represent a mean effect.
 
   this(double[] Y, dmatrix K, dmatrix Kva, dmatrix Kve, dmatrix X0, bool verbose){
-    llog("Y => ");
-    llog(Y);
+    trace("Y => ");
+    trace(Y);
 
     if(X0.init == false){
-      llog("Initializing LMM2...");
+      trace("Initializing LMM2...");
       X0 = onesMatrix(cast(int)Y.length,1);
     }
 
@@ -258,7 +257,7 @@ double optimizeBrent(LMM2 lmmobject, dmatrix X, bool REML, double lower, double 
     status = gsl_min_test_interval (a, b, 0.0001, 0.0);
 
     if (status == GSL_SUCCESS)
-      llog("Converged:\n");
+      trace("Converged:\n");
   }
   while (status == GSL_CONTINUE && iter < max_iter);
 
@@ -287,7 +286,7 @@ double getMax(LMM2 lmmobject, dmatrix L, dmatrix H, dmatrix X, bool REML=false){
   }
 
   if(HOpt.length > 1){
-    llog("NOTE: Found multiple optima.  Returning first...\n");
+    trace("NOTE: Found multiple optima.  Returning first...\n");
     return HOpt[0];
   }
   else if(HOpt.length == 1){
@@ -344,10 +343,10 @@ auto lmm2association(LMM2 lmmobject, dmatrix X, bool stack=true, bool REML=true,
   //  If h is None, the optimal h stored in optH is used.
   //"""
   if(false){
-    llog("X=",X);
-    llog("q=",lmmobject.q);
-    llog("lmmobject.Kve=",lmmobject.Kve);
-    llog("X0t_stack=",lmmobject.X0t_stack);
+    trace("X=",X);
+    trace("q=",lmmobject.q);
+    trace("lmmobject.Kve=",lmmobject.Kve);
+    trace("X0t_stack=",lmmobject.X0t_stack);
   }
 
   if(stack){

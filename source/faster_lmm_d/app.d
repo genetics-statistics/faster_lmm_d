@@ -9,6 +9,7 @@ import std.math : round;
 import std.typecons;
 import core.stdc.stdlib : exit;
 import std.experimental.logger;
+
 import faster_lmm_d.rqtlreader;
 import faster_lmm_d.tsvreader;
 import faster_lmm_d.lmm;
