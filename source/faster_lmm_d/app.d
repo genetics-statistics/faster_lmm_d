@@ -7,6 +7,7 @@ import std.getopt;
 import std.json;
 import std.math : round;
 import std.typecons;
+import core.stdc.stdlib : exit;
 import std.experimental.logger;
 import faster_lmm_d.rqtlreader;
 import faster_lmm_d.tsvreader;
@@ -29,12 +30,7 @@ void main(string[] args)
   int pheno_column;
   string cmd;
 
-  globalLogLevel(LogLevel.warning);
-
-  auto f = new FileLogger(stdout);
-  f.logLevel = LogLevel.info;
-  assert(f.logLevel == LogLevel.info);
-
+  globalLogLevel(LogLevel.warning); //default
 
   getopt(args, "control", &ocontrol, "kinship", &okinship, "pheno", &opheno, "geno", &ogeno, "useBLAS", &useBLAS, "noBLAS", &noBLAS, "noCUDA", &noCUDA, "pheno_column", &pheno_column, "cmd", &cmd, "logging", &ologging);
 
@@ -56,15 +52,13 @@ void main(string[] args)
   if(okinship){
     //string k = reader.kinship(kinship);
     //kinship(kinship);
-    log("k.shape");
+    // trace("k.shape");
   }
 
-  if(ologging){
+  if(ologging) {
+    writeln("Setting logger to " ~ ologging);
     switch (ologging){
       case "debug":
-        globalLogLevel(LogLevel.error);
-        break;
-      case "trace":
         globalLogLevel(LogLevel.trace);
         break;
       case "info":
@@ -76,11 +70,8 @@ void main(string[] args)
       case "critical":
         globalLogLevel(LogLevel.critical);
         break;
-      case "fatal":
-        globalLogLevel(LogLevel.fatal);
-        break;
       default:
-        globalLogLevel(LogLevel.info);
+        assert(false); // should never happen
     }
   }
 
@@ -98,7 +89,7 @@ void main(string[] args)
       y = pTuple[0];
       ynames = pTuple[1];
     }
-    log(y.sizeof);
+    trace(y.sizeof);
   }
 
   dmatrix g;
@@ -114,18 +105,18 @@ void main(string[] args)
     }
     g = g1.geno;
     gnames = g1.gnames;
-    log(g.shape);
+    trace(g.shape);
   }
 
   if(useBLAS){
     bool optmatrixUseBLAS = true;
-    log(optmatrixUseBLAS);
+    trace(optmatrixUseBLAS);
     info("Forcing BLAS support");
   }
 
   if(noBLAS){
     bool optmatrixUseBLAS = false;
-    log(optmatrixUseBLAS);
+    trace(optmatrixUseBLAS);
     info("Disabling BLAS support");
   }
 
@@ -140,7 +131,7 @@ void main(string[] args)
   int m;
 
   void check_results(double[] ps, double[] ts){
-    log(ps.length, "\n", sum(ps));
+    trace(ps.length, "\n", sum(ps));
     double p1 = ps[0];
     double p2 = ps[$-1];
     if(ogeno == "data/small.geno"){
@@ -166,9 +157,9 @@ void main(string[] args)
 
   if(g.shape[0] != y.sizeof){
     info("Reduce geno matrix to match phenotype strains");
-    log("gnames and ynames");
-    log(gnames);
-    log(ynames);
+    trace("gnames and ynames");
+    trace(gnames);
+    trace(ynames);
     int[] gidx = [];
     int index = 0;
     foreach(ind; ynames){
@@ -181,12 +172,12 @@ void main(string[] args)
       index++;
       gnames.popFront;
     }
-    log(gidx);
+    trace(gidx);
     dmatrix gTranspose = matrixTranspose(g);
     dmatrix slicedMatrix = sliceDmatrix(gTranspose, gidx);
-    log(slicedMatrix.shape);
+    trace(slicedMatrix.shape);
     dmatrix g2 = matrixTranspose(slicedMatrix);
-    log("geno matrix ",g.shape," reshaped to ",g2.shape);
+    trace("geno matrix ",g.shape," reshaped to ",g2.shape);
     g = g2;
   }
 
@@ -200,8 +191,8 @@ void main(string[] args)
     auto gwas = run_gwas("other",n,m,k,y,g); //<--- pass in geno by SNP
     double[] ts = gwas[0];
     double[] ps = gwas[1];
-    log(ts);
-    log(ps);
+    trace(ts);
+    trace(ps);
     writeln("ps : ",ps[0],",",ps[1],",",ps[2],"...",ps[n-3],",",ps[n-2],",",ps[n-1]);
     check_results(ps,ts);
   }
@@ -215,8 +206,8 @@ void main(string[] args)
     auto gwas = run_gwas("other",n,m,k,y,g);
     double[] ts = gwas[0];
     double[] ps = gwas[1];
-    log(ts);
-    log(ps);
+    trace(ts);
+    trace(ps);
     writeln("ps : ",ps[0],",",ps[1],",",ps[2],"...",ps[n-3],",",ps[n-2],",",ps[n-1]);
     check_results(ps,ts);
   }
@@ -228,7 +219,7 @@ void main(string[] args)
 //      check_results(ps,ts)
   }
   else{
-    log("Doing nothing");
+    trace("Doing nothing");
   }
 
 
@@ -237,9 +228,9 @@ void main(string[] args)
     //auto k1 = std.math.round(K[0][0],4);
     //auto k2 = std.math.round(K2[0][0],4);
 
-    //log("Genotype",G.shape, "\n", G);
+    //trace("Genotype",G.shape, "\n", G);
     //auto K3 = kinship(G);
-    //log("third Kinship method",K3.shape,"\n",K3);
+    //trace("third Kinship method",K3.shape,"\n",K3);
     //sys.stderr.write(options.geno+"\n");
     //auto k3 = std.math.round(K3[0][0],4);
     //assert(k3 == 1.4352);
