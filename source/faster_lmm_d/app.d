@@ -21,45 +21,29 @@ import faster_lmm_d.helpers;
 import faster_lmm_d.optimize;
 //import gperftools_d.profiler;
 
-// LogLevel logLevel;
-
 void main(string[] args)
 {
-  // Main routine
   //ProfilerStart();
 
-  string ocontrol, okinship, opheno, ogeno, useBLAS, noBLAS, noCUDA, ologging;
-  int pheno_column;
+  string option_control, option_kinship, option_pheno, option_geno, useBLAS, noBLAS, noCUDA, option_logging;
+  int option_pheno_column;
   string cmd;
 
   globalLogLevel(LogLevel.warning); //default
 
-  getopt(args, "control", &ocontrol, "kinship", &okinship, "pheno", &opheno, "geno", &ogeno, "useBLAS", &useBLAS, "noBLAS", &noBLAS, "noCUDA", &noCUDA, "pheno_column", &pheno_column, "cmd", &cmd, "logging", &ologging);
+  getopt(args, "control", &option_control, "kinship", &option_kinship, "pheno", &option_pheno, "geno", &option_geno, "useBLAS", &useBLAS, "noBLAS", &noBLAS, "noCUDA", &noCUDA, "option_pheno_column", &option_pheno_column, "cmd", &cmd, "logging", &option_logging);
 
   trace(cmd);
   JSONValue ctrl;
 
-  if(cmd == "rqtl"){
-    trace("import rqtlreader as reader");
-  }
-  else{
-    trace("import tsvreader as reader");
-  }
-
-  if(ocontrol){
-    ctrl = control(ocontrol);//type
+  if(option_control){
+    ctrl = control(option_control);//type
     trace(ctrl);
   }
 
-  if(okinship){
-    //string k = reader.kinship(kinship);
-    //kinship(kinship);
-    // trace("k.shape");
-  }
-
-  if(ologging) {
-    writeln("Setting logger to " ~ ologging);
-    switch (ologging){
+  if(option_logging) {
+    writeln("Setting logger to " ~ option_logging);
+    switch (option_logging){
       case "debug":
         globalLogLevel(LogLevel.trace);
         break;
@@ -80,14 +64,14 @@ void main(string[] args)
   double[] y;
   string[] ynames;
 
-  if(opheno){
+  if(option_pheno){
     if(cmd == "rqtl"){
-      auto pTuple = pheno(opheno, pheno_column);
+      auto pTuple = pheno(option_pheno, option_pheno_column);
       y = pTuple[0];
       ynames = pTuple[1];
     }
     else{
-      auto pTuple = tsvpheno(opheno, pheno_column);
+      auto pTuple = tsvpheno(option_pheno, option_pheno_column);
       y = pTuple[0];
       ynames = pTuple[1];
     }
@@ -97,13 +81,13 @@ void main(string[] args)
   dmatrix g;
   string[] gnames;
 
-  if(ogeno && cmd != "iterator"){
+  if(option_geno && cmd != "iterator"){
     genoObj g1;
     if(cmd == "rqtl"){
-      g1 = geno(ogeno, ctrl);
+      g1 = geno(option_geno, ctrl);
     }
     else{
-      g1 = tsvgeno(ogeno, ctrl);
+      g1 = tsvgeno(option_geno, ctrl);
     }
     g = g1.geno;
     gnames = g1.gnames;
@@ -127,36 +111,29 @@ void main(string[] args)
     info("Disabling CUDA support");
   }
 
-  //geno_callback("data/small.geno");
-
-  int n;
-  int m;
-
   void check_results(double[] ps, double[] ts){
     trace(ps.length, "\n", sum(ps));
     double p1 = ps[0];
     double p2 = ps[$-1];
-    if(ogeno == "data/small.geno"){
-      info("Validating results for ", ogeno);
+    if(option_geno == "data/small.geno"){
+      info("Validating results for ", option_geno);
       enforce(modDiff(p1,0.7387)<0.001);
       enforce(modDiff(p2,0.7387)<0.001);
     }
-    if(ogeno == "data/small_na.geno"){
-      info("Validating results for ", ogeno);
+    if(option_geno == "data/small_na.geno"){
+      info("Validating results for ", option_geno);
       enforce(modDiff(p1,0.062)<0.001);
       enforce(modDiff(p2,0.062)<0.001);
     }
-    if(ogeno == "data/test8000.geno"){
-      info("Validating results for ",ogeno," ",sum(ps));
+    if(option_geno == "data/test8000.geno"){
+      info("Validating results for ",option_geno," ",sum(ps));
       enforce(round(sum(ps)) == 4071);
       enforce(ps.length == 8000);
     }
     info("Run completed");
   }
 
-
-  // If there are less phenotypes than strains, reduce the genotype matrix
-
+  // ---- If there are less phenotypes than strains, reduce the genotype matrix:
   if(g.shape[0] != y.sizeof){
     info("Reduce geno matrix to match phenotype strains");
     trace("gnames and ynames");
@@ -183,59 +160,16 @@ void main(string[] args)
     g = g2;
   }
 
-  if(cmd == "run"){
-    //if options.remove_missing_phenotypes{
-    //  raise Exception('Can not use --remove-missing-phenotypes with LMM2')
-    //}
-    n = cast(int)y.length;
-    m = g.shape[1];
-    dmatrix k;
-    auto gwas = run_gwas("other",n,m,k,y,g); //<--- pass in geno by SNP
-    double[] ts = gwas[0];
-    double[] ps = gwas[1];
-    trace(ts);
-    trace(ps);
-    writeln("ps : ",ps[0],",",ps[1],",",ps[2],"...",ps[n-3],",",ps[n-2],",",ps[n-1]);
-    check_results(ps,ts);
-  }
-  else if(cmd == "rqtl"){
-    //if options.remove_missing_phenotypes{
-    //  raise Exception('Can not use --remove-missing-phenotypes with LMM2')
-    //}
-    n = cast(int)y.length;
-    m = g.shape[1];
-    dmatrix k;
-    auto gwas = run_gwas("other",n,m,k,y,g);
-    double[] ts = gwas[0];
-    double[] ps = gwas[1];
-    trace(ts);
-    trace(ps);
-    writeln("ps : ",ps[0],",",ps[1],",",ps[2],"...",ps[n-3],",",ps[n-2],",",ps[n-1]);
-    check_results(ps,ts);
-  }
-  else if(cmd == "iterator"){
-//     if options.remove_missing_phenotypes:
-//          raise Exception('Can not use --remove-missing-phenotypes with LMM2')
-//      geno_iterator =  reader.geno_iter(options.geno)
-//      ps, ts = gn2_load_redis_iter('testrun_iter','other',k,y,geno_iterator)
-//      check_results(ps,ts)
-  }
-  else{
-    trace("Doing nothing");
-  }
+  int n = cast(int)y.length;
+  int m = g.shape[1];
+  dmatrix k;
+  auto gwas = run_gwas("other",n,m,k,y,g);
+  double[] ts = gwas[0];
+  double[] ps = gwas[1];
+  trace(ts);
+  trace(ps);
+  writeln("ps : ",ps[0],",",ps[1],",",ps[2],"...",ps[n-3],",",ps[n-2],",",ps[n-1]);
+  check_results(ps,ts);
 
-
-  if(ogeno =="data/test8000.geno" && opheno == "data/test8000.pheno"){
-    //K = kinship_full(G);
-    //auto k1 = std.math.round(K[0][0],4);
-    //auto k2 = std.math.round(K2[0][0],4);
-
-    //trace("Genotype",G.shape, "\n", G);
-    //auto K3 = kinship(G);
-    //trace("third Kinship method",K3.shape,"\n",K3);
-    //sys.stderr.write(options.geno+"\n");
-    //auto k3 = std.math.round(K3[0][0],4);
-    //assert(k3 == 1.4352);
-  }
   //ProfilerStop();
 }
