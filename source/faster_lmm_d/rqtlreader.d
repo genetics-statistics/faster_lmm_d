@@ -7,18 +7,14 @@
 
 module faster_lmm_d.rqtlreader;
 
-import std.stdio;
-import std.string;
-import std.array;
 import std.csv;
-import std.getopt;
-import std.typecons;
-import std.json;
 import std.conv;
-import std.range;
-import std.file;
 import std.experimental.logger;
+import std.file;
+import std.json;
 import std.regex;
+import std.typecons;
+
 import dyaml.all;
 
 import faster_lmm_d.dmatrix;

@@ -7,10 +7,10 @@
 
 module faster_lmm_d.lmm2;
 
-import std.typecons;
 import std.experimental.logger;
 import std.math;
 alias mlog = std.math.log;
+import std.typecons;
 
 import dstats.distrib;
 import gsl.errno;
@@ -18,9 +18,9 @@ import gsl.math;
 import gsl.min;
 
 import faster_lmm_d.dmatrix;
-import faster_lmm_d.optmatrix;
 import faster_lmm_d.helpers;
 import faster_lmm_d.kinship;
+import faster_lmm_d.optmatrix;
 
 struct LLtuple{
   double sigma, LL;

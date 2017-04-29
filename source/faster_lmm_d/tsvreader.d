@@ -7,17 +7,14 @@
 
 module faster_lmm_d.tsvreader;
 
-import std.stdio;
-import std.json;
-import std.conv;
-import std.range;
-import std.file;
-import std.typecons;
-import std.string;
-import std.array;
 import std.csv;
-import std.regex;
+import std.conv;
 import std.experimental.logger;
+import std.file;
+import std.json;
+import std.regex;
+import std.string;
+import std.typecons;
 
 import faster_lmm_d.dmatrix;
 import faster_lmm_d.optmatrix;

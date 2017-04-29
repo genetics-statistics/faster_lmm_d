@@ -7,14 +7,14 @@
 
 module faster_lmm_d.kinship;
 
-import std.stdio;
+import core.sys.posix.stdlib: exit;
 import std.exception;
 import std.experimental.logger;
-import core.sys.posix.stdlib: exit;
+import std.stdio;
 
 import faster_lmm_d.dmatrix;
-import faster_lmm_d.optmatrix;
 import faster_lmm_d.helpers;
+import faster_lmm_d.optmatrix;
 
 alias immutable(long) ii;
 alias immutable(ulong) iu;

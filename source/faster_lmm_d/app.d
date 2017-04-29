@@ -5,27 +5,27 @@
    Copyright © 2017 Prasun Anand & Pjotr Prins
 */
 
-import std.stdio;
-import std.string;
+import core.stdc.stdlib : exit;
 import std.array;
 import std.conv;
 import std.csv;
-import std.regex;
+import std.exception;
+import std.experimental.logger;
 import std.getopt;
+import std.regex;
 import std.json;
 import std.math : round;
+import std.string;
+import std.stdio;
 import std.typecons;
-import std.exception;
-import core.stdc.stdlib : exit;
-import std.experimental.logger;
 
+import faster_lmm_d.dmatrix;
+import faster_lmm_d.gwas;
+import faster_lmm_d.helpers;
+import faster_lmm_d.lmm;
+import faster_lmm_d.optmatrix;
 import faster_lmm_d.rqtlreader;
 import faster_lmm_d.tsvreader;
-import faster_lmm_d.lmm;
-import faster_lmm_d.gwas;
-import faster_lmm_d.dmatrix;
-import faster_lmm_d.optmatrix;
-import faster_lmm_d.helpers;
 
 //import gperftools_d.profiler;
 
@@ -57,10 +57,9 @@ void main(string[] args)
 {
   //ProfilerStart();
 
-  string option_control, option_kinship, option_pheno, option_geno, useBLAS, noBLAS, noCUDA, option_logging;
+  string cmd, option_control, option_kinship, option_pheno, option_geno, useBLAS, noBLAS, noCUDA, option_logging;
   bool option_help = false;
   int option_pheno_column;
-  string cmd;
 
   globalLogLevel(LogLevel.warning); //default
 

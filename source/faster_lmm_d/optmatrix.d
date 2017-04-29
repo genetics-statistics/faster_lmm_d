@@ -7,14 +7,15 @@
 
 module faster_lmm_d.optmatrix;
 
-import std.stdio;
 import std.experimental.logger;
 import std.math: sqrt, round;
+import std.stdio;
 
 import cblas : gemm, Transpose, Order;
 
 import faster_lmm_d.arrayfire;
-
+import faster_lmm_d.dmatrix;
+import faster_lmm_d.helpers;
 
 extern (C) {
   int LAPACKE_dgetrf (int matrix_layout, int m, int n, double* a, int lda, int* ipiv);
@@ -23,9 +24,6 @@ extern (C) {
                       int* m, double* w, double* z, int ldz, int* isuppz);
   int LAPACKE_dgetri (int matrix_layout, int n, double* a, int lda, const(int)* ipiv);
 }
-
-import faster_lmm_d.dmatrix;
-import faster_lmm_d.helpers;
 
 struct eighTuple{
   dmatrix kva, kve;
@@ -232,8 +230,6 @@ eighTuple eigh(dmatrix input) {
   }
   return eighTuple(kva, kve);
 }
-
-
 
 double det(dmatrix input) {
   double[] narr = input.elements.dup;

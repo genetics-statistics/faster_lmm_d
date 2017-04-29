@@ -8,14 +8,14 @@
 module faster_lmm_d.lmm;
 
 import std.exception;
+import std.experimenta.l.logger;
 import std.typecons;
-import std.experimental.logger;
 
 import faster_lmm_d.dmatrix;
 import faster_lmm_d.gwas;
 import faster_lmm_d.helpers;
-import faster_lmm_d.optmatrix;
 import faster_lmm_d.kinship;
+import faster_lmm_d.optmatrix;
 import faster_lmm_d.phenotype;
 
 struct KGstruct{

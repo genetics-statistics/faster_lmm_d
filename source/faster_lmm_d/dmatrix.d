@@ -198,39 +198,6 @@ bool eqeq(dmatrix lha, dmatrix rha) {
   return true;
 }
 
-
-unittest{
-  dmatrix d = dmatrix([2,2],[1,2,3,4]);
-
-  // Test equality of two dmatrixes
-  dmatrix lha = dmatrix([3,3], [1,2,3, 4,5,6, 7,8,9]);
-  dmatrix rha = dmatrix([3,3], [1.001,2,3, 4,5,6, 7,8,9]);
-  assert(eqeq(lha, rha));
-
-  // Test the fields of a dmatrix
-  assert(d.shape == [2,2]);
-  assert(d.elements == [1,2,3,4]);
-
-  // Test elementwise operations
-  dmatrix d2 = dmatrix([2,2],[2,4,5,6]);
-  dmatrix d3 = dmatrix([2,2],[3,6,8,10]);
-  assert(addDmatrix(d, d2) == d3);
-  assert(subDmatrix(d3, d2) == d);
-
-  dmatrix d4 = dmatrix([2,2],[6,24,40,60]);
-  assert(multiplyDmatrix(d2,d3) == d4);
-
-  assert(multiplyDmatrixNum(d2,1) == d2);
-  assert(divideDmatrixNum(d2,1) == d2);
-
-  dmatrix zeroMat = dmatrix([3,3], [0,0,0, 0,0,0, 0,0,0]);
-  assert(zerosMatrix(3,3) == zeroMat);
-
-  dmatrix onesMat = dmatrix([3,3], [1,1,1, 1,1,1, 1,1,1]);
-  assert(onesMatrix(3,3) == onesMat);
-
-}
-
 dmatrix getCol(dmatrix input, int colNo) {
   double[] arr;
   for(int i=0; i<input.shape[0]; i++) {
@@ -272,4 +239,37 @@ void nanCounter(dmatrix input) {
   if(nanCounter>0){
     writefln("NaNs encountered => %d", nanCounter);
   }
+}
+
+
+unittest{
+  dmatrix d = dmatrix([2,2],[1,2,3,4]);
+
+  // Test equality of two dmatrixes
+  dmatrix lha = dmatrix([3,3], [1,2,3, 4,5,6, 7,8,9]);
+  dmatrix rha = dmatrix([3,3], [1.001,2,3, 4,5,6, 7,8,9]);
+  assert(eqeq(lha, rha));
+
+  // Test the fields of a dmatrix
+  assert(d.shape == [2,2]);
+  assert(d.elements == [1,2,3,4]);
+
+  // Test elementwise operations
+  dmatrix d2 = dmatrix([2,2],[2,4,5,6]);
+  dmatrix d3 = dmatrix([2,2],[3,6,8,10]);
+  assert(addDmatrix(d, d2) == d3);
+  assert(subDmatrix(d3, d2) == d);
+
+  dmatrix d4 = dmatrix([2,2],[6,24,40,60]);
+  assert(multiplyDmatrix(d2,d3) == d4);
+
+  assert(multiplyDmatrixNum(d2,1) == d2);
+  assert(divideDmatrixNum(d2,1) == d2);
+
+  dmatrix zeroMat = dmatrix([3,3], [0,0,0, 0,0,0, 0,0,0]);
+  assert(zerosMatrix(3,3) == zeroMat);
+
+  dmatrix onesMat = dmatrix([3,3], [1,1,1, 1,1,1, 1,1,1]);
+  assert(onesMatrix(3,3) == onesMat);
+
 }

@@ -7,13 +7,13 @@
 
 module faster_lmm_d.gwas;
 
+import std.experimental.logger;
 import std.stdio;
 import std.typecons;
-import std.experimental.logger;
 
-import faster_lmm_d.lmm2;
-import faster_lmm_d.dmatrix;
 import dstats.distrib;
+import faster_lmm_d.dmatrix;
+import faster_lmm_d.lmm2;
 import faster_lmm_d.optmatrix;
 
 
@@ -21,10 +21,9 @@ auto gwas(double[] Y, dmatrix G, dmatrix K, bool restricted_max_likelihood = tru
 
   trace("In gwas.gwas");
 
-  int n = G.shape[1]; // inds
-  int inds = n;
-  int m = G.shape[0]; // snps
-  int snps = m;
+  int inds = G.shape[1];
+  int snps = G.shape[0];
+
   infof("%d SNPs",snps);
 
   if( snps < inds ){
@@ -48,14 +47,14 @@ auto gwas(double[] Y, dmatrix G, dmatrix K, bool restricted_max_likelihood = tru
     log("heritability= ", lmm2.optH, " sigma= ", lmm2.optSigma, " LL= ", fit.fit_LL);
   }
 
-  double[] ps = new double[m];
-  double[] ts = new double[m];
+  double[] ps = new double[snps];
+  double[] ts = new double[snps];
   info(G.shape);
-  info("m is ", m);
+  info("snps is ", snps);
 
-  for(int i=0; i<m; i++){
+  for(int i=0; i<snps; i++){
     dmatrix x = getRow(G, i);
-    x.shape = [n,1];
+    x.shape = [inds, 1];
     auto tsps = lmm2association(lmm2, x, true,true);
     ps[i] = tsps[1];
     ts[i] = tsps[0];
