@@ -1,6 +1,7 @@
 import std.stdio;
 import std.string;
 import std.array;
+import std.conv;
 import std.csv;
 import std.regex;
 import std.getopt;
@@ -43,6 +44,7 @@ void printUsage() {
     stderr.writeln("Leave bug reports and feature requests at");
     stderr.writeln("https://github.com/prasunanand/faster_lmm_d/issues");
     stderr.writeln();
+    exit(0);
 }
 
 void main(string[] args)
@@ -71,10 +73,7 @@ void main(string[] args)
     "help", &option_help
   );
 
-  if(option_help){
-    printUsage();
-    exit(0);
-  }
+  if(option_help || !cmd) printUsage();
 
   trace(cmd);
   JSONValue ctrl;
@@ -154,28 +153,6 @@ void main(string[] args)
     info("Disabling CUDA support");
   }
 
-  void check_results(double[] ps, double[] ts){
-    trace(ps.length, "\n", sum(ps));
-    double p1 = ps[0];
-    double p2 = ps[$-1];
-    if(option_geno == "data/small.geno"){
-      info("Validating results for ", option_geno);
-      enforce(modDiff(p1,0.7387)<0.001);
-      enforce(modDiff(p2,0.7387)<0.001);
-    }
-    if(option_geno == "data/small_na.geno"){
-      info("Validating results for ", option_geno);
-      enforce(modDiff(p1,0.062)<0.001);
-      enforce(modDiff(p2,0.062)<0.001);
-    }
-    if(option_geno == "data/test8000.geno"){
-      info("Validating results for ",option_geno," ",sum(ps));
-      enforce(round(sum(ps)) == 4071);
-      enforce(ps.length == 8000);
-    }
-    info("Run completed");
-  }
-
   // ---- If there are less phenotypes than strains, reduce the genotype matrix:
   if(g.shape[0] != y.sizeof){
     info("Reduce geno matrix to match phenotype strains");
@@ -212,6 +189,35 @@ void main(string[] args)
   trace(ts);
   trace(ps);
   writeln("ps : ",ps[0],",",ps[1],",",ps[2],"...",ps[n-3],",",ps[n-2],",",ps[n-1]);
+
+  void check_results(double[] ps, double[] ts){
+    trace(ps.length, "\n", sum(ps));
+    double p1 = ps[0];
+    double p2 = ps[$-1];
+    if(option_geno == "data/small.geno"){
+      info("Validating results for ", option_geno);
+      enforce(modDiff(p1,0.7387)<0.001);
+      enforce(modDiff(p2,0.7387)<0.001);
+    }
+    if(option_geno == "data/small_na.geno"){
+      info("Validating results for ", option_geno);
+      enforce(modDiff(p1,0.062)<0.001);
+      enforce(modDiff(p2,0.062)<0.001);
+    }
+    if(option_geno == "data/genenetwork/BXD.csv"){
+      info("Validating results for ", option_geno);
+      enforce(round(sum(ps)) == 1901);
+
+      enforce(ps.length == 3811,"size is " ~ to!string(ps.length));
+    }
+    if(option_geno == "data/test8000.geno"){
+      info("Validating results for ",option_geno," ",sum(ps));
+      enforce(round(sum(ps)) == 4071);
+      enforce(ps.length == 8000);
+    }
+    info("Run completed");
+  }
+
   check_results(ps,ts);
 
   //ProfilerStop();
