@@ -1,6 +1,14 @@
+/*
+   This code is part of faster_lmm_d and published under the GPLv3
+   License (see LICENSE.txt)
+
+   Copyright © 2017 Prasun Anand & Pjotr Prins
+*/
+
 import std.stdio;
 import std.string;
 import std.array;
+import std.conv;
 import std.csv;
 import std.regex;
 import std.getopt;
@@ -43,6 +51,7 @@ void printUsage() {
     stderr.writeln("Leave bug reports and feature requests at");
     stderr.writeln("https://github.com/prasunanand/faster_lmm_d/issues");
     stderr.writeln();
+    exit(0);
 }
 
 void main(string[] args)
@@ -71,17 +80,25 @@ void main(string[] args)
     "help", &option_help
   );
 
-  if(option_help){
-    printUsage();
-    exit(0);
-  }
+  if(option_help || !cmd) printUsage();
 
   trace(cmd);
-  JSONValue ctrl;
 
-  if(option_control){
-    ctrl = control(option_control);//type
-    trace(ctrl);
+  if(useBLAS){
+    bool optmatrixUseBLAS = true;
+    trace(optmatrixUseBLAS);
+    info("Forcing BLAS support");
+  }
+
+  if(noBLAS){
+    bool optmatrixUseBLAS = false;
+    trace(optmatrixUseBLAS);
+    info("Disabling BLAS support");
+  }
+
+  if(noCUDA){
+    bool cudauseCUDA = false;
+    info("Disabling CUDA support");
   }
 
   if(option_logging) {
@@ -104,9 +121,16 @@ void main(string[] args)
     }
   }
 
+  // ---- Control
+  JSONValue ctrl;
+  if(option_control){
+    ctrl = control(option_control);//type
+    trace(ctrl);
+  }
+
+  // ---- Phenotypes
   double[] y;
   string[] ynames;
-
   if(option_pheno){
     if(cmd == "rqtl"){
       auto pTuple = pheno(option_pheno, option_pheno_column);
@@ -121,9 +145,9 @@ void main(string[] args)
     trace(y.sizeof);
   }
 
+  // ---- Genotypes
   dmatrix g;
   string[] gnames;
-
   if(option_geno && cmd != "iterator"){
     genoObj g1;
     if(cmd == "rqtl"){
@@ -135,45 +159,6 @@ void main(string[] args)
     g = g1.geno;
     gnames = g1.gnames;
     trace(g.shape);
-  }
-
-  if(useBLAS){
-    bool optmatrixUseBLAS = true;
-    trace(optmatrixUseBLAS);
-    info("Forcing BLAS support");
-  }
-
-  if(noBLAS){
-    bool optmatrixUseBLAS = false;
-    trace(optmatrixUseBLAS);
-    info("Disabling BLAS support");
-  }
-
-  if(noCUDA){
-    bool cudauseCUDA = false;
-    info("Disabling CUDA support");
-  }
-
-  void check_results(double[] ps, double[] ts){
-    trace(ps.length, "\n", sum(ps));
-    double p1 = ps[0];
-    double p2 = ps[$-1];
-    if(option_geno == "data/small.geno"){
-      info("Validating results for ", option_geno);
-      enforce(modDiff(p1,0.7387)<0.001);
-      enforce(modDiff(p2,0.7387)<0.001);
-    }
-    if(option_geno == "data/small_na.geno"){
-      info("Validating results for ", option_geno);
-      enforce(modDiff(p1,0.062)<0.001);
-      enforce(modDiff(p2,0.062)<0.001);
-    }
-    if(option_geno == "data/test8000.geno"){
-      info("Validating results for ",option_geno," ",sum(ps));
-      enforce(round(sum(ps)) == 4071);
-      enforce(ps.length == 8000);
-    }
-    info("Run completed");
   }
 
   // ---- If there are less phenotypes than strains, reduce the genotype matrix:
@@ -203,15 +188,45 @@ void main(string[] args)
     g = g2;
   }
 
+  // ---- Run GWAS
   int n = cast(int)y.length;
   int m = g.shape[1];
   dmatrix k;
-  auto gwas = run_gwas("other",n,m,k,y,g);
+  auto gwas = run_gwas(n,m,k,y,g);
   double[] ts = gwas[0];
   double[] ps = gwas[1];
   trace(ts);
   trace(ps);
   writeln("ps : ",ps[0],",",ps[1],",",ps[2],"...",ps[n-3],",",ps[n-2],",",ps[n-1]);
+
+  void check_results(double[] ps, double[] ts){
+    trace(ps.length, "\n", sum(ps));
+    double p1 = ps[0];
+    double p2 = ps[$-1];
+    if(option_geno == "data/small.geno"){
+      info("Validating results for ", option_geno);
+      enforce(modDiff(p1,0.7387)<0.001);
+      enforce(modDiff(p2,0.7387)<0.001);
+    }
+    if(option_geno == "data/small_na.geno"){
+      info("Validating results for ", option_geno);
+      enforce(modDiff(p1,0.062)<0.001);
+      enforce(modDiff(p2,0.062)<0.001);
+    }
+    if(option_geno == "data/genenetwork/BXD.csv"){
+      info("Validating results for ", option_geno);
+      enforce(round(sum(ps)) == 1901);
+
+      enforce(ps.length == 3811,"size is " ~ to!string(ps.length));
+    }
+    if(option_geno == "data/test8000.geno"){
+      info("Validating results for ",option_geno," ",sum(ps));
+      enforce(round(sum(ps)) == 4071);
+      enforce(ps.length == 8000);
+    }
+    info("Run completed");
+  }
+
   check_results(ps,ts);
 
   //ProfilerStop();
