@@ -6,6 +6,7 @@
 */
 
 module faster_lmm_d.phenotype;
+
 import faster_lmm_d.dmatrix;
 import faster_lmm_d.helpers;
 
@@ -24,9 +25,9 @@ struct phenoStruct{
 }
 
 phenoStruct remove_missing( int n, double[] y){
-  //"""
+
   //Remove missing data. Returns new n,y,keep
-  //"""
+
   trace("In remove missing new");
   bool[] v = isnan(y);
   bool[] keep = negateBool(v);
