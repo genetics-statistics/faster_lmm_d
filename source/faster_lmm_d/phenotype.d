@@ -23,8 +23,6 @@ phenoStruct remove_missing( int n, double[] y){
   trace("In remove missing new");
   bool[] v = isnan(y);
   bool[] keep = negateBool(v);
-  //if v.sum():
-  //    info("runlmm.py: Cleaning the phenotype vector by removing %d individuals" % (v.sum()))
   double[] Y = getNumArray(y,keep);
   n = cast(int)Y.length;
   return phenoStruct(Y, keep, n);
