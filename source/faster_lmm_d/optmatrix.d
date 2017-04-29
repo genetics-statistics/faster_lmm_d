@@ -9,13 +9,18 @@ module faster_lmm_d.optmatrix;
 
 import std.stdio;
 import std.experimental.logger;
+import std.math: sqrt, round;
+
 import cblas : gemm, Transpose, Order;
+
 import faster_lmm_d.arrayfire;
-import std.math;
+
 
 extern (C) {
   int LAPACKE_dgetrf (int matrix_layout, int m, int n, double* a, int lda, int* ipiv);
-  int LAPACKE_dsyevr (int matrix_layout, char jobz, char range, char uplo, int n, double* a, int lda, double vl, double vu, int il, int iu, double abstol, int* m, double* w, double* z, int ldz, int* isuppz);
+  int LAPACKE_dsyevr (int matrix_layout, char jobz, char range, char uplo, int n,
+                      double* a, int lda, double vl, double vu, int il, int iu, double abstol,
+                      int* m, double* w, double* z, int ldz, int* isuppz);
   int LAPACKE_dgetri (int matrix_layout, int n, double* a, int lda, const(int)* ipiv);
 }
 
@@ -92,7 +97,8 @@ void pPrint(dmatrix input) {
 void pPrint2(dmatrix input) {
   writeln("[");
   for(int i=0; i < input.shape[0]; i++) {
-    writeln(input.elements[(input.shape[1]*i)..(input.shape[1]*i+3)],"...", input.elements[(input.shape[1]*(i+1)-3)..(input.shape[1]*(i+1))]);
+    writeln(input.elements[(input.shape[1]*i)..(input.shape[1]*i+3)],"...",
+      input.elements[(input.shape[1]*(i+1)-3)..(input.shape[1]*(i+1))]);
   }
   writeln("]");
 }
@@ -101,11 +107,13 @@ void pPrint3(dmatrix input) {
   writeln("[");
   if(input.shape[0]>6) {
     for(int i=0; i < 3; i++) {
-      writeln(input.elements[(input.shape[1]*i)..(input.shape[1]*i+3)],"...", input.elements[(input.shape[1]*(i+1)-3)..(input.shape[1]*(i+1))]);
+      writeln(input.elements[(input.shape[1]*i)..(input.shape[1]*i+3)],"...",
+        input.elements[(input.shape[1]*(i+1)-3)..(input.shape[1]*(i+1))]);
     }
     writeln("...");
     for(int i=input.shape[0]-3; i < input.shape[0]; i++) {
-      writeln(input.elements[(input.shape[1]*i)..(input.shape[1]*i+3)],"...", input.elements[(input.shape[1]*(i+1)-3)..(input.shape[1]*(i+1))]);
+      writeln(input.elements[(input.shape[1]*i)..(input.shape[1]*i+3)],"...",
+        input.elements[(input.shape[1]*(i+1)-3)..(input.shape[1]*(i+1))]);
     }
   }
 
@@ -115,8 +123,6 @@ void pPrint3(dmatrix input) {
 
 dmatrix sliceDmatrix(dmatrix input, int[] along) {
   trace("In sliceDmatrix");
-  //writeln(along.length);
-  //writeln(along);
   double[] output;
   foreach(int rowIndex; along) {
     for(int i=rowIndex*input.shape[1]; i < (rowIndex+1)*input.shape[1]; i++) {
@@ -213,7 +219,9 @@ eighTuple eigh(dmatrix input) {
   int ldz = n;
   double abstol = 0.001; //default value for abstol
 
-  LAPACKE_dsyevr(101, 'V', 'A', 'L', n, elements.ptr, n, vl, vu, il, iu, abstol, m.ptr, w.ptr, z.ptr, ldz, isuppz.ptr);
+  LAPACKE_dsyevr(101, 'V', 'A', 'L', n,
+                elements.ptr, n, vl, vu, il, iu, abstol,
+                m.ptr, w.ptr, z.ptr, ldz, isuppz.ptr);
 
   dmatrix kva = dmatrix([input.shape[0],1], roundedNearest(w));
   dmatrix kve = dmatrix(input.shape, z);
@@ -287,14 +295,4 @@ unittest{
   assert(matrixMultT(d2, d6) == d7);
 
   assert(det(d4) == 2);
-
-  dmatrix eigenvalue, dvl, dvr;
-  dmatrix mat = dmatrix([3,3], [2,0,0, 0,3,2, 0,1,2]);
-  eigh(mat, eigenvalue, dvl, dvr);
-  // dmatrix ev = dmatrix([3,1], []);
-  // dmatrix vl = dmatrix([3,3], []);
-  //dmatrix vr = dmatrix([3,1], []);
-  // assert(eqeq(ev, eigehnvalue));
-  // assert(eqeq(vl, dvl));
-  // assert(eqeq(vr, dvr));
 }

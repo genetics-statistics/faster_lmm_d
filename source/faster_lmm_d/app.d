@@ -26,7 +26,6 @@ import faster_lmm_d.gwas;
 import faster_lmm_d.dmatrix;
 import faster_lmm_d.optmatrix;
 import faster_lmm_d.helpers;
-import faster_lmm_d.optimize;
 
 //import gperftools_d.profiler;
 
