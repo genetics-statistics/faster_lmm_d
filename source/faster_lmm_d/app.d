@@ -1,3 +1,10 @@
+/*
+   This code is part of faster_lmm_d and published under the GPLv3
+   License (see LICENSE.txt)
+
+   Copyright © 2017 Prasun Anand & Pjotr Prins
+*/
+
 import std.stdio;
 import std.string;
 import std.array;
@@ -76,11 +83,22 @@ void main(string[] args)
   if(option_help || !cmd) printUsage();
 
   trace(cmd);
-  JSONValue ctrl;
 
-  if(option_control){
-    ctrl = control(option_control);//type
-    trace(ctrl);
+  if(useBLAS){
+    bool optmatrixUseBLAS = true;
+    trace(optmatrixUseBLAS);
+    info("Forcing BLAS support");
+  }
+
+  if(noBLAS){
+    bool optmatrixUseBLAS = false;
+    trace(optmatrixUseBLAS);
+    info("Disabling BLAS support");
+  }
+
+  if(noCUDA){
+    bool cudauseCUDA = false;
+    info("Disabling CUDA support");
   }
 
   if(option_logging) {
@@ -103,9 +121,16 @@ void main(string[] args)
     }
   }
 
+  // ---- Control
+  JSONValue ctrl;
+  if(option_control){
+    ctrl = control(option_control);//type
+    trace(ctrl);
+  }
+
+  // ---- Phenotypes
   double[] y;
   string[] ynames;
-
   if(option_pheno){
     if(cmd == "rqtl"){
       auto pTuple = pheno(option_pheno, option_pheno_column);
@@ -120,9 +145,9 @@ void main(string[] args)
     trace(y.sizeof);
   }
 
+  // ---- Genotypes
   dmatrix g;
   string[] gnames;
-
   if(option_geno && cmd != "iterator"){
     genoObj g1;
     if(cmd == "rqtl"){
@@ -134,23 +159,6 @@ void main(string[] args)
     g = g1.geno;
     gnames = g1.gnames;
     trace(g.shape);
-  }
-
-  if(useBLAS){
-    bool optmatrixUseBLAS = true;
-    trace(optmatrixUseBLAS);
-    info("Forcing BLAS support");
-  }
-
-  if(noBLAS){
-    bool optmatrixUseBLAS = false;
-    trace(optmatrixUseBLAS);
-    info("Disabling BLAS support");
-  }
-
-  if(noCUDA){
-    bool cudauseCUDA = false;
-    info("Disabling CUDA support");
   }
 
   // ---- If there are less phenotypes than strains, reduce the genotype matrix:
@@ -180,10 +188,11 @@ void main(string[] args)
     g = g2;
   }
 
+  // ---- Run GWAS
   int n = cast(int)y.length;
   int m = g.shape[1];
   dmatrix k;
-  auto gwas = run_gwas("other",n,m,k,y,g);
+  auto gwas = run_gwas(n,m,k,y,g);
   double[] ts = gwas[0];
   double[] ps = gwas[1];
   trace(ts);
