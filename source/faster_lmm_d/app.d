@@ -19,19 +19,62 @@ import faster_lmm_d.dmatrix;
 import faster_lmm_d.optmatrix;
 import faster_lmm_d.helpers;
 import faster_lmm_d.optimize;
+
 //import gperftools_d.profiler;
+
+void printUsage() {
+    stderr.writeln("faster_lmm_d ");
+    stderr.writeln();
+    stderr.writeln("Usage: faster_lmm_d [args...]");
+    stderr.writeln("Common options:");
+    stderr.writeln();
+    stderr.writeln("   --kinship","                  ","Kinship file format 1.0");
+    stderr.writeln("   --pheno","                    ","Phenotype file format 1.0");
+    stderr.writeln("   --pheno-column","             ","pheno_column (default = 0)");
+    stderr.writeln("   --geno","                     ","Genotype file format 1.0");
+    stderr.writeln("   --blas","                     ","Use BLAS instead of MIR-GLAS matrix multiplication");
+    stderr.writeln("   --no-blas","                  ","Disable BLAS support");
+    stderr.writeln("   --no-cuda","                  ","Disable CUDA support");
+    stderr.writeln("   --control","                  ","R/qtl control file");
+    stderr.writeln("   --cmd","                      ","command  = run|rqtl");
+    stderr.writeln("   --logging","                  ","set logging  = debug|info|warning|critical");
+    stderr.writeln("   --help","                     ","");
+    stderr.writeln();
+    stderr.writeln("Leave bug reports and feature requests at");
+    stderr.writeln("https://github.com/prasunanand/faster_lmm_d/issues");
+    stderr.writeln();
+}
 
 void main(string[] args)
 {
   //ProfilerStart();
 
   string option_control, option_kinship, option_pheno, option_geno, useBLAS, noBLAS, noCUDA, option_logging;
+  bool option_help = false;
   int option_pheno_column;
   string cmd;
 
   globalLogLevel(LogLevel.warning); //default
 
-  getopt(args, "control", &option_control, "kinship", &option_kinship, "pheno", &option_pheno, "geno", &option_geno, "useBLAS", &useBLAS, "noBLAS", &noBLAS, "noCUDA", &noCUDA, "option_pheno_column", &option_pheno_column, "cmd", &cmd, "logging", &option_logging);
+  getopt(
+    args,
+    "control", &option_control,
+    "kinship", &option_kinship,
+    "pheno", &option_pheno,
+    "pheno-column", &option_pheno_column,
+    "geno", &option_geno,
+    "blas", &useBLAS,
+    "no-blas", &noBLAS,
+    "no-cuda", &noCUDA,
+    "cmd", &cmd,
+    "logging", &option_logging,
+    "help", &option_help
+  );
+
+  if(option_help){
+    printUsage();
+    exit(0);
+  }
 
   trace(cmd);
   JSONValue ctrl;
