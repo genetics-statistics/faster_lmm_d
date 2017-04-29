@@ -21,8 +21,6 @@ auto gwas(double[] Y, dmatrix G, dmatrix K, bool restricted_max_likelihood = tru
 
   trace("In gwas.gwas");
 
-  bool kfile2 = false;
-  bool reml = restricted_max_likelihood;
   int n = G.shape[1]; // inds
   int inds = n;
   int m = G.shape[0]; // snps
