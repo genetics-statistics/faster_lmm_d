@@ -8,7 +8,6 @@
 module faster_lmm_d.lmm;
 
 import std.exception;
-import std.stdio;
 import std.typecons;
 import std.experimental.logger;
 
@@ -29,11 +28,6 @@ struct KGstruct{
 }
 
 auto run_gwas(int n, int m, dmatrix k, double[] y, dmatrix geno){
-  int cov;
-  bool reml = true;
-  bool refit = false;
-  string inputfn = "";
-  bool new_code = true;
 
   trace("run_gwas");
   log("pheno ", y.length," ", y[0..5]);
