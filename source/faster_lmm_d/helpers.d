@@ -6,8 +6,8 @@
 */
 
 module faster_lmm_d.helpers;
-import std.math;
-import std.stdio;
+
+import std.math : isNaN, pow;
 
 double modDiff(double x, double y){
   double rem = y - x;
