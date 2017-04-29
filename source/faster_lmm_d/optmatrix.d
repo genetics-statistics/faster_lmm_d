@@ -1,3 +1,10 @@
+/*
+   This code is part of faster_lmm_d and published under the GPLv3
+   License (see LICENSE.txt)
+
+   Copyright © 2017 Prasun Anand & Pjotr Prins
+*/
+
 module faster_lmm_d.optmatrix;
 
 import std.stdio;

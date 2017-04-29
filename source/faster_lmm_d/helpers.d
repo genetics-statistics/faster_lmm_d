@@ -1,3 +1,10 @@
+/*
+   This code is part of faster_lmm_d and published under the GPLv3
+   License (see LICENSE.txt)
+
+   Copyright © 2017 Prasun Anand & Pjotr Prins
+*/
+
 module faster_lmm_d.helpers;
 import std.math;
 import std.stdio;
@@ -95,5 +102,5 @@ unittest{
 
   assert(sum(arr) == 16);
   assert(sum(arr2) == 3);
-  assert(globalMean(arr) == 4); 
+  assert(globalMean(arr) == 4);
 }

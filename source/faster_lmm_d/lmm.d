@@ -10,7 +10,6 @@ module faster_lmm_d.lmm;
 import std.exception;
 import std.stdio;
 import std.typecons;
-
 import std.experimental.logger;
 
 import faster_lmm_d.dmatrix;
