@@ -26,11 +26,9 @@ auto tsvpheno(string fn, int p_column= 0){
 	trace("In tsvpheno");
 	double[] y;
   string[] ynames;
-  //ynames = None
   string input = cast(string)std.file.read(fn);
 
   string[] lines = input.split("\n");
-  //with open(fn,'r') as tsvin:
   assert(lines[0] == "# Phenotype format version 1.0");
   lines = lines[4..$];
   foreach(line; lines){
@@ -47,14 +45,9 @@ auto tsvpheno(string fn, int p_column= 0){
 genoObj tsvgeno(string fn, JSONValue ctrl){
 
   trace("in geno function");
-  //log(ctrl["genotypes"].object);
-  //string ptr = ("na-strings" in ctrl.object).str;
-  //log(ctrl.object);
-  //string s = `{"-" : "0","NA": "0"}`;
-  //FIXME
   string s = `{"A":0,"H":1,"B":2,"-":3}`;
   ctrl["na-strings"] = parseJSON(s);
-  //log(ctrl.object);
+
   int[string] hab_mapper;
   int idx = 0;
 
@@ -63,24 +56,17 @@ genoObj tsvgeno(string fn, JSONValue ctrl){
     string b = to!string(value);
     int c = to!int(b);
     hab_mapper[a] = c;
-    log(hab_mapper);
-    //log(a);
-    log(b);
-
     idx++;
   }
-  //log(hab_mapper);
+
   double[] faster_lmm_d_mapper = [ 0.0, 0.5, 1.0, double.nan,];
-  //foreach(s; ctrl["na.strings"]){
 
   log("hab_mapper", hab_mapper);
   log("faster_lmm_d_mapper", faster_lmm_d_mapper);
-  //log(fn);
 
   string input = cast(string)std.file.read(fn);
   string[] rows = input.split("\n");
   rows = rows[4..$];
-  //log(tsv.header[1..$]);
   string[] gnames = rows[0].split("\t");
   gnames = gnames[1..$];
   double[] gs2;
@@ -92,8 +78,6 @@ genoObj tsvgeno(string fn, JSONValue ctrl){
   	if(line != ""){
 	  	string[] row = line.split("\t");
 	    string id = row[0];
-	    //log(id);
-	    //gs = [];
 	    colCount = 0;
 	    foreach(dchar item; row[1]){
 	      gs ~= to!string(item);
