@@ -4,6 +4,7 @@ import std.stdio;
 import std.experimental.logger;
 import cblas : gemm, Transpose, Order;
 import faster_lmm_d.arrayfire;
+import std.math;
 
 extern (C) {
   int LAPACKE_dgetrf (int matrix_layout, int m, int n, double* a, int lda, int* ipiv);
@@ -148,7 +149,7 @@ dmatrix normalize_along_row(dmatrix input) {
     double[] values = getNumArray(arr,valuesArr);
     double mean = globalMean(values);
     double variation = getVariation(values, mean);
-    double stddev = std.math.sqrt(variation);
+    double stddev = sqrt(variation);
 
     replaceNaN(arr, valuesArr, mean);
     if(stddev == 0) {
@@ -185,7 +186,7 @@ dmatrix removeCols(dmatrix input, bool[] keep) {
 double[] roundedNearest(double[] input) {
   double[] arr = new double[input.length];
   for(int i = 0; i < input.length; i++) {
-    arr[i] = std.math.round(input[i]*1000)/1000;
+    arr[i] = round(input[i]*1000)/1000;
   }
   return arr;
 }
