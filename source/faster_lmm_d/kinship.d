@@ -7,10 +7,8 @@
 
 module faster_lmm_d.kinship;
 
-import core.sys.posix.stdlib: exit;
 import std.exception;
 import std.experimental.logger;
-import std.stdio;
 
 import faster_lmm_d.dmatrix;
 import faster_lmm_d.helpers;

@@ -8,16 +8,12 @@
 import core.stdc.stdlib : exit;
 import std.array;
 import std.conv;
-import std.csv;
 import std.exception;
 import std.experimental.logger;
 import std.getopt;
-import std.regex;
 import std.json;
 import std.math : round;
-import std.string;
 import std.stdio;
-import std.typecons;
 
 import faster_lmm_d.dmatrix;
 import faster_lmm_d.gwas;

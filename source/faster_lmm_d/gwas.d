@@ -8,7 +8,6 @@
 module faster_lmm_d.gwas;
 
 import std.experimental.logger;
-import std.stdio;
 import std.typecons;
 
 import dstats.distrib;

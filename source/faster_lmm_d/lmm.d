@@ -8,8 +8,7 @@
 module faster_lmm_d.lmm;
 
 import std.exception;
-import std.experimenta.l.logger;
-import std.typecons;
+import std.experimental.logger;
 
 import faster_lmm_d.dmatrix;
 import faster_lmm_d.gwas;
