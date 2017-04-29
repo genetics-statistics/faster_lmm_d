@@ -6,22 +6,21 @@
 */
 
 module faster_lmm_d.lmm2;
+
+import std.typecons;
+import std.experimental.logger;
+import std.math;
+alias mlog = std.math.log;
+
 import dstats.distrib;
-import faster_lmm_d.dmatrix;
-import faster_lmm_d.optmatrix;
-import faster_lmm_d.helpers;
-import faster_lmm_d.kinship;
 import gsl.errno;
 import gsl.math;
 import gsl.min;
 
-import std.stdio;
-import std.typecons;
-
-import std.math;
-alias mlog = std.math.log;
-
-import std.experimental.logger;
+import faster_lmm_d.dmatrix;
+import faster_lmm_d.optmatrix;
+import faster_lmm_d.helpers;
+import faster_lmm_d.kinship;
 
 struct LLtuple{
   double sigma, LL;
@@ -102,12 +101,7 @@ struct LMM2{
     this.Y =  dmatrix([K.shape[0],1] ,Y);
     //nanCounter(this.Y);  //for debugging
     this.X0 = X0;
-
-
   }
-
-  //this(int q, double N, double optH, double optSigma, dmatrix X0, dmatrix Y, dmatrix K, dmatrix Kva, dmatrix Kve, dmatrix Yt,
-  // dmatrix X0t, dmatrix X0t_stack, dmatrix H, dmatrix optLL, dmatrix optBeta, dmatrix LLs){
 
   this(LMM2 lmmobject, dmatrix Yt, dmatrix X0t, dmatrix X0t_stack, dmatrix KveT, int q){
     this.verbose = lmmobject.verbose;
@@ -150,11 +144,11 @@ struct LMM2{
 }
 
 LMM2 lmm2transform(LMM2 lmmobject){
-  //"""
+
   //   Computes a transformation on the phenotype vector and the covariate matrix.
   //   The transformation is obtained by left multiplying each parameter by the transpose of the
   //   eigenvector matrix of K (the kinship).
-  //"""
+
   trace("In lmm2transform");
   dmatrix KveT = matrixTranspose(lmmobject.Kve);
   dmatrix Yt = matrixMult(KveT, lmmobject.Y);
@@ -166,13 +160,12 @@ LMM2 lmm2transform(LMM2 lmmobject){
 
 mlSol getMLSoln(LMM2 lmmobject, double h, dmatrix X){
 
-  //"""
   //   Obtains the maximum-likelihood estimates for the covariate coefficients (beta),
   //   the total variance of the trait (sigma) and also passes intermediates that can
   //   be utilized in other functions. The input parameter h is a value between 0 and 1 and represents
   //   the heritability or the proportion of the total variance attributed to genetics.  The X is the
   //   covariate matrix.
-  //"""
+
   dmatrix S = divideNumDmatrix(1,addDmatrixNum(multiplyDmatrixNum(lmmobject.Kva,h),(1.0 - h)));
   int[] temp = S.shape.dup;
   S.shape = [temp[1], temp[0]];
@@ -192,23 +185,21 @@ LMM2 LMMglob;
 dmatrix Xglob;
 
 extern(C) double LL_brent(double h, void *params){
-    //#brent will not be bounded by the specified bracket.
-    //# I return a large number if we encounter h < 0 to avoid errors in LL computation during the search.
-  if(h < 0){return 1e6;}
-  dmatrix beta, betaVAR;
-  bool REML = false;
-  double sigma;
-  dmatrix l;
-  return -getLL(LMMglob, h, Xglob, false, REML).LL;
+
+  // brent will not be bounded by the specified bracket.
+  // I return a large number if we encounter h < 0 to avoid errors in LL computation during the search.
+
+  if( h < 0){ return 1e6; }
+  return -getLL(LMMglob, h, Xglob, false, false).LL;
 }
 
 LLtuple getLL(LMM2 lmmobject, double h, dmatrix X, bool stack=true, bool REML=false){
-  //"""
+
   //   Computes the log-likelihood for a given heritability (h).  If X==None, then the
   //   default X0t will be used.  If X is set and stack=True, then X0t will be matrix concatenated with
   //   the input X.  If stack is false, then X is used in place of X0t in the LL calculation.
   //   REML is computed by adding additional terms to the standard LL and can be computed by setting REML=True.
-  //"""
+
   if(X.init != true){
     X = lmmobject.X0t;
   }
@@ -274,13 +265,11 @@ double optimizeBrent(LMM2 lmmobject, dmatrix X, bool REML, double lower, double 
 
 double getMax(LMM2 lmmobject, dmatrix L, dmatrix H, dmatrix X, bool REML=false){
 
-  //"""
   //   Helper functions for .fit(...).
   //   This function takes a set of LLs computed over a grid and finds possible regions
   //   containing a maximum.  Within these regions, a Brent search is performed to find the
   //   optimum.
 
-  //"""
   int n = cast(int)L.shape[0];
   double[] HOpt;
   for(int i=1; i< n-2; i++){
@@ -309,14 +298,12 @@ double getMax(LMM2 lmmobject, dmatrix L, dmatrix H, dmatrix X, bool REML=false){
 
 fitTuple lmm2fit(LMM2 lmmobject, dmatrix X, int ngrids=100, bool REML=true){
 
-  //"""
   //   Finds the maximum-likelihood solution for the heritability (h) given the current parameters.
   //   X can be passed and will transformed and concatenated to X0t.  Otherwise, X0t is used as
   //   the covariate matrix.
 
   //   This function calculates the LLs over a grid and then uses .getMax(...) to find the optimum.
   //   Given this optimum, the function computes the LL and associated ML solutions.
-  //"""
 
   if(X.init == false){
     X = lmmobject.X0t;
@@ -345,10 +332,10 @@ fitTuple lmm2fit(LMM2 lmmobject, dmatrix X, int ngrids=100, bool REML=true){
 }
 
 auto lmm2association(LMM2 lmmobject, dmatrix X, bool stack=true, bool REML=true, bool returnBeta=false){
-  //"""
+
   //  Calculates association statitics for the SNPs encoded in the vector X of size n.
   //  If h is None, the optimal h stored in optH is used.
-  //"""
+
   if(false){
     trace("X=",X);
     trace("q=",lmmobject.q);
@@ -368,23 +355,13 @@ auto lmm2association(LMM2 lmmobject, dmatrix X, bool stack=true, bool REML=true,
   return tstat(lmmobject, round(ll.beta.elements[q-1]*1000)/1000, ll.betaVAR.acc(q-1,q-1), ll.sigma, q);
 }
 
-auto tstat( LMM2 lmmobject, double beta, double var, double sigma, double q, bool log=false){
+auto tstat( LMM2 lmmobject, double beta, double var, double sigma, double q){
 
-  //"""
   //   Calculates a t-statistic and associated p-value given the estimate of beta and its standard error.
   //   This is actually an F-test, but when only one hypothesis is being performed, it reduces to a t-test.
-  //"""S
-  double ts =  beta / sqrt(var*sigma);
-  //#ps = 2.0*(1.0 - stats.t.cdf(np.abs(ts), lmmobject.N-q))
-  //# sf == survival function - this is more accurate -- could also use logsf if the precision is not good enough
-  double ps;
-  if(log){
-    //double psNum = 2.0 + (stats.t.logsf(np.abs(ts), lmmobject.N-q));
-  }
-  else{
-    //check the sign of ts.elements[0]''
-    ps = 2.0*(normalCDF(-abs(ts)));
-  }
+
+  double ts = beta / sqrt(var*sigma);
+  double ps = 2.0*(normalCDF(-abs(ts)));
 
   return Tuple!(double, double)(ts, ps);
 }
