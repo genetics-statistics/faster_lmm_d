@@ -22,45 +22,9 @@ import faster_lmm_d.helpers;
 import faster_lmm_d.kinship;
 import faster_lmm_d.optmatrix;
 
-struct LLtuple{
-  double sigma, LL;
-  dmatrix beta,betaVAR;
-
-  this(double LL, dmatrix beta, double sigma, dmatrix betaVAR){
-    this.LL = LL;
-    this.beta = beta;
-    this.sigma = sigma;
-    this.betaVAR = betaVAR;
-  }
-}
-
-struct fitTuple{
-  double fit_hmax, fit_sigma, fit_LL;
-  dmatrix fit_beta;
-  LMM2 lmmobj;
-
-  this(LMM2 lmmobj, double fit_hmax, dmatrix fit_beta, double fit_sigma, double fit_LL){
-    this.lmmobj = lmmobj;
-    this.fit_hmax = fit_hmax;
-    this.fit_beta = fit_beta;
-    this.fit_sigma = fit_sigma;
-    this.fit_LL = fit_LL;
-    this.lmmobj = lmmobj;
-  }
-}
-
-struct mlSol{
-  double sigma;
-  dmatrix beta, Q, XX_i, XX;
-
-  this(dmatrix beta, double sigma, dmatrix Q, dmatrix XX_i, dmatrix XX){
-    this.beta = beta;
-    this.sigma = sigma;
-    this.Q = Q;
-    this.XX_i = XX_i;
-    this.XX = XX;
-  }
-}
+alias Tuple!(double, "LL", dmatrix, "beta", double, "sigma", dmatrix, "betaVAR") llTuple;
+alias Tuple!(LMM2, "lmmobj", double, "fit_hmax", dmatrix, "fit_beta", double, "fit_sigma", double, "fit_LL") fitTuple;
+alias Tuple!(dmatrix, "beta", double, "sigma", dmatrix, "Q", dmatrix, "XX_i", dmatrix, "XX") mlSol;
 
 struct LMM2{
   int q;
@@ -193,7 +157,7 @@ extern(C) double LL_brent(double h, void *params){
   return -getLL(LMMglob, h, Xglob, false, false).LL;
 }
 
-LLtuple getLL(LMM2 lmmobject, double h, dmatrix X, bool stack=true, bool REML=false){
+llTuple getLL(LMM2 lmmobject, double h, dmatrix X, bool stack=true, bool REML=false){
 
   //   Computes the log-likelihood for a given heritability (h).  If X==None, then the
   //   default X0t will be used.  If X is set and stack=True, then X0t will be matrix concatenated with
@@ -223,8 +187,7 @@ LLtuple getLL(LMM2 lmmobject, double h, dmatrix X, bool stack=true, bool REML=fa
     LL = LL + 0.5*LL_REML_part;
   }
 
-  dmatrix L = dmatrix([1,1],[LL]);
-  return LLtuple(LL, ml.beta, ml.sigma, ml.XX_i);
+  return llTuple(LL, ml.beta, ml.sigma, ml.XX_i);
 }
 
 double optimizeBrent(LMM2 lmmobject, dmatrix X, bool REML, double lower, double upper){
@@ -324,7 +287,7 @@ fitTuple lmm2fit(LMM2 lmmobject, dmatrix X, int ngrids=100, bool REML=true){
   dmatrix L = dmatrix([cast(int)elm.length,1],elm);
   dmatrix H = dmatrix([cast(int)Harr.length,1],Harr);
   double hmax = getMax(lmmobject, L, H, X, REML);
-  LLtuple ll = getLL(lmmobject, hmax, X, false, REML);
+  llTuple ll = getLL(lmmobject, hmax, X, false, REML);
 
   LMM2 lmmobj = LMM2(lmmobject, L, H, hmax, ll.LL, ll.beta, ll.sigma);
 
@@ -349,7 +312,7 @@ auto lmm2association(LMM2 lmmobject, dmatrix X, bool stack=true, bool REML=true,
     X = lmmobject.X0t_stack;
   }
   double h = lmmobject.optH;
-  LLtuple ll = getLL(lmmobject,h, X ,false,REML);
+  llTuple ll = getLL(lmmobject,h, X ,false,REML);
   int q  = cast(int)ll.beta.elements.length;
   double ts,ps;
   return tstat(lmmobject, round(ll.beta.elements[q-1]*1000)/1000, ll.betaVAR.acc(q-1,q-1), ll.sigma, q);

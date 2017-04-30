@@ -7,22 +7,12 @@
 
 module faster_lmm_d.phenotype;
 
-import faster_lmm_d.dmatrix;
+import std.experimental.logger;
+import std.typecons;
+
 import faster_lmm_d.helpers;
 
-import std.experimental.logger;
-
-struct phenoStruct{
-  double[] Y;
-  bool[] keep;
-  int n;
-
-  this(double[] Y, bool[] keep, int n){
-    this.Y = Y;
-    this.keep = keep;
-    this.n = n;
-  }
-}
+alias Tuple!(double[], "Y", bool[], "keep", int, "n") phenoStruct;
 
 phenoStruct remove_missing( int n, double[] y){
 
@@ -34,4 +24,5 @@ phenoStruct remove_missing( int n, double[] y){
   double[] Y = getNumArray(y,keep);
   n = cast(int)Y.length;
   return phenoStruct(Y, keep, n);
+
 }
