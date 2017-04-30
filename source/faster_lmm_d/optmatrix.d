@@ -34,7 +34,7 @@ struct eighTuple{
   }
 }
 
-dmatrix matrixMult(dmatrix lha, dmatrix rha) {
+dmatrix matrixMult(const dmatrix lha,const dmatrix rha) {
   double[] C = new double[lha.shape[0]*rha.shape[1]];
   gemm(Order.RowMajor, Transpose.NoTrans, Transpose.NoTrans, lha.shape[0], rha.shape[1], lha.shape[1], /*no scaling*/
     1,lha.elements.ptr, lha.shape[1], rha.elements.ptr, rha.shape[1], /*no addition*/0, C.ptr, rha.shape[1]);
@@ -42,7 +42,7 @@ dmatrix matrixMult(dmatrix lha, dmatrix rha) {
   return dmatrix(resshape, C);
 }
 
-dmatrix matrixMultT(dmatrix lha, dmatrix rha) {
+dmatrix matrixMultT(const dmatrix lha, const dmatrix rha) {
   double[] C = new double[lha.shape[0]*rha.shape[0]];
   gemm(Order.RowMajor, Transpose.NoTrans, Transpose.NoTrans, lha.shape[0], rha.shape[0], lha.shape[1], /*no scaling*/
     1,lha.elements.ptr, lha.shape[1], rha.elements.ptr, rha.shape[0], /*no addition*/0, C.ptr, rha.shape[0]);
@@ -50,7 +50,7 @@ dmatrix matrixMultT(dmatrix lha, dmatrix rha) {
   return dmatrix(resshape, C);
 }
 
-dmatrix matrixTranspose(dmatrix input) {
+dmatrix matrixTranspose(const dmatrix input) {
   double[] output = new double[input.shape[0]*input.shape[1]];
   int index = 0;
   for(int i=0; i< input.shape[1]; i++) {
@@ -64,7 +64,7 @@ dmatrix matrixTranspose(dmatrix input) {
 
 }
 
-void prettyPrint(dmatrix input) {
+void prettyPrint(const dmatrix input) {
   writeln("[");
   if(input.shape[0]>6) {
     for(int i=0; i < 3; i++) {
@@ -84,7 +84,7 @@ void prettyPrint(dmatrix input) {
   writeln("]");
 }
 
-void pPrint(dmatrix input) {
+void pPrint(const dmatrix input) {
   writeln("[");
   for(int i=0; i < input.shape[0]; i++) {
     writeln(input.elements[(input.shape[1]*i)..(input.shape[1]*(i+1))]);
@@ -92,7 +92,7 @@ void pPrint(dmatrix input) {
   writeln("]");
 }
 
-void pPrint2(dmatrix input) {
+void pPrint2(const dmatrix input) {
   writeln("[");
   for(int i=0; i < input.shape[0]; i++) {
     writeln(input.elements[(input.shape[1]*i)..(input.shape[1]*i+3)],"...",
@@ -101,7 +101,7 @@ void pPrint2(dmatrix input) {
   writeln("]");
 }
 
-void pPrint3(dmatrix input) {
+void pPrint3(const dmatrix input) {
   writeln("[");
   if(input.shape[0]>6) {
     for(int i=0; i < 3; i++) {
@@ -118,8 +118,7 @@ void pPrint3(dmatrix input) {
   writeln("]");
 }
 
-
-dmatrix sliceDmatrix(dmatrix input, int[] along) {
+dmatrix sliceDmatrix(const dmatrix input, const int[] along) {
   trace("In sliceDmatrix");
   double[] output;
   foreach(int rowIndex; along) {
@@ -130,7 +129,7 @@ dmatrix sliceDmatrix(dmatrix input, int[] along) {
   return dmatrix([cast(int)along.length,input.shape[1]],output);
 }
 
-dmatrix sliceDmatrixKeep(dmatrix input, bool[] along) {
+dmatrix sliceDmatrixKeep(const dmatrix input, const bool[] along) {
   trace("In sliceDmatrix");
   assert(along.length == input.shape[0]);
   double[] output;
@@ -149,7 +148,7 @@ dmatrix sliceDmatrixKeep(dmatrix input, bool[] along) {
   return dmatrix([shape0,input.shape[1]],output);
 }
 
-dmatrix normalize_along_row(dmatrix input) {
+dmatrix normalize_along_row(const dmatrix input) {
   double[] largeArr;
   double[] arr;
   log(input.shape);
@@ -177,8 +176,8 @@ dmatrix normalize_along_row(dmatrix input) {
   return dmatrix(input.shape, largeArr);
 }
 
-dmatrix removeCols(const dmatrix input, bool[] keep) {
-  int colLength = sum(keep);
+dmatrix removeCols(const dmatrix input, const bool[] keep) {
+  immutable int colLength = sum(cast(bool[])keep);
   double[] arr = new double[input.shape[0]*colLength];
   int index = 0;
   for(int i= 0; i < input.shape[0]; i++) {
@@ -190,11 +189,11 @@ dmatrix removeCols(const dmatrix input, bool[] keep) {
       count++;
     }
   }
-  int[] shape = [input.shape[0], sum(keep)];
+  int[] shape = [input.shape[0], colLength];
   return dmatrix(shape, arr);
 }
 
-double[] roundedNearest(double[] input) {
+double[] roundedNearest(const double[] input) {
   double[] arr = new double[input.length];
   for(int i = 0; i < input.length; i++) {
     arr[i] = round(input[i]*1000)/1000;
@@ -202,7 +201,10 @@ double[] roundedNearest(double[] input) {
   return arr;
 }
 
-eighTuple eigh(dmatrix input) {
+//Obtain eigendecomposition for K and return Kva,Kve where Kva is cleaned
+//of small values < 1e-6 (notably smaller than zero)
+
+eighTuple eigh(const dmatrix input) {
   double[] z = new double[input.shape[0] * input.shape[1]]; //eigenvalues
   double[] w = new double[input.shape[0]];  // eigenvectors
   double[] elements = roundedNearest(input.elements.dup);
@@ -231,7 +233,7 @@ eighTuple eigh(dmatrix input) {
   return eighTuple(kva, kve);
 }
 
-double det(dmatrix input) {
+double det(const dmatrix input) {
   double[] narr = input.elements.dup;
   int[] pivot = getrf(narr, input.shape.dup);
 
@@ -255,14 +257,15 @@ double det(dmatrix input) {
   return prod;
 }
 
-int[] getrf(double[] arr, int[] shape) {
+int[] getrf(const double[] arr, const int[] shape) {
   auto ipiv = new int[shape[0]+1];
-  LAPACKE_dgetrf(101, shape[0],shape[0],arr.ptr,shape[0],ipiv.ptr);
+  // LAPACKE changes the contents of arr, so we copy it first
+  LAPACKE_dgetrf(101, shape[0],shape[0],arr.dup.ptr,shape[0],ipiv.ptr);
   return ipiv;
 }
 
-dmatrix inverse(dmatrix input) {
-  double[] elements= input.elements.dup;
+dmatrix inverse(const dmatrix input) {
+  double[] elements= input.elements.dup; // exactly, elements get changed by LAPACKA
   int LWORK = input.shape[0]*input.shape[0];
   double[] WORK = new double[input.shape[0]*input.shape[0]];
   auto ipiv = new int[input.shape[0]+1];
