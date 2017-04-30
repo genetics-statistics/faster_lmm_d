@@ -177,7 +177,7 @@ dmatrix normalize_along_row(dmatrix input) {
   return dmatrix(input.shape, largeArr);
 }
 
-dmatrix removeCols(dmatrix input, bool[] keep) {
+dmatrix removeCols(const dmatrix input, bool[] keep) {
   int colLength = sum(keep);
   double[] arr = new double[input.shape[0]*colLength];
   int index = 0;
