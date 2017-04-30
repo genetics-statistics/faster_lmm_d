@@ -51,12 +51,12 @@ genoObj geno(string fn, JSONValue ctrl){
   int idx = 0;
 
   foreach( key, value; ctrl["genotypes"].object){
-    string a  = to!string(key);
     string b = to!string(value);
     int c = to!int(b);
-    hab_mapper[a] = c;
+    hab_mapper[key] = c;
     idx++;
   }
+
   assert(idx == 3);
   double[] faster_lmm_d_mapper = [double.nan, 0.0, 0.5, 1.0];
 
@@ -74,21 +74,19 @@ genoObj geno(string fn, JSONValue ctrl){
 
   string[] gnames = tsv.header[1..$];
   double[] gs2;
+
   int rowCount = 0;
-  int colCount;
-  string[] gs;
+  int colCount = cast(int)gnames.length;
+
   foreach(row; tsv){
     string id = row.front;
     row.popFront();
-    gs = [];
-    colCount = 0;
     foreach(item; row){
-      gs ~= item;
       gs2 ~= faster_lmm_d_mapper[hab_mapper[item]];
-      colCount++;
     }
     rowCount++;
   }
-  info("MATRIX CREATED");
+
+  info("Genotype Matrix created");
   return genoObj(dmatrix([rowCount, colCount], gs2), gnames);
 }
