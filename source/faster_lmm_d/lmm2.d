@@ -129,20 +129,20 @@ mlSol getMLSoln(LMM2 lmmobject, double h, dmatrix X){
   //   be utilized in other functions. The input parameter h is a value between 0 and 1 and represents
   //   the heritability or the proportion of the total variance attributed to genetics.  The X is the
   //   covariate matrix.
-
+  mlSol ml_sol;
   dmatrix S = divideNumDmatrix(1,addDmatrixNum(multiplyDmatrixNum(lmmobject.Kva,h),(1.0 - h)));
   int[] temp = S.shape.dup;
   S.shape = [temp[1], temp[0]];
   dmatrix Xt = multiplyDmatrix(matrixTranspose(X), S);
-  dmatrix XX = matrixMult(Xt,X);
-  dmatrix XX_i = inverse(XX);
-  dmatrix beta =  matrixMult(matrixMult(XX_i,Xt),lmmobject.Yt);
-  dmatrix Yt = subDmatrix(lmmobject.Yt, matrixMult(X,beta));
+  ml_sol.XX = matrixMult(Xt,X);
+  ml_sol.XX_i = inverse(ml_sol.XX);
+  ml_sol.beta =  matrixMult(matrixMult(ml_sol.XX_i,Xt),lmmobject.Yt);
+  dmatrix Yt = subDmatrix(lmmobject.Yt, matrixMult(X,ml_sol.beta));
   dmatrix YtT = matrixTranspose(Yt);
   dmatrix YtTS = multiplyDmatrix(YtT, S);
-  dmatrix Q = matrixMult(YtTS,Yt);
-  double sigma = Q.elements[0] * 1.0 / (cast(double)(lmmobject.N) - cast(double)(X.shape[1]));
-  return mlSol(beta, sigma, Q, XX_i, XX);
+  ml_sol.Q = matrixMult(YtTS,Yt);
+  ml_sol.sigma = ml_sol.Q.elements[0] * 1.0 / (cast(double)(lmmobject.N) - cast(double)(X.shape[1]));
+  return ml_sol;
 }
 
 LMM2 LMMglob;
@@ -267,7 +267,7 @@ fitTuple lmm2fit(LMM2 lmmobject, dmatrix X, int ngrids=100, bool REML=true){
 
   //   This function calculates the LLs over a grid and then uses .getMax(...) to find the optimum.
   //   Given this optimum, the function computes the LL and associated ML solutions.
-
+  fitTuple fit;
   if(X.init == false){
     X = lmmobject.X0t;
   }
@@ -286,12 +286,15 @@ fitTuple lmm2fit(LMM2 lmmobject, dmatrix X, int ngrids=100, bool REML=true){
   }
   dmatrix L = dmatrix([cast(int)elm.length,1],elm);
   dmatrix H = dmatrix([cast(int)Harr.length,1],Harr);
-  double hmax = getMax(lmmobject, L, H, X, REML);
-  llTuple ll = getLL(lmmobject, hmax, X, false, REML);
+  fit.fit_hmax = getMax(lmmobject, L, H, X, REML);
+  llTuple ll = getLL(lmmobject, fit.fit_hmax, X, false, REML);
 
-  LMM2 lmmobj = LMM2(lmmobject, L, H, hmax, ll.LL, ll.beta, ll.sigma);
+  fit.lmmobj = LMM2(lmmobject, L, H, fit.fit_hmax, ll.LL, ll.beta, ll.sigma);
+  fit.fit_beta = ll.beta;
+  fit.fit_sigma = ll.sigma;
+  fit.fit_LL = ll.LL;
 
-  return fitTuple(lmmobj, hmax, ll.beta, ll.sigma, ll.LL);
+  return fit;
 }
 
 auto lmm2association(LMM2 lmmobject, dmatrix X, bool stack=true, bool REML=true, bool returnBeta=false){
