@@ -69,7 +69,7 @@ genoObj tsvgeno(string fn, JSONValue ctrl){
   geno_obj.gnames = gnames[1..$];
 
   int rowCount = cast(int)rows.length - 6;
-  int colCount= cast(int)gnames.length;
+  int colCount= cast(int)geno_obj.gnames.length;
 
   foreach(line; rows[5..$]){
     if(line != ""){

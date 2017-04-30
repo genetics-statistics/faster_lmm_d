@@ -315,7 +315,7 @@ auto lmm2association(LMM2 lmmobject, dmatrix X, bool stack=true, bool REML=true,
   llTuple ll = getLL(lmmobject,h, X ,false,REML);
   int q  = cast(int)ll.beta.elements.length;
   double ts,ps;
-  return tstat(lmmobject, round(ll.beta.elements[q-1]*1000)/1000, ll.betaVAR.acc(q-1,q-1), ll.sigma, q);
+  return tstat(lmmobject, ll.beta.elements[q-1], ll.betaVAR.acc(q-1,q-1), ll.sigma, q);
 }
 
 auto tstat( LMM2 lmmobject, double beta, double var, double sigma, double q){
