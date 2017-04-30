@@ -124,17 +124,17 @@ void main(string[] args)
 
   // ---- Phenotypes
   double[] y;
-  string[] ynames;
+  string[] phenotypes;
   if(option_pheno){
     if(cmd == "rqtl"){
       auto pTuple = pheno(option_pheno, option_pheno_column);
       y = pTuple[0];
-      ynames = pTuple[1];
+      phenotypes = pTuple[1];
     }
     else{
       auto pTuple = tsvpheno(option_pheno, option_pheno_column);
       y = pTuple[0];
-      ynames = pTuple[1];
+      phenotypes = pTuple[1];
     }
     trace("y.size=",y.sizeof);
   }
@@ -142,6 +142,7 @@ void main(string[] args)
   // ---- Genotypes
   dmatrix g;
   string[] gnames;
+  string[] ynames;
   if(option_geno && cmd != "iterator"){
     genoObj g1;
     if(cmd == "rqtl"){
@@ -152,18 +153,19 @@ void main(string[] args)
     }
     g = g1.geno;
     gnames = g1.gnames;
+    ynames = g1.ynames;
     trace(g.shape);
   }
 
   // ---- If there are less phenotypes than strains, reduce the genotype matrix:
   if(g.shape[0] != y.sizeof){
     info("Reduce geno matrix to match phenotype strains");
-    trace("gnames and ynames");
+    trace("gnames and phenotypes");
     trace("gnames=",gnames);
-    trace("ynames=",ynames);
+    trace("phenotypes=",phenotypes);
     int[] gidx = [];
     int index = 0;
-    foreach(ind; ynames){
+    foreach(ind; phenotypes){
       while(gnames[0] != ind)
       {
         gnames.popFront;
@@ -214,7 +216,7 @@ void main(string[] args)
     }
     if(option_geno == "data/test8000.geno"){
       info("Validating results for ",option_geno," ",sum(p_values));
-      enforce(round(sum(p_values)) == 4071);
+      enforce(round(sum(p_values)) == 4070);
       enforce(p_values.length == 8000);
     }
     info("Run completed");

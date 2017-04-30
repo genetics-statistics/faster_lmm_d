@@ -22,7 +22,7 @@ import faster_lmm_d.optmatrix;
 auto tsvpheno(string fn, int p_column= 0){
 	trace("In tsvpheno");
 	double[] y;
-  string[] ynames;
+  string[] phenotypes;
   string input = cast(string)std.file.read(fn);
 
   string[] lines = input.split("\n");
@@ -32,11 +32,11 @@ auto tsvpheno(string fn, int p_column= 0){
   	if(line != ""){
   		string[] row = line.split("\t");
 	  	y ~=  to!double(row[1]);// <--- slow
-	  	ynames ~= to!string(row[0]);
+	  	phenotypes ~= to!string(row[0]);
   	}
 
   }
-  return Tuple!(double[], string[])(y, ynames);
+  return Tuple!(double[], string[])(y, phenotypes);
 }// # FIXME: column not used
 
 genoObj tsvgeno(string fn, JSONValue ctrl){
@@ -64,9 +64,9 @@ genoObj tsvgeno(string fn, JSONValue ctrl){
   string[] rows = input.split("\n");
 
   string[] gnames = rows[4].split("\t");
-  gnames = gnames[1..$];
 
-  double[] gs2;
+  genoObj geno_obj;
+  geno_obj.gnames = gnames[1..$];
 
   int rowCount = cast(int)rows.length - 6;
   int colCount= cast(int)gnames.length;
@@ -74,13 +74,14 @@ genoObj tsvgeno(string fn, JSONValue ctrl){
   foreach(line; rows[5..$]){
     if(line != ""){
       string[] row = line.split("\t");
-      string id = row[0];
+      geno_obj.ynames ~= row[0];
       foreach(dchar item; row[1]){
-        gs2 ~= faster_lmm_d_mapper[hab_mapper[item]];
+        geno_obj.geno.elements ~= faster_lmm_d_mapper[hab_mapper[item]];
       }
     }
   }
-  info("Genotype Matrix created");
 
-  return genoObj(dmatrix([rowCount, colCount], gs2), gnames);
+  geno_obj.geno.shape = [rowCount, colCount];
+  info("Genotype Matrix created");
+  return geno_obj;
 }

@@ -9,6 +9,7 @@ module faster_lmm_d.dmatrix;
 
 import std.math;
 import std.stdio;
+import std.typecons;
 
 struct dmatrix{
   int[] shape;
@@ -26,14 +27,7 @@ struct dmatrix{
   }
 }
 
-struct genoObj {
-  dmatrix geno;
-  string[] gnames;
-  this(dmatrix geno, string[] gnames) {
-    this.geno = geno;
-    this.gnames = gnames;
-  }
-}
+alias Tuple!(dmatrix, "geno", string[], "gnames", string[], "ynames") genoObj;
 
 dmatrix newDmatrix(dmatrix inDmat, int start, int end) {
   return inDmat;

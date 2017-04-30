@@ -28,17 +28,17 @@ JSONValue control(string fn){
 auto pheno(string fn, int p_column= 0){
   Regex!char Pattern = regex("\\.json$", "i");
   double[] y;
-  string[] ynames;
+  string[] phenotypes;
 
   if(!match(fn, Pattern).empty)
   {
     Node gn2_pheno = Loader(fn).load();
     foreach(Node strain; gn2_pheno){
       y ~= strain[2].as!double;
-      ynames ~= strain[1].as!string;
+      phenotypes ~= strain[1].as!string;
     }
   }
-  return Tuple!(double[], string[])(y, ynames);
+  return Tuple!(double[], string[])(y, phenotypes);
 }
 
 genoObj geno(string fn, JSONValue ctrl){
@@ -72,21 +72,22 @@ genoObj geno(string fn, JSONValue ctrl){
   string input = cast(string)std.file.read(fn);
   auto tsv = csvReader!(string, Malformed.ignore)(input, null);
 
-  string[] gnames = tsv.header[1..$];
-  double[] gs2;
+  genoObj geno_obj;
+  geno_obj.gnames = tsv.header[1..$];
 
   int rowCount = 0;
-  int colCount = cast(int)gnames.length;
+  int colCount = cast(int)geno_obj.gnames.length;
 
   foreach(row; tsv){
-    string id = row.front;
+    geno_obj.ynames ~= row.front;
     row.popFront();
     foreach(item; row){
-      gs2 ~= faster_lmm_d_mapper[hab_mapper[item]];
+      geno_obj.geno.elements ~= faster_lmm_d_mapper[hab_mapper[item]];
     }
     rowCount++;
   }
 
+  geno_obj.geno.shape = [rowCount, colCount];
   info("Genotype Matrix created");
-  return genoObj(dmatrix([rowCount, colCount], gs2), gnames);
+  return geno_obj;
 }
