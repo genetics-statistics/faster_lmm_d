@@ -1,6 +1,6 @@
 #! /bin/bash
 
-echo "Running small"
+echo "Skipping small"
 # ./build/faster_lmm_d --control=data/genenetwork/BXD.json --pheno=data/small.pheno --geno=data/small.geno --cmd=run $*
 if [ $? -ne 0 ]; then echo "ERR1" ; exit 1 ; fi
 ./build/faster_lmm_d --control=data/genenetwork/BXD.json --pheno=data/genenetwork/104617_at.json --geno=data/genenetwork/BXD.csv --cmd=rqtl $*
