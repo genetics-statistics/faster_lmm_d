@@ -136,7 +136,7 @@ void main(string[] args)
       y = pTuple[0];
       ynames = pTuple[1];
     }
-    trace(y.sizeof);
+    trace("y.size=",y.sizeof);
   }
 
   // ---- Genotypes
@@ -159,8 +159,8 @@ void main(string[] args)
   if(g.shape[0] != y.sizeof){
     info("Reduce geno matrix to match phenotype strains");
     trace("gnames and ynames");
-    trace(gnames);
-    trace(ynames);
+    trace("gnames=",gnames);
+    trace("ynames=",ynames);
     int[] gidx = [];
     int index = 0;
     foreach(ind; ynames){
@@ -222,5 +222,8 @@ void main(string[] args)
 
   check_results(p_values,ts);
 
+  foreach(i, p ; p_values) {
+    writeln(ynames[i],"\t",p);
+  }
   //ProfilerStop();
 }
