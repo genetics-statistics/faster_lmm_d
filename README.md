@@ -4,6 +4,20 @@ A faster lmm for GWAS. GPU support coming soon.
 
 NOTICE: this software is under active development. YMMV.
 
+# Introduction
+
+Faster_lmm_d is a lightweight linear mixed-model solver for use in
+genome-wide association studies (GWAS). The original is similar to
+FaST-LMM (an algorithm by Lippert et al.) and that code base can be
+found [here](https://github.com/nickFurlotte/pylmm). Prof. Karl Broman
+wrote a comparison with his
+[R/lmmlite](http://kbroman.org/lmmlite/assets/lmmlite.html). Faster_lmm_d
+and pylmm are part of the
+[Genenetwork2](https://github.com/genenetwork) project. faster_lmm_d
+can parse data in
+[R/qtl2 format](http://kbroman.org/qtl2/assets/vignettes/input_files.html)
+as input.
+
 # Install
 
 ## Requirements

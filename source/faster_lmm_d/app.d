@@ -136,7 +136,7 @@ void main(string[] args)
       y = pTuple[0];
       ynames = pTuple[1];
     }
-    trace(y.sizeof);
+    trace("y.size=",y.sizeof);
   }
 
   // ---- Genotypes
@@ -159,8 +159,8 @@ void main(string[] args)
   if(g.shape[0] != y.sizeof){
     info("Reduce geno matrix to match phenotype strains");
     trace("gnames and ynames");
-    trace(gnames);
-    trace(ynames);
+    trace("gnames=",gnames);
+    trace("ynames=",ynames);
     int[] gidx = [];
     int index = 0;
     foreach(ind; ynames){
@@ -188,15 +188,15 @@ void main(string[] args)
   dmatrix k;
   auto gwas = run_gwas(n,m,k,y,g);
   double[] ts = gwas[0];
-  double[] ps = gwas[1];
+  double[] p_values = gwas[1];
   trace(ts);
-  trace(ps);
-  writeln("ps : ",ps[0],",",ps[1],",",ps[2],"...",ps[n-3],",",ps[n-2],",",ps[n-1]);
+  trace(p_values);
+  log("p_values : ",p_values[0],",",p_values[1],",",p_values[2],"...",p_values[n-3],",",p_values[n-2],",",p_values[n-1]);
 
-  void check_results(double[] ps, double[] ts){
-    trace(ps.length, "\n", sum(ps));
-    double p1 = ps[0];
-    double p2 = ps[$-1];
+  void check_results(double[] p_values, double[] ts){
+    trace(p_values.length, "\n", sum(p_values));
+    double p1 = p_values[0];
+    double p2 = p_values[$-1];
     if(option_geno == "data/small.geno"){
       info("Validating results for ", option_geno);
       enforce(modDiff(p1,0.7387)<0.001);
@@ -209,19 +209,21 @@ void main(string[] args)
     }
     if(option_geno == "data/genenetwork/BXD.csv"){
       info("Validating results for ", option_geno);
-      enforce(round(sum(ps)) == 1901);
-
-      enforce(ps.length == 3811,"size is " ~ to!string(ps.length));
+      enforce(round(sum(p_values)) == 1901);
+      enforce(p_values.length == 3811,"size is " ~ to!string(p_values.length));
     }
     if(option_geno == "data/test8000.geno"){
-      info("Validating results for ",option_geno," ",sum(ps));
-      enforce(round(sum(ps)) == 4071);
-      enforce(ps.length == 8000);
+      info("Validating results for ",option_geno," ",sum(p_values));
+      enforce(round(sum(p_values)) == 4071);
+      enforce(p_values.length == 8000);
     }
     info("Run completed");
   }
 
-  check_results(ps,ts);
+  check_results(p_values,ts);
 
+  foreach(i, p ; p_values) {
+    writeln(ynames[i],"\t",p);
+  }
   //ProfilerStop();
 }
