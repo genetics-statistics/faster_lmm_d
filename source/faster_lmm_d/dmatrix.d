@@ -15,10 +15,10 @@ struct dmatrix{
   double[] elements;
   bool init = false;
 
-  this(int[] s, double[] e) {
-    shape = s;
-    elements = e;
-    init = true;
+  this(const int[] s, const double[] e) {
+    shape    = s.dup();
+    elements = e.dup();
+    init     = true;
   }
 
   double acc(int row, int col) {
