@@ -10,6 +10,7 @@ module faster_lmm_d.optmatrix;
 import std.experimental.logger;
 import std.math: sqrt, round;
 import std.stdio;
+import std.typecons; // for Tuples
 
 import cblas : gemm, Transpose, Order;
 
@@ -23,15 +24,6 @@ extern (C) {
                       double* a, int lda, double vl, double vu, int il, int iu, double abstol,
                       int* m, double* w, double* z, int ldz, int* isuppz);
   int LAPACKE_dgetri (int matrix_layout, int n, double* a, int lda, const(int)* ipiv);
-}
-
-struct eighTuple{
-  dmatrix kva, kve;
-
-  this(dmatrix kva, dmatrix kve) {
-    this.kva = kva;
-    this.kve = kve;
-  }
 }
 
 dmatrix matrixMult(const dmatrix lha,const dmatrix rha) {
@@ -204,6 +196,8 @@ double[] roundedNearest(const double[] input) {
 //Obtain eigendecomposition for K and return Kva,Kve where Kva is cleaned
 //of small values < 1e-6 (notably smaller than zero)
 
+alias Tuple!(dmatrix,"kva",dmatrix,"kve") eighTuple;
+
 eighTuple eigh(const dmatrix input) {
   double[] z = new double[input.shape[0] * input.shape[1]]; //eigenvalues
   double[] w = new double[input.shape[0]];  // eigenvectors
@@ -230,7 +224,10 @@ eighTuple eigh(const dmatrix input) {
       kva.elements[zq] = 0;
     }
   }
-  return eighTuple(kva, kve);
+  eighTuple e;
+  e.kva = kva;
+  e.kve = kve;
+  return e;
 }
 
 double det(const dmatrix input) {
