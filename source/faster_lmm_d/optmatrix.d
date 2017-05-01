@@ -262,7 +262,7 @@ int[] getrf(const double[] arr, const int[] shape) {
 }
 
 dmatrix inverse(const dmatrix input) {
-  double[] elements= input.elements.dup; // exactly, elements get changed by LAPACKA
+  double[] elements= input.elements.dup; // exactly, elements get changed by LAPACK
   int LWORK = input.shape[0]*input.shape[0];
   double[] WORK = new double[input.shape[0]*input.shape[0]];
   auto ipiv = new int[input.shape[0]+1];

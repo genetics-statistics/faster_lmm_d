@@ -29,11 +29,7 @@ struct dmatrix{
 
 alias Tuple!(dmatrix, "geno", string[], "gnames", string[], "ynames") genoObj;
 
-dmatrix newDmatrix(dmatrix inDmat, int start, int end) {
-  return inDmat;
-}
-
-dmatrix logDmatrix(dmatrix inDmat) {
+dmatrix logDmatrix(const dmatrix inDmat) {
   double[] elements = new double[inDmat.shape[0] * inDmat.shape[1]];
   for(int i = 0; i < inDmat.shape[0]*inDmat.shape[1]; i++) {
     elements[i] = log(inDmat.elements[i]);
@@ -41,7 +37,7 @@ dmatrix logDmatrix(dmatrix inDmat) {
   return dmatrix(inDmat.shape, elements);
 }
 
-dmatrix addDmatrix(dmatrix lha, dmatrix rha) {
+dmatrix addDmatrix(const dmatrix lha, const dmatrix rha) {
   assert(lha.shape[0] == rha.shape[0]);
   assert(lha.shape[1] == rha.shape[1]);
   double[] elements = new double[lha.shape[0] * lha.shape[1]];
@@ -51,7 +47,7 @@ dmatrix addDmatrix(dmatrix lha, dmatrix rha) {
   return dmatrix(lha.shape, elements);
 }
 
-dmatrix subDmatrix(dmatrix lha, dmatrix rha) {
+dmatrix subDmatrix(const dmatrix lha, const dmatrix rha) {
   assert(lha.shape[0] == rha.shape[0]);
   assert(lha.shape[1] == rha.shape[1]);
   double[] elements = new double[lha.shape[0] * lha.shape[1]];
@@ -61,27 +57,28 @@ dmatrix subDmatrix(dmatrix lha, dmatrix rha) {
   return dmatrix(lha.shape, elements);
 }
 
-dmatrix multiplyDmatrix(dmatrix lha, dmatrix rha) {
+dmatrix multiplyDmatrix(const dmatrix lha, const dmatrix rha) {
+  int[] rha_shape = rha.shape.dup;
   if(lha.shape[0] != rha.shape[0]){
     int[] temp = rha.shape.dup;
-    rha.shape = [temp[1], temp[0]];
+    rha_shape = [temp[1], temp[0]];
   }
   double[] elements = new double[lha.shape[0] * lha.shape[1]];
-  if(lha.shape[1] == rha.shape[1]) {
+  if(lha.shape[1] == rha_shape[1]) {
     for(int i = 0; i < lha.shape[0]*lha.shape[1]; i++) {
       elements[i] = lha.elements[i] * rha.elements[i];
     }
   }
   else{
     for(int i = 0; i < lha.shape[0]*lha.shape[1]; i++) {
-      elements[i] = lha.elements[i] * rha.elements[i%(rha.shape[0]*rha.shape[1])];
+      elements[i] = lha.elements[i] * rha.elements[i%(rha_shape[0]*rha_shape[1])];
     }
   }
 
   return dmatrix(lha.shape, elements);
 }
 
-dmatrix addDmatrixNum(dmatrix input, double num) {
+dmatrix addDmatrixNum(const dmatrix input, const double num) {
   double[] elements = new double[input.shape[0] * input.shape[1]];
   for(int i = 0; i < input.shape[0]*input.shape[1]; i++) {
     elements[i] = input.elements[i] + num;
@@ -89,7 +86,7 @@ dmatrix addDmatrixNum(dmatrix input, double num) {
   return dmatrix(input.shape, elements);
 }
 
-dmatrix subDmatrixNum(dmatrix input, double num) {
+dmatrix subDmatrixNum(const dmatrix input, const double num) {
   double[] elements = new double[input.shape[0] * input.shape[1]];
   for(int i = 0; i < input.shape[0]*input.shape[1]; i++) {
     elements[i] = input.elements[i] - num;
@@ -97,7 +94,7 @@ dmatrix subDmatrixNum(dmatrix input, double num) {
   return dmatrix(input.shape, elements);
 }
 
-dmatrix multiplyDmatrixNum(dmatrix input, double num) {
+dmatrix multiplyDmatrixNum(const dmatrix input, const double num) {
   double[] elements = new double[input.shape[0] * input.shape[1]];
   for(int i = 0; i < input.shape[0]*input.shape[1]; i++) {
     elements[i] = input.elements[i] * num;
@@ -105,7 +102,7 @@ dmatrix multiplyDmatrixNum(dmatrix input, double num) {
   return dmatrix(input.shape, elements);
 }
 
-dmatrix divideNumDmatrix(double num, dmatrix input) {
+dmatrix divideNumDmatrix(const double num, const dmatrix input) {
   double[] elements = new double[input.shape[0] * input.shape[1]];
   for(int i = 0; i < input.shape[0]*input.shape[1]; i++) {
     elements[i] =  num /input.elements[i];
@@ -113,7 +110,7 @@ dmatrix divideNumDmatrix(double num, dmatrix input) {
   return dmatrix(input.shape, elements);
 }
 
-dmatrix addDMatrixNum(dmatrix input, double num) {
+dmatrix addDMatrixNum(const dmatrix input, const double num) {
   double[] elements = new double[input.shape[0] * input.shape[1]];
   for(int i = 0; i < input.shape[0]*input.shape[1]; i++) {
     elements[i] = input.elements[i] + num;
@@ -121,7 +118,7 @@ dmatrix addDMatrixNum(dmatrix input, double num) {
   return dmatrix(input.shape, elements);
 }
 
-dmatrix divideDmatrixNum(dmatrix input, double factor) {
+dmatrix divideDmatrixNum(const dmatrix input, const double factor) {
   double[] elements = new double[input.shape[0] * input.shape[1]];
   for(int i = 0; i < input.shape[0]*input.shape[1]; i++) {
     elements[i] = input.elements[i]/factor;
@@ -129,7 +126,7 @@ dmatrix divideDmatrixNum(dmatrix input, double factor) {
   return dmatrix(input.shape, elements);
 }
 
-dmatrix zerosMatrix(int rows, int cols) {
+dmatrix zerosMatrix(const int rows, const int cols) {
   double[] elements = new double[rows * cols];
   for(int i = 0; i < rows*cols; i++) {
     elements[i] = 0;
@@ -137,7 +134,7 @@ dmatrix zerosMatrix(int rows, int cols) {
   return dmatrix([rows, cols], elements);
 }
 
-dmatrix onesMatrix(int rows, int cols) {
+dmatrix onesMatrix(const int rows, const int cols) {
   double[] elements = new double[rows * cols];
   for(int i = 0; i < rows*cols; i++) {
     elements[i] = 1;
@@ -145,11 +142,7 @@ dmatrix onesMatrix(int rows, int cols) {
   return dmatrix([rows, cols], elements);
 }
 
-double sumArray(double[] arr) {
-  return 1;
-}
-
-dmatrix horizontallystack(dmatrix a, dmatrix b) {
+dmatrix horizontallystack(const dmatrix a, const dmatrix b) {
   int n = a.shape[0];
   double[] arr;
   for(int i = 0; i < n; i++) {
@@ -159,7 +152,7 @@ dmatrix horizontallystack(dmatrix a, dmatrix b) {
   return dmatrix([a.shape[0], a.shape[1]+b.shape[1]], arr);
 }
 
-bool[] compareGt(dmatrix lha, double val) {
+bool[] compareGt(const dmatrix lha, const double val) {
   bool[] result = new bool[lha.shape[0] * lha.shape[1]];
   for(int i = 0; i < lha.shape[0] * lha.shape[1]; i++) {
     if(lha.elements[i] > val) {
@@ -172,7 +165,7 @@ bool[] compareGt(dmatrix lha, double val) {
   return result;
 }
 
-bool eqeq(dmatrix lha, dmatrix rha) {
+bool eqeq(const dmatrix lha, const dmatrix rha) {
   int index = 0;
   foreach(s; lha.shape) {
     if(s != rha.shape[index]) {
@@ -192,7 +185,7 @@ bool eqeq(dmatrix lha, dmatrix rha) {
   return true;
 }
 
-dmatrix getCol(dmatrix input, int colNo) {
+dmatrix getCol(const dmatrix input, const int colNo) {
   double[] arr;
   for(int i=0; i<input.shape[0]; i++) {
     arr ~= input.elements[i*input.shape[1]+colNo];
@@ -200,19 +193,19 @@ dmatrix getCol(dmatrix input, int colNo) {
   return dmatrix([input.shape[0],1],arr);
 }
 
-dmatrix getRow(dmatrix input, int rowNo) {
-  double[] arr = input.elements[rowNo*input.shape[1]..(rowNo+1)*input.shape[1]];
+dmatrix getRow(const dmatrix input, const int rowNo) {
+  double[] arr = input.elements[rowNo*input.shape[1]..(rowNo+1)*input.shape[1]].dup;
   return dmatrix([1,input.shape[1]],arr);
 }
 
 
-void setCol(ref dmatrix input, int colNo, dmatrix arr) {
+void setCol(ref dmatrix input, const int colNo, const dmatrix arr) {
   for(int i=0; i<input.shape[0]; i++) {
     input.elements[i*input.shape[1]+colNo] = arr.elements[i];
   }
 }
 
-void setRow(ref dmatrix input, int rowNo, dmatrix arr) {
+void setRow(ref dmatrix input, const int rowNo, const dmatrix arr) {
   int index =  rowNo*input.shape[1];
   int end =  (rowNo+1)*input.shape[1];
   int k = 0;
@@ -222,7 +215,7 @@ void setRow(ref dmatrix input, int rowNo, dmatrix arr) {
   }
 }
 
-void nanCounter(dmatrix input) {
+void nanCounter(const dmatrix input) {
   int nanCounter = 0;
   foreach(ref ele; input.elements) {
     if(std.math.isNaN(ele)) {
