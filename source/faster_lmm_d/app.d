@@ -162,7 +162,7 @@ void main(string[] args)
     info("Reduce geno matrix to match phenotype strains");
     trace("gnames and phenotypes");
     trace("gnames=",gnames);
-    trace("phenotypes=",phenotypes);
+    trace("ynames=",ynames);
     int[] gidx = [];
     int index = 0;
     foreach(ind; phenotypes){
