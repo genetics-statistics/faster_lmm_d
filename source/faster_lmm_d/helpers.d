@@ -9,13 +9,13 @@ module faster_lmm_d.helpers;
 
 import std.math : isNaN, pow;
 
-double modDiff(double x, double y){
+double modDiff(const double x, const double y){
   double rem = y - x;
   if(rem<0){return -rem;}
   return rem;
 }
 
-bool[] isnan(double[] vector){
+bool[] isnan(const double[] vector){
   bool[] result;
   foreach(element; vector){
     result ~= isNaN(element);
@@ -23,7 +23,7 @@ bool[] isnan(double[] vector){
   return result;
 }
 
-bool[] negateBool(bool[] vector){
+bool[] negateBool(const bool[] vector){
   bool[] result;
   foreach(element; vector){
     result ~= true - element;
@@ -31,13 +31,13 @@ bool[] negateBool(bool[] vector){
   return result;
 }
 
-double sum(double[] vector){
+double sum(const double[] vector){
   double result = 0;
   foreach(element;vector){result+=element;}
   return result;
 }
 
-int sum(bool[] vector){
+int sum(const bool[] vector){
   int result = 0;
   foreach(element;vector){
     if(element == true){
@@ -47,25 +47,17 @@ int sum(bool[] vector){
   return result;
 }
 
-double[] array(int n){
-  return [];
-}
-
-int range(int n){
-  return 0;
-}
-
-double globalMean(double[] input){
+double globalMean(const double[] input){
   return sum(input)/input.length;
 }
 
-double getVariation(double[] vector, double mean){
+double getVariation(const double[] vector, const double mean){
   double result = 0;
   foreach(element;vector){result+= pow(element-mean,2);}
   return result/vector.length;
 }
 
-double[] getNumArray(double[] arr,bool[] valuesArr){
+double[] getNumArray(const double[] arr, const bool[] valuesArr){
   double[] result = new double[sum(valuesArr)];
   for(int k = 0, index = 0 ; k < arr.length; k++){
     if(valuesArr[k] == true){
@@ -76,7 +68,7 @@ double[] getNumArray(double[] arr,bool[] valuesArr){
   return result;
 }
 
-void replaceNaN(ref double[] arr, bool[] valuesArr, double mean){
+void replaceNaN(ref double[] arr, const bool[] valuesArr, const double mean){
   int index = 0;
   foreach(ref element; valuesArr){
     if(element == true){
@@ -88,7 +80,7 @@ void replaceNaN(ref double[] arr, bool[] valuesArr, double mean){
   }
 }
 
-double[] rangeArray(int count){
+double[] rangeArray(const int count){
   double[] arr;
   for(int i = 0; i < count; i++){
     arr ~= i;
