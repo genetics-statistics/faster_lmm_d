@@ -225,7 +225,7 @@ void main(string[] args)
   check_results(p_values,ts);
 
   foreach(i, p ; p_values) {
-    writeln(ynames[i],"\t",p);
+    writeln(ynames[i],"\t",p,"\t",ts[i]);
   }
   //ProfilerStop();
 }

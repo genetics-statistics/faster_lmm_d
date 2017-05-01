@@ -1,3 +1,23 @@
 This is a test set from GeneNetwork which can also be viewed with
 
   http://gn2.genenetwork.org/show_trait?trait_id=104617_at&dataset=BR_U_0805_M
+
+The data can be fetched through the REST API. Fetch the genotype data with
+
+  wget "http://test-gn2.genenetwork.org/api_pre1/genotype/mouse/BXD/geno.csv"
+
+and the phenotype data
+
+  wget "http://test-gn2.genenetwork.org/api_pre1/trait/BR_U_0805_M/104617_at.json"
+
+the control file contains some information for parsing
+
+  wget "http://test-gn2.genenetwork.org/api_pre1/genotype/mouse/BXD.json"
+
+Run it with something like
+
+  time env LD_LIBRARY_PATH=~/.guix-profile/lib ./build/faster_lmm_d --control=BXD.json --pheno=104617_at.json --geno=geno.csv --cmd=rqtl
+
+and you get (for now)
+
+  core.exception.RangeError@source/faster_lmm_d/app.d(169): Range violation
