@@ -201,8 +201,8 @@ void main(string[] args)
     double p2 = p_values[$-1];
     if(option_geno == "data/small.geno"){
       info("Validating results for ", option_geno);
-      enforce(modDiff(p1,0.7387)<0.001);
-      enforce(modDiff(p2,0.7387)<0.001);
+      enforce(modDiff(p1,0.7141)<0.001);
+      enforce(modDiff(p2,0.7141)<0.001);
     }
     if(option_geno == "data/small_na.geno"){
       info("Validating results for ", option_geno);
@@ -216,7 +216,7 @@ void main(string[] args)
     }
     if(option_geno == "data/test8000.geno"){
       info("Validating results for ",option_geno," ",sum(p_values));
-      enforce(round(sum(p_values)) == 4070);
+      enforce(round(sum(p_values)) == 4069);
       enforce(p_values.length == 8000);
     }
     info("Run completed");

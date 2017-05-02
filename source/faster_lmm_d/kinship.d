@@ -37,6 +37,6 @@ dmatrix kinship_full(const dmatrix G)
 
 eighTuple kvakve(const dmatrix K)
 {
-  trace("Obtaining eigendecomposition for %dx%d matrix",K.shape[0],K.shape[1]);
+  tracef("Obtaining eigendecomposition for %dx%d matrix",K.shape[0],K.shape[1]);
   return eigh(K);
 }
