@@ -201,7 +201,7 @@ alias Tuple!(dmatrix,"kva",dmatrix,"kve") eighTuple;
 eighTuple eigh(const dmatrix input) {
   double[] z = new double[input.shape[0] * input.shape[1]]; //eigenvalues
   double[] w = new double[input.shape[0]];  // eigenvectors
-  double[] elements = roundedNearest(input.elements.dup);
+  double[] elements = input.elements.dup;
 
   double wi;
   int n = input.shape[0];
@@ -217,7 +217,7 @@ eighTuple eigh(const dmatrix input) {
                 elements.ptr, n, vl, vu, il, iu, abstol,
                 m.ptr, w.ptr, z.ptr, ldz, isuppz.ptr);
 
-  dmatrix kva = dmatrix([input.shape[0],1], roundedNearest(w));
+  dmatrix kva = dmatrix([input.shape[0],1], w);
   dmatrix kve = dmatrix(input.shape, z);
   for(int zq = 0 ; zq < cast(int)kva.elements.length; zq++){
     if(kva.elements[zq]< 1e-6){

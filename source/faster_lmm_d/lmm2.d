@@ -154,7 +154,7 @@ extern(C) double LL_brent(double h, void *params){
   // I return a large number if we encounter h < 0 to avoid errors in LL computation during the search.
 
   if( h < 0){ return 1e6; }
-  return -getLL(LMMglob, h, Xglob, false, false).LL;
+  return -getLL(LMMglob, h, Xglob, false, true).LL;
 }
 
 llTuple getLL(LMM2 lmmobject, double h, dmatrix X, bool stack=true, bool REML=false){
@@ -218,7 +218,7 @@ double optimizeBrent(LMM2 lmmobject, dmatrix X, bool REML, double lower, double 
     status = gsl_min_test_interval (a, b, 0.0001, 0.0);
 
     if (status == GSL_SUCCESS)
-      trace("Converged:\n");
+      trace("Converged:");
   }
   while (status == GSL_CONTINUE && iter < max_iter);
 
