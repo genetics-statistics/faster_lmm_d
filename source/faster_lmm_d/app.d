@@ -14,6 +14,7 @@ import std.getopt;
 import std.json;
 import std.math : round;
 import std.stdio;
+import std.algorithm : countUntil;
 
 import faster_lmm_d.dmatrix;
 import faster_lmm_d.gwas;
@@ -123,8 +124,9 @@ void main(string[] args)
   }
 
   // ---- Phenotypes
-  double[] y;
+  double[] y, y_temp;
   string[] phenotypes;
+
   if(option_pheno){
     if(cmd == "rqtl"){
       auto pTuple = pheno(option_pheno, option_pheno_column);
@@ -165,17 +167,16 @@ void main(string[] args)
     trace("ynames=",ynames);
     int[] gidx = [];
     int index = 0;
-    foreach(ind; phenotypes){
-      while(gnames[0] != ind)
-      {
-        gnames.popFront;
-        index++;
+
+    foreach(i, ind; phenotypes){
+      int a = cast(int)countUntil(gnames, ind);
+      if(a != -1){
+        gidx ~= a;
+        y_temp ~= y[i];
       }
-      gidx ~= index;
-      index++;
-      gnames.popFront;
     }
-    trace(gidx);
+    y = y_temp;
+
     dmatrix gTranspose = matrixTranspose(g);
     dmatrix slicedMatrix = sliceDmatrix(gTranspose, gidx);
     trace(slicedMatrix.shape);
