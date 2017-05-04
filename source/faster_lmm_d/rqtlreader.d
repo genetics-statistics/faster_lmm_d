@@ -78,13 +78,13 @@ genoObj geno(string fn, JSONValue ctrl){
   auto tsv = csvReader!(string, Malformed.ignore)(input, null);
 
   genoObj geno_obj;
-  geno_obj.gnames = tsv.header[1..$];
+  geno_obj.ynames = tsv.header[1..$];
 
   int rowCount = 0;
-  int colCount = cast(int)geno_obj.gnames.length;
+  int colCount = cast(int)geno_obj.ynames.length;
 
   foreach(row; tsv){
-    geno_obj.ynames ~= row.front;
+    geno_obj.gnames ~= row.front;
     row.popFront();
     foreach(item; row){
       geno_obj.geno.elements ~= faster_lmm_d_mapper[hab_mapper[item]];

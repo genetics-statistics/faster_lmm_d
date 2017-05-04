@@ -169,7 +169,7 @@ void main(string[] args)
     int index = 0;
 
     foreach(i, ind; phenotypes){
-      int a = cast(int)countUntil(gnames, ind);
+      int a = cast(int)countUntil(ynames, ind);
       if(a != -1){
         gidx ~= a;
         y_temp ~= y[i];
@@ -226,7 +226,7 @@ void main(string[] args)
   check_results(p_values,ts);
 
   foreach(i, p ; p_values) {
-    writeln(ynames[i],"\t",p);
+    writeln(gnames[i],"\t",p);
   }
   //ProfilerStop();
 }
