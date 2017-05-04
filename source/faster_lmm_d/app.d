@@ -56,7 +56,7 @@ void main(string[] args)
 
   string cmd, option_control, option_kinship, option_pheno, option_geno, useBLAS, noBLAS, noCUDA, option_logging;
   bool option_help = false;
-  int option_pheno_column;
+  ulong option_pheno_column;
 
   globalLogLevel(LogLevel.warning); //default
 
@@ -144,32 +144,23 @@ void main(string[] args)
   // ---- Genotypes
   dmatrix g;
   string[] gnames;
-  string[] ynames;
-  if(option_geno && cmd != "iterator"){
-    genoObj g1;
-    if(cmd == "rqtl"){
-      g1 = geno(option_geno, ctrl);
-    }
-    else{
-      g1 = tsvgeno(option_geno, ctrl);
-    }
-    g = g1.geno;
-    gnames = g1.gnames;
-    ynames = g1.ynames;
-    trace(g.shape);
-  }
+  auto g1 = (cmd == "rqtl" ? geno(option_geno, ctrl) : tsvgeno(option_geno, ctrl ));
+  g = g1.geno;
+  gnames = g1.gnames;
+  auto ynames = g1.ynames;
+  trace(g.shape);
 
   // ---- If there are less phenotypes than strains, reduce the genotype matrix:
   if(g.shape[0] != y.sizeof){
-    info("Reduce geno matrix to match phenotype strains");
+    info("Reduce geno matrix to match # strains in phenotype");
     trace("gnames and phenotypes");
     trace("gnames=",gnames);
     trace("ynames=",ynames);
-    int[] gidx = [];
-    int index = 0;
+    ulong[] gidx = [];
+    ulong index = 0;
 
     foreach(i, ind; phenotypes){
-      int a = cast(int)countUntil(ynames, ind);
+      auto a = countUntil(ynames, ind);
       if(a != -1){
         gidx ~= a;
         y_temp ~= y[i];
@@ -186,8 +177,8 @@ void main(string[] args)
   }
 
   // ---- Run GWAS
-  int n = cast(int)y.length;
-  int m = g.shape[1];
+  auto n = y.length;
+  auto m = g.shape[1];
   dmatrix k;
   auto gwas = run_gwas(n,m,k,y,g);
   double[] ts = gwas[0];

@@ -12,10 +12,9 @@ import std.typecons;
 
 import faster_lmm_d.helpers;
 
-alias Tuple!(double[], "Y", bool[], "keep", int, "n") phenoStruct;
+alias Tuple!(double[], "Y", bool[], "keep", ulong, "n") phenoStruct;
 
-phenoStruct remove_missing( int n, double[] y){
-
+phenoStruct remove_missing( ulong n, double[] y){
   //Remove missing data. Returns new n,y,keep
 
   trace("In remove missing new");
@@ -24,5 +23,4 @@ phenoStruct remove_missing( int n, double[] y){
   double[] Y = getNumArray(y,keep);
   n = cast(int)Y.length;
   return phenoStruct(Y, keep, n);
-
 }

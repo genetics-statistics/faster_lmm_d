@@ -25,7 +25,7 @@ JSONValue control(string fn){
   return j;
 }
 
-auto pheno(string fn, int p_column= 0){
+auto pheno(string fn, ulong p_column= 0){
   Regex!char Pattern = regex("\\.json$", "i");
   double[] y;
   string[] phenotypes;
@@ -77,20 +77,22 @@ genoObj geno(string fn, JSONValue ctrl){
   string input = cast(string)std.file.read(fn);
   auto tsv = csvReader!(string, Malformed.ignore)(input, null);
 
-  genoObj geno_obj;
-  geno_obj.ynames = tsv.header[1..$];
+  auto ynames = cast(immutable(string[]))tsv.header[1..$];
 
-  int rowCount = 0;
-  int colCount = cast(int)geno_obj.ynames.length;
+  dmatrix geno;
+  string[] gnames = [];
+  auto rowCount = 0;
+  auto colCount = ynames.length;
 
   foreach(row; tsv){
-    geno_obj.gnames ~= row.front;
+    gnames ~= row.front;
     row.popFront();
     foreach(item; row){
-      geno_obj.geno.elements ~= faster_lmm_d_mapper[hab_mapper[item]];
+      geno.elements ~= faster_lmm_d_mapper[hab_mapper[item]];
     }
     rowCount++;
   }
+  genoObj geno_obj = genoObj(geno,gnames,ynames[1..$]);
 
   geno_obj.geno.shape = [rowCount, colCount];
   info("Genotype Matrix created");
