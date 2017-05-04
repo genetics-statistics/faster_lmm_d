@@ -97,7 +97,7 @@ void main(string[] args)
   }
 
   if(option_logging) {
-    writeln("Setting logger to " ~ option_logging);
+    stderr.writeln("Setting logger to " ~ option_logging);
     switch (option_logging){
       case "debug":
         globalLogLevel(LogLevel.trace);
@@ -225,8 +225,9 @@ void main(string[] args)
 
   check_results(p_values,ts);
 
+  writeln("Marker\tP-value\tt-test");
   foreach(i, p ; p_values) {
-    writeln(gnames[i],"\t",p);
+    writeln(gnames[i],"\t",p,"\t",ts[i]);
   }
   //ProfilerStop();
 }
