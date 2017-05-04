@@ -207,8 +207,8 @@ void main(string[] args)
     }
     if(option_geno == "data/small_na.geno"){
       info("Validating results for ", option_geno);
-      enforce(modDiff(p1,0.062)<0.001);
-      enforce(modDiff(p2,0.062)<0.001);
+      enforce(modDiff(p1,0)<0.001);
+      enforce(modDiff(p2,0)<0.001);
     }
     if(option_geno == "data/genenetwork/BXD.csv"){
       info("Validating results for ", option_geno);
