@@ -169,7 +169,7 @@ void main(string[] args)
     int index = 0;
 
     foreach(i, ind; phenotypes){
-      int a = cast(int)countUntil(gnames, ind);
+      int a = cast(int)countUntil(ynames, ind);
       if(a != -1){
         gidx ~= a;
         y_temp ~= y[i];
@@ -207,8 +207,8 @@ void main(string[] args)
     }
     if(option_geno == "data/small_na.geno"){
       info("Validating results for ", option_geno);
-      enforce(modDiff(p1,0.062)<0.001);
-      enforce(modDiff(p2,0.062)<0.001);
+      enforce(modDiff(p1,0)<0.001);
+      enforce(modDiff(p2,0)<0.001);
     }
     if(option_geno == "data/genenetwork/BXD.csv"){
       info("Validating results for ", option_geno);
@@ -227,7 +227,7 @@ void main(string[] args)
 
   writeln("Marker\tP-value\tt-test");
   foreach(i, p ; p_values) {
-    writeln(ynames[i],"\t",p,"\t",ts[i]);
+    writeln(gnames[i],"\t",p,"\t",ts[i]);
   }
   //ProfilerStop();
 }

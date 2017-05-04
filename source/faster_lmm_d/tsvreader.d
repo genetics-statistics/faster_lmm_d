@@ -31,7 +31,12 @@ auto tsvpheno(string fn, int p_column= 0){
   foreach(line; lines){
   	if(line != ""){
   		string[] row = line.split("\t");
-	  	y ~=  to!double(row[1]);// <--- slow
+      if(row[1] == "NA"){
+        y ~=  double.nan;// <--- slow
+      }
+      else{
+        y ~=  to!double(row[1]);// <--- slow
+      }
 	  	phenotypes ~= to!string(row[0]);
   	}
 
@@ -63,18 +68,18 @@ genoObj tsvgeno(string fn, JSONValue ctrl){
   string input = cast(string)std.file.read(fn);
   string[] rows = input.split("\n");
 
-  string[] gnames = rows[4].split("\t");
+  string[] ynames = rows[4].split("\t");
 
   genoObj geno_obj;
-  geno_obj.gnames = gnames[1..$];
+  geno_obj.ynames = ynames[1..$];
 
   int rowCount = cast(int)rows.length - 6;
-  int colCount= cast(int)geno_obj.gnames.length;
+  int colCount= cast(int)geno_obj.ynames.length;
 
   foreach(line; rows[5..$]){
     if(line != ""){
       string[] row = line.split("\t");
-      geno_obj.ynames ~= row[0];
+      geno_obj.gnames ~= row[0];
       foreach(dchar item; row[1]){
         geno_obj.geno.elements ~= faster_lmm_d_mapper[hab_mapper[item]];
       }
