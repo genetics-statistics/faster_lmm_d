@@ -20,8 +20,8 @@ auto gwas(double[] Y, dmatrix G, dmatrix K, bool restricted_max_likelihood = tru
 
   trace("In gwas.gwas");
 
-  int inds = G.shape[1];
-  int snps = G.shape[0];
+  auto inds = G.shape[1];
+  auto snps = G.shape[0];
 
   infof("%d SNPs",snps);
 

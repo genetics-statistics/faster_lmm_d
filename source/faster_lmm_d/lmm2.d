@@ -27,8 +27,8 @@ alias Tuple!(LMM2, "lmmobj", double, "fit_hmax", dmatrix, "fit_beta", double, "f
 alias Tuple!(dmatrix, "beta", double, "sigma", dmatrix, "Q", dmatrix, "XX_i", dmatrix, "XX") mlSol;
 
 struct LMM2{
-  int q;
-  double N, optH, optSigma, optLL;
+  ulong q, N;
+  double optH, optSigma, optLL;
   bool init = false;
   bool verbose = false;
   dmatrix X0, Y, K, Kva, Kve, KveT;
@@ -50,7 +50,7 @@ struct LMM2{
 
     if(X0.init == false){
       trace("Initializing LMM2...");
-      X0 = onesMatrix(cast(int)Y.length,1);
+      X0 = onesMatrix(Y.length,1);
     }
 
     this.verbose = verbose;
@@ -67,7 +67,7 @@ struct LMM2{
     this.X0 = X0;
   }
 
-  this(LMM2 lmmobject, dmatrix Yt, dmatrix X0t, dmatrix X0t_stack, dmatrix KveT, int q){
+  this(LMM2 lmmobject, dmatrix Yt, dmatrix X0t, dmatrix X0t_stack, dmatrix KveT, ulong q){
     this.verbose = lmmobject.verbose;
     this.init = true;
     this.K = lmmobject.K;
@@ -117,8 +117,8 @@ LMM2 lmm2transform(LMM2 lmmobject){
   dmatrix KveT = matrixTranspose(lmmobject.Kve);
   dmatrix Yt = matrixMult(KveT, lmmobject.Y);
   dmatrix X0t = matrixMult(KveT, lmmobject.X0);
-  dmatrix X0t_stack = horizontallystack(X0t, onesMatrix(cast(int)lmmobject.N,1));
-  int q = X0t.shape[1];
+  dmatrix X0t_stack = horizontallystack(X0t, onesMatrix(lmmobject.N,1));
+  auto q = X0t.shape[1];
   return LMM2(lmmobject, Yt, X0t, X0t_stack, KveT, q);
 }
 
@@ -131,7 +131,7 @@ mlSol getMLSoln(LMM2 lmmobject, double h, dmatrix X){
   //   covariate matrix.
   mlSol ml_sol;
   dmatrix S = divideNumDmatrix(1,addDmatrixNum(multiplyDmatrixNum(lmmobject.Kva,h),(1.0 - h)));
-  int[] temp = S.shape.dup;
+  auto temp = S.shape.dup;
   S.shape = [temp[1], temp[0]];
   dmatrix Xt = multiplyDmatrix(matrixTranspose(X), S);
   ml_sol.XX = matrixMult(Xt,X);
@@ -192,7 +192,7 @@ llTuple getLL(LMM2 lmmobject, double h, dmatrix X, bool stack=true, bool REML=fa
 
 double optimizeBrent(LMM2 lmmobject, dmatrix X, bool REML, double lower, double upper){
   int status;
-  int iter = 0, max_iter = 100;
+  ulong iter = 0, max_iter = 100;
   const(gsl_min_fminimizer_type) *T;
   gsl_min_fminimizer *s;
   double a = lower, b = upper;
@@ -233,9 +233,9 @@ double getMax(LMM2 lmmobject, dmatrix L, dmatrix H, dmatrix X, bool REML=false){
   //   containing a maximum.  Within these regions, a Brent search is performed to find the
   //   optimum.
 
-  int n = cast(int)L.shape[0];
+  auto n = L.shape[0];
   double[] HOpt;
-  for(int i=1; i< n-2; i++){
+  for(auto i=1; i< n-2; i++){
     if(L.elements[i-1] < L.elements[i] && L.elements[i] > L.elements[i+1]){
       HOpt ~= optimizeBrent(lmmobject, X, REML, H.elements[i-1],H.elements[i+1]);
       if(isNaN(HOpt[$-1])){
@@ -259,7 +259,7 @@ double getMax(LMM2 lmmobject, dmatrix L, dmatrix H, dmatrix X, bool REML=false){
   }
 }
 
-fitTuple lmm2fit(LMM2 lmmobject, dmatrix X, int ngrids=100, bool REML=true){
+fitTuple lmm2fit(LMM2 lmmobject, dmatrix X, ulong ngrids=100, bool REML=true){
 
   //   Finds the maximum-likelihood solution for the heritability (h) given the current parameters.
   //   X can be passed and will transformed and concatenated to X0t.  Otherwise, X0t is used as
@@ -276,16 +276,16 @@ fitTuple lmm2fit(LMM2 lmmobject, dmatrix X, int ngrids=100, bool REML=true){
     X = lmmobject.X0t_stack;
   }
   double[] Harr = new double[ngrids];
-  for(int m = 0; m < ngrids; m++){
+  for(auto m = 0; m < ngrids; m++){
     Harr[m] = m / cast(double)ngrids;
   }
 
   double[] elm = new double[ngrids];
-  for(int h = 0; h < ngrids; h++){
+  for(auto h = 0; h < ngrids; h++){
     elm[h] = getLL(lmmobject, Harr[h], X, false, REML).LL;
   }
-  dmatrix L = dmatrix([cast(int)elm.length,1],elm);
-  dmatrix H = dmatrix([cast(int)Harr.length,1],Harr);
+  dmatrix L = dmatrix([elm.length,1],elm);
+  dmatrix H = dmatrix([Harr.length,1],Harr);
   fit.fit_hmax = getMax(lmmobject, L, H, X, REML);
   llTuple ll = getLL(lmmobject, fit.fit_hmax, X, false, REML);
 
@@ -316,7 +316,7 @@ auto lmm2association(LMM2 lmmobject, dmatrix X, bool stack=true, bool REML=true,
   }
   double h = lmmobject.optH;
   llTuple ll = getLL(lmmobject,h, X ,false,REML);
-  int q  = cast(int)ll.beta.elements.length;
+  auto q  = ll.beta.elements.length;
   double ts,ps;
   return tstat(lmmobject, ll.beta.elements[q-1], ll.betaVAR.acc(q-1,q-1), ll.sigma, q);
 }

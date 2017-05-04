@@ -17,8 +17,8 @@ import faster_lmm_d.optmatrix;
 dmatrix kinship_full(const dmatrix G)
 {
   info("Full kinship matrix used");
-  int m = G.shape[0]; // snps
-  int n = G.shape[1]; // inds
+  auto m = G.shape[0]; // snps
+  auto n = G.shape[1]; // inds
   log(m," SNPs");
   assert(m>n, "n should be larger than m");
   dmatrix temp = matrixTranspose(G);
