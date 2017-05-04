@@ -276,6 +276,8 @@ dmatrix inverse(const dmatrix input) {
   return dmatrix(input.shape, elements);
 }
 
+import std.conv;
+
 unittest{
   dmatrix d1 = dmatrix([3,4],[2,4,5,6, 7,8,9,10, 2,-1,-4,3]);
   dmatrix d2 = dmatrix([4,2],[2,7,8,9, -5,2,-1,-4]);
@@ -289,8 +291,20 @@ unittest{
   dmatrix d6 = dmatrix([2,2],[2, -4, -1, 3]);
   assert(matrixTranspose(d4) == d6);
 
+  dmatrix M = dmatrix([3,4],[10, 11, 12, 13,
+                             14, 15, 16, 17,
+                             18, 19, 20, 21]);
+
+  dmatrix MT = dmatrix([4,3],[10,14,18,
+                              11,15,19,
+                              12,16,20,
+                              13,17,21]);
+
+  auto resultMT = matrixTranspose(M);
+  assert(resultMT == MT,to!string(resultMT));
+
   dmatrix d7 = dmatrix([4,2],[-3,13,7, -5, -12, 26, 2, -8]);
   assert(matrixMultT(d2, d6) == d7);
 
-  assert(det(d4) == 2);
+  assert(det(d4) == 2,to!string(det(d4)));
 }

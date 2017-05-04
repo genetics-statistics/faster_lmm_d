@@ -38,7 +38,7 @@ OUT    = build/faster_lmm_d
 # The Guix targets resolve the RPATH automatically
 guix:        DFLAGS += -O -g -inline
 
-guix-debug:  DFLAGS += -O0 -g -d-debug
+guix-debug:  DFLAGS += -O0 -g -d-debug -unittest
 
 # The development options are run from ~/.guix-profile and need to inject the RPATH
 debug:       DFLAGS += -O0 -g -d-debug $(RPATH) -link-debuglib
