@@ -48,7 +48,6 @@ dmatrix matrixTranspose(const dmatrix input) {
   auto index = 0;
   for(auto i=0; i < input.shape[1]; i++) {
     for(auto j=0; j < input.shape[0]; j++) {
-      trace(input.shape,",",i,",",j,",",index,",",j*input.shape[1]+i,",",dim);
       output[index] = input.elements[j*input.shape[1]+i];
       index++;
     }

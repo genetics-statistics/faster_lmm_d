@@ -70,7 +70,7 @@ genoObj tsvgeno(string fn, JSONValue ctrl){
   immutable(string[]) ynames = rows[4].split("\t");
 
   auto rowCount = rows.length - 6;
-  auto colCount = ynames.length;
+  auto colCount = ynames.length - 1;
 
   dmatrix geno;
   string[] gnames = [];
