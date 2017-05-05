@@ -76,40 +76,6 @@ void prettyPrint(const dmatrix input) {
   writeln("]");
 }
 
-void pPrint(const dmatrix input) {
-  writeln("[");
-  for(auto i=0; i < input.shape[0]; i++) {
-    writeln(input.elements[(input.shape[1]*i)..(input.shape[1]*(i+1))]);
-  }
-  writeln("]");
-}
-
-void pPrint2(const dmatrix input) {
-  writeln("[");
-  for(auto i=0; i < input.shape[0]; i++) {
-    writeln(input.elements[(input.shape[1]*i)..(input.shape[1]*i+3)],"...",
-      input.elements[(input.shape[1]*(i+1)-3)..(input.shape[1]*(i+1))]);
-  }
-  writeln("]");
-}
-
-void pPrint3(const dmatrix input) {
-  writeln("[");
-  if(input.shape[0]>6) {
-    for(auto i=0; i < 3; i++) {
-      writeln(input.elements[(input.shape[1]*i)..(input.shape[1]*i+3)],"...",
-        input.elements[(input.shape[1]*(i+1)-3)..(input.shape[1]*(i+1))]);
-    }
-    writeln("...");
-    for(auto i=input.shape[0]-3; i < input.shape[0]; i++) {
-      writeln(input.elements[(input.shape[1]*i)..(input.shape[1]*i+3)],"...",
-        input.elements[(input.shape[1]*(i+1)-3)..(input.shape[1]*(i+1))]);
-    }
-  }
-
-  writeln("]");
-}
-
 dmatrix sliceDmatrix(const dmatrix input, const ulong[] along) {
   trace("In sliceDmatrix");
   double[] output;
@@ -230,35 +196,34 @@ eighTuple eigh(const dmatrix input) {
   return e;
 }
 
-double det(const dmatrix input) {
-  double[] narr = input.elements.dup;
-  auto shape = [cast(int)input.shape[0],cast(int)input.shape[1]];
-  auto pivot = getrf(narr, shape);
+double det(const dmatrix input)
+in {
+  assert(input.is_square, "Input matrix should be square");
+}
+body {
+  auto matrix = cast(const double [])input.elements;
+  auto pivot = getrf(matrix, input.cols);
 
   auto num_perm = 0;
   auto j = 0;
   foreach(swap; pivot) {
-    if(swap-1 != j) {num_perm += 1;}
+    if (swap-1 != j) num_perm += 1;
     j++;
   }
-  double prod;
-  if(num_perm % 2 == 1) {
-    prod = 1;
-  } else{
-    prod = -1; //# odd permutations => negative
-  }
-  ulong min = input.shape[0];
-  if(input.shape[0] > input.shape[1]) {min = input.shape[1];}
+  // odd permutations => negative:
+  double prod = (num_perm % 2 == 1.0 ? 1 : -1.0 );
+  auto min = ( input.rows < input.cols ? input.rows : input.cols );
   for(auto i =0; i < min; i++) {
-    prod *= narr[input.shape[0]*i + i];
+    prod *= matrix[input.cols*i + i];
   }
   return prod;
 }
 
-int[] getrf(const double[] arr, const int[] shape) {
-  auto ipiv = new int[shape[0]+1];
-  // LAPACKE changes the contents of arr, so we copy it first
-  LAPACKE_dgetrf(101, shape[0],shape[0],arr.dup.ptr,shape[0],ipiv.ptr);
+int[] getrf(const double[] arr, const m_items cols) {
+  auto ipiv = new int[cols+1];
+  int i_cols = cast(int)cols;
+  // LAPACKE changes the contents of arr, so we copy it first:
+  LAPACKE_dgetrf(101,i_cols,i_cols,arr.dup.ptr,i_cols,ipiv.ptr);
   return ipiv;
 }
 
@@ -300,7 +265,9 @@ unittest{
                               13,17,21]);
 
   auto resultMT = matrixTranspose(M);
+  auto resultM = matrixTranspose(MT);
   assert(resultMT == MT,to!string(resultMT));
+  assert(resultM == M,to!string(resultM));
 
   dmatrix d7 = dmatrix([4,2],[-3,13,7, -5, -12, 26, 2, -8]);
   assert(matrixMultT(d2, d6) == d7);

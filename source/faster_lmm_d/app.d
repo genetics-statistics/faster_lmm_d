@@ -151,7 +151,7 @@ void main(string[] args)
   trace(g.shape);
 
   // ---- If there are less phenotypes than strains, reduce the genotype matrix:
-  if(g.shape[0] != y.sizeof){
+  if(g.rows != y.sizeof){
     info("Reduce geno matrix to match # strains in phenotype");
     trace("gnames and phenotypes");
     trace("gnames=",gnames);
@@ -178,7 +178,7 @@ void main(string[] args)
 
   // ---- Run GWAS
   auto n = y.length;
-  auto m = g.shape[1];
+  auto m = g.m_geno;
   dmatrix k;
   auto gwas = run_gwas(n,m,k,y,g);
   double[] ts = gwas[0];
