@@ -24,42 +24,46 @@ struct DMatrix{
     init     = true;
   }
 
-  const m_items cols() { return shape[0]; }
-  const m_items rows() { return shape[1]; }
+  const m_items cols() { return shape[1]; }
+  const m_items rows() { return shape[0]; }
+  const m_items size() { return shape[0] * shape[1]; }
   const m_items n_pheno() { return cols; }
   const m_items m_geno() { return rows; }
   const bool is_square() { return rows == cols; };
 
   double acc(ulong row, ulong col) {
-    return this.elements[row*this.shape[1]+col];
+    return this.elements[row*this.cols()+col];
   }
 }
 
 alias Tuple!(DMatrix, "geno", string[], "gnames", immutable(string[]), "ynames") genoObj;
 
 DMatrix logDMatrix(const DMatrix inDmat) {
-  double[] elements = new double[inDmat.shape[0] * inDmat.shape[1]];
-  for(auto i = 0; i < inDmat.shape[0]*inDmat.shape[1]; i++) {
+  m_items total_items = inDmat.size();
+  double[] elements = new double[total_items];
+  for(auto i = 0; i < total_items; i++) {
     elements[i] = log(inDmat.elements[i]);
   }
   return DMatrix(inDmat.shape, elements);
 }
 
 DMatrix addDMatrix(const DMatrix lha, const DMatrix rha) {
-  assert(lha.shape[0] == rha.shape[0]);
-  assert(lha.shape[1] == rha.shape[1]);
-  double[] elements = new double[lha.shape[0] * lha.shape[1]];
-  for(auto i = 0; i < lha.shape[0]*lha.shape[1]; i++) {
+  assert(lha.rows() == rha.rows());
+  assert(lha.cols() == rha.cols());
+  m_items total_items = lha.size();
+  double[] elements = new double[total_items];
+  for(auto i = 0; i < total_items; i++) {
     elements[i] = lha.elements[i] + rha.elements[i];
   }
   return DMatrix(lha.shape, elements);
 }
 
 DMatrix subDMatrix(const DMatrix lha, const DMatrix rha) {
-  assert(lha.shape[0] == rha.shape[0]);
-  assert(lha.shape[1] == rha.shape[1]);
-  double[] elements = new double[lha.shape[0] * lha.shape[1]];
-  for(auto i = 0; i < lha.shape[0]*lha.shape[1]; i++) {
+  assert(lha.rows() == rha.rows());
+  assert(lha.cols() == rha.cols());
+  m_items total_items = lha.size();
+  double[] elements = new double[total_items];
+  for(auto i = 0; i < total_items; i++) {
     elements[i] = lha.elements[i] - rha.elements[i];
   }
   return DMatrix(lha.shape, elements);
@@ -67,18 +71,19 @@ DMatrix subDMatrix(const DMatrix lha, const DMatrix rha) {
 
 DMatrix multiplyDMatrix(const DMatrix lha, const DMatrix rha) {
   ulong[] rha_shape = rha.shape.dup;
-  if(lha.shape[0] != rha.shape[0]){
+  if(lha.rows() != rha.rows()){
     ulong[] temp = rha.shape.dup;
     rha_shape = [temp[1], temp[0]];
   }
-  double[] elements = new double[lha.shape[0] * lha.shape[1]];
-  if(lha.shape[1] == rha_shape[1]) {
-    for(auto i = 0; i < lha.shape[0]*lha.shape[1]; i++) {
+  m_items total_items = lha.size();
+  double[] elements = new double[total_items];
+  if(lha.cols() == rha_shape[1]) {
+    for(auto i = 0; i < total_items; i++) {
       elements[i] = lha.elements[i] * rha.elements[i];
     }
   }
   else{
-    for(auto i = 0; i < lha.shape[0]*lha.shape[1]; i++) {
+    for(auto i = 0; i < total_items; i++) {
       elements[i] = lha.elements[i] * rha.elements[i%(rha_shape[0]*rha_shape[1])];
     }
   }
@@ -87,40 +92,45 @@ DMatrix multiplyDMatrix(const DMatrix lha, const DMatrix rha) {
 }
 
 DMatrix addDMatrixNum(const DMatrix input, const double num) {
-  double[] elements = new double[input.shape[0] * input.shape[1]];
-  for(auto i = 0; i < input.shape[0]*input.shape[1]; i++) {
+  m_items total_items = input.size();
+  double[] elements = new double[total_items];
+  for(auto i = 0; i < total_items; i++) {
     elements[i] = input.elements[i] + num;
   }
   return DMatrix(input.shape, elements);
 }
 
 DMatrix subDMatrixNum(const DMatrix input, const double num) {
-  double[] elements = new double[input.shape[0] * input.shape[1]];
-  for(auto i = 0; i < input.shape[0]*input.shape[1]; i++) {
+  m_items total_items = input.size();
+  double[] elements = new double[total_items];
+  for(auto i = 0; i < total_items; i++) {
     elements[i] = input.elements[i] - num;
   }
   return DMatrix(input.shape, elements);
 }
 
 DMatrix multiplyDMatrixNum(const DMatrix input, const double num) {
-  double[] elements = new double[input.shape[0] * input.shape[1]];
-  for(auto i = 0; i < input.shape[0]*input.shape[1]; i++) {
+  m_items total_items = input.size();
+  double[] elements = new double[total_items];
+  for(auto i = 0; i < total_items; i++) {
     elements[i] = input.elements[i] * num;
   }
   return DMatrix(input.shape, elements);
 }
 
 DMatrix divideNumDMatrix(const double num, const DMatrix input) {
-  double[] elements = new double[input.shape[0] * input.shape[1]];
-  for(auto i = 0; i < input.shape[0]*input.shape[1]; i++) {
+  m_items total_items = input.size();
+  double[] elements = new double[total_items];
+  for(auto i = 0; i < total_items; i++) {
     elements[i] =  num /input.elements[i];
   }
   return DMatrix(input.shape, elements);
 }
 
 DMatrix divideDMatrixNum(const DMatrix input, const double factor) {
-  double[] elements = new double[input.shape[0] * input.shape[1]];
-  for(auto i = 0; i < input.shape[0]*input.shape[1]; i++) {
+  m_items total_items = input.size();
+  double[] elements = new double[total_items];
+  for(auto i = 0; i < total_items; i++) {
     elements[i] = input.elements[i]/factor;
   }
   return DMatrix(input.shape, elements);
@@ -143,19 +153,22 @@ DMatrix onesMatrix(const ulong rows, const ulong cols) {
 }
 
 DMatrix horizontallystack(const DMatrix a, const DMatrix b) {
-  auto n = a.shape[0];
+  auto n = a.rows();
+  m_items a_cols = a.cols();
+  m_items b_cols = b.cols();
   double[] arr;
   for(auto i = 0; i < n; i++) {
-    arr ~= a.elements[(a.shape[1]*i)..(a.shape[1]*(i+1))];
-    arr ~= b.elements[(b.shape[1]*i)..(b.shape[1]*(i+1))];
+    arr ~= a.elements[(a_cols*i)..(a_cols*(i+1))];
+    arr ~= b.elements[(b_cols*i)..(b_cols*(i+1))];
   }
-  return DMatrix([a.shape[0], a.shape[1]+b.shape[1]], arr);
+  return DMatrix([n, a_cols+b_cols], arr);
 }
 
-bool[] compareGt(const DMatrix lha, const double val) {
-  bool[] result = new bool[lha.shape[0] * lha.shape[1]];
-  for(auto i = 0; i < lha.shape[0] * lha.shape[1]; i++) {
-    if(lha.elements[i] > val) {
+bool[] compareGt(const DMatrix input, const double val) {
+  m_items total_items = input.size;
+  bool[] result = new bool[total_items];
+  for(auto i = 0; i < total_items; i++) {
+    if(input.elements[i] > val) {
       result[i] = true;
     }
     else{
@@ -187,27 +200,32 @@ bool eqeq(const DMatrix lha, const DMatrix rha) {
 
 DMatrix getCol(const DMatrix input, const ulong colNo) {
   double[] arr;
-  for(auto i=0; i<input.shape[0]; i++) {
-    arr ~= input.elements[i*input.shape[1]+colNo];
+  m_items rows = input.rows();
+  m_items cols = input.cols();
+  for(auto i=0; i < rows; i++) {
+    arr ~= input.elements[i*cols+colNo];
   }
-  return DMatrix([input.shape[0],1],arr);
+  return DMatrix([rows,1],arr);
 }
 
 DMatrix getRow(const DMatrix input, const ulong rowNo) {
-  double[] arr = input.elements[rowNo*input.shape[1]..(rowNo+1)*input.shape[1]].dup;
-  return DMatrix([1,input.shape[1]],arr);
+  m_items cols = input.cols();
+  double[] arr = input.elements[rowNo*cols..(rowNo+1)*cols].dup;
+  return DMatrix([1,cols],arr);
 }
 
 
 void setCol(ref DMatrix input, const ulong colNo, const DMatrix arr) {
-  for(auto i=0; i<input.shape[0]; i++) {
-    input.elements[i*input.shape[1]+colNo] = arr.elements[i];
+  m_items rows = input.rows();
+  m_items cols = input.cols();
+  for(auto i=0; i < rows; i++) {
+    input.elements[i*cols + colNo] = arr.elements[i];
   }
 }
 
 void setRow(ref DMatrix input, const ulong rowNo, const DMatrix arr) {
-  auto index =  rowNo*input.shape[1];
-  auto end =  (rowNo+1)*input.shape[1];
+  auto index =  rowNo*input.cols();
+  auto end =  (rowNo+1)*input.cols();
   auto k = 0;
   for(auto i=index; i<end; i++) {
     input.elements[i] = arr.elements[k];
