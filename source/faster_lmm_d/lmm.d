@@ -16,7 +16,7 @@ import faster_lmm_d.kinship;
 import faster_lmm_d.optmatrix;
 import faster_lmm_d.phenotype;
 
-auto run_gwas(m_items n, m_items m, const dmatrix k, double[] y, const dmatrix geno) {
+auto run_gwas(m_items n, m_items m, const DMatrix k, double[] y, const DMatrix geno) {
   trace("run_gwas");
   trace("pheno ", y.length," ", y[0..4]);
   trace(geno.shape,m);
@@ -26,9 +26,9 @@ auto run_gwas(m_items n, m_items m, const dmatrix k, double[] y, const dmatrix g
   phenoStruct pheno = remove_missing(n,y);
 
   auto geno2 = removeCols(geno,pheno.keep);
-  dmatrix G = normalize_along_row(geno2);
+  DMatrix G = normalize_along_row(geno2);
   trace("run_other_new genotype_matrix: ", G.shape);
-  dmatrix K = kinship_full(G);
+  DMatrix K = kinship_full(G);
   trace("kinship_matrix.shape: ", K.shape);
 
   return gwas(pheno.Y, G, K, true, false, true);

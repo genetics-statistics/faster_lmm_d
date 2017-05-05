@@ -72,7 +72,7 @@ genoObj tsvgeno(string fn, JSONValue ctrl){
   auto rowCount = rows.length - 6;
   auto colCount = ynames.length - 1;
 
-  dmatrix geno;
+  DMatrix geno;
   string[] gnames = [];
   foreach(line; rows[5..$]){
     if(line != ""){

@@ -26,23 +26,23 @@ extern (C) {
   int LAPACKE_dgetri (int matrix_layout, int n, double* a, int lda, const(int)* ipiv);
 }
 
-dmatrix matrixMult(const dmatrix lha,const dmatrix rha) {
+DMatrix matrixMult(const DMatrix lha,const DMatrix rha) {
   double[] C = new double[lha.shape[0]*rha.shape[1]];
   gemm(Order.RowMajor, Transpose.NoTrans, Transpose.NoTrans, cast(int)lha.shape[0], cast(int)rha.shape[1], cast(int)lha.shape[1], /*no scaling*/
        1,lha.elements.ptr, cast(int)lha.shape[1], rha.elements.ptr, cast(int)rha.shape[1], /*no addition*/0, C.ptr, cast(int)rha.shape[1]);
   auto resshape = [lha.shape[0],rha.shape[1]];
-  return dmatrix(resshape, C);
+  return DMatrix(resshape, C);
 }
 
-dmatrix matrixMultT(const dmatrix lha, const dmatrix rha) {
+DMatrix matrixMultT(const DMatrix lha, const DMatrix rha) {
   double[] C = new double[lha.shape[0]*rha.shape[0]];
   gemm(Order.RowMajor, Transpose.NoTrans, Transpose.NoTrans, cast(int)lha.shape[0], cast(int)rha.shape[0], cast(int)lha.shape[1], /*no scaling*/
        1,lha.elements.ptr, cast(int)lha.shape[1], rha.elements.ptr, cast(int)rha.shape[0], /*no addition*/0, C.ptr, cast(int)rha.shape[0]);
   auto resshape = [lha.shape[0],rha.shape[0]];
-  return dmatrix(resshape, C);
+  return DMatrix(resshape, C);
 }
 
-dmatrix matrixTranspose(const dmatrix input) {
+DMatrix matrixTranspose(const DMatrix input) {
   auto dim = input.shape[0]*input.shape[1];
   double[] output = new double[input.shape[0]*input.shape[1]];
   auto index = 0;
@@ -53,10 +53,10 @@ dmatrix matrixTranspose(const dmatrix input) {
     }
   }
   auto resshape = [input.shape[1],input.shape[0]];
-  return dmatrix(resshape,output);
+  return DMatrix(resshape,output);
 }
 
-void prettyPrint(const dmatrix input) {
+void prettyPrint(const DMatrix input) {
   writeln("[");
   if(input.shape[0]>6) {
     for(auto i=0; i < 3; i++) {
@@ -76,19 +76,19 @@ void prettyPrint(const dmatrix input) {
   writeln("]");
 }
 
-dmatrix sliceDmatrix(const dmatrix input, const ulong[] along) {
-  trace("In sliceDmatrix");
+DMatrix sliceDMatrix(const DMatrix input, const ulong[] along) {
+  trace("In sliceDMatrix");
   double[] output;
   foreach(rowIndex; along) {
     for(auto i=cast(ulong)(rowIndex*input.shape[1]); i < (rowIndex+1)*input.shape[1]; i++) {
       output ~= input.elements[i];
     }
   }
-  return dmatrix([along.length,input.shape[1]],output);
+  return DMatrix([along.length,input.shape[1]],output);
 }
 
-dmatrix sliceDmatrixKeep(const dmatrix input, const bool[] along) {
-  trace("In sliceDmatrixkeep");
+DMatrix sliceDMatrixKeep(const DMatrix input, const bool[] along) {
+  trace("In sliceDMatrixkeep");
   assert(along.length == input.shape[0]);
   double[] output;
   auto rowIndex = 0;
@@ -103,10 +103,10 @@ dmatrix sliceDmatrixKeep(const dmatrix input, const bool[] along) {
     rowIndex++;
 
   }
-  return dmatrix([shape0,input.shape[1]],output);
+  return DMatrix([shape0,input.shape[1]],output);
 }
 
-dmatrix normalize_along_row(const dmatrix input) {
+DMatrix normalize_along_row(const DMatrix input) {
   double[] largeArr;
   double[] arr;
   log(input.shape);
@@ -131,10 +131,10 @@ dmatrix normalize_along_row(const dmatrix input) {
     }
     largeArr ~= arr;
   }
-  return dmatrix(input.shape, largeArr);
+  return DMatrix(input.shape, largeArr);
 }
 
-dmatrix removeCols(const dmatrix input, const bool[] keep) {
+DMatrix removeCols(const DMatrix input, const bool[] keep) {
   immutable colLength = sum(cast(bool[])keep);
   double[] arr = new double[input.shape[0]*colLength];
   auto index = 0;
@@ -148,7 +148,7 @@ dmatrix removeCols(const dmatrix input, const bool[] keep) {
     }
   }
   auto shape = [input.shape[0], colLength];
-  return dmatrix(shape, arr);
+  return DMatrix(shape, arr);
 }
 
 double[] roundedNearest(const double[] input) {
@@ -159,20 +159,20 @@ double[] roundedNearest(const double[] input) {
   return arr;
 }
 
-dmatrix roundedNearest(const dmatrix input) {
+DMatrix roundedNearest(const DMatrix input) {
   double[] arr = new double[input.elements.length];
   for(auto i = 0; i < input.elements.length; i++) {
     arr[i] = round(input.elements[i]*1000)/1000;
   }
-  return dmatrix(input.shape, arr);
+  return DMatrix(input.shape, arr);
 }
 
 //Obtain eigendecomposition for K and return Kva,Kve where Kva is cleaned
 //of small values < 1e-6 (notably smaller than zero)
 
-alias Tuple!(dmatrix,"kva",dmatrix,"kve") eighTuple;
+alias Tuple!(DMatrix,"kva",DMatrix,"kve") eighTuple;
 
-eighTuple eigh(const dmatrix input) {
+eighTuple eigh(const DMatrix input) {
   double[] z = new double[input.shape[0] * input.shape[1]]; //eigenvalues
   double[] w = new double[input.shape[0]];  // eigenvectors
   double[] elements = input.elements.dup;
@@ -191,8 +191,8 @@ eighTuple eigh(const dmatrix input) {
                 elements.ptr, n, vl, vu, il, iu, abstol,
                 m.ptr, w.ptr, z.ptr, ldz, isuppz.ptr);
 
-  dmatrix kva = dmatrix([input.shape[0],1], w);
-  dmatrix kve = dmatrix(input.shape, z);
+  DMatrix kva = DMatrix([input.shape[0],1], w);
+  DMatrix kve = DMatrix(input.shape, z);
   for(auto zq = 0 ; zq < kva.elements.length; zq++){
     if(kva.elements[zq]< 1e-6){
       kva.elements[zq] = 0;
@@ -204,7 +204,7 @@ eighTuple eigh(const dmatrix input) {
   return e;
 }
 
-double det(const dmatrix input)
+double det(const DMatrix input)
 in {
   assert(input.is_square, "Input matrix should be square");
 }
@@ -234,7 +234,7 @@ int[] getrf(double[] arr, const m_items cols) {
   return ipiv;
 }
 
-dmatrix inverse(const dmatrix input) {
+DMatrix inverse(const DMatrix input) {
   double[] elements= input.elements.dup; // exactly, elements get changed by LAPACK
   auto LWORK = input.shape[0]*input.shape[0];
   double[] WORK = new double[input.shape[0]*input.shape[0]];
@@ -244,29 +244,29 @@ dmatrix inverse(const dmatrix input) {
   int output = LAPACKE_dgetrf(101, cast(int)input.shape[0],cast(int)input.shape[0],elements.ptr,cast(int)input.shape[0],ipiv.ptr);
   int[] resshape = [cast(int)input.shape[0],cast(int)input.shape[0]];
   LAPACKE_dgetri(101, cast(int)input.shape[0], elements.ptr, cast(int)input.shape[0], ipiv.ptr);
-  return dmatrix(input.shape, elements);
+  return DMatrix(input.shape, elements);
 }
 
 import std.conv;
 
 unittest{
-  dmatrix d1 = dmatrix([3,4],[2,4,5,6, 7,8,9,10, 2,-1,-4,3]);
-  dmatrix d2 = dmatrix([4,2],[2,7,8,9, -5,2,-1,-4]);
-  dmatrix d3 = dmatrix([3,2], [5,36,23, 99,13,-15]);
+  DMatrix d1 = DMatrix([3,4],[2,4,5,6, 7,8,9,10, 2,-1,-4,3]);
+  DMatrix d2 = DMatrix([4,2],[2,7,8,9, -5,2,-1,-4]);
+  DMatrix d3 = DMatrix([3,2], [5,36,23, 99,13,-15]);
   assert(matrixMult(d1,d2) == d3);
 
-  dmatrix d4 = dmatrix([2,2], [2, -1, -4, 3]);
-  dmatrix d5 = dmatrix([2,2], [1.5, 0.5, 2, 1]);
+  DMatrix d4 = DMatrix([2,2], [2, -1, -4, 3]);
+  DMatrix d5 = DMatrix([2,2], [1.5, 0.5, 2, 1]);
   assert(inverse(d4) == d5);
 
-  dmatrix d6 = dmatrix([2,2],[2, -4, -1, 3]);
+  DMatrix d6 = DMatrix([2,2],[2, -4, -1, 3]);
   assert(matrixTranspose(d4) == d6);
 
-  dmatrix M = dmatrix([3,4],[10, 11, 12, 13,
+  DMatrix M = DMatrix([3,4],[10, 11, 12, 13,
                              14, 15, 16, 17,
                              18, 19, 20, 21]);
 
-  dmatrix MT = dmatrix([4,3],[10,14,18,
+  DMatrix MT = DMatrix([4,3],[10,14,18,
                               11,15,19,
                               12,16,20,
                               13,17,21]);
@@ -276,34 +276,34 @@ unittest{
   assert(resultMT == MT,to!string(resultMT));
   assert(resultM == M,to!string(resultM));
 
-  dmatrix d7 = dmatrix([4,2],[-3,13,7, -5, -12, 26, 2, -8]);
+  DMatrix d7 = DMatrix([4,2],[-3,13,7, -5, -12, 26, 2, -8]);
   assert(matrixMultT(d2, d6) == d7);
 
   assert(det(d4) == 2,to!string(det(d4)));
 
-  auto d8 = dmatrix([3,3], [21, 14, 12, -11, 22, 1, 31, -11, 42]);
+  auto d8 = DMatrix([3,3], [21, 14, 12, -11, 22, 1, 31, -11, 42]);
   auto eigh_matrix = eigh(d8);
-  auto kva_matrix = dmatrix([3, 1], [0, 17.322, 69.228]);
-  auto kve_matrix = dmatrix([3, 3], [-0.823, 0.075, 0.563, -0.126, 0.943, -0.310, 0.554, 0.326, 0.766]);
+  auto kva_matrix = DMatrix([3, 1], [0, 17.322, 69.228]);
+  auto kve_matrix = DMatrix([3, 3], [-0.823, 0.075, 0.563, -0.126, 0.943, -0.310, 0.554, 0.326, 0.766]);
   assert( roundedNearest(eigh_matrix.kva) == kva_matrix);
   assert( roundedNearest(eigh_matrix.kve) == kve_matrix);
 
-  auto mat = dmatrix([3,3], [4,  6,  11,
+  auto mat = DMatrix([3,3], [4,  6,  11,
                              5,  5,  5,
                              11, 12, 13]);
 
-  auto rmMat = dmatrix([3,1], [11,
+  auto rmMat = DMatrix([3,1], [11,
                                 5,
                                13]);
   assert(removeCols(mat, [false, false, true]) == rmMat);
 
-  auto slicedMat = dmatrix([2,3], [4, 6, 11,
+  auto slicedMat = DMatrix([2,3], [4, 6, 11,
                                    5, 5, 5, ]);
 
-  assert(sliceDmatrix(mat, [0,1]) == slicedMat);
-  assert(sliceDmatrixKeep(mat, [true, true, false]) == slicedMat);
+  assert(sliceDMatrix(mat, [0,1]) == slicedMat);
+  assert(sliceDMatrixKeep(mat, [true, true, false]) == slicedMat);
 
-  auto normMat = dmatrix([3,3], [-1.01905, -0.339683, 1.35873,
+  auto normMat = DMatrix([3,3], [-1.01905, -0.339683, 1.35873,
                                         0,         0,       0,
                                  -1.22474,         0, 1.22474]);
   assert(eqeq(normalize_along_row(mat), normMat));

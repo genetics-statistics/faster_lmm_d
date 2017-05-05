@@ -13,7 +13,7 @@ import std.typecons;
 
 alias ulong m_items;
 
-struct dmatrix{
+struct DMatrix{
   m_items[] shape; // dimensions are never negative
   double[] elements;
   bool init = false;
@@ -35,37 +35,37 @@ struct dmatrix{
   }
 }
 
-alias Tuple!(dmatrix, "geno", string[], "gnames", immutable(string[]), "ynames") genoObj;
+alias Tuple!(DMatrix, "geno", string[], "gnames", immutable(string[]), "ynames") genoObj;
 
-dmatrix logDmatrix(const dmatrix inDmat) {
+DMatrix logDMatrix(const DMatrix inDmat) {
   double[] elements = new double[inDmat.shape[0] * inDmat.shape[1]];
   for(auto i = 0; i < inDmat.shape[0]*inDmat.shape[1]; i++) {
     elements[i] = log(inDmat.elements[i]);
   }
-  return dmatrix(inDmat.shape, elements);
+  return DMatrix(inDmat.shape, elements);
 }
 
-dmatrix addDmatrix(const dmatrix lha, const dmatrix rha) {
+DMatrix addDMatrix(const DMatrix lha, const DMatrix rha) {
   assert(lha.shape[0] == rha.shape[0]);
   assert(lha.shape[1] == rha.shape[1]);
   double[] elements = new double[lha.shape[0] * lha.shape[1]];
   for(auto i = 0; i < lha.shape[0]*lha.shape[1]; i++) {
     elements[i] = lha.elements[i] + rha.elements[i];
   }
-  return dmatrix(lha.shape, elements);
+  return DMatrix(lha.shape, elements);
 }
 
-dmatrix subDmatrix(const dmatrix lha, const dmatrix rha) {
+DMatrix subDMatrix(const DMatrix lha, const DMatrix rha) {
   assert(lha.shape[0] == rha.shape[0]);
   assert(lha.shape[1] == rha.shape[1]);
   double[] elements = new double[lha.shape[0] * lha.shape[1]];
   for(auto i = 0; i < lha.shape[0]*lha.shape[1]; i++) {
     elements[i] = lha.elements[i] - rha.elements[i];
   }
-  return dmatrix(lha.shape, elements);
+  return DMatrix(lha.shape, elements);
 }
 
-dmatrix multiplyDmatrix(const dmatrix lha, const dmatrix rha) {
+DMatrix multiplyDMatrix(const DMatrix lha, const DMatrix rha) {
   ulong[] rha_shape = rha.shape.dup;
   if(lha.shape[0] != rha.shape[0]){
     ulong[] temp = rha.shape.dup;
@@ -83,76 +83,76 @@ dmatrix multiplyDmatrix(const dmatrix lha, const dmatrix rha) {
     }
   }
 
-  return dmatrix(lha.shape, elements);
+  return DMatrix(lha.shape, elements);
 }
 
-dmatrix addDmatrixNum(const dmatrix input, const double num) {
+DMatrix addDMatrixNum(const DMatrix input, const double num) {
   double[] elements = new double[input.shape[0] * input.shape[1]];
   for(auto i = 0; i < input.shape[0]*input.shape[1]; i++) {
     elements[i] = input.elements[i] + num;
   }
-  return dmatrix(input.shape, elements);
+  return DMatrix(input.shape, elements);
 }
 
-dmatrix subDmatrixNum(const dmatrix input, const double num) {
+DMatrix subDMatrixNum(const DMatrix input, const double num) {
   double[] elements = new double[input.shape[0] * input.shape[1]];
   for(auto i = 0; i < input.shape[0]*input.shape[1]; i++) {
     elements[i] = input.elements[i] - num;
   }
-  return dmatrix(input.shape, elements);
+  return DMatrix(input.shape, elements);
 }
 
-dmatrix multiplyDmatrixNum(const dmatrix input, const double num) {
+DMatrix multiplyDMatrixNum(const DMatrix input, const double num) {
   double[] elements = new double[input.shape[0] * input.shape[1]];
   for(auto i = 0; i < input.shape[0]*input.shape[1]; i++) {
     elements[i] = input.elements[i] * num;
   }
-  return dmatrix(input.shape, elements);
+  return DMatrix(input.shape, elements);
 }
 
-dmatrix divideNumDmatrix(const double num, const dmatrix input) {
+DMatrix divideNumDMatrix(const double num, const DMatrix input) {
   double[] elements = new double[input.shape[0] * input.shape[1]];
   for(auto i = 0; i < input.shape[0]*input.shape[1]; i++) {
     elements[i] =  num /input.elements[i];
   }
-  return dmatrix(input.shape, elements);
+  return DMatrix(input.shape, elements);
 }
 
-dmatrix divideDmatrixNum(const dmatrix input, const double factor) {
+DMatrix divideDMatrixNum(const DMatrix input, const double factor) {
   double[] elements = new double[input.shape[0] * input.shape[1]];
   for(auto i = 0; i < input.shape[0]*input.shape[1]; i++) {
     elements[i] = input.elements[i]/factor;
   }
-  return dmatrix(input.shape, elements);
+  return DMatrix(input.shape, elements);
 }
 
-dmatrix zerosMatrix(const ulong rows, const ulong cols) {
+DMatrix zerosMatrix(const ulong rows, const ulong cols) {
   double[] elements = new double[rows * cols];
   for(auto i = 0; i < rows*cols; i++) {
     elements[i] = 0;
   }
-  return dmatrix([rows, cols], elements);
+  return DMatrix([rows, cols], elements);
 }
 
-dmatrix onesMatrix(const ulong rows, const ulong cols) {
+DMatrix onesMatrix(const ulong rows, const ulong cols) {
   double[] elements = new double[rows * cols];
   for(auto i = 0; i < rows*cols; i++) {
     elements[i] = 1;
   }
-  return dmatrix([rows, cols], elements);
+  return DMatrix([rows, cols], elements);
 }
 
-dmatrix horizontallystack(const dmatrix a, const dmatrix b) {
+DMatrix horizontallystack(const DMatrix a, const DMatrix b) {
   auto n = a.shape[0];
   double[] arr;
   for(auto i = 0; i < n; i++) {
     arr ~= a.elements[(a.shape[1]*i)..(a.shape[1]*(i+1))];
     arr ~= b.elements[(b.shape[1]*i)..(b.shape[1]*(i+1))];
   }
-  return dmatrix([a.shape[0], a.shape[1]+b.shape[1]], arr);
+  return DMatrix([a.shape[0], a.shape[1]+b.shape[1]], arr);
 }
 
-bool[] compareGt(const dmatrix lha, const double val) {
+bool[] compareGt(const DMatrix lha, const double val) {
   bool[] result = new bool[lha.shape[0] * lha.shape[1]];
   for(auto i = 0; i < lha.shape[0] * lha.shape[1]; i++) {
     if(lha.elements[i] > val) {
@@ -165,7 +165,7 @@ bool[] compareGt(const dmatrix lha, const double val) {
   return result;
 }
 
-bool eqeq(const dmatrix lha, const dmatrix rha) {
+bool eqeq(const DMatrix lha, const DMatrix rha) {
   auto index = 0;
   foreach(s; lha.shape) {
     if(s != rha.shape[index]) {
@@ -185,27 +185,27 @@ bool eqeq(const dmatrix lha, const dmatrix rha) {
   return true;
 }
 
-dmatrix getCol(const dmatrix input, const ulong colNo) {
+DMatrix getCol(const DMatrix input, const ulong colNo) {
   double[] arr;
   for(auto i=0; i<input.shape[0]; i++) {
     arr ~= input.elements[i*input.shape[1]+colNo];
   }
-  return dmatrix([input.shape[0],1],arr);
+  return DMatrix([input.shape[0],1],arr);
 }
 
-dmatrix getRow(const dmatrix input, const ulong rowNo) {
+DMatrix getRow(const DMatrix input, const ulong rowNo) {
   double[] arr = input.elements[rowNo*input.shape[1]..(rowNo+1)*input.shape[1]].dup;
-  return dmatrix([1,input.shape[1]],arr);
+  return DMatrix([1,input.shape[1]],arr);
 }
 
 
-void setCol(ref dmatrix input, const ulong colNo, const dmatrix arr) {
+void setCol(ref DMatrix input, const ulong colNo, const DMatrix arr) {
   for(auto i=0; i<input.shape[0]; i++) {
     input.elements[i*input.shape[1]+colNo] = arr.elements[i];
   }
 }
 
-void setRow(ref dmatrix input, const ulong rowNo, const dmatrix arr) {
+void setRow(ref DMatrix input, const ulong rowNo, const DMatrix arr) {
   auto index =  rowNo*input.shape[1];
   auto end =  (rowNo+1)*input.shape[1];
   auto k = 0;
@@ -215,7 +215,7 @@ void setRow(ref dmatrix input, const ulong rowNo, const dmatrix arr) {
   }
 }
 
-void nanCounter(const dmatrix input) {
+void nanCounter(const DMatrix input) {
   auto nanCounter = 0;
   foreach(ref ele; input.elements) {
     if(std.math.isNaN(ele)) {
@@ -230,58 +230,58 @@ void nanCounter(const dmatrix input) {
 
 
 unittest{
-  auto d = dmatrix([2,2],[1,2,3,4]);
+  auto d = DMatrix([2,2],[1,2,3,4]);
 
-  // Test equality of two dmatrixes
-  auto lha = dmatrix([3,3], [1,    2, 3, 4, 5, 6, 7, 8, 9]);
-  auto rha = dmatrix([3,3], [1.001,2, 3, 4, 5, 6, 7, 8, 9]);
+  // Test equality of two DMatrixes
+  auto lha = DMatrix([3,3], [1,    2, 3, 4, 5, 6, 7, 8, 9]);
+  auto rha = DMatrix([3,3], [1.001,2, 3, 4, 5, 6, 7, 8, 9]);
   assert(eqeq(lha, rha));
 
-  // Test the fields of a dmatrix
+  // Test the fields of a DMatrix
   assert(d.shape == [2,2]);
   assert(d.elements == [1,2,3,4]);
 
   // Test elementwise operations
-  auto d2 = dmatrix([2,2],[2,4,5,6]);
-  auto d3 = dmatrix([2,2],[3,6,8,10]);
-  assert(addDmatrix(d, d2) == d3);
-  assert(addDmatrixNum(d, 0) == d);
+  auto d2 = DMatrix([2,2],[2,4,5,6]);
+  auto d3 = DMatrix([2,2],[3,6,8,10]);
+  assert(addDMatrix(d, d2) == d3);
+  assert(addDMatrixNum(d, 0) == d);
 
-  assert(subDmatrix(d3, d2) == d);
-  assert(subDmatrixNum(d, 0) == d);
+  assert(subDMatrix(d3, d2) == d);
+  assert(subDMatrixNum(d, 0) == d);
 
-  auto d4 = dmatrix([2,2],[6,24,40,60]);
-  assert(multiplyDmatrix(d2,d3) == d4);
-  assert(multiplyDmatrixNum(d2,1) == d2);
+  auto d4 = DMatrix([2,2],[6,24,40,60]);
+  assert(multiplyDMatrix(d2,d3) == d4);
+  assert(multiplyDMatrixNum(d2,1) == d2);
 
-  assert(divideDmatrixNum(d2,1) == d2);
+  assert(divideDMatrixNum(d2,1) == d2);
 
-  auto zeroMat = dmatrix([3,3], [0,0,0, 0,0,0, 0,0,0]);
+  auto zeroMat = DMatrix([3,3], [0,0,0, 0,0,0, 0,0,0]);
   assert(zerosMatrix(3,3) == zeroMat);
 
-  auto onesMat = dmatrix([3,3], [1,1,1, 1,1,1, 1,1,1]);
+  auto onesMat = DMatrix([3,3], [1,1,1, 1,1,1, 1,1,1]);
   assert(onesMatrix(3,3) == onesMat);
 
-  auto colMatrix = dmatrix([2,1], [2,4]);
+  auto colMatrix = DMatrix([2,1], [2,4]);
   assert( getCol(d, 1) == colMatrix );
 
-  auto rowMatrix = dmatrix([1,2], [3,4]);
+  auto rowMatrix = DMatrix([1,2], [3,4]);
   assert( getRow(d, 1) == rowMatrix );
 
-  auto row = dmatrix([1,2], [3.5,4.2]);
+  auto row = DMatrix([1,2], [3.5,4.2]);
   setRow(d, 1, row);
-  auto newD =  dmatrix([2,2], [1, 2, 3.5, 4.2]);
+  auto newD =  DMatrix([2,2], [1, 2, 3.5, 4.2]);
   assert( d == newD );
 
-  auto left = dmatrix([3, 1], [1,
+  auto left = DMatrix([3, 1], [1,
                                4,
                                5]);
 
-  auto right = dmatrix([3, 2], [2, 4,
+  auto right = DMatrix([3, 2], [2, 4,
                                 4, 8,
                                 7, 12]);
 
-  auto stacked = dmatrix([3, 3], [1, 2, 4,
+  auto stacked = DMatrix([3, 3], [1, 2, 4,
                                   4, 4, 8,
                                   5, 7, 12]);
   assert(horizontallystack(left, right) == stacked);

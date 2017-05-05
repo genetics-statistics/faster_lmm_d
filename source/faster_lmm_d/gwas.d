@@ -16,7 +16,7 @@ import faster_lmm_d.lmm2;
 import faster_lmm_d.optmatrix;
 
 
-auto gwas(double[] Y, dmatrix G, dmatrix K, bool restricted_max_likelihood = true, bool refit=false, bool verbose = true){
+auto gwas(double[] Y, DMatrix G, DMatrix K, bool restricted_max_likelihood = true, bool refit=false, bool verbose = true){
 
   trace("In gwas.gwas");
 
@@ -29,18 +29,18 @@ auto gwas(double[] Y, dmatrix G, dmatrix K, bool restricted_max_likelihood = tru
     log("snps should be larger than inds (snps=%d,inds=%d)", snps,inds);
   }
 
-  dmatrix Kva;
-  dmatrix Kve;
-  dmatrix X0;
+  DMatrix Kva;
+  DMatrix Kve;
+  DMatrix X0;
 
   LMM2 lmm2 = LMM2(Y,K,Kva,Kve,X0, true);
   lmm2 = lmm2transform(lmm2);
-  dmatrix X;
+  DMatrix X;
 
   if(!refit){
     trace("Computing fit for null model");
     double fit_hmax, fit_sigma, fit_LL;
-    dmatrix fit_beta;
+    DMatrix fit_beta;
     fitTuple fit = lmm2fit(lmm2, X); // # follow GN model in run_other;
     lmm2 = fit.lmmobj;
     log("heritability= ", lmm2.optH, " sigma= ", lmm2.optSigma, " LL= ", fit.fit_LL);
@@ -52,7 +52,7 @@ auto gwas(double[] Y, dmatrix G, dmatrix K, bool restricted_max_likelihood = tru
   info("snps is ", snps);
 
   for(int i=0; i<snps; i++){
-    dmatrix x = getRow(G, i);
+    DMatrix x = getRow(G, i);
     x.shape = [inds, 1];
     auto tsps = lmm2association(lmm2, x, true,true);
     ps[i] = tsps[1];

@@ -79,7 +79,7 @@ genoObj geno(string fn, JSONValue ctrl){
 
   auto ynames = cast(immutable(string[]))tsv.header[1..$];
 
-  dmatrix geno;
+  DMatrix geno;
   string[] gnames = [];
   auto rowCount = 0;
   auto colCount = ynames.length;

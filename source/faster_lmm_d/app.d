@@ -142,7 +142,7 @@ void main(string[] args)
   }
 
   // ---- Genotypes
-  dmatrix g;
+  DMatrix g;
   string[] gnames;
   auto g1 = (cmd == "rqtl" ? geno(option_geno, ctrl) : tsvgeno(option_geno, ctrl ));
   g = g1.geno;
@@ -168,10 +168,10 @@ void main(string[] args)
     }
     y = y_temp;
 
-    dmatrix gTranspose = matrixTranspose(g);
-    dmatrix slicedMatrix = sliceDmatrix(gTranspose, gidx);
-    trace(slicedMatrix.shape);
-    dmatrix g2 = matrixTranspose(slicedMatrix);
+    DMatrix gTranspose = matrixTranspose(g);
+    DMatrix sliceDMatrix = sliceDMatrix(gTranspose, gidx);
+    trace(sliceDMatrix.shape);
+    DMatrix g2 = matrixTranspose(sliceDMatrix);
     trace("geno matrix ",g.shape," reshaped to ",g2.shape);
     g = g2;
   }
@@ -179,7 +179,7 @@ void main(string[] args)
   // ---- Run GWAS
   auto n = y.length;
   auto m = g.m_geno;
-  dmatrix k;
+  DMatrix k;
   auto gwas = run_gwas(n,m,k,y,g);
   double[] ts = gwas[0];
   double[] p_values = gwas[1];
