@@ -22,7 +22,8 @@ auto run_gwas(ulong n, ulong m, const dmatrix k, double[] y, const dmatrix geno)
   log("pheno ", y.length," ", y[0..5]);
   log(geno.shape,m);
   assert(y.length == n);
-  assert(geno.genotypes == m);
+  assert(geno.n_pheno == n);
+  assert(geno.m_geno == m);
 
   phenoStruct pheno = remove_missing(n,y);
 

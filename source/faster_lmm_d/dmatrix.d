@@ -26,8 +26,8 @@ struct dmatrix{
 
   const m_items cols() { return shape[0]; }
   const m_items rows() { return shape[1]; }
-  const m_items phenotypes() { return cols; }
-  const m_items genotypes() { return rows; }
+  const m_items n_pheno() { return cols; }
+  const m_items m_geno() { return rows; }
   const bool is_square() { return rows == cols; };
 
   double acc(ulong row, ulong col) {

@@ -178,7 +178,7 @@ void main(string[] args)
 
   // ---- Run GWAS
   auto n = y.length;
-  auto m = g.genotypes;
+  auto m = g.m_geno;
   dmatrix k;
   auto gwas = run_gwas(n,m,k,y,g);
   double[] ts = gwas[0];
