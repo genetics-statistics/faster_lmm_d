@@ -88,7 +88,7 @@ dmatrix sliceDmatrix(const dmatrix input, const ulong[] along) {
 }
 
 dmatrix sliceDmatrixKeep(const dmatrix input, const bool[] along) {
-  trace("In sliceDmatrix");
+  trace("In sliceDmatrixkeep");
   assert(along.length == input.shape[0]);
   double[] output;
   auto rowIndex = 0;
@@ -288,4 +288,23 @@ unittest{
   assert( roundedNearest(eigh_matrix.kva) == kva_matrix);
   assert( roundedNearest(eigh_matrix.kve) == kve_matrix);
 
+  auto mat = dmatrix([3,3], [4,  6,  11,
+                             5,  5,  5,
+                             11, 12, 13]);
+
+  auto rmMat = dmatrix([3,1], [11,
+                                5,
+                               13]);
+  assert(removeCols(mat, [false, false, true]) == rmMat);
+
+  auto slicedMat = dmatrix([2,3], [4, 6, 11,
+                                   5, 5, 5, ]);
+
+  assert(sliceDmatrix(mat, [0,1]) == slicedMat);
+  assert(sliceDmatrixKeep(mat, [true, true, false]) == slicedMat);
+
+  auto normMat = dmatrix([3,3], [-1.01905, -0.339683, 1.35873,
+                                        0,         0,       0,
+                                 -1.22474,         0, 1.22474]);
+  assert(eqeq(normalize_along_row(mat), normMat));
 }
