@@ -159,6 +159,14 @@ double[] roundedNearest(const double[] input) {
   return arr;
 }
 
+dmatrix roundedNearest(const dmatrix input) {
+  double[] arr = new double[input.elements.length];
+  for(auto i = 0; i < input.elements.length; i++) {
+    arr[i] = round(input.elements[i]*1000)/1000;
+  }
+  return dmatrix(input.shape, arr);
+}
+
 //Obtain eigendecomposition for K and return Kva,Kve where Kva is cleaned
 //of small values < 1e-6 (notably smaller than zero)
 
@@ -272,4 +280,12 @@ unittest{
   assert(matrixMultT(d2, d6) == d7);
 
   assert(det(d4) == 2,to!string(det(d4)));
+
+  auto d8 = dmatrix([3,3], [21, 14, 12, -11, 22, 1, 31, -11, 42]);
+  auto eigh_matrix = eigh(d8);
+  auto kva_matrix = dmatrix([3, 1], [0, 17.322, 69.228]);
+  auto kve_matrix = dmatrix([3, 3], [-0.823, 0.075, 0.563, -0.126, 0.943, -0.310, 0.554, 0.326, 0.766]);
+  assert( roundedNearest(eigh_matrix.kva) == kva_matrix);
+  assert( roundedNearest(eigh_matrix.kve) == kve_matrix);
+
 }
