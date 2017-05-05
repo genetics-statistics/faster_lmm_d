@@ -201,7 +201,7 @@ in {
   assert(input.is_square, "Input matrix should be square");
 }
 body {
-  auto matrix = cast(const double [])input.elements;
+  auto matrix = input.elements.dup;
   auto pivot = getrf(matrix, input.cols);
 
   auto num_perm = 0;
@@ -219,11 +219,10 @@ body {
   return prod;
 }
 
-int[] getrf(const double[] arr, const m_items cols) {
+int[] getrf(double[] arr, const m_items cols) {
   auto ipiv = new int[cols+1];
   int i_cols = cast(int)cols;
-  // LAPACKE changes the contents of arr, so we copy it first:
-  LAPACKE_dgetrf(101,i_cols,i_cols,arr.dup.ptr,i_cols,ipiv.ptr);
+  LAPACKE_dgetrf(101,i_cols,i_cols,arr.ptr,i_cols,ipiv.ptr);
   return ipiv;
 }
 
