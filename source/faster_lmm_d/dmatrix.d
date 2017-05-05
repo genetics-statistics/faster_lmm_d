@@ -11,8 +11,10 @@ import std.math;
 import std.stdio;
 import std.typecons;
 
+alias ulong m_items;
+
 struct dmatrix{
-  ulong[] shape; // dimensions are never negative
+  m_items[] shape; // dimensions are never negative
   double[] elements;
   bool init = false;
 
@@ -21,6 +23,12 @@ struct dmatrix{
     elements = e.dup();
     init     = true;
   }
+
+  const m_items cols() { return shape[0]; }
+  const m_items rows() { return shape[1]; }
+  const m_items phenotypes() { return cols; }
+  const m_items genotypes() { return rows; }
+  const bool is_square() { return rows == cols; };
 
   double acc(ulong row, ulong col) {
     return this.elements[row*this.shape[1]+col];
