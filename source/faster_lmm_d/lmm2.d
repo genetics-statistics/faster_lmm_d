@@ -54,9 +54,9 @@ struct LMM2{
     }
 
     this.verbose = verbose;
-    bool[] v = isnan(Y);
-    bool[] x = negateBool(v);
-    eighTuple keigh = kvakve(K);
+    bool[] v = is_nan(Y);
+    bool[] x = negate_bool(v);
+    EighTuple keigh = kvakve(K);
     this.init = true;
     this.K = K;
     this.Kva = keigh.kva;
@@ -114,9 +114,9 @@ LMM2 lmm2transform(LMM2 lmmobject){
   //   eigenvector matrix of K (the kinship).
 
   trace("In lmm2transform");
-  DMatrix KveT = matrixTranspose(lmmobject.Kve);
-  DMatrix Yt = matrixMult(KveT, lmmobject.Y);
-  DMatrix X0t = matrixMult(KveT, lmmobject.X0);
+  DMatrix KveT = matrix_transpose(lmmobject.Kve);
+  DMatrix Yt = matrix_mult(KveT, lmmobject.Y);
+  DMatrix X0t = matrix_mult(KveT, lmmobject.X0);
   DMatrix X0t_stack = horizontally_stack(X0t, ones_dmatrix(lmmobject.N,1));
   auto q = X0t.shape[1];
   return LMM2(lmmobject, Yt, X0t, X0t_stack, KveT, q);
@@ -133,14 +133,14 @@ mlSol getMLSoln(LMM2 lmmobject, double h, DMatrix X){
   DMatrix S = divide_num_dmatrix(1,add_dmatrix_num(multiply_dmatrix_num(lmmobject.Kva,h),(1.0 - h)));
   auto temp = S.shape.dup;
   S.shape = [temp[1], temp[0]];
-  DMatrix Xt = multiply_dmatrix(matrixTranspose(X), S);
-  ml_sol.XX = matrixMult(Xt,X);
+  DMatrix Xt = multiply_dmatrix(matrix_transpose(X), S);
+  ml_sol.XX = matrix_mult(Xt,X);
   ml_sol.XX_i = inverse(ml_sol.XX);
-  ml_sol.beta =  matrixMult(matrixMult(ml_sol.XX_i,Xt),lmmobject.Yt);
-  DMatrix Yt = sub_dmatrix(lmmobject.Yt, matrixMult(X,ml_sol.beta));
-  DMatrix YtT = matrixTranspose(Yt);
+  ml_sol.beta =  matrix_mult(matrix_mult(ml_sol.XX_i,Xt),lmmobject.Yt);
+  DMatrix Yt = sub_dmatrix(lmmobject.Yt, matrix_mult(X,ml_sol.beta));
+  DMatrix YtT = matrix_transpose(Yt);
   DMatrix YtTS = multiply_dmatrix(YtT, S);
-  ml_sol.Q = matrixMult(YtTS,Yt);
+  ml_sol.Q = matrix_mult(YtTS,Yt);
   ml_sol.sigma = ml_sol.Q.elements[0] * 1.0 / (cast(double)(lmmobject.N) - cast(double)(X.shape[1]));
   return ml_sol;
 }
@@ -180,8 +180,8 @@ llTuple getLL(LMM2 lmmobject, double h, DMatrix X, bool stack=true, bool REML=fa
 
   if(REML){
     double LL_REML_part = 0;
-    DMatrix XT = matrixTranspose(X);
-    double XTX = det(matrixMult(XT, X));
+    DMatrix XT = matrix_transpose(X);
+    double XTX = det(matrix_mult(XT, X));
 
     LL_REML_part = q*mlog(2.0*PI* ml.sigma) + mlog(XTX) - mlog(det(ml.XX));
     LL = LL + 0.5*LL_REML_part;
@@ -272,7 +272,7 @@ fitTuple lmm2fit(LMM2 lmmobject, DMatrix X, ulong ngrids=100, bool REML=true){
     X = lmmobject.X0t;
   }
   else{
-    DMatrix KveTX = matrixMult(lmmobject.KveT , X);
+    DMatrix KveTX = matrix_mult(lmmobject.KveT , X);
     X = lmmobject.X0t_stack;
   }
   double[] Harr = new double[ngrids];
@@ -310,7 +310,7 @@ auto lmm2association(LMM2 lmmobject, DMatrix X, bool stack=true, bool REML=true,
   }
 
   if(stack){
-    DMatrix m = matrixMult(lmmobject.KveT,X);
+    DMatrix m = matrix_mult(lmmobject.KveT,X);
     set_col(lmmobject.X0t_stack,lmmobject.q,m);
     X = lmmobject.X0t_stack;
   }

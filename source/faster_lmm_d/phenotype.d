@@ -12,15 +12,15 @@ import std.typecons;
 
 import faster_lmm_d.helpers;
 
-alias Tuple!(double[], "Y", bool[], "keep", ulong, "n") phenoStruct;
+alias Tuple!(double[], "Y", bool[], "keep", ulong, "n") PhenoStruct;
 
-phenoStruct remove_missing( ulong n, double[] y){
+PhenoStruct remove_missing( ulong n, double[] y){
   //Remove missing data. Returns new n,y,keep
 
   trace("In remove missing new");
-  bool[] v = isnan(y);
-  bool[] keep = negateBool(v);
-  double[] Y = getNumArray(y,keep);
+  bool[] v = is_nan(y);
+  bool[] keep = negate_bool(v);
+  double[] Y = get_num_array(y,keep);
   n = cast(int)Y.length;
-  return phenoStruct(Y, keep, n);
+  return PhenoStruct(Y, keep, n);
 }

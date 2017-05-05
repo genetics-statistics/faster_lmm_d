@@ -168,10 +168,10 @@ void main(string[] args)
     }
     y = y_temp;
 
-    DMatrix gTranspose = matrixTranspose(g);
-    DMatrix sliceDMatrix = sliceDMatrix(gTranspose, gidx);
+    DMatrix gTranspose = matrix_transpose(g);
+    DMatrix sliceDMatrix = slice_dmatrix(gTranspose, gidx);
     trace(sliceDMatrix.shape);
-    DMatrix g2 = matrixTranspose(sliceDMatrix);
+    DMatrix g2 = matrix_transpose(sliceDMatrix);
     trace("geno matrix ",g.shape," reshaped to ",g2.shape);
     g = g2;
   }

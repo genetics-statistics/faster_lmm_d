@@ -23,9 +23,9 @@ auto run_gwas(m_items n, m_items m, const DMatrix k, double[] y, const DMatrix g
   assert(y.length == n);
   assert(geno.m_geno == m);
 
-  phenoStruct pheno = remove_missing(n,y);
+  PhenoStruct pheno = remove_missing(n,y);
 
-  auto geno2 = removeCols(geno,pheno.keep);
+  auto geno2 = remove_cols(geno,pheno.keep);
   DMatrix G = normalize_along_row(geno2);
   trace("run_other_new genotype_matrix: ", G.shape);
   DMatrix K = kinship_full(G);

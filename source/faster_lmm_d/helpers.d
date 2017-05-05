@@ -15,7 +15,7 @@ double modDiff(const double x, const double y){
   return rem;
 }
 
-bool[] isnan(const double[] vector){
+bool[] is_nan(const double[] vector){
   bool[] result;
   foreach(element; vector){
     result ~= isNaN(element);
@@ -23,7 +23,7 @@ bool[] isnan(const double[] vector){
   return result;
 }
 
-bool[] negateBool(const bool[] vector){
+bool[] negate_bool(const bool[] vector){
   bool[] result;
   foreach(element; vector){
     result ~= true - element;
@@ -33,7 +33,7 @@ bool[] negateBool(const bool[] vector){
 
 double sum(const double[] vector){
   double result = 0;
-  foreach(element;vector){result+=element;}
+  foreach(element; vector){ result += element; }
   return result;
 }
 
@@ -47,20 +47,20 @@ int sum(const bool[] vector){
   return result;
 }
 
-double globalMean(const double[] input){
+double global_mean(const double[] input){
   return sum(input)/input.length;
 }
 
-double getVariation(const double[] vector, const double mean){
+double get_variation(const double[] vector, const double mean){
   double result = 0;
-  foreach(element;vector){result+= pow(element-mean,2);}
+  foreach(element;vector){ result += pow(element - mean, 2); }
   return result/vector.length;
 }
 
-double[] getNumArray(const double[] arr, const bool[] valuesArr){
-  double[] result = new double[sum(valuesArr)];
+double[] get_num_array(const double[] arr, const bool[] values_arr){
+  double[] result = new double[sum(values_arr)];
   for(int k = 0, index = 0 ; k < arr.length; k++){
-    if(valuesArr[k] == true){
+    if(values_arr[k] == true){
       result[index] = arr[k];
       index++;
     }
@@ -68,9 +68,9 @@ double[] getNumArray(const double[] arr, const bool[] valuesArr){
   return result;
 }
 
-void replaceNaN(ref double[] arr, const bool[] valuesArr, const double mean){
+void replace_nan(ref double[] arr, const bool[] values_arr, const double mean){
   int index = 0;
-  foreach(ref element; valuesArr){
+  foreach(ref element; values_arr){
     if(element == true){
       index++;
     }else{
@@ -94,5 +94,5 @@ unittest{
 
   assert(sum(arr) == 16);
   assert(sum(arr2) == 3);
-  assert(globalMean(arr) == 4);
+  assert(global_mean(arr) == 4);
 }

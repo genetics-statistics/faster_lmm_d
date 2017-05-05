@@ -21,8 +21,8 @@ DMatrix kinship_full(const DMatrix G)
   auto n = G.shape[1]; // inds
   log(m," SNPs");
   assert(m>n, "n should be larger than m");
-  DMatrix temp = matrixTranspose(G);
-  DMatrix mmT = matrixMult(temp, G);
+  DMatrix temp = matrix_transpose(G);
+  DMatrix mmT = matrix_mult(temp, G);
   info("normalize K");
   DMatrix K = divide_dmatrix_num(mmT, G.shape[0]);
 
@@ -35,7 +35,7 @@ DMatrix kinship_full(const DMatrix G)
   return K;
 }
 
-eighTuple kvakve(const DMatrix K)
+EighTuple kvakve(const DMatrix K)
 {
   tracef("Obtaining eigendecomposition for %dx%d matrix",K.shape[0],K.shape[1]);
   return eigh(K);
