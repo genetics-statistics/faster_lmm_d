@@ -76,40 +76,6 @@ void prettyPrint(const dmatrix input) {
   writeln("]");
 }
 
-void pPrint(const dmatrix input) {
-  writeln("[");
-  for(auto i=0; i < input.shape[0]; i++) {
-    writeln(input.elements[(input.shape[1]*i)..(input.shape[1]*(i+1))]);
-  }
-  writeln("]");
-}
-
-void pPrint2(const dmatrix input) {
-  writeln("[");
-  for(auto i=0; i < input.shape[0]; i++) {
-    writeln(input.elements[(input.shape[1]*i)..(input.shape[1]*i+3)],"...",
-      input.elements[(input.shape[1]*(i+1)-3)..(input.shape[1]*(i+1))]);
-  }
-  writeln("]");
-}
-
-void pPrint3(const dmatrix input) {
-  writeln("[");
-  if(input.shape[0]>6) {
-    for(auto i=0; i < 3; i++) {
-      writeln(input.elements[(input.shape[1]*i)..(input.shape[1]*i+3)],"...",
-        input.elements[(input.shape[1]*(i+1)-3)..(input.shape[1]*(i+1))]);
-    }
-    writeln("...");
-    for(auto i=input.shape[0]-3; i < input.shape[0]; i++) {
-      writeln(input.elements[(input.shape[1]*i)..(input.shape[1]*i+3)],"...",
-        input.elements[(input.shape[1]*(i+1)-3)..(input.shape[1]*(i+1))]);
-    }
-  }
-
-  writeln("]");
-}
-
 dmatrix sliceDmatrix(const dmatrix input, const ulong[] along) {
   trace("In sliceDmatrix");
   double[] output;
