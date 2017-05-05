@@ -44,7 +44,7 @@ auto tsvpheno(string fn, ulong p_column= 0){
   return Tuple!(double[], string[])(y, phenotypes);
 }// # FIXME: column not used
 
-genoObj tsvgeno(string fn, JSONValue ctrl){
+GenoObj tsvgeno(string fn, JSONValue ctrl){
 
   trace("in geno function");
   string s = `{"A":0,"H":1,"B":2,"-":3}`;
@@ -83,7 +83,7 @@ genoObj tsvgeno(string fn, JSONValue ctrl){
       }
     }
   }
-  genoObj geno_obj = genoObj(geno,gnames,ynames[1..$]);
+  GenoObj geno_obj = GenoObj(geno,gnames,ynames[1..$]);
 
   geno_obj.geno.shape = [rowCount, colCount];
   info("Genotype Matrix created");

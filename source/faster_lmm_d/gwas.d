@@ -52,7 +52,7 @@ auto gwas(double[] Y, DMatrix G, DMatrix K, bool restricted_max_likelihood = tru
   info("snps is ", snps);
 
   for(int i=0; i<snps; i++){
-    DMatrix x = getRow(G, i);
+    DMatrix x = get_row(G, i);
     x.shape = [inds, 1];
     auto tsps = lmm2association(lmm2, x, true,true);
     ps[i] = tsps[1];

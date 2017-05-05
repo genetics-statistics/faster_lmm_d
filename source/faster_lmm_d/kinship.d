@@ -24,7 +24,7 @@ DMatrix kinship_full(const DMatrix G)
   DMatrix temp = matrixTranspose(G);
   DMatrix mmT = matrixMult(temp, G);
   info("normalize K");
-  DMatrix K = divideDMatrixNum(mmT, G.shape[0]);
+  DMatrix K = divide_dmatrix_num(mmT, G.shape[0]);
 
   log("kinship_full K sized ",n," ",K.elements.length);
   log(K.elements[0],",",K.elements[1],",",K.elements[2],"...",K.elements[n-3],",",K.elements[n-2],",",K.elements[n-1]);

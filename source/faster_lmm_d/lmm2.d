@@ -50,7 +50,7 @@ struct LMM2{
 
     if(X0.init == false){
       trace("Initializing LMM2...");
-      X0 = onesMatrix(Y.length,1);
+      X0 = ones_dmatrix(Y.length,1);
     }
 
     this.verbose = verbose;
@@ -117,7 +117,7 @@ LMM2 lmm2transform(LMM2 lmmobject){
   DMatrix KveT = matrixTranspose(lmmobject.Kve);
   DMatrix Yt = matrixMult(KveT, lmmobject.Y);
   DMatrix X0t = matrixMult(KveT, lmmobject.X0);
-  DMatrix X0t_stack = horizontallystack(X0t, onesMatrix(lmmobject.N,1));
+  DMatrix X0t_stack = horizontally_stack(X0t, ones_dmatrix(lmmobject.N,1));
   auto q = X0t.shape[1];
   return LMM2(lmmobject, Yt, X0t, X0t_stack, KveT, q);
 }
@@ -130,16 +130,16 @@ mlSol getMLSoln(LMM2 lmmobject, double h, DMatrix X){
   //   the heritability or the proportion of the total variance attributed to genetics.  The X is the
   //   covariate matrix.
   mlSol ml_sol;
-  DMatrix S = divideNumDMatrix(1,addDMatrixNum(multiplyDMatrixNum(lmmobject.Kva,h),(1.0 - h)));
+  DMatrix S = divide_num_dmatrix(1,add_dmatrix_num(multiply_dmatrix_num(lmmobject.Kva,h),(1.0 - h)));
   auto temp = S.shape.dup;
   S.shape = [temp[1], temp[0]];
-  DMatrix Xt = multiplyDMatrix(matrixTranspose(X), S);
+  DMatrix Xt = multiply_dmatrix(matrixTranspose(X), S);
   ml_sol.XX = matrixMult(Xt,X);
   ml_sol.XX_i = inverse(ml_sol.XX);
   ml_sol.beta =  matrixMult(matrixMult(ml_sol.XX_i,Xt),lmmobject.Yt);
-  DMatrix Yt = subDMatrix(lmmobject.Yt, matrixMult(X,ml_sol.beta));
+  DMatrix Yt = sub_dmatrix(lmmobject.Yt, matrixMult(X,ml_sol.beta));
   DMatrix YtT = matrixTranspose(Yt);
-  DMatrix YtTS = multiplyDMatrix(YtT, S);
+  DMatrix YtTS = multiply_dmatrix(YtT, S);
   ml_sol.Q = matrixMult(YtTS,Yt);
   ml_sol.sigma = ml_sol.Q.elements[0] * 1.0 / (cast(double)(lmmobject.N) - cast(double)(X.shape[1]));
   return ml_sol;
@@ -173,7 +173,7 @@ llTuple getLL(LMM2 lmmobject, double h, DMatrix X, bool stack=true, bool REML=fa
 
   mlSol ml = getMLSoln(lmmobject, h, X);
 
-  double LL  = n * mlog(2*PI) + sum(logDMatrix((addDMatrixNum( multiplyDMatrixNum(lmmobject.Kva,h),(1-h) ) )).elements)+
+  double LL  = n * mlog(2*PI) + sum(log_dmatrix((add_dmatrix_num( multiply_dmatrix_num(lmmobject.Kva,h),(1-h) ) )).elements)+
   + n + n * mlog((1.0/n) * ml.Q.elements[0]); //Q
 
   LL = -0.5 * LL;
@@ -311,7 +311,7 @@ auto lmm2association(LMM2 lmmobject, DMatrix X, bool stack=true, bool REML=true,
 
   if(stack){
     DMatrix m = matrixMult(lmmobject.KveT,X);
-    setCol(lmmobject.X0t_stack,lmmobject.q,m);
+    set_col(lmmobject.X0t_stack,lmmobject.q,m);
     X = lmmobject.X0t_stack;
   }
   double h = lmmobject.optH;

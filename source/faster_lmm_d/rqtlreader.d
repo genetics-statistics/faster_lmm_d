@@ -46,7 +46,7 @@ auto pheno(string fn, ulong p_column= 0){
   return Tuple!(double[], string[])(y, phenotypes);
 }
 
-genoObj geno(string fn, JSONValue ctrl){
+GenoObj geno(string fn, JSONValue ctrl){
 
   trace("in geno function");
   //FIXME
@@ -92,7 +92,7 @@ genoObj geno(string fn, JSONValue ctrl){
     }
     rowCount++;
   }
-  genoObj geno_obj = genoObj(geno,gnames,ynames[1..$]);
+  GenoObj geno_obj = GenoObj(geno,gnames,ynames[1..$]);
 
   geno_obj.geno.shape = [rowCount, colCount];
   info("Genotype Matrix created");
