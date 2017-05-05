@@ -173,7 +173,7 @@ llTuple getLL(LMM2 lmmobject, double h, dmatrix X, bool stack=true, bool REML=fa
 
   mlSol ml = getMLSoln(lmmobject, h, X);
 
-  double LL  = n * mlog(2*PI) + sum(logDmatrix((addDMatrixNum( multiplyDmatrixNum(lmmobject.Kva,h),(1-h) ) )).elements)+
+  double LL  = n * mlog(2*PI) + sum(logDmatrix((addDmatrixNum( multiplyDmatrixNum(lmmobject.Kva,h),(1-h) ) )).elements)+
   + n + n * mlog((1.0/n) * ml.Q.elements[0]); //Q
 
   LL = -0.5 * LL;

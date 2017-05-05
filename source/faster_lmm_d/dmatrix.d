@@ -118,14 +118,6 @@ dmatrix divideNumDmatrix(const double num, const dmatrix input) {
   return dmatrix(input.shape, elements);
 }
 
-dmatrix addDMatrixNum(const dmatrix input, const double num) {
-  double[] elements = new double[input.shape[0] * input.shape[1]];
-  for(auto i = 0; i < input.shape[0]*input.shape[1]; i++) {
-    elements[i] = input.elements[i] + num;
-  }
-  return dmatrix(input.shape, elements);
-}
-
 dmatrix divideDmatrixNum(const dmatrix input, const double factor) {
   double[] elements = new double[input.shape[0] * input.shape[1]];
   for(auto i = 0; i < input.shape[0]*input.shape[1]; i++) {
@@ -238,11 +230,11 @@ void nanCounter(const dmatrix input) {
 
 
 unittest{
-  dmatrix d = dmatrix([2,2],[1,2,3,4]);
+  auto d = dmatrix([2,2],[1,2,3,4]);
 
   // Test equality of two dmatrixes
-  dmatrix lha = dmatrix([3,3], [1,2,3, 4,5,6, 7,8,9]);
-  dmatrix rha = dmatrix([3,3], [1.001,2,3, 4,5,6, 7,8,9]);
+  auto lha = dmatrix([3,3], [1,    2, 3, 4, 5, 6, 7, 8, 9]);
+  auto rha = dmatrix([3,3], [1.001,2, 3, 4, 5, 6, 7, 8, 9]);
   assert(eqeq(lha, rha));
 
   // Test the fields of a dmatrix
@@ -250,21 +242,47 @@ unittest{
   assert(d.elements == [1,2,3,4]);
 
   // Test elementwise operations
-  dmatrix d2 = dmatrix([2,2],[2,4,5,6]);
-  dmatrix d3 = dmatrix([2,2],[3,6,8,10]);
+  auto d2 = dmatrix([2,2],[2,4,5,6]);
+  auto d3 = dmatrix([2,2],[3,6,8,10]);
   assert(addDmatrix(d, d2) == d3);
+  assert(addDmatrixNum(d, 0) == d);
+
   assert(subDmatrix(d3, d2) == d);
+  assert(subDmatrixNum(d, 0) == d);
 
-  dmatrix d4 = dmatrix([2,2],[6,24,40,60]);
+  auto d4 = dmatrix([2,2],[6,24,40,60]);
   assert(multiplyDmatrix(d2,d3) == d4);
-
   assert(multiplyDmatrixNum(d2,1) == d2);
+
   assert(divideDmatrixNum(d2,1) == d2);
 
-  dmatrix zeroMat = dmatrix([3,3], [0,0,0, 0,0,0, 0,0,0]);
+  auto zeroMat = dmatrix([3,3], [0,0,0, 0,0,0, 0,0,0]);
   assert(zerosMatrix(3,3) == zeroMat);
 
-  dmatrix onesMat = dmatrix([3,3], [1,1,1, 1,1,1, 1,1,1]);
+  auto onesMat = dmatrix([3,3], [1,1,1, 1,1,1, 1,1,1]);
   assert(onesMatrix(3,3) == onesMat);
 
+  auto colMatrix = dmatrix([2,1], [2,4]);
+  assert( getCol(d, 1) == colMatrix );
+
+  auto rowMatrix = dmatrix([1,2], [3,4]);
+  assert( getRow(d, 1) == rowMatrix );
+
+  auto row = dmatrix([1,2], [3.5,4.2]);
+  setRow(d, 1, row);
+  auto newD =  dmatrix([2,2], [1, 2, 3.5, 4.2]);
+  assert( d == newD );
+
+  auto left = dmatrix([3, 1], [1,
+                               4,
+                               5]);
+
+  auto right = dmatrix([3, 2], [2, 4,
+                                4, 8,
+                                7, 12]);
+
+  auto stacked = dmatrix([3, 3], [1, 2, 4,
+                                  4, 4, 8,
+                                  5, 7, 12]);
+  assert(horizontallystack(left, right) == stacked);
 }
