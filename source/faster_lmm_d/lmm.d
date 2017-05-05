@@ -16,22 +16,20 @@ import faster_lmm_d.kinship;
 import faster_lmm_d.optmatrix;
 import faster_lmm_d.phenotype;
 
-auto run_gwas(ulong n, ulong m, const dmatrix k, double[] y, const dmatrix geno){
-
+auto run_gwas(m_items n, m_items m, const dmatrix k, double[] y, const dmatrix geno) {
   trace("run_gwas");
-  log("pheno ", y.length," ", y[0..5]);
-  log(geno.shape,m);
+  trace("pheno ", y.length," ", y[0..4]);
+  trace(geno.shape,m);
   assert(y.length == n);
-  assert(geno.n_pheno == n);
   assert(geno.m_geno == m);
 
   phenoStruct pheno = remove_missing(n,y);
 
   auto geno2 = removeCols(geno,pheno.keep);
   dmatrix G = normalize_along_row(geno2);
-  log("run_other_new genotype_matrix: ", G.shape);
+  trace("run_other_new genotype_matrix: ", G.shape);
   dmatrix K = kinship_full(G);
-  log("kinship_matrix.shape: ", K.shape);
+  trace("kinship_matrix.shape: ", K.shape);
 
   return gwas(pheno.Y, G, K, true, false, true);
 }
