@@ -22,9 +22,9 @@ import faster_lmm_d.helpers;
 import faster_lmm_d.kinship;
 import faster_lmm_d.optmatrix;
 
-alias Tuple!(double, "LL", DMatrix, "beta", double, "sigma", DMatrix, "beta_var") llTuple;
-alias Tuple!(LMM, "lmmobj", double, "fit_hmax", DMatrix, "fit_beta", double, "fit_sigma", double, "fit_LL") fitTuple;
-alias Tuple!(DMatrix, "beta", double, "sigma", DMatrix, "Q", DMatrix, "XX_i", DMatrix, "XX") mlSol;
+alias Tuple!(double, "LL", DMatrix, "beta", double, "sigma", DMatrix, "beta_var") LLTuple;
+alias Tuple!(LMM, "lmmobj", double, "fit_hmax", DMatrix, "fit_beta", double, "fit_sigma", double, "fit_LL") FitTuple;
+alias Tuple!(DMatrix, "beta", double, "sigma", DMatrix, "Q", DMatrix, "XX_i", DMatrix, "XX") MLSol;
 
 struct LMM{
   ulong q, N;
@@ -122,14 +122,14 @@ LMM lmm_transform(LMM lmmobject){
   return LMM(lmmobject, Yt, X0t, X0t_stack, KveT, q);
 }
 
-mlSol getMLSoln(LMM lmmobject, double h, DMatrix X){
+MLSol getMLSoln(LMM lmmobject, double h, DMatrix X){
 
   //   Obtains the maximum-likelihood estimates for the covariate coefficients (beta),
   //   the total variance of the trait (sigma) and also passes intermediates that can
   //   be utilized in other functions. The input parameter h is a value between 0 and 1 and represents
   //   the heritability or the proportion of the total variance attributed to genetics.  The X is the
   //   covariate matrix.
-  mlSol ml_sol;
+  MLSol ml_sol;
   DMatrix S = divide_num_dmatrix(1,add_dmatrix_num(multiply_dmatrix_num(lmmobject.Kva,h),(1.0 - h)));
   auto temp = S.shape.dup;
   S.shape = [temp[1], temp[0]];
@@ -157,7 +157,7 @@ extern(C) double LL_brent(double h, void *params){
   return -get_LL(LMMglob, h, Xglob, false, true).LL;
 }
 
-llTuple get_LL(LMM lmmobject, double h, DMatrix X, bool stack=true, bool REML=false){
+LLTuple get_LL(LMM lmmobject, double h, DMatrix X, bool stack=true, bool REML=false){
 
   //   Computes the log-likelihood for a given heritability (h).  If X==None, then the
   //   default X0t will be used.  If X is set and stack=True, then X0t will be matrix concatenated with
@@ -171,7 +171,7 @@ llTuple get_LL(LMM lmmobject, double h, DMatrix X, bool stack=true, bool REML=fa
   double n = cast(double)lmmobject.N;
   double q = cast(double)X.shape[1];
 
-  mlSol ml = getMLSoln(lmmobject, h, X);
+  MLSol ml = getMLSoln(lmmobject, h, X);
 
   double LL  = n * mlog(2*PI) + sum(log_dmatrix((add_dmatrix_num( multiply_dmatrix_num(lmmobject.Kva,h),(1-h) ) )).elements)+
   + n + n * mlog((1.0/n) * ml.Q.elements[0]); //Q
@@ -187,7 +187,7 @@ llTuple get_LL(LMM lmmobject, double h, DMatrix X, bool stack=true, bool REML=fa
     LL = LL + 0.5*LL_REML_part;
   }
 
-  return llTuple(LL, ml.beta, ml.sigma, ml.XX_i);
+  return LLTuple(LL, ml.beta, ml.sigma, ml.XX_i);
 }
 
 double optimize_brent(LMM lmmobject, DMatrix X, bool REML, double lower, double upper){
@@ -259,7 +259,7 @@ double get_max(LMM lmmobject, DMatrix L, DMatrix H, DMatrix X, bool REML=false){
   }
 }
 
-fitTuple lmm_fit(LMM lmmobject, DMatrix X, ulong ngrids=100, bool REML=true){
+FitTuple lmm_fit(LMM lmmobject, DMatrix X, ulong ngrids=100, bool REML=true){
 
   //   Finds the maximum-likelihood solution for the heritability (h) given the current parameters.
   //   X can be passed and will transformed and concatenated to X0t.  Otherwise, X0t is used as
@@ -267,7 +267,7 @@ fitTuple lmm_fit(LMM lmmobject, DMatrix X, ulong ngrids=100, bool REML=true){
 
   //   This function calculates the LLs over a grid and then uses .get_max(...) to find the optimum.
   //   Given this optimum, the function computes the LL and associated ML solutions.
-  fitTuple fit;
+  FitTuple fit;
   if(X.init == false){
     X = lmmobject.X0t;
   }
@@ -287,7 +287,7 @@ fitTuple lmm_fit(LMM lmmobject, DMatrix X, ulong ngrids=100, bool REML=true){
   DMatrix L = DMatrix([elm.length,1],elm);
   DMatrix H = DMatrix([Harr.length,1],Harr);
   fit.fit_hmax = get_max(lmmobject, L, H, X, REML);
-  llTuple ll = get_LL(lmmobject, fit.fit_hmax, X, false, REML);
+  LLTuple ll = get_LL(lmmobject, fit.fit_hmax, X, false, REML);
 
   fit.lmmobj = LMM(lmmobject, L, H, fit.fit_hmax, ll.LL, ll.beta, ll.sigma);
   fit.fit_beta = ll.beta;
@@ -315,7 +315,7 @@ auto lmm_association(LMM lmmobject, DMatrix X, bool stack=true, bool REML=true, 
     X = lmmobject.X0t_stack;
   }
   double h = lmmobject.opt_H;
-  llTuple ll = get_LL(lmmobject,h, X ,false,REML);
+  LLTuple ll = get_LL(lmmobject,h, X ,false,REML);
   auto q  = ll.beta.elements.length;
   double ts,ps;
   return tstat(lmmobject, ll.beta.elements[q-1], ll.beta_var.acc(q-1,q-1), ll.sigma, q);
