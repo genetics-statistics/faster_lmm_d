@@ -83,7 +83,7 @@ GenoObj tsvgeno(string fn, JSONValue ctrl){
       }
     }
   }
-  GenoObj geno_obj = GenoObj(geno,gnames,ynames[1..$]);
+  GenoObj geno_obj = GenoObj(geno, cast(immutable)gnames,ynames[1..$]);
 
   geno_obj.geno.shape = [rowCount, colCount];
   info("Genotype Matrix created");

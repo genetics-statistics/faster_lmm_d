@@ -143,10 +143,9 @@ void main(string[] args)
 
   // ---- Genotypes
   DMatrix g;
-  string[] gnames;
   auto g1 = (cmd == "rqtl" ? geno(option_geno, ctrl) : tsvgeno(option_geno, ctrl ));
   g = g1.geno;
-  gnames = g1.gnames;
+  auto gnames = g1.gnames;
   auto ynames = g1.ynames;
   trace(g.shape);
 
