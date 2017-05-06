@@ -321,9 +321,8 @@ auto tstat( LMM lmmobject, double beta, double var, double sigma, double q){
 
   //   Calculates a t-statistic and associated p-value given the estimate of beta and its standard error.
   //   This is actually an F-test, but when only one hypothesis is being performed, it reduces to a t-test.
-
   double ts = beta / sqrt(var*sigma);
-  double ps = 2.0*(1 - normalCDF(abs(ts)));
+  double ps = 2.0*( 1 -  studentsTCDF(abs(ts), (lmmobject.N-q)));
 
   return Tuple!(double, double)(ts, ps);
 }
