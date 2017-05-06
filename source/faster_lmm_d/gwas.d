@@ -33,17 +33,17 @@ auto gwas(double[] Y, DMatrix G, DMatrix K, bool restricted_max_likelihood = tru
   DMatrix Kve;
   DMatrix X0;
 
-  LMM2 lmm2 = LMM2(Y,K,Kva,Kve,X0, true);
-  lmm2 = lmm2transform(lmm2);
+  LMM lmm = LMM(Y,K,Kva,Kve,X0, true);
+  lmm = lmm_transform(lmm);
   DMatrix X;
 
   if(!refit){
     trace("Computing fit for null model");
     double fit_hmax, fit_sigma, fit_LL;
     DMatrix fit_beta;
-    fitTuple fit = lmm2fit(lmm2, X); // # follow GN model in run_other;
-    lmm2 = fit.lmmobj;
-    log("heritability= ", lmm2.optH, " sigma= ", lmm2.optSigma, " LL= ", fit.fit_LL);
+    fitTuple fit = lmm_fit(lmm, X); // # follow GN model in run_other;
+    lmm = fit.lmmobj;
+    log("heritability= ", lmm.opt_H, " sigma= ", lmm.opt_sigma, " LL= ", fit.fit_LL);
   }
 
   double[] ps = new double[snps];
@@ -54,7 +54,7 @@ auto gwas(double[] Y, DMatrix G, DMatrix K, bool restricted_max_likelihood = tru
   for(int i=0; i<snps; i++){
     DMatrix x = get_row(G, i);
     x.shape = [inds, 1];
-    auto tsps = lmm2association(lmm2, x, true,true);
+    auto tsps = lmm_association(lmm, x, true,true);
     ps[i] = tsps[1];
     ts[i] = tsps[0];
     if(i%1000 == 0){

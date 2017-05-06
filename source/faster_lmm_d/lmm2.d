@@ -22,18 +22,18 @@ import faster_lmm_d.helpers;
 import faster_lmm_d.kinship;
 import faster_lmm_d.optmatrix;
 
-alias Tuple!(double, "LL", DMatrix, "beta", double, "sigma", DMatrix, "betaVAR") llTuple;
-alias Tuple!(LMM2, "lmmobj", double, "fit_hmax", DMatrix, "fit_beta", double, "fit_sigma", double, "fit_LL") fitTuple;
+alias Tuple!(double, "LL", DMatrix, "beta", double, "sigma", DMatrix, "beta_var") llTuple;
+alias Tuple!(LMM, "lmmobj", double, "fit_hmax", DMatrix, "fit_beta", double, "fit_sigma", double, "fit_LL") fitTuple;
 alias Tuple!(DMatrix, "beta", double, "sigma", DMatrix, "Q", DMatrix, "XX_i", DMatrix, "XX") mlSol;
 
-struct LMM2{
+struct LMM{
   ulong q, N;
-  double optH, optSigma, optLL;
+  double opt_H, opt_sigma, opt_LL;
   bool init = false;
   bool verbose = false;
   DMatrix X0, Y, K, Kva, Kve, KveT;
   DMatrix Yt, X0t, X0t_stack;
-  DMatrix H, optBeta, LLs;
+  DMatrix H, opt_beta, LLs;
 
   //The constructor takes a phenotype vector or array Y of size n. It
   //takes a kinship matrix K of size n x n.  Kva and Kve can be
@@ -49,7 +49,7 @@ struct LMM2{
     trace(Y);
 
     if(X0.init == false){
-      trace("Initializing LMM2...");
+      trace("Initializing LMM...");
       X0 = ones_dmatrix(Y.length,1);
     }
 
@@ -67,7 +67,7 @@ struct LMM2{
     this.X0 = X0;
   }
 
-  this(LMM2 lmmobject, DMatrix Yt, DMatrix X0t, DMatrix X0t_stack, DMatrix KveT, ulong q){
+  this(LMM lmmobject, DMatrix Yt, DMatrix X0t, DMatrix X0t_stack, DMatrix KveT, ulong q){
     this.verbose = lmmobject.verbose;
     this.init = true;
     this.K = lmmobject.K;
@@ -83,7 +83,7 @@ struct LMM2{
     this.q = q;
   }
 
-  this(LMM2 lmmobject, DMatrix LLs, DMatrix H, double hmax, double optLL, DMatrix optBeta, double optSigma){
+  this(LMM lmmobject, DMatrix LLs, DMatrix H, double hmax, double opt_LL, DMatrix opt_beta, double opt_sigma){
     this.verbose = lmmobject.verbose;
     this.init = true;
     this.K = lmmobject.K;
@@ -100,29 +100,29 @@ struct LMM2{
 
     this.LLs = LLs;
     this.H = H;
-    this.optH = hmax;
-    this.optLL = optLL;
-    this.optBeta = optBeta;
-    this.optSigma = optSigma;
+    this.opt_H = hmax;
+    this.opt_LL = opt_LL;
+    this.opt_beta = opt_beta;
+    this.opt_sigma = opt_sigma;
   }
 }
 
-LMM2 lmm2transform(LMM2 lmmobject){
+LMM lmm_transform(LMM lmmobject){
 
   //   Computes a transformation on the phenotype vector and the covariate matrix.
   //   The transformation is obtained by left multiplying each parameter by the transpose of the
   //   eigenvector matrix of K (the kinship).
 
-  trace("In lmm2transform");
+  trace("In lmm_transform");
   DMatrix KveT = matrix_transpose(lmmobject.Kve);
   DMatrix Yt = matrix_mult(KveT, lmmobject.Y);
   DMatrix X0t = matrix_mult(KveT, lmmobject.X0);
   DMatrix X0t_stack = horizontally_stack(X0t, ones_dmatrix(lmmobject.N,1));
   auto q = X0t.shape[1];
-  return LMM2(lmmobject, Yt, X0t, X0t_stack, KveT, q);
+  return LMM(lmmobject, Yt, X0t, X0t_stack, KveT, q);
 }
 
-mlSol getMLSoln(LMM2 lmmobject, double h, DMatrix X){
+mlSol getMLSoln(LMM lmmobject, double h, DMatrix X){
 
   //   Obtains the maximum-likelihood estimates for the covariate coefficients (beta),
   //   the total variance of the trait (sigma) and also passes intermediates that can
@@ -145,7 +145,7 @@ mlSol getMLSoln(LMM2 lmmobject, double h, DMatrix X){
   return ml_sol;
 }
 
-LMM2 LMMglob;
+LMM LMMglob;
 DMatrix Xglob;
 
 extern(C) double LL_brent(double h, void *params){
@@ -154,10 +154,10 @@ extern(C) double LL_brent(double h, void *params){
   // I return a large number if we encounter h < 0 to avoid errors in LL computation during the search.
 
   if( h < 0){ return 1e6; }
-  return -getLL(LMMglob, h, Xglob, false, true).LL;
+  return -get_LL(LMMglob, h, Xglob, false, true).LL;
 }
 
-llTuple getLL(LMM2 lmmobject, double h, DMatrix X, bool stack=true, bool REML=false){
+llTuple get_LL(LMM lmmobject, double h, DMatrix X, bool stack=true, bool REML=false){
 
   //   Computes the log-likelihood for a given heritability (h).  If X==None, then the
   //   default X0t will be used.  If X is set and stack=True, then X0t will be matrix concatenated with
@@ -190,7 +190,7 @@ llTuple getLL(LMM2 lmmobject, double h, DMatrix X, bool stack=true, bool REML=fa
   return llTuple(LL, ml.beta, ml.sigma, ml.XX_i);
 }
 
-double optimizeBrent(LMM2 lmmobject, DMatrix X, bool REML, double lower, double upper){
+double optimize_brent(LMM lmmobject, DMatrix X, bool REML, double lower, double upper){
   int status;
   ulong iter = 0, max_iter = 100;
   const(gsl_min_fminimizer_type) *T;
@@ -226,7 +226,7 @@ double optimizeBrent(LMM2 lmmobject, DMatrix X, bool REML, double lower, double 
   return m;
 }
 
-double getMax(LMM2 lmmobject, DMatrix L, DMatrix H, DMatrix X, bool REML=false){
+double get_max(LMM lmmobject, DMatrix L, DMatrix H, DMatrix X, bool REML=false){
 
   //   Helper functions for .fit(...).
   //   This function takes a set of LLs computed over a grid and finds possible regions
@@ -237,7 +237,7 @@ double getMax(LMM2 lmmobject, DMatrix L, DMatrix H, DMatrix X, bool REML=false){
   double[] HOpt;
   for(auto i=1; i< n-2; i++){
     if(L.elements[i-1] < L.elements[i] && L.elements[i] > L.elements[i+1]){
-      HOpt ~= optimizeBrent(lmmobject, X, REML, H.elements[i-1],H.elements[i+1]);
+      HOpt ~= optimize_brent(lmmobject, X, REML, H.elements[i-1],H.elements[i+1]);
       if(isNaN(HOpt[$-1])){
         HOpt[$-1] = H.elements[i-1];
       }
@@ -259,13 +259,13 @@ double getMax(LMM2 lmmobject, DMatrix L, DMatrix H, DMatrix X, bool REML=false){
   }
 }
 
-fitTuple lmm2fit(LMM2 lmmobject, DMatrix X, ulong ngrids=100, bool REML=true){
+fitTuple lmm_fit(LMM lmmobject, DMatrix X, ulong ngrids=100, bool REML=true){
 
   //   Finds the maximum-likelihood solution for the heritability (h) given the current parameters.
   //   X can be passed and will transformed and concatenated to X0t.  Otherwise, X0t is used as
   //   the covariate matrix.
 
-  //   This function calculates the LLs over a grid and then uses .getMax(...) to find the optimum.
+  //   This function calculates the LLs over a grid and then uses .get_max(...) to find the optimum.
   //   Given this optimum, the function computes the LL and associated ML solutions.
   fitTuple fit;
   if(X.init == false){
@@ -282,14 +282,14 @@ fitTuple lmm2fit(LMM2 lmmobject, DMatrix X, ulong ngrids=100, bool REML=true){
 
   double[] elm = new double[ngrids];
   for(auto h = 0; h < ngrids; h++){
-    elm[h] = getLL(lmmobject, Harr[h], X, false, REML).LL;
+    elm[h] = get_LL(lmmobject, Harr[h], X, false, REML).LL;
   }
   DMatrix L = DMatrix([elm.length,1],elm);
   DMatrix H = DMatrix([Harr.length,1],Harr);
-  fit.fit_hmax = getMax(lmmobject, L, H, X, REML);
-  llTuple ll = getLL(lmmobject, fit.fit_hmax, X, false, REML);
+  fit.fit_hmax = get_max(lmmobject, L, H, X, REML);
+  llTuple ll = get_LL(lmmobject, fit.fit_hmax, X, false, REML);
 
-  fit.lmmobj = LMM2(lmmobject, L, H, fit.fit_hmax, ll.LL, ll.beta, ll.sigma);
+  fit.lmmobj = LMM(lmmobject, L, H, fit.fit_hmax, ll.LL, ll.beta, ll.sigma);
   fit.fit_beta = ll.beta;
   fit.fit_sigma = ll.sigma;
   fit.fit_LL = ll.LL;
@@ -297,10 +297,10 @@ fitTuple lmm2fit(LMM2 lmmobject, DMatrix X, ulong ngrids=100, bool REML=true){
   return fit;
 }
 
-auto lmm2association(LMM2 lmmobject, DMatrix X, bool stack=true, bool REML=true, bool returnBeta=false){
+auto lmm_association(LMM lmmobject, DMatrix X, bool stack=true, bool REML=true, bool return_beta=false){
 
   //  Calculates association statitics for the SNPs encoded in the vector X of size n.
-  //  If h is None, the optimal h stored in optH is used.
+  //  If h is None, the optimal h stored in opt_H is used.
 
   if(false){
     trace("X=",X);
@@ -314,14 +314,14 @@ auto lmm2association(LMM2 lmmobject, DMatrix X, bool stack=true, bool REML=true,
     set_col(lmmobject.X0t_stack,lmmobject.q,m);
     X = lmmobject.X0t_stack;
   }
-  double h = lmmobject.optH;
-  llTuple ll = getLL(lmmobject,h, X ,false,REML);
+  double h = lmmobject.opt_H;
+  llTuple ll = get_LL(lmmobject,h, X ,false,REML);
   auto q  = ll.beta.elements.length;
   double ts,ps;
-  return tstat(lmmobject, ll.beta.elements[q-1], ll.betaVAR.acc(q-1,q-1), ll.sigma, q);
+  return tstat(lmmobject, ll.beta.elements[q-1], ll.beta_var.acc(q-1,q-1), ll.sigma, q);
 }
 
-auto tstat( LMM2 lmmobject, double beta, double var, double sigma, double q){
+auto tstat( LMM lmmobject, double beta, double var, double sigma, double q){
 
   //   Calculates a t-statistic and associated p-value given the estimate of beta and its standard error.
   //   This is actually an F-test, but when only one hypothesis is being performed, it reduces to a t-test.
