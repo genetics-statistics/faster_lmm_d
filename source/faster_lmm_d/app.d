@@ -80,19 +80,18 @@ void main(string[] args)
   trace(cmd);
 
   if(useBLAS){
-    bool optmatrixUseBLAS = true;
-    trace(optmatrixUseBLAS);
+    bool optmatrix_use_BLAS = true;
+    trace(optmatrix_use_BLAS);
     info("Forcing BLAS support");
   }
 
   if(noBLAS){
-    bool optmatrixUseBLAS = false;
-    trace(optmatrixUseBLAS);
+    bool optmatrix_use_BLAS = false;
+    trace(optmatrix_use_BLAS);
     info("Disabling BLAS support");
   }
 
   if(noCUDA){
-    bool cudauseCUDA = false;
     info("Disabling CUDA support");
   }
 
@@ -167,11 +166,12 @@ void main(string[] args)
     }
     y = y_temp;
 
-    DMatrix gTranspose = matrix_transpose(g);
-    DMatrix sliceDMatrix = slice_dmatrix(gTranspose, gidx);
-    trace(sliceDMatrix.shape);
-    DMatrix g2 = matrix_transpose(sliceDMatrix);
+    DMatrix g_transposed = matrix_transpose(g);
+    DMatrix sliced_mat = slice_dmatrix(g_transposed, gidx);
+    trace(sliced_mat.shape);
+    DMatrix g2 = matrix_transpose(sliced_mat);
     trace("geno matrix ",g.shape," reshaped to ",g2.shape);
+
     g = g2;
   }
 
