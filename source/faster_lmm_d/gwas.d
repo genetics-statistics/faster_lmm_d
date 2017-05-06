@@ -10,7 +10,6 @@ module faster_lmm_d.gwas;
 import std.experimental.logger;
 import std.typecons;
 
-import dstats.distrib;
 import faster_lmm_d.dmatrix;
 import faster_lmm_d.lmm2;
 import faster_lmm_d.optmatrix;
@@ -20,8 +19,8 @@ auto gwas(double[] Y, DMatrix G, DMatrix K, bool restricted_max_likelihood = tru
 
   trace("In gwas.gwas");
 
-  auto inds = G.shape[1];
-  auto snps = G.shape[0];
+  auto inds = G.cols();
+  auto snps = G.rows();
 
   infof("%d SNPs",snps);
 
@@ -33,14 +32,12 @@ auto gwas(double[] Y, DMatrix G, DMatrix K, bool restricted_max_likelihood = tru
   DMatrix Kve;
   DMatrix X0;
 
-  LMM lmm = LMM(Y,K,Kva,Kve,X0, true);
+  LMM lmm = LMM(Y, K, Kva, Kve, X0, true);
   lmm = lmm_transform(lmm);
-  DMatrix X;
 
   if(!refit){
     trace("Computing fit for null model");
-    double fit_hmax, fit_sigma, fit_LL;
-    DMatrix fit_beta;
+    DMatrix X;
     FitTuple fit = lmm_fit(lmm, X); // # follow GN model in run_other;
     lmm = fit.lmmobj;
     log("heritability= ", lmm.opt_H, " sigma= ", lmm.opt_sigma, " LL= ", fit.fit_LL);
@@ -62,5 +59,5 @@ auto gwas(double[] Y, DMatrix G, DMatrix K, bool restricted_max_likelihood = tru
     }
   }
 
-  return Tuple!(double[], double[])(ts,ps);
+  return Tuple!(double[], double[])(ts, ps);
 }

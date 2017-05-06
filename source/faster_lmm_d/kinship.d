@@ -17,14 +17,14 @@ import faster_lmm_d.optmatrix;
 DMatrix kinship_full(const DMatrix G)
 {
   info("Full kinship matrix used");
-  auto m = G.shape[0]; // snps
-  auto n = G.shape[1]; // inds
+  m_items m = G.rows(); // snps
+  m_items n = G.cols(); // inds
   log(m," SNPs");
   assert(m>n, "n should be larger than m");
   DMatrix temp = matrix_transpose(G);
   DMatrix mmT = matrix_mult(temp, G);
   info("normalize K");
-  DMatrix K = divide_dmatrix_num(mmT, G.shape[0]);
+  DMatrix K = divide_dmatrix_num(mmT, m);
 
   log("kinship_full K sized ",n," ",K.elements.length);
   log(K.elements[0],",",K.elements[1],",",K.elements[2],"...",K.elements[n-3],",",K.elements[n-2],",",K.elements[n-1]);
@@ -37,6 +37,6 @@ DMatrix kinship_full(const DMatrix G)
 
 EighTuple kvakve(const DMatrix K)
 {
-  tracef("Obtaining eigendecomposition for %dx%d matrix",K.shape[0],K.shape[1]);
+  tracef("Obtaining eigendecomposition for %dx%d matrix",K.rows(),K.cols());
   return eigh(K);
 }
