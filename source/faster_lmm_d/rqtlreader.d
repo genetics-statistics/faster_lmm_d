@@ -34,12 +34,7 @@ auto pheno(string fn, ulong p_column= 0){
   {
     Node gn2_pheno = Loader(fn).load();
     foreach(Node strain; gn2_pheno){
-      if(strain[2] == "NA"){
-        y ~=  double.nan;// <--- slow
-      }
-      else{
-        y ~= strain[2].as!double;
-      }
+      y ~= ( strain[2] == "NA" ? double.nan : strain[2].as!double);
       phenotypes ~= strain[1].as!string;
     }
   }

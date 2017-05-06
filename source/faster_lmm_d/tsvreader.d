@@ -31,12 +31,7 @@ auto tsvpheno(string fn, ulong p_column= 0){
   foreach(line; lines){
   	if(line != ""){
   		string[] row = line.split("\t");
-      if(row[1] == "NA"){
-        y ~=  double.nan;// <--- slow
-      }
-      else{
-        y ~=  to!double(row[1]);// <--- slow
-      }
+      y ~= ( row[1] == "NA" ? double.nan : to!double(row[1]) );
 	  	phenotypes ~= to!string(row[0]);
   	}
 
