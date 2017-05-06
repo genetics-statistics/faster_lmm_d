@@ -43,7 +43,7 @@ auto pheno(string fn, ulong p_column= 0){
       phenotypes ~= strain[1].as!string;
     }
   }
-  return Tuple!(double[], string[])(y, phenotypes);
+  return Tuple!(double[], immutable(string[]))(y, cast(immutable)phenotypes);
 }
 
 GenoObj geno(string fn, JSONValue ctrl){

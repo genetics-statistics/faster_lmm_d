@@ -41,7 +41,7 @@ auto tsvpheno(string fn, ulong p_column= 0){
   	}
 
   }
-  return Tuple!(double[], string[])(y, phenotypes);
+  return Tuple!(double[], immutable(string[]))(y, cast(immutable)phenotypes);
 }// # FIXME: column not used
 
 GenoObj tsvgeno(string fn, JSONValue ctrl){

@@ -124,25 +124,15 @@ void main(string[] args)
 
   // ---- Phenotypes
   double[] y, y_temp;
-  string[] phenotypes;
 
-  if(option_pheno){
-    if(cmd == "rqtl"){
-      auto pTuple = pheno(option_pheno, option_pheno_column);
-      y = pTuple[0];
-      phenotypes = pTuple[1];
-    }
-    else{
-      auto pTuple = tsvpheno(option_pheno, option_pheno_column);
-      y = pTuple[0];
-      phenotypes = pTuple[1];
-    }
-    trace("y.size=",y.sizeof);
-  }
+  auto pTuple = ( cmd == "rqtl" ? pheno(option_pheno, option_pheno_column) : tsvpheno(option_pheno, option_pheno_column ));
+  y = pTuple[0];
+  auto phenotypes = pTuple[1];
+  trace("y.size=",y.sizeof);
 
   // ---- Genotypes
   DMatrix g;
-  auto g1 = (cmd == "rqtl" ? geno(option_geno, ctrl) : tsvgeno(option_geno, ctrl ));
+  auto g1 = ( cmd == "rqtl" ? geno(option_geno, ctrl) : tsvgeno(option_geno, ctrl ));
   g = g1.geno;
   auto gnames = g1.gnames;
   auto ynames = g1.ynames;
