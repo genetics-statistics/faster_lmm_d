@@ -192,7 +192,7 @@ void main(string[] args)
     }
     if(option_geno == "data/genenetwork/BXD.csv"){
       info("Validating results for ", option_geno);
-      enforce(round(sum(p_values)) == 1970);
+      enforce(round(sum(p_values)) == 1901);
       enforce(p_values.length == 3811,"size is " ~ to!string(p_values.length));
     }
     if(option_geno == "data/test8000.geno"){

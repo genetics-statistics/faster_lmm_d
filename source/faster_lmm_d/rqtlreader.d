@@ -92,7 +92,7 @@ GenoObj geno(string fn, JSONValue ctrl){
     }
     rowCount++;
   }
-  GenoObj geno_obj = GenoObj(geno, cast(immutable)gnames, ynames[1..$]);
+  GenoObj geno_obj = GenoObj(geno, cast(immutable)gnames, ynames);
 
   geno_obj.geno.shape = [rowCount, colCount];
   info("Genotype Matrix created");
