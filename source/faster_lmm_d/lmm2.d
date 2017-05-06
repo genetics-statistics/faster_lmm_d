@@ -63,7 +63,6 @@ struct LMM{
     this.Kve = keigh.kve;
     this.N = K.shape[0];
     this.Y =  DMatrix([K.shape[0],1] ,Y);
-    //nanCounter(this.Y);  //for debugging
     this.X0 = X0;
   }
 
@@ -181,9 +180,7 @@ LLTuple get_LL(LMM lmmobject, double h, DMatrix X, bool stack=true, bool REML=fa
   if(REML){
     double LL_REML_part = 0;
     DMatrix XT = matrix_transpose(X);
-    double XTX = det(matrix_mult(XT, X));
-
-    LL_REML_part = q*mlog(2.0*PI* ml.sigma) + mlog(XTX) - mlog(det(ml.XX));
+    LL_REML_part = q*mlog(2.0*PI* ml.sigma) + mlog(det(matrix_mult(XT, X))) - mlog(det(ml.XX));
     LL = LL + 0.5*LL_REML_part;
   }
 
@@ -196,7 +193,7 @@ double optimize_brent(LMM lmmobject, DMatrix X, bool REML, double lower, double 
   const(gsl_min_fminimizer_type) *T;
   gsl_min_fminimizer *s;
   double a = lower, b = upper;
-  double m = (a+b)/2, m_expected = (a+b)/2;
+  double m = (a+b)/2;
   gsl_function F;
   F.function_ = &LL_brent;
 
@@ -314,10 +311,9 @@ auto lmm_association(LMM lmmobject, DMatrix X, bool stack=true, bool REML=true, 
     set_col(lmmobject.X0t_stack,lmmobject.q,m);
     X = lmmobject.X0t_stack;
   }
-  double h = lmmobject.opt_H;
-  LLTuple ll = get_LL(lmmobject,h, X ,false,REML);
-  auto q  = ll.beta.elements.length;
-  double ts,ps;
+
+  LLTuple ll = get_LL(lmmobject, lmmobject.opt_H, X ,false, REML);
+  auto q = ll.beta.elements.length;
   return tstat(lmmobject, ll.beta.elements[q-1], ll.beta_var.acc(q-1,q-1), ll.sigma, q);
 }
 
