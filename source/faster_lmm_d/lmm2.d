@@ -323,6 +323,7 @@ auto tstat( LMM lmmobject, double beta, double var, double sigma, double q){
   //   This is actually an F-test, but when only one hypothesis is being performed, it reduces to a t-test.
   double ts = beta / sqrt(var*sigma);
   double ps = 2.0*( 1 -  studentsTCDF(abs(ts), (lmmobject.N-q)));
+  double lod = chiSquareCDF(ps, 1);
 
-  return Tuple!(double, double)(ts, ps);
+  return Tuple!(double, double, double)(ts, ps, lod);
 }

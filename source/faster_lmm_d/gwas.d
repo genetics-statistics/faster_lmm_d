@@ -45,6 +45,8 @@ auto gwas(double[] Y, DMatrix G, DMatrix K, bool restricted_max_likelihood = tru
 
   double[] ps = new double[snps];
   double[] ts = new double[snps];
+  double[] lod = new double[snps];
+
   info(G.shape);
   info("snps is ", snps);
 
@@ -52,12 +54,14 @@ auto gwas(double[] Y, DMatrix G, DMatrix K, bool restricted_max_likelihood = tru
     DMatrix x = get_row(G, i);
     x.shape = [inds, 1];
     auto tsps = lmm_association(lmm, x, true,true);
-    ps[i] = tsps[1];
-    ts[i] = tsps[0];
+    ps[i]  = tsps[1];
+    ts[i]  = tsps[0];
+    lod[i] = tsps[2];
+
     if(i%1000 == 0){
       log(i, " snps processed");
     }
   }
 
-  return Tuple!(double[], double[])(ts, ps);
+  return Tuple!(double[], double[], double[])(ts, ps, lod);
 }

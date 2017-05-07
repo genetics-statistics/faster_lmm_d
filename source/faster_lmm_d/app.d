@@ -170,8 +170,11 @@ void main(string[] args)
   auto m = g.m_geno;
   DMatrix k;
   auto gwas = run_gwas(n,m,k,y,g);
+
   double[] ts = gwas[0];
   double[] p_values = gwas[1];
+  double[] lod_values = gwas[2];
+
   trace(ts);
   trace(p_values);
   log("p_values : ",p_values[0],",",p_values[1],",",p_values[2],"...",p_values[n-3],",",p_values[n-2],",",p_values[n-1]);
@@ -205,9 +208,9 @@ void main(string[] args)
 
   check_results(p_values,ts);
 
-  writeln("Marker\tP-value\tt-test");
+  writefln("%20s\t%9s\t%9s\t%9s\t%9s", "Marker","P-value","t-test","LOD","LRS");
   foreach(i, p ; p_values) {
-    writeln(gnames[i],"\t",p,"\t",ts[i]);
+    writefln("%20s\t%9.5f\t%9.5f\t%9.5f\t%9.5f", gnames[i],p,ts[i],lod_values[i],lod_values[i]/4.61);
   }
   //ProfilerStop();
 }
