@@ -80,19 +80,19 @@ struct LMM{
     this.q = q;
   }
 
-  this(LMM lmmobject, DMatrix LLs, DMatrix H, double hmax, double opt_LL, DMatrix opt_beta, double opt_sigma){
+  this(const LMM lmmobject, DMatrix LLs, DMatrix H, double hmax, double opt_LL, DMatrix opt_beta, double opt_sigma){
     this.verbose = lmmobject.verbose;
     this.init = true;
-    this.K = lmmobject.K;
-    this.Kve = lmmobject.Kve;
-    this.Kva = lmmobject.Kva;
+    this.K = DMatrix(lmmobject.K);
+    this.Kve = DMatrix(lmmobject.Kve);
+    this.Kva = DMatrix(lmmobject.Kva);
     this.N = lmmobject.N;
-    this.Y = lmmobject.Y;
-    this.Yt = lmmobject.Yt;
-    this.X0 = lmmobject.X0;
-    this.X0t = lmmobject.X0t;
-    this.X0t_stack = lmmobject.X0t_stack;
-    this.KveT = lmmobject.KveT;
+    this.Y = DMatrix(lmmobject.Y);
+    this.Yt = DMatrix(lmmobject.Yt);
+    this.X0 = DMatrix(lmmobject.X0);
+    this.X0t = DMatrix(lmmobject.X0t);
+    this.X0t_stack = DMatrix(lmmobject.X0t_stack);
+    this.KveT = DMatrix(lmmobject.KveT);
     this.q = lmmobject.q;
 
     this.LLs = LLs;
@@ -101,6 +101,29 @@ struct LMM{
     this.opt_LL = opt_LL;
     this.opt_beta = opt_beta;
     this.opt_sigma = opt_sigma;
+  }
+
+  this(const LMM lmmobject){
+    this.verbose = lmmobject.verbose;
+    this.init = true;
+    this.K = DMatrix(lmmobject.K);
+    this.Kve = DMatrix(lmmobject.Kve);
+    this.Kva = DMatrix(lmmobject.Kva);
+    this.N = lmmobject.N;
+    this.Y = DMatrix(lmmobject.Y);
+    this.Yt = DMatrix(lmmobject.Yt);
+    this.X0 = DMatrix(lmmobject.X0);
+    this.X0t = DMatrix(lmmobject.X0t);
+    this.X0t_stack = DMatrix(lmmobject.X0t_stack);
+    this.KveT = DMatrix(lmmobject.KveT);
+    this.q = lmmobject.q;
+
+    this.LLs = DMatrix(lmmobject.LLs);
+    this.H = DMatrix(lmmobject.H);
+    //this.opt_H = lmmobject.hmax;
+    this.opt_LL = lmmobject.opt_LL;
+    this.opt_beta = DMatrix(lmmobject.opt_beta);
+    this.opt_sigma = lmmobject.opt_sigma;
   }
 }
 
@@ -119,7 +142,7 @@ LMM lmm_transform(const LMM lmmobject){
   return LMM(lmmobject, Yt, X0t, X0t_stack, KveT, q);
 }
 
-MLSol getMLSoln(const LMM lmmobject, double h, const DMatrix X){
+MLSol getMLSoln(const LMM lmmobject, const double h, const DMatrix X){
 
   //   Obtains the maximum-likelihood estimates for the covariate coefficients (beta),
   //   the total variance of the trait (sigma) and also passes intermediates that can
@@ -154,7 +177,7 @@ extern(C) double LL_brent(double h, void *params){
   return -get_LL(LMMglob, h, Xglob, false, true).LL;
 }
 
-LLTuple get_LL(LMM lmmobject, double h, DMatrix X, bool stack=true, bool REML=false){
+LLTuple get_LL(const LMM lmmobject, const double h, DMatrix X, const bool stack=true, const bool REML=false){
 
   //   Computes the log-likelihood for a given heritability (h).  If X==None, then the
   //   default X0t will be used.  If X is set and stack=True, then X0t will be matrix concatenated with
@@ -162,7 +185,7 @@ LLTuple get_LL(LMM lmmobject, double h, DMatrix X, bool stack=true, bool REML=fa
   //   REML is computed by adding additional terms to the standard LL and can be computed by setting REML=True.
 
   if(X.init != true){
-    X = lmmobject.X0t;
+    X = DMatrix(lmmobject.X0t);
   }
 
   double n = cast(double)lmmobject.N;
@@ -185,7 +208,7 @@ LLTuple get_LL(LMM lmmobject, double h, DMatrix X, bool stack=true, bool REML=fa
   return LLTuple(LL, ml.beta, ml.sigma, ml.XX_i);
 }
 
-double optimize_brent(LMM lmmobject, DMatrix X, bool REML, double lower, double upper){
+double optimize_brent(const LMM lmmobject, const DMatrix X, const bool REML, const double lower, const double upper){
   int status;
   ulong iter = 0, max_iter = 100;
   const(gsl_min_fminimizer_type) *T;
@@ -195,8 +218,8 @@ double optimize_brent(LMM lmmobject, DMatrix X, bool REML, double lower, double 
   gsl_function F;
   F.function_ = &LL_brent;
 
-  Xglob = X;
-  LMMglob = lmmobject;
+  Xglob = DMatrix(X);
+  LMMglob = LMM(lmmobject);
   T = gsl_min_fminimizer_brent;
   s = gsl_min_fminimizer_alloc (T);
   gsl_min_fminimizer_set (s, &F, m, a, b);
@@ -221,7 +244,7 @@ double optimize_brent(LMM lmmobject, DMatrix X, bool REML, double lower, double 
   return m;
 }
 
-double get_max(LMM lmmobject, DMatrix L, DMatrix H, DMatrix X, bool REML=false){
+double get_max(const LMM lmmobject, const DMatrix L, const DMatrix H, const DMatrix X, const bool REML=false){
 
   //   Helper functions for .fit(...).
   //   This function takes a set of LLs computed over a grid and finds possible regions
@@ -254,7 +277,7 @@ double get_max(LMM lmmobject, DMatrix L, DMatrix H, DMatrix X, bool REML=false){
   }
 }
 
-FitTuple lmm_fit(LMM lmmobject, DMatrix X, ulong ngrids=100, bool REML=true){
+FitTuple lmm_fit(const LMM lmmobject, DMatrix X, const ulong ngrids=100, const bool REML=true){
 
   //   Finds the maximum-likelihood solution for the heritability (h) given the current parameters.
   //   X can be passed and will transformed and concatenated to X0t.  Otherwise, X0t is used as
@@ -264,11 +287,11 @@ FitTuple lmm_fit(LMM lmmobject, DMatrix X, ulong ngrids=100, bool REML=true){
   //   Given this optimum, the function computes the LL and associated ML solutions.
   FitTuple fit;
   if(X.init == false){
-    X = lmmobject.X0t;
+    X = DMatrix(lmmobject.X0t);
   }
   else{
     DMatrix KveTX = matrix_mult(lmmobject.KveT , X);
-    X = lmmobject.X0t_stack;
+    X = DMatrix(lmmobject.X0t_stack);
   }
   double[] Harr = new double[ngrids];
   for(auto m = 0; m < ngrids; m++){
@@ -292,7 +315,7 @@ FitTuple lmm_fit(LMM lmmobject, DMatrix X, ulong ngrids=100, bool REML=true){
   return fit;
 }
 
-auto lmm_association(LMM lmmobject, DMatrix X, bool stack=true, bool REML=true, bool return_beta=false){
+auto lmm_association(LMM lmmobject, DMatrix X, const bool stack=true, const bool REML=true, const bool return_beta=false){
 
   //  Calculates association statitics for the SNPs encoded in the vector X of size n.
   //  If h is None, the optimal h stored in opt_H is used.
@@ -312,15 +335,16 @@ auto lmm_association(LMM lmmobject, DMatrix X, bool stack=true, bool REML=true, 
 
   LLTuple ll = get_LL(lmmobject, lmmobject.opt_H, X ,false, REML);
   auto q = ll.beta.elements.length;
-  return tstat(lmmobject, ll.beta.elements[q-1], ll.beta_var.acc(q-1,q-1), ll.sigma, q);
+  const ulong df = lmmobject.N - q;
+  return tstat(ll.beta.elements[q-1], ll.beta_var.acc(q-1,q-1), ll.sigma, q, df);
 }
 
-auto tstat( LMM lmmobject, double beta, double var, double sigma, double q){
+auto tstat(const double beta, const double var, const double sigma, const double q, const ulong df){
 
   //   Calculates a t-statistic and associated p-value given the estimate of beta and its standard error.
   //   This is actually an F-test, but when only one hypothesis is being performed, it reduces to a t-test.
   double ts = beta / sqrt(var*sigma);
-  double ps = 2.0*( 1 -  studentsTCDF(abs(ts), (lmmobject.N-q)));
+  double ps = 2.0*( 1 -  studentsTCDF(abs(ts), df));
   double lod = chiSquareCDF(ps, 1);
 
   return Tuple!(double, double, double)(ts, ps, lod);
