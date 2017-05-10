@@ -1,0 +1,691 @@
+<!doctype html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="author" content="Artem Tarasov" />
+<title>[FaST-LMM] Proximal contamination</title>
+
+<script type="text/x-mathjax-config"> 
+MathJax.Hub.Config({ 
+  jax: ["input/TeX","output/HTML-CSS"], 
+  extensions: ["tex2jax.js"], 
+  tex2jax: { 
+    inlineMath: [ ['$','$'], ["\\(","\\)"] ], 
+    displayMath: [ ['$$','$$'], ["\\[","\\]"] ], 
+    processEscapes: true 
+  }, 
+}); 
+</script> 
+<style>
+  .center-image
+  {
+  margin: 0 auto;
+  display: block;
+  width: 90%;
+  }
+  
+pre > code {
+  border: 0;
+  padding-right: 0;
+  padding-left: 0; }
+
+  table{
+    border-collapse: collapse;
+    border: 1px solid black;
+  }
+  table td,th{
+    border: 1px solid black;
+    padding: 3px;
+  }
+
+.highlight pre code * {
+  white-space: nowrap;    // this sets all children inside to nowrap
+}
+
+.highlight pre {
+  overflow-x: auto;       // this sets the scrolling in x
+}
+
+.highlight pre code {
+  white-space: pre;       // forces <code> to respect <pre> formatting
+}
+
+/* github style pygments theme for jekyll */
+/* from https://github.com/aahan/pygments-github-style */
+
+.highlight pre, pre, .highlight .hll { background-color: #f8f8f8; border: 1px solid #ccc; padding: 6px 10px; border-radius: 3px; }
+.highlight .c { color: #999988; font-style: italic; }
+.highlight .err { color: #a61717; background-color: #e3d2d2; }
+.highlight .k { font-weight: bold; }
+.highlight .o { font-weight: bold; }
+.highlight .cm { color: #999988; font-style: italic; }
+.highlight .cp { color: #999999; font-weight: bold; }
+.highlight .c1 { color: #999988; font-style: italic; }
+.highlight .cs { color: #999999; font-weight: bold; font-style: italic; }
+.highlight .gd { color: #000000; background-color: #ffdddd; }
+.highlight .gd .x { color: #000000; background-color: #ffaaaa; }
+.highlight .ge { font-style: italic; }
+.highlight .gr { color: #aa0000; }
+.highlight .gh { color: #999999; }
+.highlight .gi { color: #000000; background-color: #ddffdd; }
+.highlight .gi .x { color: #000000; background-color: #aaffaa; }
+.highlight .go { color: #888888; }
+.highlight .gp { color: #555555; }
+.highlight .gs { font-weight: bold; }
+.highlight .gu { color: #800080; font-weight: bold; }
+.highlight .gt { color: #aa0000; }
+.highlight .kc { font-weight: bold; }
+.highlight .kd { font-weight: bold; }
+.highlight .kn { font-weight: bold; }
+.highlight .kp { font-weight: bold; }
+.highlight .kr { font-weight: bold; }
+.highlight .kt { color: #445588; font-weight: bold; }
+.highlight .m { color: #009999; }
+.highlight .s { color: #dd1144; }
+.highlight .n { color: #333333; }
+.highlight .na { color: teal; }
+.highlight .nb { color: #0086b3; }
+.highlight .nc { color: #445588; font-weight: bold; }
+.highlight .no { color: teal; }
+.highlight .ni { color: purple; }
+.highlight .ne { color: #990000; font-weight: bold; }
+.highlight .nf { color: #990000; font-weight: bold; }
+.highlight .nn { color: #555555; }
+.highlight .nt { color: navy; }
+.highlight .nv { color: teal; }
+.highlight .ow { font-weight: bold; }
+.highlight .w { color: #bbbbbb; }
+.highlight .mf { color: #009999; }
+.highlight .mh { color: #009999; }
+.highlight .mi { color: #009999; }
+.highlight .mo { color: #009999; }
+.highlight .sb { color: #dd1144; }
+.highlight .sc { color: #dd1144; }
+.highlight .sd { color: #dd1144; }
+.highlight .s2 { color: #dd1144; }
+.highlight .se { color: #dd1144; }
+.highlight .sh { color: #dd1144; }
+.highlight .si { color: #dd1144; }
+.highlight .sx { color: #dd1144; }
+.highlight .sr { color: #009926; }
+.highlight .s1 { color: #dd1144; }
+.highlight .ss { color: #990073; }
+.highlight .bp { color: #999999; }
+.highlight .vc { color: teal; }
+.highlight .vg { color: teal; }
+.highlight .vi { color: teal; }
+.highlight .il { color: #009999; }
+.highlight .gc { color: #999; background-color: #EAF2F5; }
+
+#content {
+  width: 66%;
+}
+
+#list {
+  width: 17%;
+  vertical-align: top;
+}
+
+header {
+  font-family: Sans-serif;
+  font-size: 10pt;
+  text-align: center;
+  background-color: #cdd;
+  max-width: 800px;
+  border-radius: 3px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+section {
+  max-width: 900px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+blockquote {
+  width: 80%;
+}
+</style>
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {
+    skipTags: ['script', 'noscript', 'style', 'textarea', 'pre']
+  }
+});
+
+MathJax.Hub.Queue(function() {
+  var all = MathJax.Hub.getAllJax(), i;
+  for(i=0; i < all.length; i += 1) {
+    all[i].SourceElement().parentNode.className += ' has-jax';
+  }
+});
+</script>
+
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+</head>
+<body>
+<header>
+  <h1>[FaST-LMM] Proximal contamination</h1>
+</header>
+<table>
+<tr>
+  <td id="list">
+  
+  
+    <span>March 29, 2015</span>
+    <br/>
+    <a href="/2015/03/29/performance.html">[LMM] literature overview: performance</a>
+    <hr/>
+  
+  
+  
+    <span>March 27, 2015</span>
+    <br/>
+    <a href="/2015/03/27/overview.html">[LMM] literature overview: approximate methods</a>
+    <hr/>
+  
+  
+  
+    <span>March 15, 2015</span>
+    <br/>
+    <a href="/2015/03/15/proximal.html">[FaST-LMM] Proximal contamination</a>
+    <hr/>
+  
+  
+  
+    <span>March 13, 2015</span>
+    <br/>
+    <a href="/2015/03/13/reml.html">[FaST-LMM] REML estimate</a>
+    <hr/>
+  
+  
+  
+    <span>March 11, 2015</span>
+    <br/>
+    <a href="/2015/03/11/mixing.html">[FaST-LMM] comparison with PyLMM (continued)</a>
+    <hr/>
+  
+  
+  
+    <span>March 10, 2015</span>
+    <br/>
+    <a href="/2015/03/10/pylmm.html">[FaST-LMM] comparison with PyLMM (practice)</a>
+    <hr/>
+  
+  
+  
+    <span>March  9, 2015</span>
+    <br/>
+    <a href="/2015/03/09/pylmm.html">[FaST-LMM] comparison with PyLMM (theory)</a>
+    <hr/>
+  
+  
+  
+    <span>March  3, 2015</span>
+    <br/>
+    <a href="/2015/03/03/lmm_cov2.html">[FaST-LMM] fastlmm/inference/lmm_cov.py, part 2</a>
+    <hr/>
+  
+  
+  
+    <span>February 27, 2015</span>
+    <br/>
+    <a href="/2015/02/27/highlevel2.html">[FaST-LMM] high-level overview, part 2</a>
+    <hr/>
+  
+  
+  
+    <span>February 25, 2015</span>
+    <br/>
+    <a href="/2015/02/25/highlevel.html">[FaST-LMM] high-level overview of the codebase, part 1</a>
+    <hr/>
+  
+  
+  
+    <span>February 18, 2015</span>
+    <br/>
+    <a href="/2015/02/18/lmm.html">[FaST-LMM] fastlmm/inference/lmm.py</a>
+    <hr/>
+  
+  
+  
+    <span>February 16, 2015</span>
+    <br/>
+    <a href="/2015/02/16/lmm_cov.html">[FaST-LMM] fastlmm/inference/lmm_cov.py, part 1</a>
+    <hr/>
+  
+  
+  </td>
+<td id="content">
+<section>
+  <p>Today I decided to perform some practical testing of removing nearby SNPs: does it really help? and if so, how much?</p>
+
+<h2 id="simulating-phenotypes">Simulating phenotypes</h2>
+
+<p>I decided to try a different, larger, dataset. Such one is found in <code>pylmm</code> distrubution. However, I ran into an issue with it.
+I don’t know how phenotype values from <code>pylmm/data/snps.132k.clean.noX.fake.phenos</code> were generated, but Shapiro-Wilk suggest it’s simply normal distribution. A more disturbing fact is that <code>h2</code> is estimated to be almost zero. It seems that there are no causal SNPs at all.</p>
+
+<p>So I decided to simulate phenotype values on my own.</p>
+
+<p>First of all, I downloaded GCTA software, which can generate phenotypes according to LMM:</p>
+
+<div class="highlight"><pre><code class="language-bash" data-lang="bash"><span class="nv">$ </span>wget http://www.complextraitgenomics.com/software/gcta/gcta_1.24.4.zip
+<span class="nv">$ </span>unzip gcta_1.24.4.zip</code></pre></div>
+
+<p>Then I moved to the ‘data/’ directory of PyLMM, selected a few SNP IDs from the <code>snps.132k.clean.noX.bim</code> file and simulated a phenotype:</p>
+
+<div class="highlight"><pre><code class="language-bash" data-lang="bash"><span class="nv">$ </span>cat causal.snps.fake 
+mm37-4-133676920
+mm37-8-65761568
+mm37-14-67815624
+mm37-17-79322387
+mm37-2-102530353
+mm37-4-63910807
+mm37-16-74943366
+mm37-14-107893320
+mm37-15-70067681
+mm37-7-13055310
+mm37-14-88557274
+mm37-18-77348115
+<span class="nv">$ </span>./gcta64 --bfile snps.132k.clean.noX --simu-qt  --out simulated.phenos --simu-causal-loci causal.snps.fake</code></pre></div>
+
+<p>It generated a file with phenotype values, and a <code>.par</code> file with the list of selected SNPs’ effects:</p>
+
+<div class="highlight"><pre><code class="language-bash" data-lang="bash"><span class="nv">$ </span>cat simulated.phenos.par 
+QTL	RefAllele	Frequency	Effect
+mm37-2-102530353	1	0.467511	0.476187
+mm37-4-63910807	1	0.325677	-2.4254
+mm37-4-133676920	1	0.412418	0.874929
+mm37-7-13055310	1	0.487124	-0.349036
+mm37-8-65761568	1	0.498354	-1.22581
+mm37-14-67815624	1	0.240277	-0.655073
+mm37-14-88557274	1	0.488778	0.56847
+mm37-14-107893320	1	0.283429	1.04148
+mm37-15-70067681	1	0.419196	0.0930597
+mm37-16-74943366	1	0.388843	-0.484555
+mm37-17-79322387	1	0.465428	0.282487
+mm37-18-77348115	1	0.365039	1.03661</code></pre></div>
+
+<p>The values from the phenotype file don’t seem to follow normal distribution (Shapiro-Wilk p-value is 0.03), which is good. The characteristics of the distribution are these:</p>
+
+<div class="highlight"><pre><code class="language-r" data-lang="r"><span class="kp">summary</span><span class="p">(</span>read.table<span class="p">(</span><span class="s">&quot;simulated.phenos.phen&quot;</span><span class="p">)</span><span class="o">$</span>V3<span class="p">)</span>
+     Min.   <span class="m">1</span>st Qu.    Median      Mean   <span class="m">3</span>rd Qu.      Max. 
+<span class="m">-42.37000</span>  <span class="m">-8.70700</span>   <span class="m">0.27810</span>   <span class="m">0.03152</span>   <span class="m">8.77100</span>  <span class="m">40.03000</span></code></pre></div>
+
+<p>The effects are small compared to noise, but that only makes it more interesting. Let’s see how well the procedure can handle this. The relatively large number of causal SNPs also adds complexity.</p>
+
+<p>The estimated mixing parameter <code>h2</code> is around 0.075 and doesn’t change much when $X$ with SNPs is provided, and a refit is done.</p>
+
+<h2 id="assessing-p-values-for-causal-snps">Assessing p-values for causal SNPs</h2>
+
+<p>Let’s save snps and causal SNPs into arrays.</p>
+
+<div class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">causal_ids</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="s">&quot;causal.snps.fake&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">)</span>
+<span class="n">causal_ids</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">causal_ids</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="c"># last line is empty</span>
+
+<span class="c"># using pylmm to read files</span>
+<span class="n">IN</span> <span class="o">=</span> <span class="nb">input</span><span class="o">.</span><span class="n">plink</span><span class="p">(</span><span class="n">bfile</span><span class="p">,</span><span class="nb">type</span><span class="o">=</span><span class="s">&#39;b&#39;</span><span class="p">,</span> <span class="n">phenoFile</span><span class="o">=</span><span class="n">pheno</span><span class="p">,</span><span class="n">normGenotype</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="n">snps</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="n">causal_snps</span> <span class="o">=</span> <span class="p">[]</span>
+
+<span class="k">for</span> <span class="n">snp</span><span class="p">,</span><span class="nb">id</span> <span class="ow">in</span> <span class="n">IN</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">var</span><span class="p">(</span><span class="n">snp</span><span class="p">)</span> <span class="o">==</span> <span class="mf">0.0</span><span class="p">:</span>
+        <span class="k">continue</span>
+    <span class="k">if</span> <span class="nb">id</span> <span class="ow">in</span> <span class="n">causal_ids</span><span class="p">:</span>
+        <span class="n">causal_snps</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">snp</span><span class="p">,</span> <span class="nb">id</span><span class="p">,</span> <span class="n">i</span><span class="p">))</span> <span class="c"># indexes will be helpful later</span>
+    <span class="n">snps</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">snp</span><span class="p">)</span>
+    <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+
+<span class="n">snps</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">snps</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
+
+<span class="kn">import</span> <span class="nn">fastlmm.util.standardizer</span> <span class="kn">as</span> <span class="nn">stdizer</span>
+<span class="n">stdizer</span><span class="o">.</span><span class="n">Unit</span><span class="p">()</span><span class="o">.</span><span class="n">standardize</span><span class="p">(</span><span class="n">snps</span><span class="p">)</span> <span class="c"># set mean=0, var=1</span></code></pre></div>
+
+<p>And now compute P-values using the built LMM (here I use lmm_cov.py):</p>
+
+<div class="highlight"><pre><code class="language-python" data-lang="python"><span class="kn">import</span> <span class="nn">scipy.stats</span> <span class="kn">as</span> <span class="nn">st</span>
+
+<span class="n">h2</span> <span class="o">=</span> <span class="n">lmm_cov</span><span class="o">.</span><span class="n">findH2</span><span class="p">()[</span><span class="s">&#39;h2&#39;</span><span class="p">]</span>
+
+<span class="k">for</span> <span class="n">snp</span><span class="p">,</span> <span class="nb">id</span><span class="p">,</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">causal_snps</span><span class="p">:</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">snp</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="n">snp</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">1</span><span class="p">))</span>
+    <span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">x</span><span class="p">,</span> <span class="n">X0</span><span class="p">))</span>
+
+    <span class="n">r2</span> <span class="o">=</span> <span class="n">lmm_cov</span><span class="o">.</span><span class="n">nLLeval_2K</span><span class="p">(</span><span class="n">h2</span><span class="p">,</span> <span class="n">snps</span><span class="o">=</span><span class="n">X</span><span class="p">,</span> <span class="n">penalty</span><span class="o">=</span><span class="mf">1e-8</span><span class="p">)</span>
+    <span class="n">b2</span> <span class="o">=</span> <span class="n">r2</span><span class="p">[</span><span class="s">&#39;beta&#39;</span><span class="p">][:,</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">varbeta</span> <span class="o">=</span> <span class="n">r2</span><span class="p">[</span><span class="s">&#39;variance_beta&#39;</span><span class="p">][:,</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">pv</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">chi2</span><span class="o">.</span><span class="n">sf</span><span class="p">(</span><span class="n">b2</span><span class="o">*</span><span class="n">b2</span><span class="o">/</span><span class="n">varbeta</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="k">print</span> <span class="s">&quot;| </span><span class="si">%s</span><span class="se">\t</span><span class="s">| </span><span class="si">%.5f</span><span class="s"> |&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="nb">id</span><span class="p">,</span> <span class="n">pv</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span></code></pre></div>
+
+<p>The output shows that only three of them are identified (p &lt; 0.05):</p>
+
+<table>
+  <tbody>
+    <tr>
+      <td>mm37-2-102530353</td>
+      <td>0.33208</td>
+    </tr>
+    <tr>
+      <td>mm37-4-63910807</td>
+      <td>0.00010</td>
+    </tr>
+    <tr>
+      <td>mm37-4-133676920</td>
+      <td>0.06684</td>
+    </tr>
+    <tr>
+      <td>mm37-7-13055310</td>
+      <td>0.29550</td>
+    </tr>
+    <tr>
+      <td>mm37-8-65761568</td>
+      <td>0.00119</td>
+    </tr>
+    <tr>
+      <td>mm37-14-67815624</td>
+      <td>0.68446</td>
+    </tr>
+    <tr>
+      <td>mm37-14-88557274</td>
+      <td>0.48970</td>
+    </tr>
+    <tr>
+      <td>mm37-14-107893320</td>
+      <td>0.00561</td>
+    </tr>
+    <tr>
+      <td>mm37-15-70067681</td>
+      <td>0.58416</td>
+    </tr>
+    <tr>
+      <td>mm37-16-74943366</td>
+      <td>0.74048</td>
+    </tr>
+    <tr>
+      <td>mm37-17-79322387</td>
+      <td>0.56762</td>
+    </tr>
+    <tr>
+      <td>mm37-18-77348115</td>
+      <td>0.43114</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Now let’s try to apply code for avoiding proximal contamination and see how that influences the p-values.
+In <code>lmm_cov.py</code>, the matrix <code>WW</code> is computed in a weird way, I had to change it to</p>
+
+<div class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">WW</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="n">num_exclude</span><span class="p">)</span> <span class="o">-</span> <span class="n">computeAKA</span><span class="p">(</span><span class="n">Sd</span><span class="o">=</span><span class="n">Sd</span><span class="p">,</span> <span class="n">denom</span><span class="o">=</span><span class="n">denom</span><span class="p">,</span> <span class="n">UA</span><span class="o">=</span><span class="n">UW</span><span class="p">,</span> <span class="n">UUA</span><span class="o">=</span><span class="n">UUW</span><span class="p">)</span></code></pre></div>
+
+<p>and replace every <code>-=</code> with <code>+=</code> for everything to make sense.</p>
+
+<p>Then, I couldn’t figure out how to call <code>nLLeval_2K</code> with right parameters, so I simply called the low-level method <code>nLLcore</code>:</p>
+
+<div class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">for</span> <span class="n">snp</span><span class="p">,</span> <span class="nb">id</span><span class="p">,</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">causal_snps</span><span class="p">:</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">snp</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="n">snp</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">1</span><span class="p">))</span>
+    <span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">x</span><span class="p">,</span> <span class="n">X0</span><span class="p">))</span>
+    
+    <span class="c"># usual results</span>
+    <span class="n">r2_1</span> <span class="o">=</span> <span class="n">lmm_cov</span><span class="o">.</span><span class="n">nLLeval_2K</span><span class="p">(</span><span class="n">h2</span><span class="p">,</span> <span class="n">snps</span><span class="o">=</span><span class="n">X</span><span class="p">,</span> <span class="n">penalty</span><span class="o">=</span><span class="mf">1e-8</span><span class="p">)</span>
+    
+    <span class="n">b2</span> <span class="o">=</span> <span class="n">r2_1</span><span class="p">[</span><span class="s">&#39;beta&#39;</span><span class="p">][:,</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">varbeta</span> <span class="o">=</span> <span class="n">r2_1</span><span class="p">[</span><span class="s">&#39;variance_beta&#39;</span><span class="p">][:,</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">pv1</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">chi2</span><span class="o">.</span><span class="n">sf</span><span class="p">(</span><span class="n">b2</span><span class="o">*</span><span class="n">b2</span><span class="o">/</span><span class="n">varbeta</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">print</span> <span class="s">&quot;| </span><span class="si">%s</span><span class="se">\t</span><span class="s"> | </span><span class="si">%.5f</span><span class="s"> | &quot;</span> <span class="o">%</span> <span class="p">(</span><span class="nb">id</span><span class="p">,</span> <span class="n">pv1</span><span class="p">),</span>
+
+    <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">20</span><span class="p">,</span> <span class="mi">30</span><span class="p">]:</span>
+        <span class="n">UW</span><span class="p">,</span> <span class="n">UUW</span> <span class="o">=</span> <span class="n">lmm_cov</span><span class="o">.</span><span class="n">rotate</span><span class="p">(</span><span class="n">snps</span><span class="p">[:,</span><span class="n">i</span><span class="o">-</span><span class="n">n</span><span class="p">:</span><span class="n">i</span><span class="o">+</span><span class="n">n</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span><span class="o">/</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">snps</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+        <span class="n">Usnps</span><span class="p">,</span><span class="n">UUsnps</span> <span class="o">=</span> <span class="n">lmm_cov</span><span class="o">.</span><span class="n">rotate</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="n">Sd</span> <span class="o">=</span> <span class="n">h2</span><span class="o">*</span><span class="n">lmm_cov</span><span class="o">.</span><span class="n">S</span> <span class="o">+</span> <span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="n">h2</span><span class="p">)</span>
+    
+        <span class="c"># results with nearby SNPs removed</span>
+        <span class="n">r2_2</span> <span class="o">=</span> <span class="n">lmm_cov</span><span class="o">.</span><span class="n">nLLcore</span><span class="p">(</span><span class="n">Sd</span><span class="o">=</span><span class="n">Sd</span><span class="p">,</span> <span class="n">denom</span><span class="o">=</span><span class="mi">1</span><span class="o">-</span><span class="n">h2</span><span class="p">,</span> <span class="n">Usnps</span><span class="o">=</span><span class="n">Usnps</span><span class="p">,</span> <span class="n">UUsnps</span><span class="o">=</span><span class="n">UUsnps</span><span class="p">,</span> <span class="n">UW</span><span class="o">=</span><span class="n">UW</span><span class="p">,</span> <span class="n">UUW</span><span class="o">=</span><span class="n">UUW</span><span class="p">,</span> <span class="n">weightW</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">UW</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span> <span class="n">penalty</span><span class="o">=</span><span class="mf">1e-8</span><span class="p">)</span>
+    
+        <span class="n">b2</span> <span class="o">=</span> <span class="n">r2_2</span><span class="p">[</span><span class="s">&#39;beta&#39;</span><span class="p">][:,</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">varbeta</span> <span class="o">=</span> <span class="n">r2_2</span><span class="p">[</span><span class="s">&#39;variance_beta&#39;</span><span class="p">][:,</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">pv2</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">chi2</span><span class="o">.</span><span class="n">sf</span><span class="p">(</span><span class="n">b2</span><span class="o">*</span><span class="n">b2</span><span class="o">/</span><span class="n">varbeta</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">print</span> <span class="s">&quot;</span><span class="si">%.5f</span><span class="s"> |&quot;</span> <span class="o">%</span> <span class="n">pv2</span><span class="p">,</span>
+    <span class="k">print</span></code></pre></div>
+
+<p>Most P-values got closer to zero, but not enough to call it a success. And that is with 30*2+1=61 SNPs removed, which is quite a lot.</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Number of SNPs removed</th>
+      <th>0</th>
+      <th>3</th>
+      <th>5</th>
+      <th>7</th>
+      <th>11</th>
+      <th>21</th>
+      <th>41</th>
+      <th>61</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>mm37-2-102530353</td>
+      <td>0.33208</td>
+      <td>0.32986</td>
+      <td>0.32827</td>
+      <td>0.32912</td>
+      <td>0.32674</td>
+      <td>0.31521</td>
+      <td>0.30549</td>
+      <td>0.29103</td>
+    </tr>
+    <tr>
+      <td>mm37-4-63910807</td>
+      <td>0.00010</td>
+      <td>0.00009</td>
+      <td>0.00009</td>
+      <td>0.00009</td>
+      <td>0.00008</td>
+      <td>0.00006</td>
+      <td>0.00003</td>
+      <td>0.00001</td>
+    </tr>
+    <tr>
+      <td>mm37-4-133676920</td>
+      <td>0.06684</td>
+      <td>0.06464</td>
+      <td>0.06311</td>
+      <td>0.06176</td>
+      <td>0.05882</td>
+      <td>0.05218</td>
+      <td>0.04023</td>
+      <td>0.02979</td>
+    </tr>
+    <tr>
+      <td>mm37-7-13055310</td>
+      <td>0.29550</td>
+      <td>0.29241</td>
+      <td>0.29009</td>
+      <td>0.28927</td>
+      <td>0.28496</td>
+      <td>0.27669</td>
+      <td>0.26859</td>
+      <td>0.24872</td>
+    </tr>
+    <tr>
+      <td>mm37-8-65761568</td>
+      <td>0.00119</td>
+      <td>0.00111</td>
+      <td>0.00106</td>
+      <td>0.00102</td>
+      <td>0.00093</td>
+      <td>0.00075</td>
+      <td>0.00055</td>
+      <td>0.00038</td>
+    </tr>
+    <tr>
+      <td>mm37-14-67815624</td>
+      <td>0.68446</td>
+      <td>0.68521</td>
+      <td>0.68596</td>
+      <td>0.68656</td>
+      <td>0.68755</td>
+      <td>0.68705</td>
+      <td>0.68727</td>
+      <td>0.69435</td>
+    </tr>
+    <tr>
+      <td>mm37-14-88557274</td>
+      <td>0.48970</td>
+      <td>0.48670</td>
+      <td>0.48425</td>
+      <td>0.48245</td>
+      <td>0.47828</td>
+      <td>0.46994</td>
+      <td>0.44329</td>
+      <td>0.41584</td>
+    </tr>
+    <tr>
+      <td>mm37-14-107893320</td>
+      <td>0.00561</td>
+      <td>0.00526</td>
+      <td>0.00516</td>
+      <td>0.00501</td>
+      <td>0.00452</td>
+      <td>0.00324</td>
+      <td>0.00158</td>
+      <td>0.00075</td>
+    </tr>
+    <tr>
+      <td>mm37-15-70067681</td>
+      <td>0.58416</td>
+      <td>0.58259</td>
+      <td>0.58186</td>
+      <td>0.57981</td>
+      <td>0.57646</td>
+      <td>0.57024</td>
+      <td>0.56077</td>
+      <td>0.54728</td>
+    </tr>
+    <tr>
+      <td>mm37-16-74943366</td>
+      <td>0.74048</td>
+      <td>0.73834</td>
+      <td>0.73689</td>
+      <td>0.73542</td>
+      <td>0.73253</td>
+      <td>0.72131</td>
+      <td>0.69880</td>
+      <td>0.68521</td>
+    </tr>
+    <tr>
+      <td>mm37-17-79322387</td>
+      <td>0.56762</td>
+      <td>0.56415</td>
+      <td>0.56313</td>
+      <td>0.56259</td>
+      <td>0.56054</td>
+      <td>0.55554</td>
+      <td>0.54652</td>
+      <td>0.53043</td>
+    </tr>
+    <tr>
+      <td>mm37-18-77348115</td>
+      <td>0.43114</td>
+      <td>0.42660</td>
+      <td>0.42330</td>
+      <td>0.42007</td>
+      <td>0.41291</td>
+      <td>0.39242</td>
+      <td>0.38557</td>
+      <td>0.38033</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="comparing-hatbeta--with-beta">Comparing $\hat{\beta} $ with $\beta$</h2>
+
+<p>Since we know what are the real coefficients, it’s interesting to plot true values against estimated ones (errorbars are $\pm 2\,$SD). </p>
+
+<p>No wonder that even the largest effects won’t pass Bonferroni correction:</p>
+
+<p><img src="2015-03-15-beta.png" alt="" /></p>
+
+<h2 id="simpler-input">Simpler input</h2>
+
+<p>Let’s now leave only three causal SNPs and specify the effect size in the file fed to <code>GCTA</code> tool:</p>
+
+<div class="highlight"><pre><code class="language-bash" data-lang="bash"><span class="nv">$ </span>cat causal.snps.fake2
+mm37-2-102530353  3
+mm37-4-63910807 4
+mm37-4-133676920  5
+<span class="nv">$ </span>./gcta64 --bfile snps.132k.clean.noX --simu-qt  --out simulated2.phenos --simu-causal-loci causal.snps.fake2</code></pre></div>
+
+<p>Running the same analysis but with the new phenotypes produces the following P-values:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Number of SNPs removed</th>
+      <th>0</th>
+      <th>3</th>
+      <th>5</th>
+      <th>7</th>
+      <th>11</th>
+      <th>21</th>
+      <th>41</th>
+      <th>61</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>mm37-2-102530353</td>
+      <td>0.0006150</td>
+      <td>0.0005883</td>
+      <td>0.0005624</td>
+      <td>0.0005629</td>
+      <td>0.0005381</td>
+      <td>0.0004462</td>
+      <td>0.0003483</td>
+      <td>0.0002527</td>
+    </tr>
+    <tr>
+      <td>mm37-4-63910807</td>
+      <td>0.0017976</td>
+      <td>0.0016955</td>
+      <td>0.0016545</td>
+      <td>0.0015902</td>
+      <td>0.0015148</td>
+      <td>0.0012178</td>
+      <td>0.0007377</td>
+      <td>0.0003833</td>
+    </tr>
+    <tr>
+      <td>mm37-4-133676920</td>
+      <td>0.0000017</td>
+      <td>0.0000014</td>
+      <td>0.0000012</td>
+      <td>0.0000011</td>
+      <td>0.0000008</td>
+      <td>0.0000004</td>
+      <td>0.0000001</td>
+      <td>0.0000000</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Although p-values are better now, estimated effect sizes are 5.0, 5.6, and 6.8 instead of 3,4,5, with SDs of 1.5–1.8. Also, large effect size doesn’t guarantee small p-value (variance can be high as well).</p>
+
+<h2 id="conclusions">Conclusions</h2>
+
+<ul>
+  <li>the simple synthetic tests performed above show that GWAS is not a simple business</li>
+  <li>removing nearby SNPs indeed helps, but it can at best reduce a p-value by an order or two of magnitude</li>
+</ul>
+
+</section>
+</td></tr></table>
+
+</div>
+</div>
+</body>
+</html>
