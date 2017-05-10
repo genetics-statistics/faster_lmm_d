@@ -1,0 +1,365 @@
+<!doctype html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="author" content="Artem Tarasov" />
+<title>[FaST-LMM] fastlmm/inference/lmm.py</title>
+
+<script type="text/x-mathjax-config"> 
+MathJax.Hub.Config({ 
+  jax: ["input/TeX","output/HTML-CSS"], 
+  extensions: ["tex2jax.js"], 
+  tex2jax: { 
+    inlineMath: [ ['$','$'], ["\\(","\\)"] ], 
+    displayMath: [ ['$$','$$'], ["\\[","\\]"] ], 
+    processEscapes: true 
+  }, 
+}); 
+</script> 
+<style>
+  .center-image
+  {
+  margin: 0 auto;
+  display: block;
+  width: 90%;
+  }
+  
+pre > code {
+  border: 0;
+  padding-right: 0;
+  padding-left: 0; }
+
+  table{
+    border-collapse: collapse;
+    border: 1px solid black;
+  }
+  table td,th{
+    border: 1px solid black;
+    padding: 3px;
+  }
+
+.highlight pre code * {
+  white-space: nowrap;    // this sets all children inside to nowrap
+}
+
+.highlight pre {
+  overflow-x: auto;       // this sets the scrolling in x
+}
+
+.highlight pre code {
+  white-space: pre;       // forces <code> to respect <pre> formatting
+}
+
+/* github style pygments theme for jekyll */
+/* from https://github.com/aahan/pygments-github-style */
+
+.highlight pre, pre, .highlight .hll { background-color: #f8f8f8; border: 1px solid #ccc; padding: 6px 10px; border-radius: 3px; }
+.highlight .c { color: #999988; font-style: italic; }
+.highlight .err { color: #a61717; background-color: #e3d2d2; }
+.highlight .k { font-weight: bold; }
+.highlight .o { font-weight: bold; }
+.highlight .cm { color: #999988; font-style: italic; }
+.highlight .cp { color: #999999; font-weight: bold; }
+.highlight .c1 { color: #999988; font-style: italic; }
+.highlight .cs { color: #999999; font-weight: bold; font-style: italic; }
+.highlight .gd { color: #000000; background-color: #ffdddd; }
+.highlight .gd .x { color: #000000; background-color: #ffaaaa; }
+.highlight .ge { font-style: italic; }
+.highlight .gr { color: #aa0000; }
+.highlight .gh { color: #999999; }
+.highlight .gi { color: #000000; background-color: #ddffdd; }
+.highlight .gi .x { color: #000000; background-color: #aaffaa; }
+.highlight .go { color: #888888; }
+.highlight .gp { color: #555555; }
+.highlight .gs { font-weight: bold; }
+.highlight .gu { color: #800080; font-weight: bold; }
+.highlight .gt { color: #aa0000; }
+.highlight .kc { font-weight: bold; }
+.highlight .kd { font-weight: bold; }
+.highlight .kn { font-weight: bold; }
+.highlight .kp { font-weight: bold; }
+.highlight .kr { font-weight: bold; }
+.highlight .kt { color: #445588; font-weight: bold; }
+.highlight .m { color: #009999; }
+.highlight .s { color: #dd1144; }
+.highlight .n { color: #333333; }
+.highlight .na { color: teal; }
+.highlight .nb { color: #0086b3; }
+.highlight .nc { color: #445588; font-weight: bold; }
+.highlight .no { color: teal; }
+.highlight .ni { color: purple; }
+.highlight .ne { color: #990000; font-weight: bold; }
+.highlight .nf { color: #990000; font-weight: bold; }
+.highlight .nn { color: #555555; }
+.highlight .nt { color: navy; }
+.highlight .nv { color: teal; }
+.highlight .ow { font-weight: bold; }
+.highlight .w { color: #bbbbbb; }
+.highlight .mf { color: #009999; }
+.highlight .mh { color: #009999; }
+.highlight .mi { color: #009999; }
+.highlight .mo { color: #009999; }
+.highlight .sb { color: #dd1144; }
+.highlight .sc { color: #dd1144; }
+.highlight .sd { color: #dd1144; }
+.highlight .s2 { color: #dd1144; }
+.highlight .se { color: #dd1144; }
+.highlight .sh { color: #dd1144; }
+.highlight .si { color: #dd1144; }
+.highlight .sx { color: #dd1144; }
+.highlight .sr { color: #009926; }
+.highlight .s1 { color: #dd1144; }
+.highlight .ss { color: #990073; }
+.highlight .bp { color: #999999; }
+.highlight .vc { color: teal; }
+.highlight .vg { color: teal; }
+.highlight .vi { color: teal; }
+.highlight .il { color: #009999; }
+.highlight .gc { color: #999; background-color: #EAF2F5; }
+
+#content {
+  width: 66%;
+}
+
+#list {
+  width: 17%;
+  vertical-align: top;
+}
+
+header {
+  font-family: Sans-serif;
+  font-size: 10pt;
+  text-align: center;
+  background-color: #cdd;
+  max-width: 800px;
+  border-radius: 3px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+section {
+  max-width: 900px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+blockquote {
+  width: 80%;
+}
+</style>
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {
+    skipTags: ['script', 'noscript', 'style', 'textarea', 'pre']
+  }
+});
+
+MathJax.Hub.Queue(function() {
+  var all = MathJax.Hub.getAllJax(), i;
+  for(i=0; i < all.length; i += 1) {
+    all[i].SourceElement().parentNode.className += ' has-jax';
+  }
+});
+</script>
+
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+</head>
+<body>
+<header>
+  <h1>[FaST-LMM] fastlmm/inference/lmm.py</h1>
+</header>
+<table>
+<tr>
+  <td id="list">
+  
+  
+    <span>March 29, 2015</span>
+    <br/>
+    <a href="/2015/03/29/performance.html">[LMM] literature overview: performance</a>
+    <hr/>
+  
+  
+  
+    <span>March 27, 2015</span>
+    <br/>
+    <a href="/2015/03/27/overview.html">[LMM] literature overview: approximate methods</a>
+    <hr/>
+  
+  
+  
+    <span>March 15, 2015</span>
+    <br/>
+    <a href="/2015/03/15/proximal.html">[FaST-LMM] Proximal contamination</a>
+    <hr/>
+  
+  
+  
+    <span>March 13, 2015</span>
+    <br/>
+    <a href="/2015/03/13/reml.html">[FaST-LMM] REML estimate</a>
+    <hr/>
+  
+  
+  
+    <span>March 11, 2015</span>
+    <br/>
+    <a href="/2015/03/11/mixing.html">[FaST-LMM] comparison with PyLMM (continued)</a>
+    <hr/>
+  
+  
+  
+    <span>March 10, 2015</span>
+    <br/>
+    <a href="/2015/03/10/pylmm.html">[FaST-LMM] comparison with PyLMM (practice)</a>
+    <hr/>
+  
+  
+  
+    <span>March  9, 2015</span>
+    <br/>
+    <a href="/2015/03/09/pylmm.html">[FaST-LMM] comparison with PyLMM (theory)</a>
+    <hr/>
+  
+  
+  
+    <span>March  3, 2015</span>
+    <br/>
+    <a href="/2015/03/03/lmm_cov2.html">[FaST-LMM] fastlmm/inference/lmm_cov.py, part 2</a>
+    <hr/>
+  
+  
+  
+    <span>February 27, 2015</span>
+    <br/>
+    <a href="/2015/02/27/highlevel2.html">[FaST-LMM] high-level overview, part 2</a>
+    <hr/>
+  
+  
+  
+    <span>February 25, 2015</span>
+    <br/>
+    <a href="/2015/02/25/highlevel.html">[FaST-LMM] high-level overview of the codebase, part 1</a>
+    <hr/>
+  
+  
+  
+    <span>February 18, 2015</span>
+    <br/>
+    <a href="/2015/02/18/lmm.html">[FaST-LMM] fastlmm/inference/lmm.py</a>
+    <hr/>
+  
+  
+  
+    <span>February 16, 2015</span>
+    <br/>
+    <a href="/2015/02/16/lmm_cov.html">[FaST-LMM] fastlmm/inference/lmm_cov.py, part 1</a>
+    <hr/>
+  
+  
+  </td>
+<td id="content">
+<section>
+  <p>It’s better to start from the old <code>lmm.py</code> version in order to gain understanding.</p>
+
+<p>Its <code>setG</code> and <code>setK</code> methods are easy to understand, because they simply compute the economy decomposition $ K = U_1^T \Lambda_1 U_1 $, either by taking SVD of the matrix $ G $ (recall that $ K = GG^T $) or by spectral decomposition of $K$. Both methods take the <code>a2</code> parameter, which is the mixing parameter, i.e. the kinship matrix $K $ equals $ (1-a_2)K_0 + a_2  K_1 $.</p>
+
+<p>The next step is setting matrix $X$ (covariates) and vector $y$ (phenotypes). The methods <code>setX</code> and <code>sety</code> also compute the rotated versions $U_1^TX$ and $U_1^Ty$. Additionally, if $k$ (the rank of $K$) is less than the number of individuals, $N$, the matrices $(I-U_1U_1^T)X$ and $(I-U_1U_1^T)y$ are computed. The rationale can be found in thesis 3.4.3 under the subheading ‘Finding the maximum likelihood and parameters efficiently’ - the formula (3.27) includes these matrices.</p>
+
+<p>The class also can find optimal <code>a2</code> and <code>h2</code> parameters for the model, where the total variance is given by $ h_2 ((1-a_2)K_0+a_2 K_1) + (1-h_2)I $. This task is handled by the <code>findA2</code> method which searches over a 2d grid. In the inner loop it calls <code>findH2</code> which is however not recommended to use - instead it’s suggested to use another method <code>find_log_delta</code>, which optimizes the $\delta = \sigma^2 / \sigma^2_g$. This, in fact, is one of the crucial ideas. The thesis section 3.3 talks about this algorithmic optimization in terms of $\gamma = 1/\delta$. The formulation of the same idea in terms of $\delta$ can be found in the <a href="http://www.nature.com/nmeth/journal/v8/n10/extref/nmeth.1681-S1.pdf">supplementary note</a> for the paper ‘FaST linear mixed models for genome-wide association studies’.</p>
+
+<p>Thus let’s now peek into <code>find_log_delta</code> method.
+Unfortunately, its docstring is not as polished as the ones for the previous methods but honestly states ‘#Need comments’. <br />
+The function body includes the following relationship: $ h_2 = 1/(\delta s_c + 1) $. It is not made clear what is meant by $s_c$ (<code>sid_count</code>) here, but at least setting it to 1 makes sense because
+<script type="math/tex"> \sigma^2_g(K + \delta I) = h_2 K + (1-h_2) I \Rightarrow \delta = \frac{1-h_2}{h_2} \Rightarrow 1-h_2 = h_2\delta \Rightarrow h_2 = 1/(1 + \delta)\,. </script>
+So <code>findH2</code> and <code>find_log_delta</code> essentially differ only in the grid spacing, but it’s implied that this difference can boost the computations.</p>
+
+<p>Ultimately, <code>find_log_delta</code> calls <code>nLLeval</code> method, passing <code>h2</code> to it.
+In it we suddenly see a commented out reference to <code>lmm_cov.py</code>:</p>
+
+<div class="highlight"><pre><code class="language-python" data-lang="python"><span class="c">#if REML == True:</span>
+        <span class="c">#    # this needs to be fixed, please see test_gwas.py for details</span>
+        <span class="c">#    raise NotImplementedError(&quot;this feature is not ready to use at this time, please use lmm_cov.py instead&quot;)</span></code></pre></div>
+
+<p>But let’s not digress and move on to consider the most important method in this module.</p>
+
+<h3 id="nlleval">nLLeval</h3>
+
+<p>The function computes log-likelihood, cleverly using the spectral decomposition of $K$.</p>
+
+<ul>
+  <li>Since <script type="math/tex"> K+\delta I = U_1^T\Lambda_1 U_1 + \delta I= U_1^T(\Lambda_1 + \delta I)U_1 </script> and all we need from this matrix is the value of its determinant, the first step is computing $\Lambda_1 + \delta I$. These are the following lines in the code:</li>
+</ul>
+
+<div class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">if</span> <span class="n">logdelta</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+    <span class="n">delta</span> <span class="o">=</span> <span class="n">SP</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">logdelta</span><span class="p">)</span>
+
+<span class="k">if</span> <span class="n">delta</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+    <span class="n">Sd</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">S</span><span class="o">+</span><span class="n">delta</span><span class="p">)</span><span class="o">*</span><span class="n">scale</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="n">Sd</span> <span class="o">=</span> <span class="p">(</span><span class="n">h2</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">S</span> <span class="o">+</span> <span class="p">(</span><span class="mf">1.0</span><span class="o">-</span><span class="n">h2</span><span class="p">))</span><span class="o">*</span><span class="n">scale</span>
+
+<span class="n">logdetK</span> <span class="o">=</span> <span class="n">SP</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">Sd</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span></code></pre></div>
+
+<ul>
+  <li>
+    <p>Now it depends whether we’re dealing with low-rank case ($k &lt; N$) or the general case. For simplicity, let’s start with the general case and also skip the optional proximal contamination part.</p>
+  </li>
+  <li>
+    <p>A bunch of matrices is computed:</p>
+  </li>
+</ul>
+
+<div class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">UXS</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">UX</span> <span class="o">/</span> <span class="n">NP</span><span class="o">.</span><span class="n">lib</span><span class="o">.</span><span class="n">stride_tricks</span><span class="o">.</span><span class="n">as_strided</span><span class="p">(</span><span class="n">Sd</span><span class="p">,</span> <span class="p">(</span><span class="n">Sd</span><span class="o">.</span><span class="n">size</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">UX</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span> <span class="p">(</span><span class="n">Sd</span><span class="o">.</span><span class="n">itemsize</span><span class="p">,</span><span class="mi">0</span><span class="p">))</span>
+<span class="n">UyS</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Uy</span> <span class="o">/</span> <span class="n">Sd</span>
+
+<span class="n">XKX</span> <span class="o">=</span> <span class="n">UXS</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">UX</span><span class="p">)</span>
+<span class="n">XKy</span> <span class="o">=</span> <span class="n">UXS</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Uy</span><span class="p">)</span>
+<span class="n">yKy</span> <span class="o">=</span> <span class="n">UyS</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Uy</span><span class="p">)</span></code></pre></div>
+
+<ul>
+  <li>The estimate $ \hat\beta$ is calculated as follows:</li>
+</ul>
+
+<div class="highlight"><pre><code class="language-python" data-lang="python"><span class="p">[</span><span class="n">SxKx</span><span class="p">,</span><span class="n">UxKx</span><span class="p">]</span><span class="o">=</span> <span class="n">LA</span><span class="o">.</span><span class="n">eigh</span><span class="p">(</span><span class="n">XKX</span><span class="p">)</span>
+<span class="n">i_pos</span> <span class="o">=</span> <span class="n">SxKx</span><span class="o">&gt;</span><span class="mf">1E-10</span>
+<span class="n">beta</span> <span class="o">=</span> <span class="n">SP</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">UxKx</span><span class="p">[:,</span><span class="n">i_pos</span><span class="p">],(</span><span class="n">SP</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">UxKx</span><span class="p">[:,</span><span class="n">i_pos</span><span class="p">]</span><span class="o">.</span><span class="n">T</span><span class="p">,</span><span class="n">XKy</span><span class="p">)</span><span class="o">/</span><span class="n">SxKx</span><span class="p">[</span><span class="n">i_pos</span><span class="p">]))</span></code></pre></div>
+
+<p>Comparing these expressions with the thesis equations 3.26-3.27 reveals that <code>XKX</code> corresponds to <script type="math/tex"> C_{X,X} </script>, and <code>XKy</code> to <script type="math/tex"> c_{X,y} </script>.
+But instead of inverting the matrix its eigendecomposition is computed:
+<script type="math/tex">
+C_{X,X} = U\Lambda U^T \Rightarrow C_{X,X}^{-1}c_{X,y} = U(U^T c_{X,y})\Lambda^{-1}\,.
+</script></p>
+
+<ul>
+  <li>The next step is estimating $\sigma^2_g$. Depending on the type of likelihood, its denominator is either $ N $ (ML) or $ N-D $ (REML).</li>
+  <li>Finally, these estimates are put into the formula for the log-likelihood:</li>
+</ul>
+
+<div class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">r2</span> <span class="o">=</span> <span class="n">yKy</span><span class="o">-</span><span class="n">XKy</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">beta</span><span class="p">)</span>
+
+<span class="k">if</span> <span class="n">dof</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span><span class="c">#Use the Multivariate Gaussian</span>
+    <span class="k">if</span> <span class="n">REML</span><span class="p">:</span>
+        <span class="n">XX</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">X</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">X</span><span class="p">)</span>
+        <span class="p">[</span><span class="n">Sxx</span><span class="p">,</span><span class="n">Uxx</span><span class="p">]</span><span class="o">=</span> <span class="n">LA</span><span class="o">.</span><span class="n">eigh</span><span class="p">(</span><span class="n">XX</span><span class="p">)</span>
+        <span class="n">logdetXX</span>  <span class="o">=</span> <span class="n">SP</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">Sxx</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+        <span class="n">logdetXKX</span> <span class="o">=</span> <span class="n">SP</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">SxKx</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+        <span class="n">sigma2</span> <span class="o">=</span> <span class="n">r2</span> <span class="o">/</span> <span class="p">(</span><span class="n">N</span> <span class="o">-</span> <span class="n">D</span><span class="p">)</span>
+        <span class="n">nLL</span> <span class="o">=</span>  <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span> <span class="n">logdetK</span> <span class="o">+</span> <span class="n">logdetXKX</span> <span class="o">-</span> <span class="n">logdetXX</span> <span class="o">+</span> <span class="p">(</span><span class="n">N</span><span class="o">-</span><span class="n">D</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span> <span class="n">SP</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mf">2.0</span><span class="o">*</span><span class="n">SP</span><span class="o">.</span><span class="n">pi</span><span class="o">*</span><span class="n">sigma2</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span> <span class="p">)</span> <span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">sigma2</span> <span class="o">=</span> <span class="n">r2</span> <span class="o">/</span> <span class="p">(</span><span class="n">N</span><span class="p">)</span>
+        <span class="n">nLL</span> <span class="o">=</span>  <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span> <span class="n">logdetK</span> <span class="o">+</span> <span class="n">N</span> <span class="o">*</span> <span class="p">(</span> <span class="n">SP</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mf">2.0</span><span class="o">*</span><span class="n">SP</span><span class="o">.</span><span class="n">pi</span><span class="o">*</span><span class="n">sigma2</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span> <span class="p">)</span> <span class="p">)</span></code></pre></div>
+
+<p>The ML formula is found in section 1.4 of the mentioned <a href="http://www.nature.com/nmeth/journal/v8/n10/extref/nmeth.1681-S1.pdf">supplementary note</a>.
+Chapter 3 of the note covers the case of low-rank, which just adds a few extra terms into the equations.
+Finally, chapter 4 provides the log-likelihood formula for the REML case.
+The skipped piece of code dealing with proximal contamination is covered in yet <a href="http://www.nature.com/nmeth/journal/v9/n6/extref/nmeth.2037-S1.pdf">another supplementary note</a> as well as in the thesis (section 4.1). The difference between the two sources is minor, the former is closer to the code (i.e. $\delta$ is used instead of $\gamma=1/\delta$).</p>
+
+
+</section>
+</td></tr></table>
+
+</div>
+</div>
+</body>
+</html>

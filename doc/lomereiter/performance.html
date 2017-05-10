@@ -1,0 +1,318 @@
+<!doctype html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="author" content="Artem Tarasov" />
+<title>[LMM] literature overview: performance</title>
+
+<script type="text/x-mathjax-config"> 
+MathJax.Hub.Config({ 
+  jax: ["input/TeX","output/HTML-CSS"], 
+  extensions: ["tex2jax.js"], 
+  tex2jax: { 
+    inlineMath: [ ['$','$'], ["\\(","\\)"] ], 
+    displayMath: [ ['$$','$$'], ["\\[","\\]"] ], 
+    processEscapes: true 
+  }, 
+}); 
+</script> 
+<style>
+  .center-image
+  {
+  margin: 0 auto;
+  display: block;
+  width: 90%;
+  }
+  
+pre > code {
+  border: 0;
+  padding-right: 0;
+  padding-left: 0; }
+
+  table{
+    border-collapse: collapse;
+    border: 1px solid black;
+  }
+  table td,th{
+    border: 1px solid black;
+    padding: 3px;
+  }
+
+.highlight pre code * {
+  white-space: nowrap;    // this sets all children inside to nowrap
+}
+
+.highlight pre {
+  overflow-x: auto;       // this sets the scrolling in x
+}
+
+.highlight pre code {
+  white-space: pre;       // forces <code> to respect <pre> formatting
+}
+
+/* github style pygments theme for jekyll */
+/* from https://github.com/aahan/pygments-github-style */
+
+.highlight pre, pre, .highlight .hll { background-color: #f8f8f8; border: 1px solid #ccc; padding: 6px 10px; border-radius: 3px; }
+.highlight .c { color: #999988; font-style: italic; }
+.highlight .err { color: #a61717; background-color: #e3d2d2; }
+.highlight .k { font-weight: bold; }
+.highlight .o { font-weight: bold; }
+.highlight .cm { color: #999988; font-style: italic; }
+.highlight .cp { color: #999999; font-weight: bold; }
+.highlight .c1 { color: #999988; font-style: italic; }
+.highlight .cs { color: #999999; font-weight: bold; font-style: italic; }
+.highlight .gd { color: #000000; background-color: #ffdddd; }
+.highlight .gd .x { color: #000000; background-color: #ffaaaa; }
+.highlight .ge { font-style: italic; }
+.highlight .gr { color: #aa0000; }
+.highlight .gh { color: #999999; }
+.highlight .gi { color: #000000; background-color: #ddffdd; }
+.highlight .gi .x { color: #000000; background-color: #aaffaa; }
+.highlight .go { color: #888888; }
+.highlight .gp { color: #555555; }
+.highlight .gs { font-weight: bold; }
+.highlight .gu { color: #800080; font-weight: bold; }
+.highlight .gt { color: #aa0000; }
+.highlight .kc { font-weight: bold; }
+.highlight .kd { font-weight: bold; }
+.highlight .kn { font-weight: bold; }
+.highlight .kp { font-weight: bold; }
+.highlight .kr { font-weight: bold; }
+.highlight .kt { color: #445588; font-weight: bold; }
+.highlight .m { color: #009999; }
+.highlight .s { color: #dd1144; }
+.highlight .n { color: #333333; }
+.highlight .na { color: teal; }
+.highlight .nb { color: #0086b3; }
+.highlight .nc { color: #445588; font-weight: bold; }
+.highlight .no { color: teal; }
+.highlight .ni { color: purple; }
+.highlight .ne { color: #990000; font-weight: bold; }
+.highlight .nf { color: #990000; font-weight: bold; }
+.highlight .nn { color: #555555; }
+.highlight .nt { color: navy; }
+.highlight .nv { color: teal; }
+.highlight .ow { font-weight: bold; }
+.highlight .w { color: #bbbbbb; }
+.highlight .mf { color: #009999; }
+.highlight .mh { color: #009999; }
+.highlight .mi { color: #009999; }
+.highlight .mo { color: #009999; }
+.highlight .sb { color: #dd1144; }
+.highlight .sc { color: #dd1144; }
+.highlight .sd { color: #dd1144; }
+.highlight .s2 { color: #dd1144; }
+.highlight .se { color: #dd1144; }
+.highlight .sh { color: #dd1144; }
+.highlight .si { color: #dd1144; }
+.highlight .sx { color: #dd1144; }
+.highlight .sr { color: #009926; }
+.highlight .s1 { color: #dd1144; }
+.highlight .ss { color: #990073; }
+.highlight .bp { color: #999999; }
+.highlight .vc { color: teal; }
+.highlight .vg { color: teal; }
+.highlight .vi { color: teal; }
+.highlight .il { color: #009999; }
+.highlight .gc { color: #999; background-color: #EAF2F5; }
+
+#content {
+  width: 66%;
+}
+
+#list {
+  width: 17%;
+  vertical-align: top;
+}
+
+header {
+  font-family: Sans-serif;
+  font-size: 10pt;
+  text-align: center;
+  background-color: #cdd;
+  max-width: 800px;
+  border-radius: 3px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+section {
+  max-width: 900px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+blockquote {
+  width: 80%;
+}
+</style>
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {
+    skipTags: ['script', 'noscript', 'style', 'textarea', 'pre']
+  }
+});
+
+MathJax.Hub.Queue(function() {
+  var all = MathJax.Hub.getAllJax(), i;
+  for(i=0; i < all.length; i += 1) {
+    all[i].SourceElement().parentNode.className += ' has-jax';
+  }
+});
+</script>
+
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+</head>
+<body>
+<header>
+  <h1>[LMM] literature overview: performance</h1>
+</header>
+<table>
+<tr>
+  <td id="list">
+  
+  
+    <span>March 29, 2015</span>
+    <br/>
+    <a href="/2015/03/29/performance.html">[LMM] literature overview: performance</a>
+    <hr/>
+  
+  
+  
+    <span>March 27, 2015</span>
+    <br/>
+    <a href="/2015/03/27/overview.html">[LMM] literature overview: approximate methods</a>
+    <hr/>
+  
+  
+  
+    <span>March 15, 2015</span>
+    <br/>
+    <a href="/2015/03/15/proximal.html">[FaST-LMM] Proximal contamination</a>
+    <hr/>
+  
+  
+  
+    <span>March 13, 2015</span>
+    <br/>
+    <a href="/2015/03/13/reml.html">[FaST-LMM] REML estimate</a>
+    <hr/>
+  
+  
+  
+    <span>March 11, 2015</span>
+    <br/>
+    <a href="/2015/03/11/mixing.html">[FaST-LMM] comparison with PyLMM (continued)</a>
+    <hr/>
+  
+  
+  
+    <span>March 10, 2015</span>
+    <br/>
+    <a href="/2015/03/10/pylmm.html">[FaST-LMM] comparison with PyLMM (practice)</a>
+    <hr/>
+  
+  
+  
+    <span>March  9, 2015</span>
+    <br/>
+    <a href="/2015/03/09/pylmm.html">[FaST-LMM] comparison with PyLMM (theory)</a>
+    <hr/>
+  
+  
+  
+    <span>March  3, 2015</span>
+    <br/>
+    <a href="/2015/03/03/lmm_cov2.html">[FaST-LMM] fastlmm/inference/lmm_cov.py, part 2</a>
+    <hr/>
+  
+  
+  
+    <span>February 27, 2015</span>
+    <br/>
+    <a href="/2015/02/27/highlevel2.html">[FaST-LMM] high-level overview, part 2</a>
+    <hr/>
+  
+  
+  
+    <span>February 25, 2015</span>
+    <br/>
+    <a href="/2015/02/25/highlevel.html">[FaST-LMM] high-level overview of the codebase, part 1</a>
+    <hr/>
+  
+  
+  
+    <span>February 18, 2015</span>
+    <br/>
+    <a href="/2015/02/18/lmm.html">[FaST-LMM] fastlmm/inference/lmm.py</a>
+    <hr/>
+  
+  
+  
+    <span>February 16, 2015</span>
+    <br/>
+    <a href="/2015/02/16/lmm_cov.html">[FaST-LMM] fastlmm/inference/lmm_cov.py, part 1</a>
+    <hr/>
+  
+  
+  </td>
+<td id="content">
+<section>
+  <p>Now let’s focus on performance optimizations on the computing side. The methods discussed below still use exact formulas, but organize computations in a smart way. They happen to be implemented in <code>omicABEL</code> package (GPLv3) and its fork, <code>cuOmicABEL</code>.</p>
+
+<h2 id="omicabel">omicABEL</h2>
+
+<p>I start with <a href="http://www.ncbi.nlm.nih.gov/pmc/articles/PMC4329600/pdf/f1000research-3-5195.pdf">High-Performance Mixed Models Based Genome-Wide Association Analysis with omicABEL software</a> (August 2014), where two methods are compared, one using eigendecomposition and the other Cholesky decomposition.</p>
+
+<p>To speed up the operations, tested SNPs are packed into batches, so that instead of relatively slow matrix-vector operations (BLAS-2) matrix-matrix are employed (BLAS-3). This suggestion first appeared in the paper <a href="http://www.sciencedirect.com/science/article/pii/S0096300314002951">Solving Sequences of Generalized Least-Squares
+Problems on Multi-threaded Architectures</a> (2014), also there’s a less polished version of it on <a href="http://arxiv.org/pdf/1210.7325.pdf">arxiv.org</a> (2012).</p>
+
+<p>It turns out that the eigendecomposition-based method is faster in case of multiple trait analysis, but Cholesky beats it when a single trait is analysed.</p>
+
+<p>The authors test the method against FaST-LMM, and announce the victory:</p>
+
+<blockquote>
+  <p>In case of single-trait analysis, our results are somewhat less
+impressive, and our CLAK-Chol solution outperforms advanced
+current methods (e.g. FaST-LMM) by about one order of magnitude 
+for large-sample-size problems. It is worth mentioning that the
+latter speed-up becomes possible because we show that for 
+single-trait GWAS problems our CLAK-Chol algorithm is superior to
+CLAK-Eig, but other current methods are actually implementing
+solutions similar to our CLAK-Eig algorithm to address the 
+single-trait GWAS problem.</p>
+</blockquote>
+
+<p>They also provide an excellent tutorial <a href="http://www.genabel.org/sites/default/files/tutorials/OmicABEL/exampleOfUse.html">here</a> that I followed along. It’s slightly outdated, though:</p>
+
+<ul>
+  <li>The program name was changed from <code>CLAK-GWAS</code> to <code>OmicABEL</code>, and the links to binaries are found <a href="http://www.genabel.org/packages/OmicABEL">here</a></li>
+  <li>The name of output file produced by <code>reshuffle</code> tool has been <em>reshuffled</em> into <code>data_chi.txt</code> from <code>chi_data.txt</code>, and the option has been renamed from <code>--chi2</code> to <code>--chi</code> and now requires a (positive integer) threshold, so I used <code>--chi2=1</code>. I’m a bit annoyed that I can’t specify a float or zero, but OK, nobody cares about non-significant SNPs.</li>
+</ul>
+
+<p>The results are indeed well correlated, even for large values of $\chi^2$, and FaST-LMM is indeed beaten (timings on my laptop are similar to those in the tutorial).</p>
+
+<h3 id="extremely-large-datasets">Extremely large datasets</h3>
+
+<p>There is another related paper (almost the same set of authors) focusing more on the algorithmic &amp; computational aspects: <br /><a href="http://www.sciencedirect.com/science/article/pii/S0167819114001161">High performance solutions for big-data GWAS</a>; on <a href="http://arxiv.org/pdf/1403.6426v1.pdf">arxiv.org</a> since March 2014.</p>
+
+<p>It goes without saying that there is no need to load all SNPs at once, and out-of-core algorithm is provided, featuring asynchronous I/O so that I/O and computations overlap.</p>
+
+<p>But the authors go further and consider how to process huge number of individuals. All algorithms require storing $N\times N$ kinship matrix (or its eigenvectors, or Cholesky factors), which might not fit into memory of a single machine. The authors suggest use of <a href="http://libelemental.org/">Elemental</a> library and provide a description of how to distribute matrix blocks across nodes.</p>
+
+<h2 id="cuomicabel">cuOmicABEL</h2>
+
+<p>Finally, there actually IS a tool allowing to speed up GWAS with GPU!
+In 2012, Lucas Beyer from RWTH Aachen University defended his thesis, <a href="http://lucasb.eyer.be/academic/gwas/lbeyer-thesis-gwas.pdf">Exploiting Graphics Accelerators for Computational Biology</a>. (It should not be surprising that the papers discussed above also include people from the same university.) Later, a paper appeared on <code>arxiv.org</code>, <a href="http://arxiv.org/pdf/1302.4332v1.pdf">Streaming Data from HDD to GPUs for Sustained Peak Performance</a>. As the name suggests, a clever buffering scheme is proposed, and the testing shows that it leads to near-ideal scaling. </p>
+
+<p>The work is available on Github in the form of fork of <code>omicABEL</code>: <a href="https://github.com/lucasb-eyer/cuOmicABEL">https://github.com/lucasb-eyer/cuOmicABEL</a>; it doesn’t seem to be merged, and there’s been no progress made since spring 2013. Hopefully it works.</p>
+
+</section>
+</td></tr></table>
+
+</div>
+</div>
+</body>
+</html>
