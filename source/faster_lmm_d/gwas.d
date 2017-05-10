@@ -38,9 +38,8 @@ auto gwas(immutable double[] Y, const DMatrix G, const DMatrix K, const bool rem
   if(!refit){
     trace("Computing fit for null model");
     DMatrix X;
-    FitTuple fit = lmm_fit(lmm, X); // # follow GN model in run_other;
-    lmm = fit.lmmobj;
-    log("heritability= ", lmm.opt_H, " sigma= ", lmm.opt_sigma, " LL= ", fit.fit_LL);
+    lmm = lmm_fit(lmm, X);
+    log("heritability= ", lmm.opt_H, " sigma= ", lmm.opt_sigma, " LL= ", lmm.opt_LL);
   }
 
   double[] ps = new double[snps];

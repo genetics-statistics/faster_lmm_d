@@ -35,13 +35,13 @@ struct DMatrix{
   pragma(inline) const m_items n_pheno() { return cols; }
   pragma(inline) const m_items m_geno() { return rows; }
   pragma(inline) const bool is_square() { return rows == cols; };
-
-  pragma(inline) double acc(ulong row, ulong col) {
-    return this.elements[row*this.cols()+col];
-  }
 }
 
 alias Tuple!(const DMatrix, "geno", immutable string[], "gnames", immutable string[], "ynames") GenoObj;
+
+double accessor(const DMatrix input, ulong row, ulong col) {
+  return input.elements[row*input.cols()+col];
+}
 
 DMatrix log_dmatrix(const DMatrix input) {
   m_items total_items = input.size();
