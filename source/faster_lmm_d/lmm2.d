@@ -176,16 +176,13 @@ extern(C) double LL_brent(double h, void *params){
   return -get_LL(LMMglob, h, Xglob, false, true).LL;
 }
 
-LLTuple get_LL(const LMM lmmobject, const double h, DMatrix X, const bool stack=true, const bool REML=false){
+LLTuple get_LL(const LMM lmmobject, const double h, const DMatrix param_X, const bool stack=true, const bool REML=false){
 
   //   Computes the log-likelihood for a given heritability (h).  If X==None, then the
   //   default X0t will be used.  If X is set and stack=True, then X0t will be matrix concatenated with
   //   the input X.  If stack is false, then X is used in place of X0t in the LL calculation.
   //   REML is computed by adding additional terms to the standard LL and can be computed by setting REML=True.
-
-  if(X.init != true){
-    X = DMatrix(lmmobject.X0t);
-  }
+  const DMatrix X = ( param_X.init != true ? lmmobject.X0t : param_X );
 
   double n = cast(double)lmmobject.N;
   double q = cast(double)X.shape[1];
@@ -276,7 +273,7 @@ double get_max(const LMM lmmobject, const DMatrix L, const DMatrix H, const DMat
   }
 }
 
-FitTuple lmm_fit(const LMM lmmobject, DMatrix X, const ulong ngrids=100, const bool REML=true){
+FitTuple lmm_fit(const LMM lmmobject, const DMatrix X_param, const ulong ngrids=100, const bool REML=true){
 
   //   Finds the maximum-likelihood solution for the heritability (h) given the current parameters.
   //   X can be passed and will transformed and concatenated to X0t.  Otherwise, X0t is used as
@@ -285,11 +282,13 @@ FitTuple lmm_fit(const LMM lmmobject, DMatrix X, const ulong ngrids=100, const b
   //   This function calculates the LLs over a grid and then uses .get_max(...) to find the optimum.
   //   Given this optimum, the function computes the LL and associated ML solutions.
   FitTuple fit;
-  if(X.init == false){
+  DMatrix X;
+
+  if(X_param.init == false){
     X = DMatrix(lmmobject.X0t);
   }
   else{
-    DMatrix KveTX = matrix_mult(lmmobject.KveT , X);
+    DMatrix KveTX = matrix_mult(lmmobject.KveT , X_param);
     X = DMatrix(lmmobject.X0t_stack);
   }
   double[] Harr = new double[ngrids];
@@ -314,20 +313,21 @@ FitTuple lmm_fit(const LMM lmmobject, DMatrix X, const ulong ngrids=100, const b
   return fit;
 }
 
-auto lmm_association(const LMM lmmobject, DMatrix X, const bool stack=true, const bool REML=true, const bool return_beta=false){
+auto lmm_association(const LMM lmmobject, const DMatrix param_X, const bool stack=true, const bool REML=true, const bool return_beta=false){
 
   //  Calculates association statitics for the SNPs encoded in the vector X of size n.
   //  If h is None, the optimal h stored in opt_H is used.
 
   if(false){
-    trace("X=",X);
+    trace("X=",param_X);
     trace("q=",lmmobject.q);
     trace("lmmobject.Kve=",lmmobject.Kve);
     trace("X0t_stack=",lmmobject.X0t_stack);
   }
 
+  DMatrix X;
   if(stack){
-    DMatrix m = matrix_mult(lmmobject.KveT,X);
+    DMatrix m = matrix_mult(lmmobject.KveT, param_X);
     X = set_col(lmmobject.X0t_stack,lmmobject.q,m);
   }
 
