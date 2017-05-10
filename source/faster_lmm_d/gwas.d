@@ -15,7 +15,7 @@ import faster_lmm_d.lmm2;
 import faster_lmm_d.optmatrix;
 
 
-auto gwas(immutable double[] Y, DMatrix G, DMatrix K, bool restricted_max_likelihood = true, bool refit=false, bool verbose = true){
+auto gwas(immutable double[] Y, const DMatrix G, const DMatrix K, const bool reml = true, const bool refit=false, const bool verbose = true){
 
   trace("In gwas.gwas");
 

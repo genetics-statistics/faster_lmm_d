@@ -68,16 +68,18 @@ double[] get_num_array(const double[] arr, const bool[] values_arr){
   return result;
 }
 
-void replace_nan(ref double[] arr, const bool[] values_arr, const double mean){
+double[] replace_nan(const double[] arr, const bool[] values_arr, const double mean){
   int index = 0;
-  foreach(ref element; values_arr){
+  double[] result = arr.dup;
+  foreach(element; values_arr){
     if(element == true){
       index++;
     }else{
-      arr[index] = mean;
+      result[index] = mean;
       index++;
     }
   }
+  return result;
 }
 
 double[] rangeArray(const int count){

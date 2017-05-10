@@ -120,7 +120,6 @@ struct LMM{
 
     this.LLs = DMatrix(lmmobject.LLs);
     this.H = DMatrix(lmmobject.H);
-    //this.opt_H = lmmobject.hmax;
     this.opt_LL = lmmobject.opt_LL;
     this.opt_beta = DMatrix(lmmobject.opt_beta);
     this.opt_sigma = lmmobject.opt_sigma;

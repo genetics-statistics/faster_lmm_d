@@ -126,17 +126,17 @@ DMatrix normalize_along_row(const DMatrix input) {
     double variation = get_variation(values, mean);
     double std_dev = sqrt(variation);
 
-    replace_nan(arr, values_arr, mean);
+    double[] num_arr = replace_nan(arr, values_arr, mean);
     if(std_dev == 0) {
-      foreach(ref elem; arr) {
+      foreach(ref elem; num_arr) {
         elem -= mean;
       }
     }else{
-      foreach(ref elem; arr) {
+      foreach(ref elem; num_arr) {
         elem = (elem - mean) / std_dev;
       }
     }
-    largeArr ~= arr;
+    largeArr ~= num_arr;
   }
   return DMatrix(input.shape, largeArr);
 }
