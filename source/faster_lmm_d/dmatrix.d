@@ -11,10 +11,10 @@ import std.math;
 import std.stdio;
 import std.typecons;
 
-alias ulong m_items;
+alias size_t m_items; // dimensions are never negative
 
 struct DMatrix{
-  m_items[] shape; // dimensions are never negative
+  m_items[] shape;
   double[] elements;
   bool init = false;
 
@@ -24,14 +24,14 @@ struct DMatrix{
     init     = true;
   }
 
-  const m_items cols() { return shape[1]; }
-  const m_items rows() { return shape[0]; }
-  const m_items size() { return shape[0] * shape[1]; }
-  const m_items n_pheno() { return cols; }
-  const m_items m_geno() { return rows; }
-  const bool is_square() { return rows == cols; };
+  pragma(inline) const m_items cols() { return shape[1]; }
+  pragma(inline) const m_items rows() { return shape[0]; }
+  pragma(inline) const m_items size() { return rows() * cols(); }
+  pragma(inline) const m_items n_pheno() { return cols; }
+  pragma(inline) const m_items m_geno() { return rows; }
+  pragma(inline) const bool is_square() { return rows == cols; };
 
-  double acc(ulong row, ulong col) {
+  pragma(inline) double acc(ulong row, ulong col) {
     return this.elements[row*this.cols()+col];
   }
 }
