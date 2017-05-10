@@ -220,8 +220,9 @@ in {
   assert(input.is_square, "Input matrix should be square");
 }
 body {
-  auto matrix = input.elements.dup;
-  auto pivot = getrf(matrix, input.cols);
+  auto rf = getrf(input.elements, input.cols);
+  auto pivot = rf[0];
+  auto m2 = cast(immutable(double[]))rf[1];
 
   auto num_perm = 0;
   auto j = 0;
@@ -233,16 +234,17 @@ body {
   double prod = (num_perm % 2 == 1.0 ? 1 : -1.0 );
   auto min = ( input.rows < input.cols ? input.rows : input.cols );
   for(auto i =0; i < min; i++) {
-    prod *= matrix[input.cols*i + i];
+    prod *= m2[input.cols*i + i];
   }
   return prod;
 }
 
-int[] getrf(double[] arr, const m_items cols) {
+Tuple!(immutable(int[]),immutable(double[])) getrf(const double[] arr, const m_items cols) {
+  auto arr2 = arr.dup;
   auto ipiv = new int[cols+1];
   int i_cols = cast(int)cols;
-  LAPACKE_dgetrf(101,i_cols,i_cols,arr.ptr,i_cols,ipiv.ptr);
-  return ipiv;
+  LAPACKE_dgetrf(101,i_cols,i_cols,arr2.ptr,i_cols,ipiv.ptr);
+  return Tuple!(immutable(int[]),immutable(double[]))(cast(immutable(int[]))ipiv,cast(immutable(double[]))arr2);
 }
 
 DMatrix inverse(const DMatrix input) {
