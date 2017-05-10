@@ -220,7 +220,9 @@ in {
   assert(input.is_square, "Input matrix should be square");
 }
 body {
-  auto rf = getrf(input.elements, input.cols);
+  m_items rows = input.rows;
+  m_items cols = input.cols;
+  auto rf = getrf(input.elements, cols);
   auto pivot = rf[0];
   auto m2 = cast(immutable(double[]))rf[1];
 
@@ -232,9 +234,9 @@ body {
   }
   // odd permutations => negative:
   double prod = (num_perm % 2 == 1.0 ? 1 : -1.0 );
-  auto min = ( input.rows < input.cols ? input.rows : input.cols );
+  auto min = ( rows < cols ? rows : cols );
   for(auto i =0; i < min; i++) {
-    prod *= m2[input.cols*i + i];
+    prod *= m2[cols*i + i];
   }
   return prod;
 }
