@@ -315,7 +315,7 @@ FitTuple lmm_fit(const LMM lmmobject, DMatrix X, const ulong ngrids=100, const b
   return fit;
 }
 
-auto lmm_association(LMM lmmobject, DMatrix X, const bool stack=true, const bool REML=true, const bool return_beta=false){
+auto lmm_association(const LMM lmmobject, DMatrix X, const bool stack=true, const bool REML=true, const bool return_beta=false){
 
   //  Calculates association statitics for the SNPs encoded in the vector X of size n.
   //  If h is None, the optimal h stored in opt_H is used.
@@ -329,8 +329,7 @@ auto lmm_association(LMM lmmobject, DMatrix X, const bool stack=true, const bool
 
   if(stack){
     DMatrix m = matrix_mult(lmmobject.KveT,X);
-    lmmobject.X0t_stack = set_col(lmmobject.X0t_stack,lmmobject.q,m);
-    X = lmmobject.X0t_stack;
+    X = set_col(lmmobject.X0t_stack,lmmobject.q,m);
   }
 
   LLTuple ll = get_LL(lmmobject, lmmobject.opt_H, X ,false, REML);
