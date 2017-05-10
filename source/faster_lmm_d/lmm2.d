@@ -31,7 +31,8 @@ struct LMM{
   double opt_H, opt_sigma, opt_LL;
   bool init = false;
   bool verbose = false;
-  DMatrix X0, Y, K, Kva, Kve, KveT;
+  DMatrix X0, Y, Kva, Kve, KveT;
+  DMatrix K;
   DMatrix Yt, X0t, X0t_stack;
   DMatrix H, opt_beta, LLs;
 
@@ -44,41 +45,38 @@ struct LMM{
   //constructor will set X0 to an n x 1 matrix of all ones to
   //represent a mean effect.
 
-  this(double[] Y, DMatrix K, DMatrix Kva, DMatrix Kve, DMatrix X0, bool verbose){
+  this(const double[] Y, const DMatrix K, const DMatrix Kva, const DMatrix Kve, const DMatrix X0, bool verbose){
     trace("Y => ");
     trace(Y);
 
-    if(X0.init == false){
-      trace("Initializing LMM...");
-      X0 = ones_dmatrix(Y.length,1);
-    }
+    auto X0_new = (!X0.init ? ones_dmatrix(Y.length,1) : DMatrix(X0) );
 
     this.verbose = verbose;
     bool[] v = is_nan(Y);
     bool[] x = negate_bool(v);
     EighTuple keigh = kvakve(K);
     this.init = true;
-    this.K = K;
+    this.K = DMatrix(K);
     this.Kva = keigh.kva;
     this.Kve = keigh.kve;
     this.N = K.shape[0];
-    this.Y =  DMatrix([K.shape[0],1] ,Y);
-    this.X0 = X0;
+    this.Y = DMatrix([K.shape[0],1] ,Y);
+    this.X0 = X0_new;
   }
 
-  this(LMM lmmobject, DMatrix Yt, DMatrix X0t, DMatrix X0t_stack, DMatrix KveT, ulong q){
+  this(const LMM lmmobject, const DMatrix Yt, const DMatrix X0t, const DMatrix X0t_stack, const DMatrix KveT, ulong q){
     this.verbose = lmmobject.verbose;
     this.init = true;
-    this.K = lmmobject.K;
-    this.Kve = lmmobject.Kve;
-    this.Kva = lmmobject.Kva;
+    this.K = DMatrix(lmmobject.K);
+    this.Kve = DMatrix(lmmobject.Kve);
+    this.Kva = DMatrix(lmmobject.Kva);
     this.N = lmmobject.N;
-    this.Y = lmmobject.Y;
-    this.Yt = Yt;
+    this.Y = DMatrix(lmmobject.Y);
+    this.Yt = DMatrix(Yt);
     this.X0 = X0;
-    this.X0t = X0t;
-    this.X0t_stack = X0t_stack;
-    this.KveT = KveT;
+    this.X0t = DMatrix(X0t);
+    this.X0t_stack = DMatrix(X0t_stack);
+    this.KveT = DMatrix(KveT);
     this.q = q;
   }
 
@@ -106,7 +104,7 @@ struct LMM{
   }
 }
 
-LMM lmm_transform(LMM lmmobject){
+LMM lmm_transform(const LMM lmmobject){
 
   //   Computes a transformation on the phenotype vector and the covariate matrix.
   //   The transformation is obtained by left multiplying each parameter by the transpose of the
@@ -121,7 +119,7 @@ LMM lmm_transform(LMM lmmobject){
   return LMM(lmmobject, Yt, X0t, X0t_stack, KveT, q);
 }
 
-MLSol getMLSoln(LMM lmmobject, double h, DMatrix X){
+MLSol getMLSoln(const LMM lmmobject, double h, const DMatrix X){
 
   //   Obtains the maximum-likelihood estimates for the covariate coefficients (beta),
   //   the total variance of the trait (sigma) and also passes intermediates that can

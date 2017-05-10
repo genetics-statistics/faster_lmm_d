@@ -18,9 +18,14 @@ struct DMatrix{
   double[] elements;
   bool init = false;
 
-  this(const ulong[] s, const double[] e) {
-    shape    = s.dup();
-    elements = e.dup();
+  this(const DMatrix m) {
+    shape    = m.shape.dup;
+    elements = m.elements.dup;
+    init     = true;
+  }
+  this(const ulong[] shape_in, const double[] e) {
+    shape    = shape_in.dup;
+    elements = e.dup;
     init     = true;
   }
 
