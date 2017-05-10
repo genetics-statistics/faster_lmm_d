@@ -123,10 +123,10 @@ void main(string[] args)
   }
 
   // ---- Phenotypes
-  double[] y, y_temp;
+  double[] pheno_vector;
 
   auto pTuple = ( cmd == "rqtl" ? pheno(option_pheno, option_pheno_column) : tsvpheno(option_pheno, option_pheno_column ));
-  y = pTuple[0];
+  const double[] y = pTuple[0];
   auto phenotypes = pTuple[1];
   trace("y.size=",y.sizeof);
 
@@ -151,10 +151,9 @@ void main(string[] args)
       auto a = countUntil(ynames, ind);
       if(a != -1){
         gidx ~= a;
-        y_temp ~= y[i];
+        pheno_vector ~= y[i];
       }
     }
-    y = y_temp;
 
     DMatrix g_transposed = matrix_transpose(g);
     DMatrix sliced_mat = slice_dmatrix(g_transposed, gidx);
@@ -166,10 +165,10 @@ void main(string[] args)
   }
 
   // ---- Run GWAS
-  immutable m_items n = y.length;
+  immutable m_items n = pheno_vector.length;
   immutable m_items m = g.m_geno;
   DMatrix k;
-  auto gwas = run_gwas(n,m,k,cast(immutable)y, g);
+  auto gwas = run_gwas(n,m,k,cast(immutable)pheno_vector, g);
 
   double[] ts = gwas[0];
   double[] p_values = gwas[1];

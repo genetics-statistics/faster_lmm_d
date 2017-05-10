@@ -19,7 +19,7 @@ import dyaml.all;
 
 import faster_lmm_d.dmatrix;
 
-JSONValue control(string fn){
+JSONValue control(const string fn){
   string input = cast(string)std.file.read(fn);
   JSONValue j = parseJSON(input);
   return j;
@@ -38,10 +38,10 @@ auto pheno(string fn, ulong p_column= 0){
       phenotypes ~= strain[1].as!string;
     }
   }
-  return Tuple!(double[], immutable(string[]))(y, cast(immutable)phenotypes);
+  return Tuple!(const double[], immutable(string[]))(y, cast(immutable)phenotypes);
 }
 
-GenoObj geno(string fn, JSONValue ctrl){
+GenoObj geno(const string fn, JSONValue ctrl){
 
   trace("in geno function");
   //FIXME

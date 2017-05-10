@@ -19,7 +19,7 @@ import std.typecons;
 import faster_lmm_d.dmatrix;
 import faster_lmm_d.optmatrix;
 
-auto tsvpheno(string fn, ulong p_column= 0){
+auto tsvpheno(const string fn, const ulong p_column= 0){
 	trace("In tsvpheno");
 	double[] y;
   string[] phenotypes;
@@ -36,7 +36,7 @@ auto tsvpheno(string fn, ulong p_column= 0){
   	}
 
   }
-  return Tuple!(double[], immutable(string[]))(y, cast(immutable)phenotypes);
+  return Tuple!(const double[], immutable(string[]))(y, cast(immutable)phenotypes);
 }// # FIXME: column not used
 
 GenoObj tsvgeno(string fn, JSONValue ctrl){
