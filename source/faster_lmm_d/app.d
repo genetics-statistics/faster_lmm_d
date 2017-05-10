@@ -197,11 +197,13 @@ void main(string[] args)
       info("Validating results for ", option_geno);
       enforce(round(sum(p_values)) == 1922);
       enforce(p_values.length == 3811,"size is " ~ to!string(p_values.length));
+      enforce(round(p_values[3]*10000) == 8073,"P-value[3] " ~ to!string(round(p_values[3]*10000)));
     }
     if(option_geno == "data/test8000.geno"){
       info("Validating results for ",option_geno," ",sum(p_values));
       enforce(round(sum(p_values)) == 4070);
       enforce(p_values.length == 8000);
+      enforce(round(p_values[3]*10000) == 7503,"P-value[3] " ~ to!string(round(p_values[3]*10000)));
     }
     info("Run completed");
   }
