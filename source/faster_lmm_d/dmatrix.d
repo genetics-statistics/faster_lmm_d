@@ -220,22 +220,26 @@ DMatrix get_row(const DMatrix input, const ulong row_no) {
 }
 
 
-void set_col(ref DMatrix input, const ulong colNo, const DMatrix arr) {
+DMatrix set_col(const DMatrix input, const ulong colNo, const DMatrix arr) {
   m_items rows = input.rows();
   m_items cols = input.cols();
+  auto result = input.elements.dup;
   for(auto i=0; i < rows; i++) {
-    input.elements[i*cols + colNo] = arr.elements[i];
+    result[i*cols + colNo] = arr.elements[i];
   }
+  return DMatrix(input.shape.dup, result);
 }
 
-void set_row(ref DMatrix input, const ulong row_no, const DMatrix arr) {
+DMatrix set_row(const DMatrix input, const ulong row_no, const DMatrix arr) {
   auto index =  row_no*input.cols();
   auto end =  (row_no+1)*input.cols();
+  auto result = input.elements.dup;
   auto k = 0;
   for(auto i=index; i<end; i++) {
-    input.elements[i] = arr.elements[k];
+    result[i] = arr.elements[k];
     k++;
   }
+  return DMatrix(input.shape.dup, result);
 }
 
 void nan_counter(const DMatrix input) {

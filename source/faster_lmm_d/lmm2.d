@@ -329,7 +329,7 @@ auto lmm_association(LMM lmmobject, DMatrix X, const bool stack=true, const bool
 
   if(stack){
     DMatrix m = matrix_mult(lmmobject.KveT,X);
-    set_col(lmmobject.X0t_stack,lmmobject.q,m);
+    lmmobject.X0t_stack = set_col(lmmobject.X0t_stack,lmmobject.q,m);
     X = lmmobject.X0t_stack;
   }
 
