@@ -16,7 +16,7 @@ import faster_lmm_d.kinship;
 import faster_lmm_d.optmatrix;
 import faster_lmm_d.phenotype;
 
-auto run_gwas(m_items n, m_items m, const DMatrix k, double[] y, const DMatrix geno) {
+auto run_gwas(immutable m_items n, immutable m_items m, DMatrix k, immutable double[] y, DMatrix geno) {
   trace("run_gwas");
   trace("pheno ", y.length," ", y[0..4]);
   trace(geno.shape,m);

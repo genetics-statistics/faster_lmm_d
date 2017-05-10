@@ -12,15 +12,14 @@ import std.typecons;
 
 import faster_lmm_d.helpers;
 
-alias Tuple!(double[], "Y", bool[], "keep", ulong, "n") PhenoStruct;
+alias Tuple!(immutable double[], "Y", const bool[], "keep", immutable ulong, "n") PhenoStruct;
 
-PhenoStruct remove_missing( ulong n, double[] y){
+PhenoStruct remove_missing( const ulong n, const double[] y){
   //Remove missing data. Returns new n,y,keep
 
   trace("In remove missing new");
   bool[] v = is_nan(y);
   bool[] keep = negate_bool(v);
   double[] Y = get_num_array(y,keep);
-  n = cast(int)Y.length;
-  return PhenoStruct(Y, keep, n);
+  return PhenoStruct(cast(immutable)Y, keep, cast(int)Y.length);
 }

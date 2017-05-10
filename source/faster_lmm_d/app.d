@@ -166,10 +166,10 @@ void main(string[] args)
   }
 
   // ---- Run GWAS
-  auto n = y.length;
-  auto m = g.m_geno;
+  immutable m_items n = y.length;
+  immutable m_items m = g.m_geno;
   DMatrix k;
-  auto gwas = run_gwas(n,m,k,y,g);
+  auto gwas = run_gwas(n,m,k,cast(immutable)y, g);
 
   double[] ts = gwas[0];
   double[] p_values = gwas[1];
