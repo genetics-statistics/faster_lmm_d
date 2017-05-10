@@ -131,9 +131,10 @@ void main(string[] args)
   trace("y.size=",y.sizeof);
 
   // ---- Genotypes
-  DMatrix g;
+  DMatrix geno_matrix;
+
   auto g1 = ( cmd == "rqtl" ? geno(option_geno, ctrl) : tsvgeno(option_geno, ctrl ));
-  g = g1.geno;
+  auto g = g1.geno;
   auto gnames = g1.gnames;
   auto ynames = g1.ynames;
   trace(g.shape);
@@ -158,17 +159,15 @@ void main(string[] args)
     DMatrix g_transposed = matrix_transpose(g);
     DMatrix sliced_mat = slice_dmatrix(g_transposed, gidx);
     trace(sliced_mat.shape);
-    DMatrix g2 = matrix_transpose(sliced_mat);
-    trace("geno matrix ",g.shape," reshaped to ",g2.shape);
-
-    g = g2;
+    geno_matrix = matrix_transpose(sliced_mat);
+    trace("geno matrix ", g.shape, " reshaped to ", geno_matrix.shape);
   }
 
   // ---- Run GWAS
   immutable m_items n = pheno_vector.length;
-  immutable m_items m = g.m_geno;
+  immutable m_items m = geno_matrix.m_geno;
   DMatrix k;
-  auto gwas = run_gwas(n,m,k,cast(immutable)pheno_vector, g);
+  auto gwas = run_gwas(n,m,k,cast(immutable)pheno_vector, geno_matrix);
 
   double[] ts = gwas[0];
   double[] p_values = gwas[1];

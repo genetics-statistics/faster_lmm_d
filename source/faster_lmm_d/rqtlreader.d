@@ -25,7 +25,7 @@ JSONValue control(const string fn){
   return j;
 }
 
-auto pheno(string fn, ulong p_column= 0){
+auto pheno(const string fn, const ulong p_column= 0){
   Regex!char Pattern = regex("\\.json$", "i");
   double[] y;
   string[] phenotypes;
@@ -87,9 +87,9 @@ GenoObj geno(const string fn, JSONValue ctrl){
     }
     rowCount++;
   }
+  geno.shape = [rowCount, colCount];
   GenoObj geno_obj = GenoObj(geno, cast(immutable)gnames, ynames);
 
-  geno_obj.geno.shape = [rowCount, colCount];
   info("Genotype Matrix created");
   return geno_obj;
 }

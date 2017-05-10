@@ -39,7 +39,7 @@ auto tsvpheno(const string fn, const ulong p_column= 0){
   return Tuple!(const double[], immutable(string[]))(y, cast(immutable)phenotypes);
 }// # FIXME: column not used
 
-GenoObj tsvgeno(string fn, JSONValue ctrl){
+GenoObj tsvgeno(const string fn, JSONValue ctrl){
 
   trace("in geno function");
   string s = `{"A":0,"H":1,"B":2,"-":3}`;
@@ -78,9 +78,9 @@ GenoObj tsvgeno(string fn, JSONValue ctrl){
       }
     }
   }
+  geno.shape = [rowCount, colCount];
   GenoObj geno_obj = GenoObj(geno, cast(immutable)gnames,ynames[1..$]);
 
-  geno_obj.geno.shape = [rowCount, colCount];
   info("Genotype Matrix created");
   return geno_obj;
 }

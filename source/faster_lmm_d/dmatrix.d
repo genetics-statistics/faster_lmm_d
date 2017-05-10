@@ -41,7 +41,7 @@ struct DMatrix{
   }
 }
 
-alias Tuple!(DMatrix, "geno", immutable(string[]), "gnames", immutable(string[]), "ynames") GenoObj;
+alias Tuple!(const DMatrix, "geno", immutable string[], "gnames", immutable string[], "ynames") GenoObj;
 
 DMatrix log_dmatrix(const DMatrix input) {
   m_items total_items = input.size();
