@@ -296,10 +296,10 @@ unittest{
   assert( get_row(d, 1) == row_matrix );
 
   auto row = DMatrix([1,2], [3.5,4.2]);
-  set_row(d, 1, row);
-  auto newD =  DMatrix([2,2], [1, 2, 3.5, 4.2]);
 
-  assert( d == newD );
+  auto new_dmatrix =  DMatrix([2,2], [1, 2, 3.5, 4.2]);
+
+  assert( set_row(d, 1, row) == new_dmatrix );
 
   auto left = DMatrix([3, 1], [1,
                                4,
