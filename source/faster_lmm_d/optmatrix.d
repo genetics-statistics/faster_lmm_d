@@ -14,7 +14,7 @@ import std.typecons; // for Tuples
 
 import cblas : gemm, Transpose, Order;
 
-import faster_lmm_d.arrayfire;
+import faster_lmm_d.cuda;
 import faster_lmm_d.dmatrix;
 import faster_lmm_d.helpers;
 
@@ -26,7 +26,7 @@ extern (C) {
   int LAPACKE_dgetri (int matrix_layout, int n, double* a, int lda, const(int)* ipiv);
 }
 
-DMatrix matrix_mult(const DMatrix lha,const DMatrix rha) {
+DMatrix matrix_mult2(const DMatrix lha,const DMatrix rha) {
   double[] C = new double[lha.rows()*rha.cols()];
   gemm(Order.RowMajor, Transpose.NoTrans, Transpose.NoTrans, cast(int)lha.rows(), cast(int)rha.cols(), cast(int)lha.cols(), /*no scaling*/
        1,lha.elements.ptr, cast(int)lha.cols(), rha.elements.ptr, cast(int)rha.cols(), /*no addition*/0, C.ptr, cast(int)rha.cols());

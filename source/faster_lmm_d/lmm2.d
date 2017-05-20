@@ -17,6 +17,7 @@ import gsl.errno;
 import gsl.math;
 import gsl.min;
 
+import faster_lmm_d.cuda;
 import faster_lmm_d.dmatrix;
 import faster_lmm_d.helpers;
 import faster_lmm_d.kinship;
