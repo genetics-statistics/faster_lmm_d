@@ -43,7 +43,7 @@ sudo apt-get install ldc2
 ### On GNU Guix
 
 ```sh
-guix package -i ldc dub openblas gsl lapack
+guix package -i ldc dub openblas gsl lapack ld-wrapper gcc glibc
 ```
 
 ## Get the source

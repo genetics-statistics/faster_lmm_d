@@ -88,7 +88,7 @@ $(OUT): build-setup $(OBJ)
 	$(D_COMPILER) $(DFLAGS) -of=build/faster_lmm_d $(OBJ) $(LIBS)
 
 test:
-	env LD_LIBRARY_PATH=$(LDC_LIB_PATH) ./run_tests.sh
+	./run_tests.sh
 
 check:  test  # alias
 
