@@ -44,6 +44,10 @@ SRC    = $(wildcard source/faster_lmm_d/*.d)
 OBJ    = $(SRC:.d=.o)
 OUT    = build/faster_lmm_d
 
+ifdef CUDA
+  LIBS += -L-L/usr/local/cuda-7.0/lib64 -L=-lcublas -L=-lcudart
+endif
+
 # The Guix targets resolve the RPATH automatically
 guix:        DFLAGS += -O -g -inline
 

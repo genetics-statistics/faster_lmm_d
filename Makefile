@@ -15,11 +15,11 @@ $(HOME)/.dub/packages/dstats-1.0.3/dstats/libdstats.a \
 $(HOME)/.dub/packages/dyaml-0.5.3/dyaml/libdyaml.a \
 $(HOME)/.dub/packages/gsl-0.1.8/gsl/libgsl.a \
 $(HOME)/.dub/packages/tinyendian-0.1.2/tinyendian/libtinyendian.a \
-$(HOME)/.dub/package/cuda_d-0.1.0/cuda_d/libcuda_d.a
+$(HOME)/.dub/packages/cuda_d-0.1.0/cuda_d/libcuda_d.a
 
 DFLAGS = -wi -I./source $(DUB_INCLUDE)
 RPATH  =
-LIBS   = -L=-llapacke -L=-llapack -L=-lblas -L=-lgsl -L=-lgslcblas -L=-lm -L=-lopenblas -L=-lm -L=-lgslcblas -L=-lcuda -L=-lcublas -L=-lcudart
+LIBS   =  -L-L/usr/lib -L-L/usr/local/cuda-7.0/lib64 -L=-llapacke -L=-llapack -L=-lblas -L=-lgsl -L=-lgslcblas -L=-lm -L=-lopenblas -L=-lm -L=-lgslcblas -L=-lcublas -L=-lcudart
 SRC     = $(wildcard source/faster_lmm_d/*.d)
 IR     = $(wildcard source/faster_lmm_d/*.ll)
 BC     = $(wildcard source/faster_lmm_d/*.bc)
