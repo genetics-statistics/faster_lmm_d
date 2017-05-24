@@ -2,7 +2,7 @@
 #
 # To build faster_lmm_d on GNU Guix:
 #
-#   make -f Makefile.guix
+#   make -f Makefile.guix [CUDA=1] [debug|release|check]
 #
 # run with
 #
@@ -11,6 +11,10 @@
 # The following two are modified by the Guix package:
 D_COMPILER=ldc2
 LDC_LIB_PATH=$(HOME)/.guix-profile/lib
+
+ifdef CUDA
+  CUDA_FLAG=-d-version=CUDA
+endif
 
 DUB_INCLUDE = \
 -I~/.dub/packages/dstats-1.0.3/dstats/source/ \
@@ -41,7 +45,7 @@ guix:        DFLAGS += -O -g -inline
 guix-debug:  DFLAGS += -O0 -g -d-debug -unittest
 
 # The development options are run from ~/.guix-profile and need to inject the RPATH
-debug:       DFLAGS += -O0 -g -d-debug $(RPATH) -link-debuglib
+debug:       DFLAGS += -O0 -g -d-debug $(RPATH) -link-debuglib $(CUDA_FLAG)
 
 release:     DFLAGS += -O -release $(RPATH)
 
@@ -80,6 +84,8 @@ $(OUT): build-setup $(OBJ)
 
 test:
 	env LD_LIBRARY_PATH=$(LDC_LIB_PATH) ./run_tests.sh
+
+check:  test  # alias
 
 debug-strip: debug
 	objcopy --only-keep-debug build/faster_lmm_d faster_lmm_d.debug

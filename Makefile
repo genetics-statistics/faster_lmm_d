@@ -15,7 +15,7 @@ $(HOME)/.dub/packages/dstats-1.0.3/dstats/libdstats.a \
 $(HOME)/.dub/packages/dyaml-0.5.3/dyaml/libdyaml.a \
 $(HOME)/.dub/packages/gsl-0.1.8/gsl/libgsl.a \
 $(HOME)/.dub/packages/tinyendian-0.1.2/tinyendian/libtinyendian.a \
- $(HOME)/.dub/packages/cuda_d-0.1.0/cuda_d/libcuda_d.a
+$(HOME)/.dub/package/cuda_d-0.1.0/cuda_d/libcuda_d.a
 
 DFLAGS = -wi -I./source $(DUB_INCLUDE)
 RPATH  =

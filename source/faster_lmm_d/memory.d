@@ -39,3 +39,5 @@ c_ulong total_RAM_used(){
   physMemUsed *= memInfo.mem_unit;
   return physMemUsed/(8 * 1024 * 1024);
 }
+
+void check_memory() {}

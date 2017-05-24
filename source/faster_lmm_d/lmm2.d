@@ -301,7 +301,7 @@ LMM lmm_fit(const LMM lmmobject, const DMatrix X_param, const ulong ngrids=100, 
   double[] elm = new double[ngrids];
   for(auto h = 0; h < ngrids; h++){
     elm[h] = get_LL(lmmobject, Harr[h], X, false, REML).LL;
-    if(virtual_memory_used() > 800){exit(0);}
+    check_memory();
   }
   DMatrix L = DMatrix([elm.length,1],elm);
   DMatrix H = DMatrix([Harr.length,1],Harr);

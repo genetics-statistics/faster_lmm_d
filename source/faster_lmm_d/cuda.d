@@ -7,6 +7,8 @@
 
 module faster_lmm_d.cuda;
 
+version(CUDA) {
+
 import cuda_d.cublas_api;
 import cuda_d.cublas_v2;
 import cuda_d.cuda;
@@ -36,7 +38,7 @@ void gpu_blas_mmul(const double *A, const double *B, double *C, const int m, con
 
 DMatrix matrix_mult(const DMatrix rha, const DMatrix lha){
   // Allocate 3 arrays on CPU
-  if(virtual_memory_used() > 800){ exit(0); }
+  check_memory();
 
   int nr_rows_A, nr_cols_A, nr_rows_B, nr_cols_B, nr_rows_C, nr_cols_C;
   nr_rows_A = cast(int)lha.cols;
@@ -71,3 +73,5 @@ DMatrix matrix_mult(const DMatrix rha, const DMatrix lha){
 
   return DMatrix([rha.rows, lha.cols], h_C);
 }
+
+} // CUDA

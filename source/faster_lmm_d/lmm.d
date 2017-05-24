@@ -34,7 +34,7 @@ auto run_gwas(immutable m_items n, immutable m_items m, DMatrix k, immutable dou
   DMatrix K = kinship_full(G);
   trace("kinship_matrix.shape: ", K.shape);
 
-  if(virtual_memory_used() > 800){exit(0);}
+  check_memory();
 
   return gwas(pheno.Y, G, K, true, false, true);
 }

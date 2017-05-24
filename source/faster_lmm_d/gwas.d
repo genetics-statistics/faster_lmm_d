@@ -34,12 +34,12 @@ auto gwas(immutable double[] Y, const DMatrix G, const DMatrix K, const bool rem
   DMatrix Kve;
   DMatrix X0;
 
-  if(virtual_memory_used() > 800){exit(0);}
+  check_memory();
 
   LMM lmm = LMM(Y, K, Kva, Kve, X0, true);
   lmm = lmm_transform(lmm);
 
-  if(virtual_memory_used() > 800){exit(0);}
+  check_memory();
 
   if(!refit){
     trace("Computing fit for null model");
