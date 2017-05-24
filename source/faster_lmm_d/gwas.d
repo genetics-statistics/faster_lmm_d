@@ -12,8 +12,10 @@ import std.typecons;
 
 import faster_lmm_d.dmatrix;
 import faster_lmm_d.lmm2;
+import faster_lmm_d.memory;
 import faster_lmm_d.optmatrix;
 
+import core.stdc.stdlib : exit;
 
 auto gwas(immutable double[] Y, const DMatrix G, const DMatrix K, const bool reml = true, const bool refit=false, const bool verbose = true){
 
@@ -32,8 +34,12 @@ auto gwas(immutable double[] Y, const DMatrix G, const DMatrix K, const bool rem
   DMatrix Kve;
   DMatrix X0;
 
+  if(virtual_memory_used() > 800){exit(0);}
+
   LMM lmm = LMM(Y, K, Kva, Kve, X0, true);
   lmm = lmm_transform(lmm);
+
+  if(virtual_memory_used() > 800){exit(0);}
 
   if(!refit){
     trace("Computing fit for null model");

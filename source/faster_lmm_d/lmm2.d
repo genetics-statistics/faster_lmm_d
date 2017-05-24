@@ -21,7 +21,10 @@ import faster_lmm_d.cuda;
 import faster_lmm_d.dmatrix;
 import faster_lmm_d.helpers;
 import faster_lmm_d.kinship;
+import faster_lmm_d.memory;
 import faster_lmm_d.optmatrix;
+
+import core.stdc.stdlib : exit;
 
 alias Tuple!(immutable double, "LL", const DMatrix, "beta", immutable double, "sigma", const DMatrix, "beta_var") LLTuple;
 alias Tuple!(const DMatrix, "beta", immutable double, "sigma", const DMatrix, "Q", const DMatrix, "XX_i", const DMatrix, "XX") MLSol;
@@ -298,6 +301,7 @@ LMM lmm_fit(const LMM lmmobject, const DMatrix X_param, const ulong ngrids=100, 
   double[] elm = new double[ngrids];
   for(auto h = 0; h < ngrids; h++){
     elm[h] = get_LL(lmmobject, Harr[h], X, false, REML).LL;
+    if(virtual_memory_used() > 800){exit(0);}
   }
   DMatrix L = DMatrix([elm.length,1],elm);
   DMatrix H = DMatrix([Harr.length,1],Harr);
