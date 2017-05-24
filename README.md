@@ -65,6 +65,7 @@ or in the case of GNU Guix (because dub does not honour the
 LIBRARY_PATH):
 
 ```sh
+export LIBRARY_PATH=~/.guix-profile/lib
 env LD_LIBRARY_PATH=$LIBRARY_PATH dub --compiler=ldc2
 ```
 

@@ -13,8 +13,11 @@ import faster_lmm_d.dmatrix;
 import faster_lmm_d.gwas;
 import faster_lmm_d.helpers;
 import faster_lmm_d.kinship;
+import faster_lmm_d.memory;
 import faster_lmm_d.optmatrix;
 import faster_lmm_d.phenotype;
+
+import core.stdc.stdlib : exit;
 
 auto run_gwas(immutable m_items n, immutable m_items m, DMatrix k, immutable double[] y, const DMatrix geno) {
   trace("run_gwas");
@@ -30,6 +33,8 @@ auto run_gwas(immutable m_items n, immutable m_items m, DMatrix k, immutable dou
   trace("run_other_new genotype_matrix: ", G.shape);
   DMatrix K = kinship_full(G);
   trace("kinship_matrix.shape: ", K.shape);
+
+  check_memory();
 
   return gwas(pheno.Y, G, K, true, false, true);
 }

@@ -10,6 +10,7 @@ module faster_lmm_d.kinship;
 import std.exception;
 import std.experimental.logger;
 
+import faster_lmm_d.cuda;
 import faster_lmm_d.dmatrix;
 import faster_lmm_d.helpers;
 import faster_lmm_d.optmatrix;
