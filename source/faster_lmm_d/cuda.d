@@ -36,7 +36,7 @@ void gpu_blas_mmul(const double *A, const double *B, double *C, const int m, con
   cublasDestroy(handle);
 }
 
-DMatrix matrix_mult(const DMatrix rha, const DMatrix lha){
+DMatrix cuda_matrix_mult(const DMatrix rha, const DMatrix lha){
   // Allocate 3 arrays on CPU
   check_memory();
 

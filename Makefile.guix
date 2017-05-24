@@ -30,6 +30,11 @@ $(HOME)/.dub/packages/gsl-0.1.8/gsl/libgsl.a \
 $(HOME)/.dub/packages/lapack-0.1.2/lapack/liblapack.a \
 $(HOME)/.dub/packages/tinyendian-0.1.2/tinyendian/libtinyendian.a
 
+ifdef CUDA
+  DUB_INCLUDE += -I~/.dub/packages/cuda_d-0.1.0/cuda_d/source/
+  DUB_LIBS += $(HOME)/.dub/packages/cuda_d-0.1.0/cuda_d/libcuda_d.a
+endif
+
 DFLAGS = -wi -I./source $(DUB_INCLUDE)
 DLIBS  = $(LDC_LIB_PATH)/libphobos2-ldc.a $(LDC_LIB_PATH)/libdruntime-ldc.a $(DUB_LIBS)
 DLIBS_DEBUG = $(LDC_LIB_PATH)/libphobos2-ldc-debug.a $(LDC_LIB_PATH)/libdruntime-ldc-debug.a $(DUB_LIBS)
