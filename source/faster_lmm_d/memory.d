@@ -5,37 +5,37 @@ import core.sys.linux.sys.sysinfo;
 
 import std.stdio;
 
-
-void tota_virtual_memory(){
+c_ulong total_virtual_memory(){
   sysinfo_ memInfo;
   sysinfo (&memInfo);
   c_ulong totalVirtualMem = memInfo.totalram;
   totalVirtualMem += memInfo.totalswap;
   totalVirtualMem *= memInfo.mem_unit;
-  writeln(totalVirtualMem);
+  return totalVirtualMem/(8 * 1024 * 1024);
 }
 
-void virtual_memory_used(){
+c_ulong virtual_memory_used(){
   sysinfo_ memInfo;
   sysinfo (&memInfo);
   c_ulong virtualMemUsed = memInfo.totalram - memInfo.freeram;
   virtualMemUsed += memInfo.totalswap - memInfo.freeswap;
   virtualMemUsed *= memInfo.mem_unit;
-  writeln(virtualMemUsed);
+  writeln(virtualMemUsed/(8 * 1024 * 1024));
+  return virtualMemUsed/(8 * 1024 * 1024);
 }
 
-void total_RAM(){
+c_ulong total_RAM(){
   sysinfo_ memInfo;
   sysinfo (&memInfo);
   c_ulong totalPhysMem = memInfo.totalram;
   totalPhysMem *= memInfo.mem_unit;
-  writeln(totalPhysMem);
+  return totalPhysMem/(8 * 1024 * 1024);
 }
 
-void total_RAM_used(){
+c_ulong total_RAM_used(){
   sysinfo_ memInfo;
   sysinfo (&memInfo);
   c_ulong physMemUsed = memInfo.totalram - memInfo.freeram;
   physMemUsed *= memInfo.mem_unit;
-  writeln(physMemUsed);
+  return physMemUsed/(8 * 1024 * 1024);
 }
