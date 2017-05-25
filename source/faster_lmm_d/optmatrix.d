@@ -30,7 +30,28 @@ version(CUDA) {
   DMatrix matrix_mult(const DMatrix lha,const DMatrix rha) {
     return cuda_matrix_mult(lha,rha);
   }
-} else {
+}
+
+version(ARRAYFIRE){
+  import faster_lmm_d.arrayfire;
+  DMatrix matrix_mult(const DMatrix lha,const DMatrix rha) {
+    af_array lharr, rharr, output;
+    const long[] ldims = [cast(long)lha.rows, cast(long)lha.cols];
+    const long[] rdims = [cast(long)rha.rows, cast(long)rha.cols];
+    af_create_array(&lharr, cast(void *)lha.elements, 2,  ldims.ptr, af_dtype.f64);
+    af_create_array(&rharr, cast(void *)rha.elements, 2,  rdims.ptr, af_dtype.f64);
+    af_matmul(&output , lharr, rharr, af_mat_prop.AF_MAT_NONE , af_mat_prop.AF_MAT_NONE);
+    //af_print_array(output);
+
+    double[] C = new double[lha.rows()*rha.cols()];
+    gemm(Order.RowMajor, Transpose.NoTrans, Transpose.NoTrans, cast(int)lha.rows(), cast(int)rha.cols(), cast(int)lha.cols(), /*no scaling*/
+         1,lha.elements.ptr, cast(int)lha.cols(), rha.elements.ptr, cast(int)rha.cols(), /*no addition*/0, C.ptr, cast(int)rha.cols());
+    auto res_shape = [lha.rows(),rha.cols()];
+    return DMatrix(res_shape, C);
+  }
+}
+
+version(CPU){
   DMatrix matrix_mult(const DMatrix lha,const DMatrix rha) {
     double[] C = new double[lha.rows()*rha.cols()];
     gemm(Order.RowMajor, Transpose.NoTrans, Transpose.NoTrans, cast(int)lha.rows(), cast(int)rha.cols(), cast(int)lha.cols(), /*no scaling*/

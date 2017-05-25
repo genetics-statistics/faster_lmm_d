@@ -65,6 +65,10 @@ CUDA Backend:
 ```sh
 make CUDA=1
 ```
+ARRAYFIRE Backend:
+```sh
+make ARRAYFIRE=1
+```
 
 or in the case of GNU Guix (because dub does not honour the
 LIBRARY_PATH):

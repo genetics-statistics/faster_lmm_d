@@ -2,8 +2,14 @@ D_COMPILER=ldc2
 
 LDMD=ldmd2
 
+BACKEND_FLAG='-d-version=CPU'
+
 ifeq ($(CUDA),1)
-  CUDA_FLAG=-d-version=CUDA
+  BACKEND_FLAG=-d-version=CUDA
+endif
+
+ifeq ($(ARRAYFIRE),1)
+  BACKEND_FLAG=-d-version=ARRAYFIRE
 endif
 
 DUB_INCLUDE = \
@@ -34,7 +40,11 @@ ifeq ($(CUDA),1)
   LIBS        += -L=-lcuda -L=-lcublas -L=-lcudart
 endif
 
-debug: DFLAGS += -O0 -g -d-debug $(RPATH) -link-debuglib $(CUDA_FLAG)
+ifeq ($(ARRAYFIRE),1)
+  LIBS        += -L=-lafcuda
+endif
+
+debug: DFLAGS += -O0 -g -d-debug $(RPATH) -link-debuglib $(BACKEND_FLAG)
 
 release: DFLAGS += -O -release $(RPATH)
 
@@ -64,11 +74,11 @@ default debug release profile getIR getBC gperf: $(OUT)
 
 # ---- Compile step
 %.o: %.d
-	$(D_COMPILER) -lib $(DFLAGS) -c $< -od=$(dir $@) $(CUDA_FLAG)
+	$(D_COMPILER) -lib $(DFLAGS) -c $< -od=$(dir $@) $(BACKEND_FLAG)
 
 # ---- Link step
 $(OUT): build-setup $(OBJ)
-	$(D_COMPILER) -of=build/faster_lmm_d $(DFLAGS)  $(OBJ) $(LIBS) $(DUB_LIBS) $(CUDA_FLAG)
+	$(D_COMPILER) -of=build/faster_lmm_d $(DFLAGS)  $(OBJ) $(LIBS) $(DUB_LIBS) $(BACKEND_FLAG)
 
 test:
 	chmod 755 build/faster_lmm_d
