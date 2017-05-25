@@ -2,32 +2,39 @@ D_COMPILER=ldc2
 
 LDMD=ldmd2
 
+ifeq ($(CUDA),1)
+  CUDA_FLAG=-d-version=CUDA
+endif
+
 DUB_INCLUDE = \
 -I~/.dub/packages/dstats-1.0.3/dstats/source/ \
 -I~/.dub/packages/gsl-0.1.8/gsl/source/ \
 -I~/.dub/packages/cblas-1.0.0/cblas/source/ \
 -I~/.dub/packages/dyaml-0.5.3/dyaml/source/ \
--I~/.dub/packages/tinyendian-0.1.2/tinyendian/source/ \
--I~/.dub/packages/cuda_d-0.1.0/cuda_d/source/
+-I~/.dub/packages/tinyendian-0.1.2/tinyendian/source/
 
 DUB_LIBS = \
 $(HOME)/.dub/packages/dstats-1.0.3/dstats/libdstats.a \
 $(HOME)/.dub/packages/dyaml-0.5.3/dyaml/libdyaml.a \
 $(HOME)/.dub/packages/gsl-0.1.8/gsl/libgsl.a \
-$(HOME)/.dub/packages/tinyendian-0.1.2/tinyendian/libtinyendian.a \
-$(HOME)/.dub/package/cuda_d-0.1.0/cuda_d/libcuda_d.a
+$(HOME)/.dub/packages/tinyendian-0.1.2/tinyendian/libtinyendian.a
 
 DFLAGS = -wi -I./source $(DUB_INCLUDE)
 RPATH  =
-LIBS   = -L=-llapacke -L=-llapack -L=-lblas -L=-lgsl -L=-lgslcblas -L=-lm -L=-lopenblas -L=-lm -L=-lgslcblas -L=-lcuda -L=-lcublas -L=-lcudart
-SRC     = $(wildcard source/faster_lmm_d/*.d)
+LIBS   = -L=-llapacke -L=-llapack -L=-lblas -L=-lgsl -L=-lgslcblas -L=-lm -L=-lopenblas -L=-lm -L=-lgslcblas
+SRC    = $(wildcard source/faster_lmm_d/*.d)
 IR     = $(wildcard source/faster_lmm_d/*.ll)
 BC     = $(wildcard source/faster_lmm_d/*.bc)
 OBJ    = $(SRC:.d=.o)
 OUT    = build/faster_lmm_d
-CUDA_OUT = build/cuda/faster_lmm_d
 
-debug: DFLAGS += -O0 -g -d-debug $(RPATH) -link-debuglib
+ifeq ($(CUDA),1)
+  DUB_INCLUDE += -I~/.dub/packages/cuda_d-0.1.0/cuda_d/source/
+  DUB_LIBS    += $(HOME)/.dub/packages/cuda_d-0.1.0/cuda_d/libcuda_d.a
+  LIBS        += -L=-lcuda -L=-lcublas -L=-lcudart
+endif
+
+debug: DFLAGS += -O0 -g -d-debug $(RPATH) -link-debuglib $(CUDA_FLAG)
 
 release: DFLAGS += -O -release $(RPATH)
 
@@ -55,18 +62,13 @@ build-cuda-setup:
 
 default debug release profile getIR getBC gperf: $(OUT)
 
-cuda: $(CUDA_OUT)
-
 # ---- Compile step
 %.o: %.d
-	$(D_COMPILER) -lib $(DFLAGS) -c $< -od=$(dir $@)
+	$(D_COMPILER) -lib $(DFLAGS) -c $< -od=$(dir $@) $(CUDA_FLAG)
 
 # ---- Link step
 $(OUT): build-setup $(OBJ)
-	$(D_COMPILER) -of=build/faster_lmm_d $(DFLAGS)  $(OBJ) $(LIBS) $(DUB_LIBS)
-
-$(CUDA_OUT): build-cuda-setup $(OBJ)
-	$(D_COMPILER) -of=build/cuda/faster_lmm_d $(DFLAGS)  $(OBJ) $(LIBS) $(DUB_LIBS)
+	$(D_COMPILER) -of=build/faster_lmm_d $(DFLAGS)  $(OBJ) $(LIBS) $(DUB_LIBS) $(CUDA_FLAG)
 
 test:
 	chmod 755 build/faster_lmm_d
