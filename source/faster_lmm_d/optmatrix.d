@@ -35,19 +35,20 @@ version(CUDA) {
 version(ARRAYFIRE){
   import faster_lmm_d.arrayfire;
   DMatrix matrix_mult(const DMatrix lha,const DMatrix rha) {
-    af_array lharr, rharr, output;
-    const long[] ldims = [cast(long)lha.rows, cast(long)lha.cols];
-    const long[] rdims = [cast(long)rha.rows, cast(long)rha.cols];
-    af_create_array(&lharr, cast(void *)lha.elements, 2,  ldims.ptr, af_dtype.f64);
-    af_create_array(&rharr, cast(void *)rha.elements, 2,  rdims.ptr, af_dtype.f64);
-    af_matmul(&output , lharr, rharr, af_mat_prop.AF_MAT_NONE , af_mat_prop.AF_MAT_NONE);
-    //af_print_array(output);
-
-    double[] C = new double[lha.rows()*rha.cols()];
-    gemm(Order.RowMajor, Transpose.NoTrans, Transpose.NoTrans, cast(int)lha.rows(), cast(int)rha.cols(), cast(int)lha.cols(), /*no scaling*/
-         1,lha.elements.ptr, cast(int)lha.cols(), rha.elements.ptr, cast(int)rha.cols(), /*no addition*/0, C.ptr, cast(int)rha.cols());
-    auto res_shape = [lha.rows(),rha.cols()];
-    return DMatrix(res_shape, C);
+    af_array device_lha, device_rha, device_result;
+    const long[] ldims = [cast(long)lha.cols, cast(long)lha.rows];
+    const long[] rdims = [cast(long)rha.cols, cast(long)rha.rows];
+    af_create_array(&device_lha, cast(void *)lha.elements, 2,  ldims.ptr, af_dtype.f64);
+    af_create_array(&device_rha, cast(void *)rha.elements, 2,  rdims.ptr, af_dtype.f64);
+    af_matmul(&device_result , device_rha, device_lha, af_mat_prop.AF_MAT_NONE , af_mat_prop.AF_MAT_NONE);
+    void* out1;
+    double[] host_result = new double[lha.rows * rha.cols];
+    af_get_data_ptr(host_result.ptr, device_result);
+    af_release_array(device_lha);
+    af_release_array(device_rha);
+    af_release_array(device_result);
+    auto res_shape = [lha.rows,rha.cols];
+    return DMatrix(res_shape, host_result);
   }
 }
 
@@ -60,6 +61,7 @@ version(CPU){
     return DMatrix(res_shape, C);
   }
 }
+
 
 DMatrix matrix_mult_transpose(const DMatrix lha, const DMatrix rha) {
   double[] C = new double[lha.rows()*rha.rows()];
