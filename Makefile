@@ -1,7 +1,5 @@
 D_COMPILER=ldc2
 
-LDMD=ldmd2
-
 DUB_INCLUDE = \
 -I~/.dub/packages/dstats-1.0.3/dstats/source/ \
 -I~/.dub/packages/gsl-0.1.8/gsl/source/ \
