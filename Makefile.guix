@@ -10,10 +10,12 @@
 
 # The following two are modified by the Guix package:
 D_COMPILER=ldc2
-LDC_LIB_PATH=$(HOME)/.guix-profile/lib
+# LDC_LIB_PATH=$(HOME)/.guix-profile/lib
+LDC_LIB_PATH=~/opt/ldc2-1.1.0-linux-x86_64/lib
 
 ifdef CUDA
   CUDA_FLAG=-d-version=CUDA
+  CUDA_LIB_PATH=/usr/local/cuda-7.0/lib64
 endif
 
 DUB_INCLUDE = \
@@ -43,6 +45,12 @@ LIBS   = -L-L$(LDC_LIB_PATH) -L-lgsl -L-lopenblas -L-llapacke
 SRC    = $(wildcard source/faster_lmm_d/*.d)
 OBJ    = $(SRC:.d=.o)
 OUT    = build/faster_lmm_d
+
+ifdef CUDA
+  LIBS += -L-L/usr/local/cuda-7.0/lib64 -L=-lcublas -L=-lcudart
+  # LIBS += $(CUDA_LIB_PATH)/libcublas_static.a $(CUDA_LIB_PATH)/libcudart_static.a /usr/lib/x86_64-linux-gnu/crti.o /usr/lib/x86_64-linux-gnu/crt1.o
+  # LIBS += $(CUDA_LIB_PATH)/libcublas_static.a $(CUDA_LIB_PATH)/libcudart_static.a /usr/lib/x86_64-linux-gnu/crti.o /usr/lib/x86_64-linux-gnu/crt1.o
+endif
 
 # The Guix targets resolve the RPATH automatically
 guix:        DFLAGS += -O -g -inline
@@ -88,7 +96,7 @@ $(OUT): build-setup $(OBJ)
 	$(D_COMPILER) $(DFLAGS) -of=build/faster_lmm_d $(OBJ) $(LIBS)
 
 test:
-	env LD_LIBRARY_PATH=$(LDC_LIB_PATH) ./run_tests.sh
+	./run_tests.sh
 
 check:  test  # alias
 
