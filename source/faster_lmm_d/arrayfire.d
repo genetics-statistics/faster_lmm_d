@@ -38,134 +38,26 @@ extern ( C ){
 
 
   enum af_err{
-    ///
-    /// The function returned successfully
-    ///
     AF_SUCCESS            =   0,
-
-    // 100-199 Errors in environment
-
-    ///
-    /// The system or device ran out of memory
-    ///
     AF_ERR_NO_MEM         = 101,
-
-    ///
-    /// There was an error in the device driver
-    ///
     AF_ERR_DRIVER         = 102,
-
-    ///
-    /// There was an error with the runtime environment
-    ///
     AF_ERR_RUNTIME        = 103,
-
-    // 200-299 Errors in input parameters
-
-    ///
-    /// The input array is not a valid af_array object
-    ///
     AF_ERR_INVALID_ARRAY  = 201,
-
-    ///
-    /// One of the function arguments is incorrect
-    ///
     AF_ERR_ARG            = 202,
-
-    ///
-    /// The size is incorrect
-    ///
     AF_ERR_SIZE           = 203,
-
-    ///
-    /// The type is not suppported by this function
-    ///
     AF_ERR_TYPE           = 204,
-
-    ///
-    /// The type of the input arrays are not compatible
-    ///
     AF_ERR_DIFF_TYPE      = 205,
-
-    ///
-    /// Function does not support GFOR / batch mode
-    ///
     AF_ERR_BATCH          = 207,
-
-
-    //if(AF_API_VERSION >= 33){
-      ///
-      /// Input does not belong to the current device.
-      ///
-      AF_ERR_DEVICE         = 208,
-    //}
-
-    // 300-399 Errors for missing software features
-
-    ///
-    /// The option is not supported
-    ///
+    AF_ERR_DEVICE         = 208,
     AF_ERR_NOT_SUPPORTED  = 301,
-
-    ///
-    /// This build of ArrayFire does not support this feature
-    ///
     AF_ERR_NOT_CONFIGURED = 302,
-
-    //if(AF_API_VERSION >= 32){
-      ///
-      /// This build of ArrayFire is not compiled with "nonfree" algorithms
-      ///
-      AF_ERR_NONFREE        = 303,
-    //}
-
-    // 400-499 Errors for missing hardware features
-
-    ///
-    /// This device does not support double
-    ///
+    AF_ERR_NONFREE        = 303,
     AF_ERR_NO_DBL         = 401,
-
-    ///
-    /// This build of ArrayFire was not built with graphics or this device does
-    /// not support graphics
-    ///
     AF_ERR_NO_GFX         = 402,
-
-    // 500-599 Errors specific to heterogenous API
-
-    //if(AF_API_VERSION >= 32){
-      ///
-      /// There was an error when loading the libraries
-      ///
-      AF_ERR_LOAD_LIB       = 501,
-    //}
-
-    //if(AF_API_VERSION >= 32){
-      ///
-      /// There was an error when loading the symbols
-      ///
-      AF_ERR_LOAD_SYM       = 502,
-    //}
-
-    //if(AF_API_VERSION >= 32){
-      ///
-      /// There was a mismatch between the input array and the active backend
-      ///
-      AF_ERR_ARR_BKND_MISMATCH    = 503,
-    //}
-
-    // 900-999 Errors from upstream libraries and runtimes
-
-    ///
-    /// There was an internal error either in ArrayFire or in a project
-    /// upstream
-    ///
+    AF_ERR_LOAD_LIB       = 501,
+    AF_ERR_LOAD_SYM       = 502,
+    AF_ERR_ARR_BKND_MISMATCH    = 503,
     AF_ERR_INTERNAL       = 998,
-
-    ///
-    /// Unknown Error
-    ///
     AF_ERR_UNKNOWN        = 999
   };
 
@@ -182,57 +74,25 @@ extern ( C ){
     AF_INTERP_BILINEAR,        ///< Bilinear Interpolation
     AF_INTERP_CUBIC,           ///< Cubic Interpolation
     AF_INTERP_LOWER,           ///< Floor Indexed
-    //#if AF_API_VERSION >= 34
-      AF_INTERP_LINEAR_COSINE,   ///< Linear Interpolation with cosine smoothing
-    //#endif
-    //#if AF_API_VERSION >= 34
-      AF_INTERP_BILINEAR_COSINE, ///< Bilinear Interpolation with cosine smoothing
-    //#endif
-    //#if AF_API_VERSION >= 34
-      AF_INTERP_BICUBIC,         ///< Bicubic Interpolation
-    //#endif
-    //#if AF_API_VERSION >= 34
-      AF_INTERP_CUBIC_SPLINE,    ///< Cubic Interpolation with Catmull-Rom splines
-    //#endif
-    //#if AF_API_VERSION >= 34
-      AF_INTERP_BICUBIC_SPLINE,  ///< Bicubic Interpolation with Catmull-Rom splines
-    //#endif
+    AF_INTERP_LINEAR_COSINE,   ///< Linear Interpolation with cosine smoothing
+    AF_INTERP_BILINEAR_COSINE, ///< Bilinear Interpolation with cosine smoothing
+    AF_INTERP_BICUBIC,         ///< Bicubic Interpolation
+    AF_INTERP_CUBIC_SPLINE,    ///< Cubic Interpolation with Catmull-Rom splines
+    AF_INTERP_BICUBIC_SPLINE,  ///< Bicubic Interpolation with Catmull-Rom splines
   };
 
   enum af_border_type{
-    ///
-    /// Out of bound values are 0
-    ///
     AF_PAD_ZERO = 0,
-
-    ///
-    /// Out of bound values are symmetric over the edge
-    ///
     AF_PAD_SYM
   };
 
   enum af_connectivity{
-    ///
-    /// Connectivity includes neighbors, North, East, South and West of current pixel
-    ///
     AF_CONNECTIVITY_4 = 4,
-
-    ///
-    /// Connectivity includes 4-connectivity neigbors and also those on Northeast, Northwest, Southeast and Southwest
-    ///
     AF_CONNECTIVITY_8 = 8
   };
 
   enum af_conv_mode{
-
-    ///
-    /// Output of the convolution is the same size as input
-    ///
     AF_CONV_DEFAULT,
-
-    ///
-    /// Output of the convolution is signal_len + filter_len - 1
-    ///
     AF_CONV_EXPAND,
   } ;
 
@@ -254,21 +114,17 @@ extern ( C ){
     AF_SHD        ///< Match based on Sum of Hamming Distances (SHD)
   };
 
-  //#if AF_API_VERSION >= 31
-    enum af_ycc_std{
-      AF_YCC_601 = 601,  ///< ITU-R BT.601 (formerly CCIR 601) standard
-      AF_YCC_709 = 709,  ///< ITU-R BT.709 standard
-      AF_YCC_2020 = 2020  ///< ITU-R BT.2020 standard
-    };
-  //#endif
+  enum af_ycc_std{
+    AF_YCC_601 = 601,  ///< ITU-R BT.601 (formerly CCIR 601) standard
+    AF_YCC_709 = 709,  ///< ITU-R BT.709 standard
+    AF_YCC_2020 = 2020  ///< ITU-R BT.2020 standard
+  };
 
   enum af_cspace_t{
     AF_GRAY = 0, ///< Grayscale
     AF_RGB,      ///< 3-channel RGB
     AF_HSV,      ///< 3-channel HSV
-  //#if AF_API_VERSION >= 31
-      AF_YCbCr     ///< 3-channel YCbCr
-  //#endif
+    AF_YCbCr
   };
 
   enum af_mat_prop{
@@ -299,115 +155,90 @@ extern ( C ){
     AF_NORM_EUCLID = AF_NORM_VECTOR_2, ///< The default. Same as AF_NORM_VECTOR_2
   };
 
-  //#if AF_API_VERSION >= 31
-    enum af_image_format{
-      AF_FIF_BMP          = 0,    ///< FreeImage Enum for Bitmap File
-      AF_FIF_ICO          = 1,    ///< FreeImage Enum for Windows Icon File
-      AF_FIF_JPEG         = 2,    ///< FreeImage Enum for JPEG File
-      AF_FIF_JNG          = 3,    ///< FreeImage Enum for JPEG Network Graphics File
-      AF_FIF_PNG          = 13,   ///< FreeImage Enum for Portable Network Graphics File
-      AF_FIF_PPM          = 14,   ///< FreeImage Enum for Portable Pixelmap (ASCII) File
-      AF_FIF_PPMRAW       = 15,   ///< FreeImage Enum for Portable Pixelmap (Binary) File
-      AF_FIF_TIFF         = 18,   ///< FreeImage Enum for Tagged Image File Format File
-      AF_FIF_PSD          = 20,   ///< FreeImage Enum for Adobe Photoshop File
-      AF_FIF_HDR          = 26,   ///< FreeImage Enum for High Dynamic Range File
-      AF_FIF_EXR          = 29,   ///< FreeImage Enum for ILM OpenEXR File
-      AF_FIF_JP2          = 31,   ///< FreeImage Enum for JPEG-2000 File
-      AF_FIF_RAW          = 34    ///< FreeImage Enum for RAW Camera Image File
-    };
-  //#endif
+  enum af_image_format{
+    AF_FIF_BMP          = 0,    ///< FreeImage Enum for Bitmap File
+    AF_FIF_ICO          = 1,    ///< FreeImage Enum for Windows Icon File
+    AF_FIF_JPEG         = 2,    ///< FreeImage Enum for JPEG File
+    AF_FIF_JNG          = 3,    ///< FreeImage Enum for JPEG Network Graphics File
+    AF_FIF_PNG          = 13,   ///< FreeImage Enum for Portable Network Graphics File
+    AF_FIF_PPM          = 14,   ///< FreeImage Enum for Portable Pixelmap (ASCII) File
+    AF_FIF_PPMRAW       = 15,   ///< FreeImage Enum for Portable Pixelmap (Binary) File
+    AF_FIF_TIFF         = 18,   ///< FreeImage Enum for Tagged Image File Format File
+    AF_FIF_PSD          = 20,   ///< FreeImage Enum for Adobe Photoshop File
+    AF_FIF_HDR          = 26,   ///< FreeImage Enum for High Dynamic Range File
+    AF_FIF_EXR          = 29,   ///< FreeImage Enum for ILM OpenEXR File
+    AF_FIF_JP2          = 31,   ///< FreeImage Enum for JPEG-2000 File
+    AF_FIF_RAW          = 34    ///< FreeImage Enum for RAW Camera Image File
+  };
 
-  //#if AF_API_VERSION >=34
-    enum af_moment_type{
-      AF_MOMENT_M00 = 1,
-      AF_MOMENT_M01 = 2,
-      AF_MOMENT_M10 = 4,
-      AF_MOMENT_M11 = 8,
-      AF_MOMENT_FIRST_ORDER = AF_MOMENT_M00 | AF_MOMENT_M01 | AF_MOMENT_M10 | AF_MOMENT_M11
-    };
-  //#endif
+  enum af_moment_type{
+    AF_MOMENT_M00 = 1,
+    AF_MOMENT_M01 = 2,
+    AF_MOMENT_M10 = 4,
+    AF_MOMENT_M11 = 8,
+    AF_MOMENT_FIRST_ORDER = AF_MOMENT_M00 | AF_MOMENT_M01 | AF_MOMENT_M10 | AF_MOMENT_M11
+  };
 
-  //#if AF_API_VERSION >= 32
-    enum af_homography_type{
-      AF_HOMOGRAPHY_RANSAC = 0,   ///< Computes homography using RANSAC
-      AF_HOMOGRAPHY_LMEDS  = 1    ///< Computes homography using Least Median of Squares
-    };
-  //#endif
+  enum af_homography_type{
+    AF_HOMOGRAPHY_RANSAC = 0,   ///< Computes homography using RANSAC
+    AF_HOMOGRAPHY_LMEDS  = 1    ///< Computes homography using Least Median of Squares
+  };
 
-  //#if AF_API_VERSION >= 32
-    // These enums should be 2^x
-    enum af_backend{
-      AF_BACKEND_DEFAULT = 0,  ///< Default backend order: OpenCL -> CUDA -> CPU
-      AF_BACKEND_CPU     = 1,  ///< CPU a.k.a sequential algorithms
-      AF_BACKEND_CUDA    = 2,  ///< CUDA Compute Backend
-      AF_BACKEND_OPENCL  = 4,  ///< OpenCL Compute Backend
-    };
-  //#endif
+  enum af_backend{
+    AF_BACKEND_DEFAULT = 0,  ///< Default backend order: OpenCL -> CUDA -> CPU
+    AF_BACKEND_CPU     = 1,  ///< CPU a.k.a sequential algorithms
+    AF_BACKEND_CUDA    = 2,  ///< CUDA Compute Backend
+    AF_BACKEND_OPENCL  = 4,  ///< OpenCL Compute Backend
+  };
 
-  // Below enum is purely added for example purposes
-  // it doesn't and shoudn't be used anywhere in the
-  // code. No Guarantee's provided if it is used.
   enum af_someenum_t{
-      AF_ID = 0
+    AF_ID = 0
   };
 
-  //#if AF_API_VERSION >=34
-    enum af_binary_op{
-        AF_BINARY_ADD  = 0,
-        AF_BINARY_MUL  = 1,
-        AF_BINARY_MIN  = 2,
-        AF_BINARY_MAX  = 3
-    };
-  //#endif
+  enum af_binary_op{
+    AF_BINARY_ADD  = 0,
+    AF_BINARY_MUL  = 1,
+    AF_BINARY_MIN  = 2,
+    AF_BINARY_MAX  = 3
+  };
 
-  //#if AF_API_VERSION >=34
-    enum af_random_engine_type{
-      AF_RANDOM_ENGINE_PHILOX_4X32_10     = 100,                                  //Philox variant with N = 4, W = 32 and Rounds = 10
-      AF_RANDOM_ENGINE_THREEFRY_2X32_16   = 200,                                  //Threefry variant with N = 2, W = 32 and Rounds = 16
-      AF_RANDOM_ENGINE_MERSENNE_GP11213   = 300,                                  //Mersenne variant with MEXP = 11213
-      AF_RANDOM_ENGINE_PHILOX             = AF_RANDOM_ENGINE_PHILOX_4X32_10,      //Resolves to Philox 4x32_10
-      AF_RANDOM_ENGINE_THREEFRY           = AF_RANDOM_ENGINE_THREEFRY_2X32_16,    //Resolves to Threefry 2X32_16
-      AF_RANDOM_ENGINE_MERSENNE           = AF_RANDOM_ENGINE_MERSENNE_GP11213,    //Resolves to Mersenne GP 11213
-      AF_RANDOM_ENGINE_DEFAULT            = AF_RANDOM_ENGINE_PHILOX               //Resolves to Philox
-    };
-  //#endif
+  enum af_random_engine_type{
+    AF_RANDOM_ENGINE_PHILOX_4X32_10     = 100,                                  //Philox variant with N = 4, W = 32 and Rounds = 10
+    AF_RANDOM_ENGINE_THREEFRY_2X32_16   = 200,                                  //Threefry variant with N = 2, W = 32 and Rounds = 16
+    AF_RANDOM_ENGINE_MERSENNE_GP11213   = 300,                                  //Mersenne variant with MEXP = 11213
+    AF_RANDOM_ENGINE_PHILOX             = AF_RANDOM_ENGINE_PHILOX_4X32_10,      //Resolves to Philox 4x32_10
+    AF_RANDOM_ENGINE_THREEFRY           = AF_RANDOM_ENGINE_THREEFRY_2X32_16,    //Resolves to Threefry 2X32_16
+    AF_RANDOM_ENGINE_MERSENNE           = AF_RANDOM_ENGINE_MERSENNE_GP11213,    //Resolves to Mersenne GP 11213
+    AF_RANDOM_ENGINE_DEFAULT            = AF_RANDOM_ENGINE_PHILOX               //Resolves to Philox
+  };
 
-////////////////////////////////////////////////////////////////////////////////
-// FORGE / Graphics Related Enums
-// These enums have values corresponsding to Forge enums in forge defines.h
-////////////////////////////////////////////////////////////////////////////////
   enum af_colormap{
-      AF_COLORMAP_DEFAULT = 0,    ///< Default grayscale map
-      AF_COLORMAP_SPECTRUM= 1,    ///< Spectrum map
-      AF_COLORMAP_COLORS  = 2,    ///< Colors
-      AF_COLORMAP_RED     = 3,    ///< Red hue map
-      AF_COLORMAP_MOOD    = 4,    ///< Mood map
-      AF_COLORMAP_HEAT    = 5,    ///< Heat map
-      AF_COLORMAP_BLUE    = 6     ///< Blue hue map
+    AF_COLORMAP_DEFAULT = 0,    ///< Default grayscale map
+    AF_COLORMAP_SPECTRUM= 1,    ///< Spectrum map
+    AF_COLORMAP_COLORS  = 2,    ///< Colors
+    AF_COLORMAP_RED     = 3,    ///< Red hue map
+    AF_COLORMAP_MOOD    = 4,    ///< Mood map
+    AF_COLORMAP_HEAT    = 5,    ///< Heat map
+    AF_COLORMAP_BLUE    = 6     ///< Blue hue map
   };
 
-  //#if AF_API_VERSION >= 32
-    enum af_marker_type{
-      AF_MARKER_NONE         = 0,
-      AF_MARKER_POINT        = 1,
-      AF_MARKER_CIRCLE       = 2,
-      AF_MARKER_SQUARE       = 3,
-      AF_MARKER_TRIANGLE     = 4,
-      AF_MARKER_CROSS        = 5,
-      AF_MARKER_PLUS         = 6,
-      AF_MARKER_STAR         = 7
-    };
-  //#endif
-////////////////////////////////////////////////////////////////////////////////
+  enum af_marker_type{
+    AF_MARKER_NONE         = 0,
+    AF_MARKER_POINT        = 1,
+    AF_MARKER_CIRCLE       = 2,
+    AF_MARKER_SQUARE       = 3,
+    AF_MARKER_TRIANGLE     = 4,
+    AF_MARKER_CROSS        = 5,
+    AF_MARKER_PLUS         = 6,
+    AF_MARKER_STAR         = 7
+  };
 
-  //#if AF_API_VERSION >= 34
-    enum af_storage{
-      AF_STORAGE_DENSE     = 0,   ///< Storage type is dense
-      AF_STORAGE_CSR       = 1,   ///< Storage type is CSR
-      AF_STORAGE_CSC       = 2,   ///< Storage type is CSC
-      AF_STORAGE_COO       = 3,   ///< Storage type is COO
-    };
-  //#endif
+  enum af_storage{
+    AF_STORAGE_DENSE     = 0,   ///< Storage type is dense
+    AF_STORAGE_CSR       = 1,   ///< Storage type is CSR
+    AF_STORAGE_CSC       = 2,   ///< Storage type is CSC
+    AF_STORAGE_COO       = 3,   ///< Storage type is COO
+  };
 
   af_err af_create_array(af_array *arr, const void * data, const uint ndims, const dim_t * dims, const af_dtype type);
 
