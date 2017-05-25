@@ -23,6 +23,7 @@ import faster_lmm_d.lmm;
 import faster_lmm_d.optmatrix;
 import faster_lmm_d.rqtlreader;
 import faster_lmm_d.tsvreader;
+import faster_lmm_d.memory;
 
 //import gperftools_d.profiler;
 
@@ -59,6 +60,7 @@ void main(string[] args)
   ulong option_pheno_column;
 
   globalLogLevel(LogLevel.warning); //default
+  check_memory("App: Start");
 
   getopt(
     args,
@@ -125,6 +127,7 @@ void main(string[] args)
   // ---- Phenotypes
   double[] pheno_vector;
 
+  check_memory("App: Phenotypes");
   auto pTuple = ( cmd == "rqtl" ? pheno(option_pheno, option_pheno_column) : tsvpheno(option_pheno, option_pheno_column ));
   const double[] y = pTuple[0];
   auto phenotypes = pTuple[1];
@@ -140,6 +143,7 @@ void main(string[] args)
   trace(g.shape);
 
   // ---- If there are less phenotypes than strains, reduce the genotype matrix:
+  check_memory("App: reduce genotype matrix");
   if(g.rows != y.sizeof){
     info("Reduce geno matrix to match # strains in phenotype");
     trace("gnames and phenotypes");
@@ -164,6 +168,7 @@ void main(string[] args)
   }
 
   // ---- Run GWAS
+  check_memory("App: run GWAS");
   immutable m_items n = pheno_vector.length;
   immutable m_items m = geno_matrix.m_geno;
   DMatrix k;
@@ -212,5 +217,6 @@ void main(string[] args)
   foreach(i, p ; p_values) {
     writefln("%20s\t%9.5f\t%9.5f\t%9.5f\t%9.5f", gnames[i],p,ts[i],lod_values[i],lod_values[i]/4.61);
   }
+  check_memory("Exit");
   //ProfilerStop();
 }

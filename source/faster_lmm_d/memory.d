@@ -1,8 +1,10 @@
 module faster_lmm_d.memory;
 
+import resusage.memory;
 import core.sys.linux.config;
 import core.sys.linux.sys.sysinfo;
 
+import std.conv;
 import std.stdio;
 
 c_ulong virtual_memory_total(){
@@ -42,10 +44,11 @@ c_ulong ram_used(){
 
 void check_memory(string msg = "check_memory") {
   stderr.writeln(msg);
-  auto ram_used  = ram_used();
-  auto ram_tot   = ram_total();
-  auto vmem_used = virtual_memory_used();
-  auto vmem_tot  = virtual_memory_total();
-  stderr.writeln("RAM  ",ram_used,"/",ram_tot);
-  stderr.writeln("VIRT ",vmem_used,"/",vmem_tot);
+  SystemMemInfo sysMemInfo = systemMemInfo();
+  auto gb = 1024.0*1024*1025;
+  auto ram_tot = sysMemInfo.totalRAM/gb;
+
+  ProcessMemInfo procMemInfo = processMemInfo();
+  auto ram_used = procMemInfo.usedRAM/gb;
+  stderr.writeln("RAM used (",ram_used*100.0/ram_tot,"%) ",ram_used,"GB, total ",to!int(ram_tot),"GB");
 }
