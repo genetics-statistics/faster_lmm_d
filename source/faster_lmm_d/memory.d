@@ -8,7 +8,7 @@ import std.stdio;
 
 void check_memory(string msg = "") {
   SystemMemInfo sysMemInfo = systemMemInfo();
-  auto gb = 1024.0*1024*1025;
+  ulong gb = 1024.0*1024*1024;
   auto ram_tot = sysMemInfo.totalRAM/gb;
 
   ProcessMemInfo procMemInfo = processMemInfo();
