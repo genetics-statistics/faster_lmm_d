@@ -30,7 +30,9 @@ version(CUDA) {
   DMatrix matrix_mult(const DMatrix lha,const DMatrix rha) {
     auto cuda_result = cuda_matrix_mult(lha,rha);
     auto cpu_result  = cpu_matrix_mult(lha,rha);
-    assert(cuda_result == cpu_result);
+    assert(cuda_result.rows == cpu_result.rows, "CUDA rows mismatch, expected "~to!string(cpu_result.rows)~" but got "~to!string(cuda_result.rows));
+    assert(cuda_result.rows == cpu_result.cols, "CUDA rows mismatch, expected "~to!string(cpu_result.cols)~" but got "~to!string(cuda_result.cols));
+    assert(cuda_result.sum == cpu_result.sum, "CUDA result mismatch, expected "~to!string(cpu_result.sum)~" but got "~to!string(cuda_result.sum));
     return cuda_result;
   }
 } else {

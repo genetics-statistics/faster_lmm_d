@@ -7,6 +7,7 @@
 
 module faster_lmm_d.dmatrix;
 
+import std.algorithm;
 import std.math;
 import std.stdio;
 import std.typecons;
@@ -28,6 +29,8 @@ struct DMatrix{
     elements = e.dup;
     init     = true;
   }
+
+  auto sum() { return reduce!"a + b"(0.0, elements); }
 
   pragma(inline) const m_items cols() { return shape[1]; }
   pragma(inline) const m_items rows() { return shape[0]; }
