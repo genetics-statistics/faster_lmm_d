@@ -25,6 +25,7 @@ version(CUDA) {
 
   const ulong MB = 1024*1024;
   const cudaSuccess = cudaError.cudaSuccess;
+  cublasHandle_t cublas_handle = null;
 
 // Do not call this function outside cuda_init
 static void cuda_startup() {
@@ -32,6 +33,8 @@ static void cuda_startup() {
   // allocate some CUDA RAM to force initialization
   enforce(cudaMalloc(&dummy, 8000)==cudaSuccess,"CUDA failed to initialize");
   enforce(cudaFree(dummy)==cudaSuccess);
+  // Create a handle for CUBLAS
+  enforce(cublasCreate(&cublas_handle) == cublasStatus_t.CUBLAS_STATUS_SUCCESS, "CUBLAS initialization failed");
 }
 
 void cuda_init() {
@@ -41,7 +44,13 @@ void cuda_init() {
   trace("Back to main thread...");
 }
 
-void gpu_blas_mmul(double *A, const double *B, double *C, const m_items _m, const m_items _k, const m_items _n) {
+void cuda_destroy() {
+  trace("Close CUDA environment");
+  if (cublas_handle)
+    cublasDestroy(cublas_handle);
+}
+
+ void gpu_blas_mmul(double *A, const double *B, double *C, const m_items _m, const m_items _k, const m_items _n) {
   auto m=to!int(_m), k=to!int(_k), n=to!int(_n);
   auto lda=m,ldb=k,ldc=m;
   const double alf = 1;
@@ -49,14 +58,9 @@ void gpu_blas_mmul(double *A, const double *B, double *C, const m_items _m, cons
   const double *alpha = &alf;
   const double *beta = &bet;
 
-  // Create a handle for CUBLAS
-  cublasHandle_t handle;
-  enforce(cublasCreate(&handle) == cublasStatus_t.CUBLAS_STATUS_SUCCESS, "CUBLAS initialization failed");
   trace("Running cublasDgemm");
-  cublasDgemm(handle, cublasOperation_t.CUBLAS_OP_N, cublasOperation_t.CUBLAS_OP_N, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc);
+  cublasDgemm(cublas_handle, cublasOperation_t.CUBLAS_OP_N, cublasOperation_t.CUBLAS_OP_N, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc);
 
-  // Destroy the handle
-  cublasDestroy(handle);
 }
 
 DMatrix cuda_matrix_mult(const DMatrix rha, const DMatrix lha){
