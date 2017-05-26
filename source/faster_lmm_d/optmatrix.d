@@ -32,6 +32,10 @@ version(CUDA) {
     auto cpu_result  = cpu_matrix_mult(lha,rha);
     assert(cuda_result.rows == cpu_result.rows, "CUDA rows mismatch, expected "~to!string(cpu_result.rows)~" but got "~to!string(cuda_result.rows));
     assert(cuda_result.rows == cpu_result.cols, "CUDA rows mismatch, expected "~to!string(cpu_result.cols)~" but got "~to!string(cuda_result.cols));
+    stderr.write("CPU result:");
+    pretty_print(cpu_result);
+    stderr.write("CUDA result:");
+    pretty_print(cuda_result);
     assert(cuda_result.sum == cpu_result.sum, "CUDA result mismatch, expected "~to!string(cpu_result.sum)~" but got "~to!string(cuda_result.sum));
     return cuda_result;
   }
@@ -76,14 +80,21 @@ DMatrix matrix_transpose(const DMatrix input) {
 void pretty_print(const DMatrix input) {
   m_items cols = input.cols();
   m_items rows = input.rows();
+  auto e = input.elements;
   writeln("[");
   if(rows>6) {
-    for(auto i=0; i < 3; i++) {
-      writeln(input.elements[(cols*i)..(cols*(i+1))]);
+    foreach(row; 0..3) {
+      write(e[row*cols+0],",",e[row*cols+1],",",e[row*cols+2]);
+      write("...");
+      write(e[row*cols+cols-2],",",e[row*cols+cols-1],",",e[row*cols+cols-2]);
+      writeln();
     }
     writeln("...");
-    for(auto i = rows - 3; i < rows; i++) {
-      writeln(input.elements[(cols*i)..(cols*(i+1))]);
+    foreach(row; rows-3..rows) {
+      write(e[row*cols+0],",",e[row*cols+1],",",e[row*cols+2]);
+      write("...");
+      write(e[row*cols+cols-2],",",e[row*cols+cols-1],",",e[row*cols+cols-2]);
+      writeln();
     }
   }
   else{

@@ -10,6 +10,7 @@ module faster_lmm_d.cuda;
 version(CUDA) {
 
   import std.experimental.logger;
+  import std.algorithm;
   import std.conv;
   import std.exception;
   import std.parallelism;
@@ -25,7 +26,7 @@ version(CUDA) {
 
   const ulong MB = 1024*1024;
   const cudaSuccess = cudaError.cudaSuccess;
-  cublasHandle_t cublas_handle = null;
+  __gshared cublasHandle_t cublas_handle = null;
 
 // Do not call this function outside cuda_init
 static void cuda_startup() {
@@ -50,20 +51,7 @@ void cuda_destroy() {
     cublasDestroy(cublas_handle);
 }
 
- void gpu_blas_mmul(double *A, const double *B, double *C, const m_items _m, const m_items _k, const m_items _n) {
-  auto m=to!int(_m), k=to!int(_k), n=to!int(_n);
-  auto lda=m,ldb=k,ldc=m;
-  const double alf = 1;
-  const double bet = 0;
-  const double *alpha = &alf;
-  const double *beta = &bet;
-
-  trace("Running cublasDgemm");
-  cublasDgemm(cublas_handle, cublasOperation_t.CUBLAS_OP_N, cublasOperation_t.CUBLAS_OP_N, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc);
-
-}
-
-DMatrix cuda_matrix_mult(const DMatrix rha, const DMatrix lha){
+DMatrix cuda_matrix_mult(const DMatrix A, const DMatrix B){
   trace("Entering cuda_matrix_mult");
   check_memory();
 
@@ -79,35 +67,69 @@ DMatrix cuda_matrix_mult(const DMatrix rha, const DMatrix lha){
     enforce(cudaMemcpy(dest, cast(void*)src.elements, src.byte_size, cudaMemcpyKind.cudaMemcpyHostToDevice)==cudaSuccess);
   }
 
-  //auto nr_rows_A = lha.cols;
-  //auto nr_cols_A = lha.rows;
-  //auto nr_rows_B = rha.cols;
-  //auto nr_cols_B = rha.rows;
-  auto A = lha, B = rha;
-  auto nr_rows_C = lha.cols;
-  auto nr_cols_C = rha.rows;
+  auto C_cols = B.cols;
+  auto C_rows = A.rows;
 
-  trace("CUDA result matrix size =",nr_rows_C,",",nr_cols_C);
-  if (nr_rows_C * nr_cols_C < 1000) {
+  auto C_size = C_cols * C_rows;
+  auto C_byte_size = to!size_t(C_size) * double.sizeof;
+
+  trace("CUDA result matrix size =",C_rows,",",C_cols);
+  if (C_size < 1000) {
     trace("Matrix is small, so running the CPU version instead");
-    return cpu_matrix_mult(rha,lha);
+    return cpu_matrix_mult(A,B);
   }
 
   auto d_A = gpu_malloc(A.size);
   auto d_B = gpu_malloc(B.size);
-  auto d_C = gpu_malloc(nr_rows_C * nr_cols_C);
+  auto d_C = gpu_malloc(C_size);
 
   // ---- Initialize GPU matrices
-  copy_ram_to_gpu(d_A,lha);
-  copy_ram_to_gpu(d_B,rha);
-  enforce(cudaMemset(d_C,0,to!size_t(nr_rows_C) * nr_cols_C * double.sizeof)==cudaSuccess);
+  copy_ram_to_gpu(d_A,A);
+  copy_ram_to_gpu(d_B,B);
+  // enforce(cudaMemset(d_C,0,C_byte_size)==cudaSuccess); skip because beta == 0.0
 
-  //gpu_blas_mmul(d_A, d_B, d_C, nr_rows_A, nr_cols_A, nr_cols_B);
-  gpu_blas_mmul(d_A, d_B, d_C, A.cols, A.rows, B.rows);
+  /*
+cublasStatus_t cublasDgemm(cublasHandle_t handle,
+                           cublasOperation_t transa, cublasOperation_t transb,
+                           int m, number of rows of matrix op(A) and C.
+                           int n, number of columns of matrix op(B) and C.
+                           int k, number of columns of op(A) and rows of op(B).
+                           const double          *alpha, scalar used for multiplication.
+                           const double          *A,
+                           int lda, leading dimension of two-dimensional array used to store the matrix A.
+                           const double          *B,
+                           int ldb,
+                           const double          *beta, scalar used for multiplication. If beta==0, C does not have to be a valid input.
+                           double          *C,
+                           int ldc leading dimension of a two-dimensional array used to store the matrix C.
+                           )
+  */
+
+  // C = αAxB + βC
+  int m = to!int(A.rows); // number of rows of matrix op(A) and C.
+  assert(A.rows == C_rows);
+  int n = to!int(B.cols); // number of columns of matrix op(B) and C.
+  assert(B.cols == C_cols);
+  int k = to!int(A.cols); // number of columns of op(A) and rows of op(B).
+  assert(A.cols == B.rows);
+  auto alpha = 1.0;    // scalar used for multiplication.
+  auto beta = 0.0;     // scalar used for multiplication. If beta==0, C does not have to be a valid input.
+  int lda = to!int(m); // leading dimension of two-dimensional array used to store A.
+  int ldb = to!int(k); // leading dimension of two-dimensional array used to store B.
+  int ldc = to!int(m); // leading dimension of a two-dimensional array used to store the matrix C.
+
+  trace("m=",m," n=",n," k=",k);
+  //cublasHandle_t cublas_handle2 = null;
+  //enforce(cublasCreate(&cublas_handle2) == cublasStatus_t.CUBLAS_STATUS_SUCCESS, "CUBLAS initialization failed");
+  enforce(cublasDgemm(cublas_handle,
+                      cublasOperation_t.CUBLAS_OP_N,
+                      cublasOperation_t.CUBLAS_OP_N,
+                      m, n, k, &alpha, d_A, lda, d_B, ldb, &beta, d_C, ldc)==cublasStatus_t.CUBLAS_STATUS_SUCCESS, "cublasDgemm function failed");
 
   // ---- Copy result to RAM
-  auto h_C = new double[nr_rows_C * nr_cols_C];
-  cudaMemcpy(h_C.ptr,d_C,nr_rows_C * nr_cols_C * double.sizeof, cudaMemcpyKind.cudaMemcpyDeviceToHost);
+  auto result = new double[C_size];
+  enforce(cudaMemcpy(result.ptr,d_C,C_byte_size,cudaMemcpyKind.cudaMemcpyDeviceToHost)==cudaSuccess);
+  trace("Sum=",reduce!"a + b"(0.0, result));
 
   enforce(cudaFree(d_A)==cudaSuccess,"Error freeing d_A");
   enforce(cudaFree(d_B)==cudaSuccess,"Error freeing d_B");
@@ -115,7 +137,7 @@ DMatrix cuda_matrix_mult(const DMatrix rha, const DMatrix lha){
 
   check_memory("Exit CUDA matrix multiply");
 
-  return DMatrix([nr_cols_C, nr_rows_C], h_C);
+  return DMatrix([C_cols, C_rows], result);
 }
 
 } // CUDA
