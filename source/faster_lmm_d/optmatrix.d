@@ -28,7 +28,10 @@ extern (C) {
 version(CUDA) {
   import faster_lmm_d.cuda;
   DMatrix matrix_mult(const DMatrix lha,const DMatrix rha) {
-    return cuda_matrix_mult(lha,rha);
+    auto cuda_result = cuda_matrix_mult(lha,rha);
+    auto cpu_result  = cpu_matrix_mult(lha,rha);
+    assert(cuda_result == cpu_result);
+    return cuda_result;
   }
 } else {
   DMatrix matrix_mult(const DMatrix lha,const DMatrix rha) {

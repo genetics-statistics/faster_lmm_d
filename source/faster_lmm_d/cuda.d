@@ -88,7 +88,7 @@ DMatrix cuda_matrix_mult(const DMatrix rha, const DMatrix lha){
   auto nr_cols_C = rha.rows;
 
   trace("CUDA result matrix size =",nr_rows_C,",",nr_cols_C);
-  if (nr_rows_C * nr_cols_C < 10000 || nr_rows_C < 10 || nr_cols_C < 10) {
+  if (nr_rows_C * nr_cols_C < 1000) {
     trace("Matrix is small, so running the CPU version instead");
     return cpu_matrix_mult(rha,lha);
   }
