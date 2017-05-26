@@ -23,6 +23,7 @@ version(CUDA) {
   import faster_lmm_d.memory;
 
   const ulong MB = 1024*1024;
+  const cudaSuccess = cudaError.cudaSuccess;
 
 void gpu_blas_mmul(double *A, const double *B, double *C, const m_items _m, const m_items _k, const m_items _n) {
   auto m=to!int(_m), k=to!int(_k), n=to!int(_n);
@@ -34,8 +35,7 @@ void gpu_blas_mmul(double *A, const double *B, double *C, const m_items _m, cons
 
   // Create a handle for CUBLAS
   cublasHandle_t handle;
-  cublasCreate(&handle);
-
+  enforce(cublasCreate(&handle) == cublasStatus_t.CUBLAS_STATUS_SUCCESS, "CUBLAS initialization failed");
   trace("Running cublasDgemm");
   cublasDgemm(handle, cublasOperation_t.CUBLAS_OP_N, cublasOperation_t.CUBLAS_OP_N, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc);
 
@@ -50,9 +50,13 @@ DMatrix cuda_matrix_mult(const DMatrix rha, const DMatrix lha){
   double *gpu_malloc(ulong size) {
     void *gpu_ptr;
     trace("Allocating GPU RAM of ",(size * to!uint(double.sizeof))/MB,"MB");
-    auto cudaStat = cudaMalloc(&gpu_ptr, size * to!uint(double.sizeof));
-    enforce(cudaStat == cudaError.cudaSuccess,"CUDA device memory allocation failed");
+    auto cudaStat = cudaMalloc(&gpu_ptr, to!size_t(size) * double.sizeof);
+    enforce(cudaStat == cudaSuccess,"CUDA device memory allocation failed");
     return cast(double *)gpu_ptr;
+  }
+
+  void copy_ram_to_gpu(double *dest, const DMatrix src) {
+    enforce(cudaMemcpy(dest, cast(void*)src.elements, src.byte_size, cudaMemcpyKind.cudaMemcpyHostToDevice)==cudaSuccess);
   }
 
   auto nr_rows_A = lha.cols;
@@ -68,30 +72,26 @@ DMatrix cuda_matrix_mult(const DMatrix rha, const DMatrix lha){
     return cpu_matrix_mult(rha,lha);
   }
 
-  trace("CUDA A matrix size =",nr_rows_A,",",nr_cols_A);
   auto d_A = gpu_malloc(nr_rows_A * nr_cols_A);
-  trace("CUDA A matrix size =",nr_rows_B,",",nr_cols_B);
   auto d_B = gpu_malloc(nr_rows_B * nr_cols_B);
   auto d_C = gpu_malloc(nr_rows_C * nr_cols_C);
 
-  cudaMemcpy(cast(void*)d_A, cast(void*)lha.elements, nr_rows_A * nr_cols_A * double.sizeof, cudaMemcpyKind.cudaMemcpyHostToDevice);
-  cudaMemcpy(cast(void*)d_B, cast(void*)rha.elements, nr_rows_B * nr_cols_B * double.sizeof, cudaMemcpyKind.cudaMemcpyHostToDevice);
-
-  // Multiply A and B on GPU
+  // ---- Initialize GPU matrices
+  copy_ram_to_gpu(d_A,lha);
+  copy_ram_to_gpu(d_B,rha);
+  enforce(cudaMemset(d_C,0,to!size_t(nr_rows_C) * nr_cols_C * double.sizeof)==cudaSuccess);
 
   gpu_blas_mmul(d_A, d_B, d_C, nr_rows_A, nr_cols_A, nr_cols_B);
 
-  // Copy (and print) the result on host memory
+  // ---- Copy result to RAM
   auto h_C = new double[nr_rows_C * nr_cols_C];
   cudaMemcpy(h_C.ptr,d_C,nr_rows_C * nr_cols_C * double.sizeof, cudaMemcpyKind.cudaMemcpyDeviceToHost);
 
-  //Free GPU memory
-  cudaFree(d_A);
-  cudaFree(d_B);
-  cudaFree(d_C);
+  enforce(cudaFree(d_A)==cudaSuccess,"Error freeing d_A");
+  enforce(cudaFree(d_B)==cudaSuccess,"Error freeing d_B");
+  enforce(cudaFree(d_C)==cudaSuccess,"Error freeing d_C");
 
-  check_memory();
-  trace("Exit cuda_matrix_mult");
+  check_memory("Exit CUDA matrix multiply");
 
   return DMatrix([rha.rows, lha.cols], h_C);
 }

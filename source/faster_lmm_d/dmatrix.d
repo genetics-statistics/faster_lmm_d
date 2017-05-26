@@ -32,6 +32,7 @@ struct DMatrix{
   pragma(inline) const m_items cols() { return shape[1]; }
   pragma(inline) const m_items rows() { return shape[0]; }
   pragma(inline) const m_items size() { return rows() * cols(); }
+  pragma(inline) const size_t byte_size() { return size() * double.sizeof; }
   pragma(inline) const m_items n_pheno() { return cols; }
   pragma(inline) const m_items m_geno() { return rows; }
   pragma(inline) const bool is_square() { return rows == cols; };
