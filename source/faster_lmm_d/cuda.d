@@ -26,8 +26,10 @@ version(CUDA) {
   const ulong MB = 1024*1024;
   const cudaSuccess = cudaError.cudaSuccess;
 
+// Do not call this function outside cuda_init
 static void cuda_startup() {
   void *dummy;
+  // allocate some CUDA RAM to force initialization
   enforce(cudaMalloc(&dummy, 8000)==cudaSuccess,"CUDA failed to initialize");
   enforce(cudaFree(dummy)==cudaSuccess);
 }
@@ -36,7 +38,7 @@ void cuda_init() {
   trace("Initializing CUDA on separate thread");
   auto t = task!cuda_startup();
   t.executeInNewThread();
-  trace("Continue...");
+  trace("Back to main thread...");
 }
 
 void gpu_blas_mmul(double *A, const double *B, double *C, const m_items _m, const m_items _k, const m_items _n) {
