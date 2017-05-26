@@ -7,9 +7,13 @@
 
 module faster_lmm_d.dmatrix;
 
+import std.algorithm;
+import std.conv;
 import std.math;
 import std.stdio;
 import std.typecons;
+
+import faster_lmm_d.optmatrix;
 
 alias size_t m_items; // dimensions are never negative
 
@@ -29,12 +33,26 @@ struct DMatrix{
     init     = true;
   }
 
+  const sum() { return reduce!"a + b"(0.0, elements); }
+
   pragma(inline) const m_items cols() { return shape[1]; }
   pragma(inline) const m_items rows() { return shape[0]; }
   pragma(inline) const m_items size() { return rows() * cols(); }
+  pragma(inline) const size_t byte_size() { return size() * double.sizeof; }
   pragma(inline) const m_items n_pheno() { return cols; }
   pragma(inline) const m_items m_geno() { return rows; }
   pragma(inline) const bool is_square() { return rows == cols; };
+
+  void validate(const DMatrix other) {
+    stderr.write("CPU result:");
+    pretty_print(other);
+    stderr.write("CUDA result:");
+    pretty_print(this);
+    assert(rows == other.rows, "CUDA rows mismatch, expected "~to!string(other.rows)~" but got "~to!string(rows));
+    assert(rows == other.cols, "CUDA rows mismatch, expected "~to!string(other.cols)~" but got "~to!string(cols));
+    assert(elements.length == other.elements.length);
+    assert(sum == other.sum, "CUDA result mismatch, expected "~to!string(other.sum)~" but got "~to!string(sum));
+  }
 }
 
 alias Tuple!(const DMatrix, "geno", immutable string[], "gnames", immutable string[], "ynames") GenoObj;

@@ -23,6 +23,7 @@ auto run_gwas(immutable m_items n, immutable m_items m, DMatrix k, immutable dou
   trace("run_gwas");
   trace("pheno ", y.length," ", y[0..4]);
   trace(geno.shape,m);
+  check_memory("before run_gwas");
   assert(y.length == n);
   assert(geno.m_geno == m);
 
@@ -33,8 +34,6 @@ auto run_gwas(immutable m_items n, immutable m_items m, DMatrix k, immutable dou
   trace("run_other_new genotype_matrix: ", G.shape);
   DMatrix K = kinship_full(G);
   trace("kinship_matrix.shape: ", K.shape);
-
-  check_memory();
 
   return gwas(pheno.Y, G, K, true, false, true);
 }

@@ -14,10 +14,12 @@ import faster_lmm_d.cuda;
 import faster_lmm_d.dmatrix;
 import faster_lmm_d.helpers;
 import faster_lmm_d.optmatrix;
+import faster_lmm_d.memory;
 
 DMatrix kinship_full(const DMatrix G)
 {
   info("Full kinship matrix used");
+  check_memory();
   m_items m = G.rows(); // snps
   m_items n = G.cols(); // inds
   log(m," SNPs");
@@ -33,6 +35,7 @@ DMatrix kinship_full(const DMatrix G)
   ulong lr = n*n-1;
   ulong ll = (n-1)*n;
   log(K.elements[ll],",",K.elements[ll+1],",",K.elements[ll+2],"...",K.elements[lr-2],",",K.elements[lr-1],",",K.elements[lr]);
+  check_memory();
   return K;
 }
 

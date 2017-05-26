@@ -34,7 +34,7 @@ auto gwas(immutable double[] Y, const DMatrix G, const DMatrix K, const bool rem
   DMatrix Kve;
   DMatrix X0;
 
-  check_memory();
+  check_memory("Before gwas");
 
   LMM lmm = LMM(Y, K, Kva, Kve, X0, true);
   lmm = lmm_transform(lmm);
