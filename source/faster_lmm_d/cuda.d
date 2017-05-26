@@ -12,6 +12,7 @@ version(CUDA) {
   import std.experimental.logger;
   import std.conv;
   import std.exception;
+  import std.parallelism;
 
   import cuda_d.cublas_api;
   import cuda_d.cublas_v2;
@@ -24,6 +25,19 @@ version(CUDA) {
 
   const ulong MB = 1024*1024;
   const cudaSuccess = cudaError.cudaSuccess;
+
+static void cuda_startup() {
+  void *dummy;
+  enforce(cudaMalloc(&dummy, 8000)==cudaSuccess,"CUDA failed to initialize");
+  enforce(cudaFree(dummy)==cudaSuccess);
+}
+
+void cuda_init() {
+  trace("Initializing CUDA on separate thread");
+  auto t = task!cuda_startup();
+  t.executeInNewThread();
+  trace("Continue...");
+}
 
 void gpu_blas_mmul(double *A, const double *B, double *C, const m_items _m, const m_items _k, const m_items _n) {
   auto m=to!int(_m), k=to!int(_k), n=to!int(_n);
@@ -59,10 +73,11 @@ DMatrix cuda_matrix_mult(const DMatrix rha, const DMatrix lha){
     enforce(cudaMemcpy(dest, cast(void*)src.elements, src.byte_size, cudaMemcpyKind.cudaMemcpyHostToDevice)==cudaSuccess);
   }
 
-  auto nr_rows_A = lha.cols;
-  auto nr_cols_A = lha.rows;
-  auto nr_rows_B = rha.cols;
-  auto nr_cols_B = rha.rows;
+  //auto nr_rows_A = lha.cols;
+  //auto nr_cols_A = lha.rows;
+  //auto nr_rows_B = rha.cols;
+  //auto nr_cols_B = rha.rows;
+  auto A = lha, B = rha;
   auto nr_rows_C = lha.cols;
   auto nr_cols_C = rha.rows;
 
@@ -72,8 +87,8 @@ DMatrix cuda_matrix_mult(const DMatrix rha, const DMatrix lha){
     return cpu_matrix_mult(rha,lha);
   }
 
-  auto d_A = gpu_malloc(nr_rows_A * nr_cols_A);
-  auto d_B = gpu_malloc(nr_rows_B * nr_cols_B);
+  auto d_A = gpu_malloc(A.size);
+  auto d_B = gpu_malloc(B.size);
   auto d_C = gpu_malloc(nr_rows_C * nr_cols_C);
 
   // ---- Initialize GPU matrices
@@ -81,7 +96,8 @@ DMatrix cuda_matrix_mult(const DMatrix rha, const DMatrix lha){
   copy_ram_to_gpu(d_B,rha);
   enforce(cudaMemset(d_C,0,to!size_t(nr_rows_C) * nr_cols_C * double.sizeof)==cudaSuccess);
 
-  gpu_blas_mmul(d_A, d_B, d_C, nr_rows_A, nr_cols_A, nr_cols_B);
+  //gpu_blas_mmul(d_A, d_B, d_C, nr_rows_A, nr_cols_A, nr_cols_B);
+  gpu_blas_mmul(d_A, d_B, d_C, A.cols, A.rows, B.rows);
 
   // ---- Copy result to RAM
   auto h_C = new double[nr_rows_C * nr_cols_C];
@@ -93,7 +109,7 @@ DMatrix cuda_matrix_mult(const DMatrix rha, const DMatrix lha){
 
   check_memory("Exit CUDA matrix multiply");
 
-  return DMatrix([rha.rows, lha.cols], h_C);
+  return DMatrix([nr_cols_C, nr_rows_C], h_C);
 }
 
 } // CUDA

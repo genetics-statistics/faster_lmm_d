@@ -25,6 +25,10 @@ import faster_lmm_d.rqtlreader;
 import faster_lmm_d.tsvreader;
 import faster_lmm_d.memory;
 
+version(CUDA) {
+  import faster_lmm_d.cuda : cuda_init;
+}
+
 //import gperftools_d.profiler;
 
 void printUsage() {
@@ -124,6 +128,9 @@ void main(string[] args)
     trace(ctrl);
   }
 
+  version(CUDA) {
+    cuda_init();
+  }
   // ---- Phenotypes
   double[] pheno_vector;
 
