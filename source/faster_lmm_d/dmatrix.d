@@ -46,22 +46,26 @@ struct DMatrix{
   /*
    * Validate by comparing two Dmatrices.
    * Params:
-   *	other     = matrix to compare
+   *	compute   = delegate returns other matrix to compare
    *	threshold = threshold is used to compare the sum of contents,
    *                created on different hardware. Typically the
    *                difference will be very small
   */
-  void validate(const DMatrix other, const double threshold=1.0) {
-    stderr.write("Other result:");
-    pretty_print(other);
-    stderr.write("Result:");
-    pretty_print(this);
-    assert(rows == other.rows, "rows mismatch, expected "~to!string(other.rows)~" but got "~to!string(rows));
-    assert(cols == other.cols, "cols mismatch, expected "~to!string(other.cols)~" but got "~to!string(cols));
-    assert(elements.length == other.elements.length);
-    assert(abs(elements[$-1]-other.elements[$-1])<threshold,"elements.last mismatch");
-    assert(abs(elements[0]-other.elements[0])<threshold,"elements[0] mismatch");
-    assert(abs(sum-other.sum)<threshold, "sum mismatch, expected "~to!string(other.sum)~" but got "~to!string(sum));
+  void validate(DMatrix delegate() compute,
+                const double threshold=1.0) {
+    debug {
+      auto other = compute();
+      stderr.write("Other result:");
+      pretty_print(other);
+      stderr.write("Result:");
+      pretty_print(this);
+      assert(rows == other.rows, "rows mismatch, expected "~to!string(other.rows)~" but got "~to!string(rows));
+      assert(cols == other.cols, "cols mismatch, expected "~to!string(other.cols)~" but got "~to!string(cols));
+      assert(elements.length == other.elements.length);
+      assert(abs(elements[$-1]-other.elements[$-1])<threshold,"elements.last mismatch");
+      assert(abs(elements[0]-other.elements[0])<threshold,"elements[0] mismatch");
+      assert(abs(sum-other.sum)<threshold, "sum mismatch, expected "~to!string(other.sum)~" but got "~to!string(sum));
+    }
   }
 }
 

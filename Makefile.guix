@@ -60,7 +60,7 @@ guix:        DFLAGS += -O -g -inline
 guix-debug:  DFLAGS += -O0 -g -d-debug -unittest
 
 # The development options are run from ~/.guix-profile and need to inject the RPATH
-debug:       DFLAGS += -O0 -g -d-debug $(RPATH) -link-debuglib $(CUDA_FLAG)
+debug:       DFLAGS += -O0 -g -d-debug $(RPATH) -link-debuglib
 
 release:     DFLAGS += -O -release $(RPATH)
 
@@ -69,6 +69,10 @@ profile:     DFLAGS += -fprofile-instr-generate=fast_lmm_d-profiler.out $(RPATH)
 getIR: DFLAGS += -output-ll
 
 getBC: DFLAGS += -output-bc
+
+ifdef CUDA
+  DFLAGS += $(CUDA_FLAG)
+endif
 
 gperf: LIBS += -L=-lprofiler
 
