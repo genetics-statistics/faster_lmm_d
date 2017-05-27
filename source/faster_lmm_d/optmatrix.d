@@ -39,8 +39,8 @@ version(ARRAYFIRE){
   import faster_lmm_d.arrayfire;
   DMatrix matrix_mult(const DMatrix lha,const DMatrix rha) {
     af_array device_lha, device_rha, device_result;
-    const long[] ldims = [cast(long)lha.cols, cast(long)lha.rows];
-    const long[] rdims = [cast(long)rha.cols, cast(long)rha.rows];
+    const long[] ldims = [to!long(lha.cols), to!long(lha.rows)];
+    const long[] rdims = [to!long(rha.cols), to!long(rha.rows)];
     af_create_array(&device_lha, cast(void *)lha.elements, 2,  ldims.ptr, af_dtype.f64);
     af_create_array(&device_rha, cast(void *)rha.elements, 2,  rdims.ptr, af_dtype.f64);
     af_matmul(&device_result , device_rha, device_lha, af_mat_prop.AF_MAT_NONE , af_mat_prop.AF_MAT_NONE);
@@ -63,16 +63,16 @@ version(CPU){
 
 DMatrix cpu_matrix_mult(const DMatrix lha,const DMatrix rha) {
   double[] C = new double[lha.rows()*rha.cols()];
-  gemm(Order.RowMajor, Transpose.NoTrans, Transpose.NoTrans, cast(int)lha.rows(), cast(int)rha.cols(), cast(int)lha.cols(), /*no scaling*/
-       1,lha.elements.ptr, cast(int)lha.cols(), rha.elements.ptr, cast(int)rha.cols(), /*no addition*/0, C.ptr, cast(int)rha.cols());
+  gemm(Order.RowMajor, Transpose.NoTrans, Transpose.NoTrans, to!int(lha.rows), to!int(rha.cols), to!int(lha.cols), /*no scaling*/
+       1,lha.elements.ptr, to!int(lha.cols), rha.elements.ptr, to!int(rha.cols), /*no addition*/0, C.ptr, to!int(rha.cols));
   auto res_shape = [lha.rows(),rha.cols()];
   return DMatrix(res_shape, C);
 }
 
 DMatrix matrix_mult_transpose(const DMatrix lha, const DMatrix rha) {
   double[] C = new double[lha.rows()*rha.rows()];
-  gemm(Order.RowMajor, Transpose.NoTrans, Transpose.NoTrans, cast(int)lha.rows(), cast(int)rha.rows(), cast(int)lha.cols(), /*no scaling*/
-       1,lha.elements.ptr, cast(int)lha.cols(), rha.elements.ptr, cast(int)rha.rows(), /*no addition*/0, C.ptr, cast(int)rha.rows());
+  gemm(Order.RowMajor, Transpose.NoTrans, Transpose.NoTrans, to!int(lha.rows), to!int(rha.rows), to!int(lha.cols), /*no scaling*/
+       1,lha.elements.ptr, to!int(lha.cols), rha.elements.ptr, to!int(rha.rows), /*no addition*/0, C.ptr, to!int(rha.rows));
   auto res_shape = [lha.rows(),rha.rows()];
   return DMatrix(res_shape, C);
 }
@@ -126,7 +126,7 @@ DMatrix slice_dmatrix(const DMatrix input, const ulong[] along) {
   trace("In slice_dmatrix");
   double[] output;
   foreach(row_index; along) {
-    for(auto i=cast(ulong)(row_index*input.cols()); i < (row_index+1)*input.cols(); i++) {
+    for(auto i=to!ulong(row_index*input.cols); i < (row_index+1)*input.cols(); i++) {
       output ~= input.elements[i];
     }
   }
@@ -231,12 +231,12 @@ EighTuple eigh(const DMatrix input) {
   double[] elements = input.elements.dup;
 
   double wi;
-  int n = cast(int)input.rows();
+  int n = to!int(input.rows);
   double vu, vl;
   int[] m = new int[n];
   int[] isuppz = new int[2*n];
   int il = 1;
-  int iu = cast(int)input.cols();
+  int iu = to!int(input.cols);
   int ldz = n;
   double abstol = 0.001; //default value for abstol
 
@@ -286,7 +286,7 @@ body {
 Tuple!(immutable(int[]),immutable(double[])) getrf(const double[] arr, const m_items cols) {
   auto arr2 = arr.dup;
   auto ipiv = new int[cols+1];
-  int i_cols = cast(int)cols;
+  int i_cols = to!int(cols);
   LAPACKE_dgetrf(101,i_cols,i_cols,arr2.ptr,i_cols,ipiv.ptr);
   return Tuple!(immutable(int[]),immutable(double[]))(cast(immutable(int[]))ipiv,cast(immutable(double[]))arr2);
 }
@@ -300,8 +300,8 @@ DMatrix inverse(const DMatrix input) {
   auto ipiv = new int[rows+1];
   auto result = new double[total_elements];
   int info;
-  int output = LAPACKE_dgetrf(101, cast(int)rows,cast(int)rows,elements.ptr,cast(int)rows,ipiv.ptr);
-  LAPACKE_dgetri(101, cast(int)rows, elements.ptr, cast(int)rows, ipiv.ptr);
+  int output = LAPACKE_dgetrf(101, to!int(rows), to!int(rows), elements.ptr, to!int(rows), ipiv.ptr);
+  LAPACKE_dgetri(101, to!int(rows), elements.ptr, to!int(rows), ipiv.ptr);
   return DMatrix(input.shape, elements);
 }
 

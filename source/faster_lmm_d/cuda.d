@@ -9,6 +9,9 @@ module faster_lmm_d.cuda;
 
 version(CUDA) {
 
+import core.stdc.stdlib : exit;
+import std.conv;
+
 import cuda_d.cublas_api;
 import cuda_d.cublas_v2;
 import cuda_d.cuda;
@@ -16,7 +19,7 @@ import cuda_d.cuda_runtime_api;
 
 import faster_lmm_d.dmatrix;
 import faster_lmm_d.memory;
-import core.stdc.stdlib : exit;
+
 
  void cuda_init() {};
  void cuda_destroy() {};
@@ -44,30 +47,30 @@ DMatrix cuda_matrix_mult(const DMatrix rha, const DMatrix lha){
   check_memory();
 
   int nr_rows_A, nr_cols_A, nr_rows_B, nr_cols_B, nr_rows_C, nr_cols_C;
-  nr_rows_A = cast(int)lha.cols;
-  nr_cols_A = cast(int)lha.rows;
-  nr_rows_B = cast(int)rha.cols;
-  nr_cols_B = cast(int)rha.rows;
-  nr_rows_C = cast(int)lha.cols;
-  nr_cols_C = cast(int)rha.rows;
+  nr_rows_A = to!int(lha.cols);
+  nr_cols_A = to!int(lha.rows);
+  nr_rows_B = to!int(rha.cols);
+  nr_cols_B = to!int(rha.rows);
+  nr_rows_C = to!int(lha.cols);
+  nr_cols_C = to!int(rha.rows);
 
   auto h_C = new double[nr_rows_C * nr_cols_C];
 
   double* d_A, d_B, d_C;
 
-  cudaMalloc(cast(void **)&d_A,nr_rows_A * nr_cols_A * cast(int)double.sizeof);
-  cudaMalloc(cast(void **)&d_B,nr_rows_B * nr_cols_B * cast(int)double.sizeof);
-  cudaMalloc(cast(void **)&d_C,nr_rows_C * nr_cols_C * cast(int)double.sizeof);
+  cudaMalloc(cast(void **)&d_A,nr_rows_A * nr_cols_A * to!int(double.sizeof));
+  cudaMalloc(cast(void **)&d_B,nr_rows_B * nr_cols_B * to!int(double.sizeof));
+  cudaMalloc(cast(void **)&d_C,nr_rows_C * nr_cols_C * to!int(double.sizeof));
 
-  cudaMemcpy(cast(void*)d_A, cast(void*)lha.elements, nr_rows_A * nr_cols_A * cast(int)double.sizeof, cudaMemcpyKind.cudaMemcpyHostToDevice);
-  cudaMemcpy(cast(void*)d_B, cast(void*)rha.elements, nr_rows_B * nr_cols_B * cast(int)double.sizeof, cudaMemcpyKind.cudaMemcpyHostToDevice);
+  cudaMemcpy(cast(void*)d_A, cast(void*)lha.elements, nr_rows_A * nr_cols_A * to!int(double.sizeof), cudaMemcpyKind.cudaMemcpyHostToDevice);
+  cudaMemcpy(cast(void*)d_B, cast(void*)rha.elements, nr_rows_B * nr_cols_B * to!int(double.sizeof), cudaMemcpyKind.cudaMemcpyHostToDevice);
 
   // Multiply A and B on GPU
 
   gpu_blas_mmul(d_A, d_B, d_C, nr_rows_A, nr_cols_A, nr_cols_B);
 
   // Copy (and print) the result on host memory
-  cudaMemcpy(h_C.ptr,d_C,nr_rows_C * nr_cols_C * cast(int)double.sizeof, cudaMemcpyKind.cudaMemcpyDeviceToHost);
+  cudaMemcpy(h_C.ptr,d_C,nr_rows_C * nr_cols_C * to!int(double.sizeof), cudaMemcpyKind.cudaMemcpyDeviceToHost);
 
   //Free GPU memory
   cudaFree(d_A);

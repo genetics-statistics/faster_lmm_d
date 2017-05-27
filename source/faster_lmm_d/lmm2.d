@@ -7,6 +7,7 @@
 
 module faster_lmm_d.lmm2;
 
+import std.conv;
 import std.experimental.logger;
 import std.math;
 alias mlog = std.math.log;
@@ -163,7 +164,7 @@ MLSol getMLSoln(const LMM lmmobject, const double h, const DMatrix X){
   DMatrix YtT = matrix_transpose(Yt);
   DMatrix YtTS = multiply_dmatrix(YtT, S);
   DMatrix Q = matrix_mult(YtTS,Yt);
-  double sigma = Q.elements[0] * 1.0 / (cast(double)(lmmobject.N) - cast(double)(X.shape[1]));
+  double sigma = Q.elements[0] * 1.0 / (to!double(lmmobject.N) - to!double(X.shape[1]));
   return MLSol(beta, sigma, Q, XX_i, XX);
 }
 
@@ -187,8 +188,8 @@ LLTuple get_LL(const LMM lmmobject, const double h, const DMatrix param_X, const
   //   REML is computed by adding additional terms to the standard LL and can be computed by setting REML=True.
   const DMatrix X = ( param_X.init != true ? lmmobject.X0t : param_X );
 
-  double n = cast(double)lmmobject.N;
-  double q = cast(double)X.shape[1];
+  double n = to!double(lmmobject.N);
+  double q = to!double(X.shape[1]);
 
   MLSol ml = getMLSoln(lmmobject, h, X);
 
@@ -295,7 +296,7 @@ LMM lmm_fit(const LMM lmmobject, const DMatrix X_param, const ulong ngrids=100, 
   }
   double[] Harr = new double[ngrids];
   for(auto m = 0; m < ngrids; m++){
-    Harr[m] = m / cast(double)ngrids;
+    Harr[m] = m / to!double(ngrids);
   }
 
   double[] elm = new double[ngrids];
