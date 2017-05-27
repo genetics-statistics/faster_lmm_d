@@ -52,7 +52,11 @@ void cuda_destroy() {
     cublasDestroy(cublas_handle);
 }
 
-DMatrix cuda_matrix_mult(const DMatrix A, const DMatrix B){
+/*
+ * Matrix multiplication using CUDA.
+ */
+
+DMatrix cuda_matrix_mult(const DMatrix _B, const DMatrix _A){
   trace("Entering cuda_matrix_mult");
   check_memory();
 
@@ -68,17 +72,23 @@ DMatrix cuda_matrix_mult(const DMatrix A, const DMatrix B){
     enforce(cudaMemcpy(dest, cast(void*)src.elements, src.byte_size, cudaMemcpyKind.cudaMemcpyHostToDevice)==cudaSuccess);
   }
 
-  auto C_cols = B.cols;
-  auto C_rows = A.rows;
+  // CUDA is column major ordered by default
+  auto A = DMatrix([_A.shape[1],_A.shape[0]],_A.elements);
+  auto B = DMatrix([_B.shape[1],_B.shape[0]],_B.elements);
+
+  // auto C_cols = B.cols;
+  // auto C_rows = A.rows;
+  auto C_cols = _B.rows;
+  auto C_rows = _A.cols;
 
   auto C_size = C_cols * C_rows;
   auto C_byte_size = to!size_t(C_size) * double.sizeof;
 
   trace("CUDA result matrix size =",C_rows,",",C_cols);
-  if (C_size < 1000) {
-    trace("Matrix is small, so running the CPU version instead");
-    return cpu_matrix_mult(A,B);
-  }
+  //if (C_size < 1000) {
+  //  trace("Matrix is small, so running the CPU version instead");
+  //  return cpu_matrix_mult(A,B);
+  //}
 
   auto d_A = gpu_malloc(A.size);
   auto d_B = gpu_malloc(B.size);
@@ -87,24 +97,7 @@ DMatrix cuda_matrix_mult(const DMatrix A, const DMatrix B){
   // ---- Initialize GPU matrices
   copy_ram_to_gpu(d_A,A);
   copy_ram_to_gpu(d_B,B);
-  enforce(cudaMemset(d_C,0,C_byte_size)==cudaSuccess); // skip because beta == 0.0
-
-  /*
-cublasStatus_t cublasDgemm(cublasHandle_t handle,
-                           cublasOperation_t transa, cublasOperation_t transb,
-                           int m, number of rows of matrix op(A) and C.
-                           int n, number of columns of matrix op(B) and C.
-                           int k, number of columns of op(A) and rows of op(B).
-                           const double          *alpha, scalar used for multiplication.
-                           const double          *A,
-                           int lda, leading dimension of two-dimensional array used to store the matrix A.
-                           const double          *B,
-                           int ldb,
-                           const double          *beta, scalar used for multiplication. If beta==0, C does not have to be a valid input.
-                           double          *C,
-                           int ldc leading dimension of a two-dimensional array used to store the matrix C.
-                           )
-  */
+  // enforce(cudaMemset(d_C,0,C_byte_size)==cudaSuccess); // skip because beta == 0.0
 
   // C = αAxB + βC
   int m = to!int(A.rows); // number of rows of matrix op(A) and C.
@@ -120,6 +113,18 @@ cublasStatus_t cublasDgemm(cublasHandle_t handle,
   int ldc = to!int(m); // leading dimension of a two-dimensional array used to store the matrix C.
 
   trace("m=",m," n=",n," k=",k);
+  // for A array of dimensions lda x k with lda>=max(1,m) if transa == CUBLAS_OP_N and lda x m with lda>=max(1,k) otherwise.
+  enforce(lda >= max(1,m));
+  enforce(lda * k == A.size);
+
+  // for B array of dimension ldb x n with ldb>=max(1,k) if transa == CUBLAS_OP_N and ldb x k with ldb>=max(1,n) otherwise
+  enforce(ldb >= max(1,k));
+  enforce(ldb * n == B.size);
+
+  // for C array array of dimensions ldc x n with ldc>=max(1,m).
+  enforce(ldc >= max(1,m));
+  enforce(ldc * n == C_size);
+
   //cublasHandle_t cublas_handle2 = null;
   //enforce(cublasCreate(&cublas_handle2) == cublasStatus_t.CUBLAS_STATUS_SUCCESS, "CUBLAS initialization failed");
   enforce(cublasDgemm(cublas_handle,

@@ -75,7 +75,7 @@ void pretty_print(const DMatrix input) {
   m_items rows = input.rows();
   auto e = input.elements;
   writeln("[");
-  if(rows>6) {
+  if(rows>6 && cols>6) {
     foreach(row; 0..3) {
       write(e[row*cols+0],",",e[row*cols+1],",",e[row*cols+2]);
       write("...");
@@ -91,8 +91,10 @@ void pretty_print(const DMatrix input) {
     }
   }
   else{
-    for(auto i = 0; i < rows; i++) {
-      writeln(input.elements[(cols*i)..(cols*(i+1))]);
+    foreach(i, c; e) {
+      write(c,",");
+      if (i>6)
+        break;
     }
   }
 
