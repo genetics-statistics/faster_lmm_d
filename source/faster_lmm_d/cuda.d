@@ -87,7 +87,7 @@ DMatrix cuda_matrix_mult(const DMatrix A, const DMatrix B){
   // ---- Initialize GPU matrices
   copy_ram_to_gpu(d_A,A);
   copy_ram_to_gpu(d_B,B);
-  // enforce(cudaMemset(d_C,0,C_byte_size)==cudaSuccess); skip because beta == 0.0
+  enforce(cudaMemset(d_C,0,C_byte_size)==cudaSuccess); // skip because beta == 0.0
 
   /*
 cublasStatus_t cublasDgemm(cublasHandle_t handle,
@@ -108,11 +108,11 @@ cublasStatus_t cublasDgemm(cublasHandle_t handle,
 
   // C = αAxB + βC
   int m = to!int(A.rows); // number of rows of matrix op(A) and C.
-  assert(A.rows == C_rows);
+  enforce(A.rows == C_rows);
   int n = to!int(B.cols); // number of columns of matrix op(B) and C.
-  assert(B.cols == C_cols);
+  enforce(B.cols == C_cols);
   int k = to!int(A.cols); // number of columns of op(A) and rows of op(B).
-  assert(A.cols == B.rows);
+  enforce(A.cols == B.rows);
   auto alpha = 1.0;    // scalar used for multiplication.
   auto beta = 0.0;     // scalar used for multiplication. If beta==0, C does not have to be a valid input.
   int lda = to!int(m); // leading dimension of two-dimensional array used to store A.
