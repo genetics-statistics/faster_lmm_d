@@ -43,15 +43,29 @@ struct DMatrix{
   pragma(inline) const m_items m_geno() { return rows; }
   pragma(inline) const bool is_square() { return rows == cols; };
 
-  void validate(const DMatrix other) {
-    stderr.write("CPU result:");
-    pretty_print(other);
-    stderr.write("CUDA result:");
-    pretty_print(this);
-    assert(rows == other.rows, "CUDA rows mismatch, expected "~to!string(other.rows)~" but got "~to!string(rows));
-    assert(rows == other.cols, "CUDA rows mismatch, expected "~to!string(other.cols)~" but got "~to!string(cols));
-    assert(elements.length == other.elements.length);
-    assert(sum == other.sum, "CUDA result mismatch, expected "~to!string(other.sum)~" but got "~to!string(sum));
+  /*
+   * Validate by comparing two Dmatrices.
+   * Params:
+   *	compute   = delegate returns other matrix to compare
+   *	threshold = threshold is used to compare the sum of contents,
+   *                created on different hardware. Typically the
+   *                difference will be very small
+  */
+  void validate(DMatrix delegate() compute,
+                const double threshold=1.0) {
+    debug {
+      auto other = compute();
+      stderr.write("Other result:");
+      pretty_print(other);
+      stderr.write("Result:");
+      pretty_print(this);
+      assert(rows == other.rows, "rows mismatch, expected "~to!string(other.rows)~" but got "~to!string(rows));
+      assert(cols == other.cols, "cols mismatch, expected "~to!string(other.cols)~" but got "~to!string(cols));
+      assert(elements.length == other.elements.length);
+      assert(abs(elements[$-1]-other.elements[$-1])<threshold,"elements.last mismatch");
+      assert(abs(elements[0]-other.elements[0])<threshold,"elements[0] mismatch");
+      assert(abs(sum-other.sum)<threshold, "sum mismatch, expected "~to!string(other.sum)~" but got "~to!string(sum));
+    }
   }
 }
 

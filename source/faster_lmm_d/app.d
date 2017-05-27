@@ -155,8 +155,8 @@ void main(string[] args)
   if(g.rows != y.sizeof){
     info("Reduce geno matrix to match # strains in phenotype");
     trace("gnames and phenotypes");
-    trace("gnames=",gnames);
-    trace("ynames=",ynames);
+    trace("gnames=",gnames[0..6]);
+    trace("ynames=",ynames[0..6]);
     ulong[] gidx = [];
     ulong index = 0;
 
