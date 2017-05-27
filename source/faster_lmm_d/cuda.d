@@ -24,6 +24,7 @@ version(CUDA) {
   import faster_lmm_d.optmatrix;
   import faster_lmm_d.memory;
 
+  alias GPU_PTR = double *;
   const ulong MB = 1024*1024;
   const cudaSuccess = cudaError.cudaSuccess;
   __gshared cublasHandle_t cublas_handle = null;
@@ -55,15 +56,15 @@ DMatrix cuda_matrix_mult(const DMatrix A, const DMatrix B){
   trace("Entering cuda_matrix_mult");
   check_memory();
 
-  double *gpu_malloc(ulong size) {
-    void *gpu_ptr;
-    trace("Allocating GPU RAM of ",(size * to!uint(double.sizeof))/MB,"MB");
-    auto cudaStat = cudaMalloc(&gpu_ptr, to!size_t(size) * double.sizeof);
-    enforce(cudaStat == cudaSuccess,"CUDA device memory allocation failed");
-    return cast(double *)gpu_ptr;
+  GPU_PTR gpu_malloc(ulong size) {
+    void *gpu_mem;
+    auto bytes = (size * to!uint(double.sizeof));
+    trace("Allocating GPU RAM of ",(bytes>MB ? to!string(bytes/MB)~"MB" : to!string(bytes)));
+    enforce(cudaMalloc(&gpu_mem, bytes) == cudaSuccess,"CUDA device memory allocation failed");
+    return cast(GPU_PTR)gpu_mem;
   }
 
-  void copy_ram_to_gpu(double *dest, const DMatrix src) {
+  void copy_ram_to_gpu(GPU_PTR dest, const DMatrix src) {
     enforce(cudaMemcpy(dest, cast(void*)src.elements, src.byte_size, cudaMemcpyKind.cudaMemcpyHostToDevice)==cudaSuccess);
   }
 
@@ -129,7 +130,6 @@ cublasStatus_t cublasDgemm(cublasHandle_t handle,
   // ---- Copy result to RAM
   auto result = new double[C_size];
   enforce(cudaMemcpy(result.ptr,d_C,C_byte_size,cudaMemcpyKind.cudaMemcpyDeviceToHost)==cudaSuccess,"cudaMemcpy failed with size "~to!string(C_size));
-  trace("Sum=",reduce!"a + b"(0.0, result));
 
   enforce(cudaFree(d_A)==cudaSuccess,"cudaFree error d_A");
   enforce(cudaFree(d_B)==cudaSuccess,"cudaFree error d_B");
