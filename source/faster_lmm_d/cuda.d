@@ -124,16 +124,16 @@ cublasStatus_t cublasDgemm(cublasHandle_t handle,
   enforce(cublasDgemm(cublas_handle,
                       cublasOperation_t.CUBLAS_OP_N,
                       cublasOperation_t.CUBLAS_OP_N,
-                      m, n, k, &alpha, d_A, lda, d_B, ldb, &beta, d_C, ldc)==cublasStatus_t.CUBLAS_STATUS_SUCCESS, "cublasDgemm function failed");
+                      m, n, k, &alpha, d_A, lda, d_B, ldb, &beta, d_C, ldc)==cublasStatus_t.CUBLAS_STATUS_SUCCESS, "cublasDgemm failed");
 
   // ---- Copy result to RAM
   auto result = new double[C_size];
-  enforce(cudaMemcpy(result.ptr,d_C,C_byte_size,cudaMemcpyKind.cudaMemcpyDeviceToHost)==cudaSuccess);
+  enforce(cudaMemcpy(result.ptr,d_C,C_byte_size,cudaMemcpyKind.cudaMemcpyDeviceToHost)==cudaSuccess,"cudaMemcpy failed with size "~to!string(C_size));
   trace("Sum=",reduce!"a + b"(0.0, result));
 
-  enforce(cudaFree(d_A)==cudaSuccess,"Error freeing d_A");
-  enforce(cudaFree(d_B)==cudaSuccess,"Error freeing d_B");
-  enforce(cudaFree(d_C)==cudaSuccess,"Error freeing d_C");
+  enforce(cudaFree(d_A)==cudaSuccess,"cudaFree error d_A");
+  enforce(cudaFree(d_B)==cudaSuccess,"cudaFree error d_B");
+  enforce(cudaFree(d_C)==cudaSuccess,"cudaFree error d_C");
 
   check_memory("Exit CUDA matrix multiply");
 
