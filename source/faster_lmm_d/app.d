@@ -156,8 +156,8 @@ void main(string[] args)
   if(g.rows != y.sizeof){
     info("Reduce geno matrix to match # strains in phenotype");
     trace("gnames and phenotypes");
-    trace("gnames=",gnames[0..6]);
-    trace("ynames=",ynames[0..6]);
+    pretty_print("gnames",gnames);
+    pretty_print("ynames",ynames);
     ulong[] gidx = [];
     ulong index = 0;
 
@@ -188,7 +188,6 @@ void main(string[] args)
   double[] lod_values = gwas[2];
 
   trace(ts);
-  trace(p_values);
   pretty_print("p_values",p_values);
 
   void check_results(double[] p_values, double[] ts){
