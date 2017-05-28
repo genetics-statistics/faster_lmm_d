@@ -29,8 +29,8 @@ struct DMatrix{
   }
 
   this(const m_items[] shape_in, const double[] e) {
-    shape    = side_effect(shape_in);
-    elements = side_effect(e);
+    shape    = shape_in.dup_fast;
+    elements = e.dup_fast;
     init     = true;
   }
 
@@ -108,9 +108,9 @@ DMatrix sub_dmatrix(const DMatrix lha, const DMatrix rha) {
 }
 
 DMatrix multiply_dmatrix(const DMatrix lha, const DMatrix rha) {
-  ulong[] rha_shape = side_effect(rha.shape);
+  ulong[] rha_shape = rha.shape.dup_fast;
   if(lha.rows() != rha.rows()){
-    ulong[] temp = side_effect(rha.shape);
+    ulong[] temp = rha.shape.dup_fast;
     rha_shape = [temp[1], temp[0]];
   }
   m_items total_items = lha.size();
@@ -244,7 +244,7 @@ DMatrix get_col(const DMatrix input, const ulong colNo) {
 
 DMatrix get_row(const DMatrix input, const ulong row_no) {
   m_items cols = input.cols();
-  double[] arr = side_effect(input.elements[row_no*cols..(row_no+1)*cols]);
+  double[] arr = input.elements[row_no*cols..(row_no+1)*cols].dup_fast;
   return DMatrix([1,cols],arr);
 }
 
@@ -252,7 +252,7 @@ DMatrix get_row(const DMatrix input, const ulong row_no) {
 DMatrix set_col(const DMatrix input, const ulong colNo, const DMatrix arr) {
   m_items rows = input.rows();
   m_items cols = input.cols();
-  auto result = side_effect(input.elements);
+  auto result = input.elements.dup_fast;
   for(auto i=0; i < rows; i++) {
     result[i*cols + colNo] = arr.elements[i];
   }
@@ -262,7 +262,7 @@ DMatrix set_col(const DMatrix input, const ulong colNo, const DMatrix arr) {
 DMatrix set_row(const DMatrix input, const ulong row_no, const DMatrix arr) {
   auto index =  row_no*input.cols();
   auto end =  (row_no+1)*input.cols();
-  auto result = side_effect(input.elements);
+  auto result = input.elements.dup_fast;
   auto k = 0;
   for(auto i=index; i<end; i++) {
     result[i] = arr.elements[k];
