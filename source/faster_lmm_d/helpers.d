@@ -9,6 +9,18 @@ module faster_lmm_d.helpers;
 
 import std.math : isNaN, pow;
 
+/*
+ * dup_fast (potentially unsafe) does not duplicate data by
+ * default. Only when FORCE_DUPLICATE has been switched on.
+ */
+@property T[] dup_fast(T)(const T[] list) {
+  version(FORCE_DUPLICATE) { // 'safe' version, but slow
+    return list.dup;
+  } else {
+    return cast(T[])list;
+  }
+}
+
 double modDiff(const double x, const double y){
   double rem = y - x;
   if(rem<0){return -rem;}
@@ -70,7 +82,7 @@ double[] get_num_array(const double[] arr, const bool[] values_arr){
 
 double[] replace_nan(const double[] arr, const bool[] values_arr, const double mean){
   int index = 0;
-  double[] result = arr.dup;
+  double[] result = arr.dup_fast;
   foreach(element; values_arr){
     if(element == true){
       index++;
