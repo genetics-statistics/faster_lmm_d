@@ -27,22 +27,19 @@ extern (C) {
 
 version(CUDA) {
   import faster_lmm_d.cuda;
-  DMatrix matrix_mult(const DMatrix lha,const DMatrix rha) {
+  DMatrix matrix_mult(const DMatrix lha, const DMatrix rha) {
     auto cuda_result = cuda_matrix_mult(lha,rha);
     return cuda_result;
   }
-}
-
-version(ARRAYFIRE){
+} else version(ARRAYFIRE) {
   import faster_lmm_d.arrayfire;
-  DMatrix matrix_mult(const DMatrix lha,const DMatrix rha) {
+  DMatrix matrix_mult(const DMatrix lha, const DMatrix rha) {
     af_array device_lha, device_rha, device_result;
     const long[] ldims = [to!long(lha.cols), to!long(lha.rows)];
     const long[] rdims = [to!long(rha.cols), to!long(rha.rows)];
     af_create_array(&device_lha, cast(void *)lha.elements, 2,  ldims.ptr, af_dtype.f64);
     af_create_array(&device_rha, cast(void *)rha.elements, 2,  rdims.ptr, af_dtype.f64);
-    af_matmul(&device_result , device_rha, device_lha, af_mat_prop.AF_MAT_NONE , af_mat_prop.AF_MAT_NONE);
-    void* out1;
+    af_matmul(&device_result, device_rha, device_lha, af_mat_prop.AF_MAT_NONE, af_mat_prop.AF_MAT_NONE);
     double[] host_result = new double[lha.rows * rha.cols];
     af_get_data_ptr(host_result.ptr, device_result);
     af_release_array(device_lha);
@@ -51,9 +48,7 @@ version(ARRAYFIRE){
     auto res_shape = [lha.rows,rha.cols];
     return DMatrix(res_shape, host_result);
   }
-}
-
-version(CPU){
+} else { // default
   DMatrix matrix_mult(const DMatrix lha,const DMatrix rha) {
     return cpu_matrix_mult(lha,rha);
   }
