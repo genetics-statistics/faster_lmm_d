@@ -7,6 +7,7 @@
 
 module faster_lmm_d.phenotype;
 
+import std.conv;
 import std.experimental.logger;
 import std.typecons;
 
@@ -21,5 +22,5 @@ PhenoStruct remove_missing( const ulong n, const double[] y){
   bool[] v = is_nan(y);
   bool[] keep = negate_bool(v);
   double[] Y = get_num_array(y,keep);
-  return PhenoStruct(cast(immutable)Y, keep, cast(int)Y.length);
+  return PhenoStruct(cast(immutable)Y, keep, to!int(Y.length));
 }
