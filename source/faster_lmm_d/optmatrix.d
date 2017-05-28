@@ -29,8 +29,7 @@ version(CUDA) {
   import faster_lmm_d.cuda;
   DMatrix matrix_mult(const DMatrix lha,const DMatrix rha) {
     auto cuda_result = cuda_matrix_mult(lha,rha);
-    auto cpu_result  = cpu_matrix_mult(lha,rha);
-    cuda_result.validate(cpu_result);
+    cuda_result.validate( () => cpu_matrix_mult(lha,rha) );
     return cuda_result;
   }
 }
@@ -98,7 +97,7 @@ void pretty_print(const DMatrix input) {
   m_items rows = input.rows();
   auto e = input.elements;
   writeln("[");
-  if(rows>6) {
+  if(rows>6 && cols>6) {
     foreach(row; 0..3) {
       write(e[row*cols+0],",",e[row*cols+1],",",e[row*cols+2]);
       write("...");
@@ -114,8 +113,10 @@ void pretty_print(const DMatrix input) {
     }
   }
   else{
-    for(auto i = 0; i < rows; i++) {
-      writeln(input.elements[(cols*i)..(cols*(i+1))]);
+    foreach(i, c; e) {
+      write(c,",");
+      if (i>6)
+        break;
     }
   }
 

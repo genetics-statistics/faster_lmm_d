@@ -50,8 +50,7 @@ struct LMM{
   //represent a mean effect.
 
   this(const double[] Y, const DMatrix K, const DMatrix Kva, const DMatrix Kve, const DMatrix X0, bool verbose){
-    trace("Y => ");
-    trace(Y);
+    trace("Y => ",Y[0..3],"...",Y[$-3..$]);
 
     auto X0_new = (!X0.init ? ones_dmatrix(Y.length,1) : DMatrix(X0) );
 
