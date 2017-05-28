@@ -24,14 +24,21 @@ struct DMatrix{
   bool init = false;
 
   this(const DMatrix m) {
-    shape    = m.shape.dup;
-    elements = m.elements.dup;
-    init     = true;
+    this(m.shape,m.elements);
   }
-  this(const ulong[] shape_in, const double[] e) {
-    shape    = shape_in.dup;
-    elements = e.dup;
-    init     = true;
+
+  version(FORCE_DUPLICATE) { // 'safe' version, but slow
+    this(const m_items[] shape_in, const double[] e) {
+      shape    = shape_in.dup;
+      elements = e.dup;
+      init     = true;
+    }
+  } else {
+    this(const m_items[] shape_in, const double[] e) {
+      shape = cast(m_items[])shape_in;
+      elements = cast(double[])e;
+      init     = true;
+    }
   }
 
   const sum() { return reduce!"a + b"(0.0, elements); }

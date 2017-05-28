@@ -94,6 +94,9 @@ endif
 ifdef VALIDATE
   DFLAGS += -d-version=VALIDATE
 endif
+ifdef FORCE_DUPLICATE
+  DFLAGS += -d-version=FORCE_DUPLICATE
+endif
 
 # ---- Compile step
 %.o: %.d
