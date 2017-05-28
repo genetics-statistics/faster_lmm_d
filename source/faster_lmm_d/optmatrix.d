@@ -29,7 +29,6 @@ version(CUDA) {
   import faster_lmm_d.cuda;
   DMatrix matrix_mult(const DMatrix lha,const DMatrix rha) {
     auto cuda_result = cuda_matrix_mult(lha,rha);
-    cuda_result.validate( () => cpu_matrix_mult(lha,rha) );
     return cuda_result;
   }
 }
@@ -90,37 +89,6 @@ DMatrix matrix_transpose(const DMatrix input) {
     }
   }
   return DMatrix([cols, rows],output);
-}
-
-void pretty_print(const DMatrix input) {
-  m_items cols = input.cols();
-  m_items rows = input.rows();
-  auto e = input.elements;
-  writeln("[");
-  if(rows>6 && cols>6) {
-    foreach(row; 0..3) {
-      write(e[row*cols+0],",",e[row*cols+1],",",e[row*cols+2]);
-      write("...");
-      write(e[row*cols+cols-2],",",e[row*cols+cols-1],",",e[row*cols+cols-2]);
-      writeln();
-    }
-    writeln("...");
-    foreach(row; rows-3..rows) {
-      write(e[row*cols+0],",",e[row*cols+1],",",e[row*cols+2]);
-      write("...");
-      write(e[row*cols+cols-2],",",e[row*cols+cols-1],",",e[row*cols+cols-2]);
-      writeln();
-    }
-  }
-  else{
-    foreach(i, c; e) {
-      write(c,",");
-      if (i>6)
-        break;
-    }
-  }
-
-  writeln("]");
 }
 
 DMatrix slice_dmatrix(const DMatrix input, const ulong[] along) {

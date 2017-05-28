@@ -24,6 +24,7 @@ import faster_lmm_d.optmatrix;
 import faster_lmm_d.rqtlreader;
 import faster_lmm_d.tsvreader;
 import faster_lmm_d.memory;
+import faster_lmm_d.output;
 
 version(CUDA) {
   import faster_lmm_d.cuda : cuda_init, cuda_destroy;
@@ -155,8 +156,8 @@ void main(string[] args)
   if(g.rows != y.sizeof){
     info("Reduce geno matrix to match # strains in phenotype");
     trace("gnames and phenotypes");
-    trace("gnames=",gnames[0..6]);
-    trace("ynames=",ynames[0..6]);
+    pretty_print("gnames",gnames);
+    pretty_print("ynames",ynames);
     ulong[] gidx = [];
     ulong index = 0;
 
@@ -187,8 +188,7 @@ void main(string[] args)
   double[] lod_values = gwas[2];
 
   trace(ts);
-  trace(p_values);
-  log("p_values : ",p_values[0],",",p_values[1],",",p_values[2],"...",p_values[n-3],",",p_values[n-2],",",p_values[n-1]);
+  pretty_print("p_values",p_values);
 
   void check_results(double[] p_values, double[] ts){
     trace(p_values.length, "\n", sum(p_values));

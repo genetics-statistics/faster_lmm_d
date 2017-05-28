@@ -14,6 +14,7 @@ import faster_lmm_d.dmatrix;
 import faster_lmm_d.lmm2;
 import faster_lmm_d.memory;
 import faster_lmm_d.optmatrix;
+import faster_lmm_d.output;
 
 import core.stdc.stdlib : exit;
 
@@ -53,7 +54,6 @@ auto gwas(immutable double[] Y, const DMatrix G, const DMatrix K, const bool rem
   double[] lod = new double[snps];
 
   info(G.shape);
-  info("snps is ", snps);
 
   for(int i=0; i<snps; i++){
     DMatrix x = get_row(G, i);

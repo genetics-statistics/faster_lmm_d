@@ -14,6 +14,7 @@ import std.stdio;
 import std.typecons;
 
 import faster_lmm_d.optmatrix;
+import faster_lmm_d.output;
 
 alias size_t m_items; // dimensions are never negative
 
@@ -53,11 +54,11 @@ struct DMatrix{
   */
   void validate(DMatrix delegate() compute,
                 const double threshold=1.0) {
-    debug {
+    version(VALIDATE) {
       auto other = compute();
-      stderr.write("Other result:");
+      write("Other result:");
       pretty_print(other);
-      stderr.write("Result:");
+      write("Result:");
       pretty_print(this);
       assert(rows == other.rows, "rows mismatch, expected "~to!string(other.rows)~" but got "~to!string(rows));
       assert(cols == other.cols, "cols mismatch, expected "~to!string(other.cols)~" but got "~to!string(cols));
