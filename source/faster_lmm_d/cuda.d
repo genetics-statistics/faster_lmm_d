@@ -52,7 +52,6 @@ version(CUDA) {
     trace("Initializing CUDA on separate thread");
     auto t = task!cuda_startup();
     t.executeInNewThread();
-    trace("Back to main thread...");
   }
 
   void cuda_destroy() {
@@ -100,6 +99,7 @@ version(CUDA) {
       gpu_free(ptr_cache[0]);
       gpu_free(ptr_cache[1]);
       gpu_free(ptr_cache[2]);
+      ptr_cache_initialized = false;
     }
   }
 
