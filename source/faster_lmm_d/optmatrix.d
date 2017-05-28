@@ -31,9 +31,7 @@ version(CUDA) {
     auto cuda_result = cuda_matrix_mult(lha,rha);
     return cuda_result;
   }
-}
-
-version(ARRAYFIRE){
+} else version(ARRAYFIRE){
   import faster_lmm_d.arrayfire;
   DMatrix matrix_mult(const DMatrix lha,const DMatrix rha) {
     af_array device_lha, device_rha, device_result;
@@ -51,9 +49,7 @@ version(ARRAYFIRE){
     auto res_shape = [lha.rows,rha.cols];
     return DMatrix(res_shape, host_result);
   }
-}
-
-version(CPU){
+} else {
   DMatrix matrix_mult(const DMatrix lha,const DMatrix rha) {
     return cpu_matrix_mult(lha,rha);
   }

@@ -263,7 +263,7 @@ DMatrix set_col(const DMatrix input, const ulong colNo, const DMatrix arr) {
   for(auto i=0; i < rows; i++) {
     result[i*cols + colNo] = arr.elements[i];
   }
-  return DMatrix(input.shape.dup, result);
+  return DMatrix(input.shape, result);
 }
 
 DMatrix set_row(const DMatrix input, const ulong row_no, const DMatrix arr) {
@@ -275,7 +275,7 @@ DMatrix set_row(const DMatrix input, const ulong row_no, const DMatrix arr) {
     result[i] = arr.elements[k];
     k++;
   }
-  return DMatrix(input.shape.dup, result);
+  return DMatrix(input.shape, result);
 }
 
 void nan_counter(const DMatrix input) {
