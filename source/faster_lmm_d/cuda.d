@@ -32,10 +32,11 @@ version(CUDA) {
   alias GPU_PTR = double *;
   __gshared cublasHandle_t cublas_handle = null;
 
-
   alias GPU_PTRS = Tuple!(GPU_PTR, GPU_PTR, GPU_PTR);
+  alias GPU_PTRS_SIZE = Tuple!(size_t, size_t, size_t);
 
   GPU_PTRS ptr_cache;
+  GPU_PTRS_SIZE ptr_cache_size;
   bool ptr_cache_initialized = false;
 
   // Do not call this function outside cuda_init
@@ -71,19 +72,34 @@ version(CUDA) {
 
   GPU_PTRS gpu_malloc(size_t size1, size_t size2, size_t size3) {
     if (!ptr_cache_initialized) {
-      auto sizex = 500L*MB/to!uint(double.sizeof);
-      ptr_cache = tuple(gpu_malloc(sizex),gpu_malloc(sizex),gpu_malloc(sizex));
+      ptr_cache = tuple(gpu_malloc(size1),gpu_malloc(size2),gpu_malloc(size3));
+      ptr_cache_size = tuple(size1,size2,size3);
       ptr_cache_initialized = true;
     }
+    else {
+      // realloc if size is too small
+      foreach (i, size; tuple(size1,size2,size3)) {
+        if (size > ptr_cache_size[i]) {
+          gpu_free(ptr_cache[i]);
+          ptr_cache[i] = gpu_malloc(size);
+          ptr_cache_size[i] = size;
+        }
+      }
+    }
     return ptr_cache;
+  }
+
+  void gpu_free(GPU_PTR p) {
+    trace("gpu_free");
+    enforce(cudaFree(p)==cudaSuccess,"cudaFree error");
   }
 
   void gpu_free()
   {
     if (ptr_cache_initialized) {
-      enforce(cudaFree(ptr_cache[0])==cudaSuccess,"cudaFree error d_A");
-      enforce(cudaFree(ptr_cache[1])==cudaSuccess,"cudaFree error d_B");
-      enforce(cudaFree(ptr_cache[2])==cudaSuccess,"cudaFree error d_C");
+      gpu_free(ptr_cache[0]);
+      gpu_free(ptr_cache[1]);
+      gpu_free(ptr_cache[2]);
     }
   }
 
@@ -150,14 +166,11 @@ DMatrix cuda_matrix_mult(const DMatrix _B, const DMatrix _A){
   assert(ldc >= max(1,m));
   assert(ldc * n == C_size);
 
-  //cublasHandle_t cublas_handle2 = null;
-  //enforce(cublasCreate(&cublas_handle2) == cublasStatus_t.CUBLAS_STATUS_SUCCESS, "CUBLAS initialization failed");
   enforce(cublasDgemm(cublas_handle,
                       cublasOperation_t.CUBLAS_OP_N,
                       cublasOperation_t.CUBLAS_OP_N,
                       m, n, k, &alpha, d_A, lda, d_B, ldb, &beta, d_C, ldc)==cublasStatus_t.CUBLAS_STATUS_SUCCESS, "cublasDgemm failed");
 
-  // ---- Copy result to RAM
   auto result = new double[C_size];
   enforce(cudaMemcpy(result.ptr,d_C,C_byte_size,cudaMemcpyKind.cudaMemcpyDeviceToHost)==cudaSuccess,"cudaMemcpy failed with size "~to!string(C_size));
 
