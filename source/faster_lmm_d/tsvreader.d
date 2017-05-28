@@ -23,7 +23,7 @@ auto tsvpheno(const string fn, const ulong p_column= 0){
 	trace("In tsvpheno");
 	double[] y;
   string[] phenotypes;
-  string input = cast(string)std.file.read(fn);
+  string input = to!string(std.file.read(fn));
 
   string[] lines = input.split("\n");
   assert(lines[0] == "# Phenotype format version 1.0");
@@ -59,7 +59,7 @@ GenoObj tsvgeno(const string fn, JSONValue ctrl){
   log("hab_mapper", hab_mapper);
   log("faster_lmm_d_mapper", faster_lmm_d_mapper);
 
-  string input = cast(string)std.file.read(fn);
+  string input = to!string(std.file.read(fn));
   string[] rows = input.split("\n");
 
   immutable(string[]) ynames = rows[4].split("\t");

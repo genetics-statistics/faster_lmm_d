@@ -20,7 +20,7 @@ import dyaml.all;
 import faster_lmm_d.dmatrix;
 
 JSONValue control(const string fn){
-  string input = cast(string)std.file.read(fn);
+  string input = to!string(std.file.read(fn));
   JSONValue j = parseJSON(input);
   return j;
 }
@@ -69,7 +69,7 @@ GenoObj geno(const string fn, JSONValue ctrl){
   log("hab_mapper", hab_mapper);
   log("faster_lmm_d_mapper", faster_lmm_d_mapper);
 
-  string input = cast(string)std.file.read(fn);
+  string input = to!string(std.file.read(fn));
   auto tsv = csvReader!(string, Malformed.ignore)(input, null);
 
   auto ynames = cast(immutable(string[]))tsv.header[1..$];
