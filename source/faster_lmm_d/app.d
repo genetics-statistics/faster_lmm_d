@@ -188,7 +188,7 @@ void main(string[] args)
 
   trace(ts);
   trace(p_values);
-  log("p_values : ",p_values[0],",",p_values[1],",",p_values[2],"...",p_values[n-3],",",p_values[n-2],",",p_values[n-1]);
+  pretty_print("p_values",p_values);
 
   void check_results(double[] p_values, double[] ts){
     trace(p_values.length, "\n", sum(p_values));
