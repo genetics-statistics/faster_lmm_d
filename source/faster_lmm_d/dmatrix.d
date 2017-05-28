@@ -14,6 +14,7 @@ import std.stdio;
 import std.typecons;
 
 import faster_lmm_d.optmatrix;
+import faster_lmm_d.output;
 
 alias size_t m_items; // dimensions are never negative
 

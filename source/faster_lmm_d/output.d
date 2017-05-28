@@ -15,39 +15,39 @@ void pretty_print(string msg, const DMatrix input) {
   m_items cols = input.cols();
   m_items rows = input.rows();
   auto e = input.elements;
-  writeln("[");
+  stderr.writeln("[");
   if(rows>6 && cols>6) {
     foreach(row; 0..3) {
-      write(e[row*cols+0],",",e[row*cols+1],",",e[row*cols+2]);
-      write("...");
-      write(e[row*cols+cols-2],",",e[row*cols+cols-1],",",e[row*cols+cols-2]);
-      writeln();
+      stderr.write(e[row*cols+0],",",e[row*cols+1],",",e[row*cols+2]);
+      stderr.write("...");
+      stderr.write(e[row*cols+cols-2],",",e[row*cols+cols-1],",",e[row*cols+cols-2]);
+      stderr.writeln();
     }
-    writeln("...");
+    stderr.writeln("...");
     foreach(row; rows-3..rows) {
-      write(e[row*cols+0],",",e[row*cols+1],",",e[row*cols+2]);
-      write("...");
-      write(e[row*cols+cols-2],",",e[row*cols+cols-1],",",e[row*cols+cols-2]);
-      writeln();
+      stderr.write(e[row*cols+0],",",e[row*cols+1],",",e[row*cols+2]);
+      stderr.write("...");
+      stderr.write(e[row*cols+cols-2],",",e[row*cols+cols-1],",",e[row*cols+cols-2]);
+      stderr.writeln();
     }
   }
   else{
     foreach(i, c; e) {
-      write(c,",");
+      stderr.write(c,",");
       if (i>6)
         break;
     }
   }
 
-  writeln("]");
-}
-
-void pretty_print(const DMatrix input) {
-  pretty_print("",input);
+  stderr.writeln("]");
 }
 
 void pretty_print(T)(string msg, T[] list) {
-  writeln(msg,":",list[0],",",
+  stderr.writeln(msg,":",list[0],",",
           list[1],",",list[2],"...",
           list[$-3],",",list[$-2],",",list[$-1]);
+}
+
+void pretty_print(T)(T input) {
+  pretty_print("",input);
 }

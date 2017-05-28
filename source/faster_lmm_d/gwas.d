@@ -54,7 +54,6 @@ auto gwas(immutable double[] Y, const DMatrix G, const DMatrix K, const bool rem
   double[] lod = new double[snps];
 
   info(G.shape);
-  pretty_print("snps", snps);
 
   for(int i=0; i<snps; i++){
     DMatrix x = get_row(G, i);

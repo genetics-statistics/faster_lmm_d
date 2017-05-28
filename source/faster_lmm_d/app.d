@@ -24,6 +24,7 @@ import faster_lmm_d.optmatrix;
 import faster_lmm_d.rqtlreader;
 import faster_lmm_d.tsvreader;
 import faster_lmm_d.memory;
+import faster_lmm_d.output;
 
 version(CUDA) {
   import faster_lmm_d.cuda : cuda_init, cuda_destroy;
