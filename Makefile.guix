@@ -2,7 +2,7 @@
 #
 # To build faster_lmm_d on GNU Guix:
 #
-#   make -f Makefile.guix [CUDA=1] [debug|release|check]
+#   make -f Makefile.guix [CUDA=1] [VALIDATE=1] [debug|release|check]
 #
 # run with
 #
@@ -14,7 +14,6 @@ D_COMPILER=ldc2
 LDC_LIB_PATH=~/opt/ldc2-1.1.0-linux-x86_64/lib
 
 ifdef CUDA
-  CUDA_FLAG=-d-version=CUDA
   CUDA_LIB_PATH=/usr/local/cuda-7.0/lib64
 endif
 
@@ -70,10 +69,6 @@ getIR: DFLAGS += -output-ll
 
 getBC: DFLAGS += -output-bc
 
-ifdef CUDA
-  DFLAGS += $(CUDA_FLAG)
-endif
-
 gperf: LIBS += -L=-lprofiler
 
 gperf: DUB_INCLUDE += -I~/.dub/packages/gperftools_d-0.1.0/gperftools_d/source/
@@ -92,6 +87,13 @@ build-setup:
 	mkdir -p build/
 
 guix guix-debug default debug release profile getIR getBC gperf: $(OUT)
+
+ifdef CUDA
+  DFLAGS += -d-version=CUDA
+endif
+ifdef VALIDATE
+  DFLAGS += -d-version=VALIDATE
+endif
 
 # ---- Compile step
 %.o: %.d

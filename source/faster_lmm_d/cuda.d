@@ -164,7 +164,7 @@ DMatrix cuda_matrix_mult(const DMatrix _B, const DMatrix _A){
   debug { check_memory("Exit CUDA matrix multiply"); }
 
   auto cuda_result = DMatrix([C_cols, C_rows], result);
-  version(VALIDATE) { cuda_result.validate( () => cpu_matrix_mult(_B,_A)); }
+  cuda_result.validate( () => cpu_matrix_mult(_B,_A));
   return cuda_result;
 }
 
