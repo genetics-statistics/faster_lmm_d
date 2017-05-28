@@ -153,7 +153,7 @@ MLSol getMLSoln(const LMM lmmobject, const double h, const DMatrix X){
   //   covariate matrix.
 
   DMatrix S = divide_num_dmatrix(1,add_dmatrix_num(multiply_dmatrix_num(lmmobject.Kva,h),(1.0 - h)));
-  auto temp = S.shape.dup;
+  auto temp = side_effect(S.shape);
   S.shape = [temp[1], temp[0]];
   DMatrix Xt = multiply_dmatrix(matrix_transpose(X), S);
   DMatrix XX = matrix_mult(Xt,X);

@@ -13,6 +13,7 @@ import std.math;
 import std.stdio;
 import std.typecons;
 
+import faster_lmm_d.helpers;
 import faster_lmm_d.optmatrix;
 import faster_lmm_d.output;
 
@@ -27,18 +28,10 @@ struct DMatrix{
     this(m.shape,m.elements);
   }
 
-  version(FORCE_DUPLICATE) { // 'safe' version, but slow
-    this(const m_items[] shape_in, const double[] e) {
-      shape    = shape_in.dup;
-      elements = e.dup;
-      init     = true;
-    }
-  } else {
-    this(const m_items[] shape_in, const double[] e) {
-      shape = cast(m_items[])shape_in;
-      elements = cast(double[])e;
-      init     = true;
-    }
+  this(const m_items[] shape_in, const double[] e) {
+    shape    = side_effect(shape_in);
+    elements = side_effect(e);
+    init     = true;
   }
 
   const sum() { return reduce!"a + b"(0.0, elements); }
@@ -115,9 +108,9 @@ DMatrix sub_dmatrix(const DMatrix lha, const DMatrix rha) {
 }
 
 DMatrix multiply_dmatrix(const DMatrix lha, const DMatrix rha) {
-  ulong[] rha_shape = rha.shape.dup;
+  ulong[] rha_shape = side_effect(rha.shape);
   if(lha.rows() != rha.rows()){
-    ulong[] temp = rha.shape.dup;
+    ulong[] temp = side_effect(rha.shape);
     rha_shape = [temp[1], temp[0]];
   }
   m_items total_items = lha.size();
@@ -251,7 +244,7 @@ DMatrix get_col(const DMatrix input, const ulong colNo) {
 
 DMatrix get_row(const DMatrix input, const ulong row_no) {
   m_items cols = input.cols();
-  double[] arr = input.elements[row_no*cols..(row_no+1)*cols].dup;
+  double[] arr = side_effect(input.elements[row_no*cols..(row_no+1)*cols]);
   return DMatrix([1,cols],arr);
 }
 
@@ -259,7 +252,7 @@ DMatrix get_row(const DMatrix input, const ulong row_no) {
 DMatrix set_col(const DMatrix input, const ulong colNo, const DMatrix arr) {
   m_items rows = input.rows();
   m_items cols = input.cols();
-  auto result = input.elements.dup;
+  auto result = side_effect(input.elements);
   for(auto i=0; i < rows; i++) {
     result[i*cols + colNo] = arr.elements[i];
   }
@@ -269,7 +262,7 @@ DMatrix set_col(const DMatrix input, const ulong colNo, const DMatrix arr) {
 DMatrix set_row(const DMatrix input, const ulong row_no, const DMatrix arr) {
   auto index =  row_no*input.cols();
   auto end =  (row_no+1)*input.cols();
-  auto result = input.elements.dup;
+  auto result = side_effect(input.elements);
   auto k = 0;
   for(auto i=index; i<end; i++) {
     result[i] = arr.elements[k];
