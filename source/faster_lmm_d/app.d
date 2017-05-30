@@ -6,6 +6,7 @@
 */
 
 import core.stdc.stdlib : exit;
+import std.algorithm : countUntil;
 import std.array;
 import std.conv;
 import std.exception;
@@ -14,17 +15,15 @@ import std.getopt;
 import std.json;
 import std.math : round;
 import std.stdio;
-import std.algorithm : countUntil;
 
 import faster_lmm_d.dmatrix;
 import faster_lmm_d.gwas;
 import faster_lmm_d.helpers;
-import faster_lmm_d.lmm;
+import faster_lmm_d.memory;
 import faster_lmm_d.optmatrix;
+import faster_lmm_d.output;
 import faster_lmm_d.rqtlreader;
 import faster_lmm_d.tsvreader;
-import faster_lmm_d.memory;
-import faster_lmm_d.output;
 
 version(CUDA) {
   import faster_lmm_d.cuda : cuda_init, cuda_destroy;
