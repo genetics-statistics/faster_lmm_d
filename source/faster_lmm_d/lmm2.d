@@ -35,8 +35,8 @@ struct LMM {
   m_items q, N;
   double opt_H, opt_sigma, opt_LL;
   DMatrix X0, Y, Kva, Kve;
-  // , KveT;
-  DMatrix Yt, X0t, X0t_stack;
+  DMatrix Yt;
+  DMatrix X0t, X0t_stack;
   DMatrix H, opt_beta, LLs;
 
   //The constructor takes a phenotype vector or array Y of size n. It
@@ -308,11 +308,8 @@ auto lmm_association(const LMM lmmobject, const DMatrix param_X, const DMatrix K
   auto REML=true;
   //  Calculates association for the SNPs encoded in the vector X of size n.
   //  If h is None, the optimal h stored in opt_H is used.
-  DMatrix X;
-  if(stack) {
-    DMatrix m = matrix_mult(KveT, param_X);
-    X = set_col(lmmobject.X0t_stack,lmmobject.q,m);
-  }
+  DMatrix m = matrix_mult(KveT, param_X);
+  DMatrix X = set_col(lmmobject.X0t_stack,lmmobject.q,m);
   LLTuple ll = get_LL(lmmobject.opt_H, X, lmmobject.N, lmmobject.Kva, lmmobject.Yt, lmmobject.X0t, false, REML);
   auto q = ll.beta.elements.length;
   const ulong df = lmmobject.N - q;

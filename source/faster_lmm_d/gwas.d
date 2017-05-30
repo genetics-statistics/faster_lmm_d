@@ -67,7 +67,7 @@ auto gwas(immutable double[] Y, const DMatrix G, const DMatrix K, const bool rem
     lod[i] = tsps[2];
 
     if(i%1000 == 0){
-      log(i, " snps processed");
+      info(i, " snps processed");
     }
   }
 
