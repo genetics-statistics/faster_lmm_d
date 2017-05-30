@@ -72,6 +72,8 @@ struct DMatrix{
 
 alias Tuple!(const DMatrix, "geno", immutable string[], "gnames", immutable string[], "ynames") GenoObj;
 
+alias Tuple!(DMatrix, "first", DMatrix, "last")MatrixSplit;
+
 double accessor(const DMatrix input, ulong row, ulong col) {
   return input.elements[row*input.cols()+col];
 }
@@ -284,6 +286,55 @@ void nan_counter(const DMatrix input) {
   }
 }
 
+MatrixSplit mat_split_along_row(DMatrix matrix) {
+  DMatrix top, bottom;
+  ulong rows = matrix.rows;
+  ulong cols = matrix.cols;
+
+  top.shape = [rows/2, cols];
+  bottom.shape = [rows - rows/2, cols];
+
+  ulong half = (rows/2)*cols;
+  top.elements = matrix.elements[0..half];
+  bottom.elements = matrix.elements[half..$];
+
+  return MatrixSplit(top, bottom);
+}
+
+MatrixSplit mat_split_along_col(DMatrix matrix){
+  DMatrix left, right;
+  ulong rows = matrix.rows;
+  ulong cols = matrix.cols;
+  left.shape = [rows, cols/2];
+  right.shape = [rows, cols - cols/2];
+
+  ulong half;
+  for(ulong i = 0; i < rows; i++){
+    half = i*cols + cols/2;
+    left.elements ~= matrix.elements[i*cols..half];
+    right.elements ~= matrix.elements[half..(i+1)*cols];
+  }
+
+  return MatrixSplit(left, right);
+}
+
+DMatrix matrix_join(DMatrix ul, DMatrix ur, DMatrix dl, DMatrix dr){
+  DMatrix result;
+  result.shape = [ul.rows + dl.rows, ul.cols + ur.cols];
+  result.init = true;
+  ulong rows = result.rows;
+  ulong cols = result.cols;
+  for(ulong i = 0; i < ul.rows; i++){
+    result.elements ~= ul.get_row(i).elements;
+    result.elements ~= ur.get_row(i).elements;
+  }
+  for(ulong i = 0; i < dl.rows; i++){
+    result.elements ~= dl.get_row(i).elements;
+    result.elements ~= dr.get_row(i).elements;
+  }
+  return result;
+}
+
 
 unittest{
   auto d = DMatrix([2,2],[1,2,3,4]);
@@ -342,4 +393,21 @@ unittest{
                                   4, 4, 8,
                                   5, 7, 12]);
   assert(horizontally_stack(left, right) == stacked);
+
+  DMatrix lmatrix = DMatrix([2,3],[1,2,3,
+                                  4,5,6]);
+
+  DMatrix rmatrix = DMatrix([3,5],[1,2,3,4,5,
+                                   4,5,6,4,6,
+                                   7,8,9,7,8]);
+
+  MatrixSplit mat =  mat_split_along_row(lmatrix);
+  MatrixSplit nat =  mat_split_along_col(rmatrix);
+
+  DMatrix res_ul = matrix_mult(mat.first, nat.first);
+  DMatrix res_ur = matrix_mult(mat.first, nat.last );
+  DMatrix res_dl = matrix_mult(mat.last,  nat.first);
+  DMatrix res_dr = matrix_mult(mat.last,  nat.last) ;
+
+  assert(matrix_mult(lmatrix, rmatrix) == matrix_join(res_ul, res_ur, res_dl, res_dr));
 }
