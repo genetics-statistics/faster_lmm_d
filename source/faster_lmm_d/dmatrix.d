@@ -43,6 +43,9 @@ struct DMatrix{
   pragma(inline) const m_items n_pheno() { return cols; }
   pragma(inline) const m_items m_geno() { return rows; }
   pragma(inline) const bool is_square() { return rows == cols; };
+  pragma(inline) const DMatrix T() {
+    return slow_matrix_transpose(this);
+  };
 
   /*
    * Validate by comparing two Dmatrices.
@@ -98,7 +101,7 @@ DMatrix add_dmatrix(const DMatrix lha, const DMatrix rha) {
   return DMatrix(lha.shape, elements);
 }
 
-DMatrix sub_dmatrix(const DMatrix lha, const DMatrix rha) {
+DMatrix subtract_dmatrix(const DMatrix lha, const DMatrix rha) {
   assert(lha.rows() == rha.rows());
   assert(lha.cols() == rha.cols());
   m_items total_items = lha.size();
@@ -109,7 +112,7 @@ DMatrix sub_dmatrix(const DMatrix lha, const DMatrix rha) {
   return DMatrix(lha.shape, elements);
 }
 
-DMatrix multiply_dmatrix(const DMatrix lha, const DMatrix rha) {
+DMatrix slow_multiply_dmatrix(const DMatrix lha, const DMatrix rha) {
   ulong[] rha_shape = rha.shape.dup_fast;
   if(lha.rows() != rha.rows()){
     ulong[] temp = rha.shape.dup_fast;
@@ -131,20 +134,15 @@ DMatrix multiply_dmatrix(const DMatrix lha, const DMatrix rha) {
   return DMatrix(lha.shape, elements);
 }
 
+/*
+ * Add a number to all elements
+ */
+
 DMatrix add_dmatrix_num(const DMatrix input, const double num) {
   m_items total_items = input.size();
   double[] elements = new double[total_items];
   foreach(i ,input_element; input.elements) {
     elements[i] = input_element + num;
-  }
-  return DMatrix(input.shape, elements);
-}
-
-DMatrix sub_dmatrix_num(const DMatrix input, const double num) {
-  m_items total_items = input.size();
-  double[] elements = new double[total_items];
-  foreach(i ,input_element; input.elements) {
-    elements[i] = input_element - num;
   }
   return DMatrix(input.shape, elements);
 }

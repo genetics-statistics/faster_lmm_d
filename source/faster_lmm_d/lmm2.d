@@ -34,8 +34,9 @@ alias Tuple!(const DMatrix, "beta", immutable double, "sigma", const DMatrix, "Q
 struct LMM {
   m_items q, N;
   double opt_H, opt_sigma, opt_LL;
-  DMatrix X0, Y, Kva, Kve, KveT;
-  DMatrix Yt, X0t, X0t_stack;
+  DMatrix X0, Y, Kva, Kve;
+  DMatrix Yt;
+  DMatrix X0t, X0t_stack;
   DMatrix H, opt_beta, LLs;
 
   //The constructor takes a phenotype vector or array Y of size n. It
@@ -60,13 +61,13 @@ struct LMM {
   }
 
   this(const LMM lmmobject, const DMatrix Yt, const DMatrix X0t,
-       const DMatrix X0t_stack, const DMatrix KveT, ulong q) {
+       const DMatrix X0t_stack, ulong q) {
     this(lmmobject);
     this.Yt = DMatrix(Yt);
     this.X0 = X0;
     this.X0t = DMatrix(X0t);
     this.X0t_stack = DMatrix(X0t_stack);
-    this.KveT = DMatrix(KveT);
+    // this.KveT = DMatrix(KveT);
     this.q = q;
   }
 
@@ -91,7 +92,7 @@ struct LMM {
     this.X0 = DMatrix(lmmobject.X0);
     this.X0t = DMatrix(lmmobject.X0t);
     this.X0t_stack = DMatrix(lmmobject.X0t_stack);
-    this.KveT = DMatrix(lmmobject.KveT);
+    // this.KveT = DMatrix(lmmobject.KveT);
     this.q = lmmobject.q;
 
     this.LLs = DMatrix(lmmobject.LLs);
@@ -109,13 +110,13 @@ LMM lmm_transform(const LMM lmmobject) {
   //   multiplying each parameter by the transpose of the eigenvector
   //   matrix of K (the kinship).
 
-  trace("In lmm_transform");
-  DMatrix KveT = matrix_transpose(lmmobject.Kve);
+  // trace("In lmm_transform");
+  DMatrix KveT = slow_matrix_transpose(lmmobject.Kve);
   DMatrix Yt = matrix_mult(KveT, lmmobject.Y);
   DMatrix X0t = matrix_mult(KveT, lmmobject.X0);
   DMatrix X0t_stack = horizontally_stack(X0t, ones_dmatrix(lmmobject.N,1));
   auto q = X0t.shape[1];
-  return LMM(lmmobject, Yt, X0t, X0t_stack, KveT, q);
+  return LMM(lmmobject, Yt, X0t, X0t_stack, q);
 }
 
 MLSol getMLSoln(const double h, const DMatrix X, const DMatrix _Yt, const DMatrix Kva, const m_items N) {
@@ -131,33 +132,16 @@ MLSol getMLSoln(const double h, const DMatrix X, const DMatrix _Yt, const DMatri
   DMatrix S = divide_num_dmatrix(1,add_dmatrix_num(multiply_dmatrix_num(Kva,h),(1.0 - h)));
   auto temp = S.shape.dup_fast;
   S.shape = [temp[1], temp[0]];
-  DMatrix Xt = multiply_dmatrix(matrix_transpose(X), S);
+  DMatrix Xt = slow_multiply_dmatrix(slow_matrix_transpose(X), S);
   DMatrix XX = matrix_mult(Xt,X);
   DMatrix XX_i = inverse(XX);
   DMatrix beta =  matrix_mult(matrix_mult(XX_i,Xt),_Yt);
-  DMatrix Yt = sub_dmatrix(_Yt, matrix_mult(X,beta));
-  DMatrix YtT = matrix_transpose(Yt);
-  DMatrix YtTS = multiply_dmatrix(YtT, S);
+  DMatrix Yt = subtract_dmatrix(_Yt, matrix_mult(X,beta));
+  DMatrix YtT = slow_matrix_transpose(Yt);
+  DMatrix YtTS = slow_multiply_dmatrix(YtT, S);
   DMatrix Q = matrix_mult(YtTS,Yt);
   double sigma = Q.elements[0] * 1.0 / (to!double(N) - to!double(X.shape[1]));
   return MLSol(beta, sigma, Q, XX_i, XX);
-}
-
-DMatrix Xglob;
-LMM LMMglob;
-
-/*
- * This function is passed into the GSL resolver
- */
-
-extern(C) double LL_brent(double h, void *params) {
-
-  // brent will not be bounded by the specified bracket.  I return a
-  // large number if we encounter h < 0 to avoid errors in LL
-  // computation during the search.
-
-  if( h < 0) { return 1e6; }
-  return -get_LL(h, Xglob, LMMglob.N, LMMglob.Kva, LMMglob.Yt, LMMglob.X0t, false, true).LL;
 }
 
 LLTuple get_LL(const double h, const DMatrix param_X,
@@ -184,12 +168,32 @@ LLTuple get_LL(const double h, const DMatrix param_X,
 
   if(REML) {
     double LL_REML_part = 0;
-    DMatrix XT = matrix_transpose(X);
+    DMatrix XT = slow_matrix_transpose(X);
     LL_REML_part = q*mlog(2.0*PI* ml.sigma) + mlog(det(matrix_mult(XT, X))) - mlog(det(ml.XX));
     LL = LL + 0.5*LL_REML_part;
   }
 
   return LLTuple(LL, ml.beta, ml.sigma, ml.XX_i);
+}
+
+alias LL_brent_params = Tuple!(LMM,DMatrix);
+
+/*
+ * This function is passed into the GSL resolver
+ */
+
+extern(C) double LL_brent(double h, void *params) {
+
+  // brent will not be bounded by the specified bracket.  I return a
+  // large number if we encounter h < 0 to avoid errors in LL
+  // computation during the search.
+
+  if( h < 0) { return 1e6; }
+  auto ptr = cast(LL_brent_params *)params;
+  auto tup = *ptr;
+  auto LMMglob = tup[0];
+  auto Xglob = tup[1];
+  return -get_LL(h, Xglob, LMMglob.N, LMMglob.Kva, LMMglob.Yt, LMMglob.X0t, false, true).LL;
 }
 
 double optimize_brent(const LMM lmmobject, const DMatrix X, const bool REML,
@@ -202,9 +206,11 @@ double optimize_brent(const LMM lmmobject, const DMatrix X, const bool REML,
   double m = (a+b)/2;
   gsl_function F;
   F.function_ = &LL_brent;
+  auto LMMglob = LMM(lmmobject);
+  auto Xglob = DMatrix(X);
+  auto params = LL_brent_params(LMMglob,Xglob);
+  F.params = cast(void *)&params;
 
-  Xglob = DMatrix(X);
-  LMMglob = LMM(lmmobject);
   T = gsl_min_fminimizer_brent;
   s = gsl_min_fminimizer_alloc (T);
   enforce(s);
@@ -282,7 +288,6 @@ LMM lmm_fit(const LMM lmmobject, const DMatrix X_param, const ulong ngrids=100,
     X = DMatrix(lmmobject.X0t);
   }
   else{
-    DMatrix KveTX = matrix_mult(lmmobject.KveT,  X_param);
     X = DMatrix(lmmobject.X0t_stack);
   }
   double[] Harr = new double[ngrids];
@@ -293,7 +298,6 @@ LMM lmm_fit(const LMM lmmobject, const DMatrix X_param, const ulong ngrids=100,
   double[] elm = new double[ngrids];
   for(auto h = 0; h < ngrids; h++) {
     elm[h] = get_LL(Harr[h], X, lmmobject.N, lmmobject.Kva, lmmobject.Yt, lmmobject.X0t, false, REML).LL;
-    check_memory();
   }
   DMatrix L = DMatrix([elm.length,1],elm);
   DMatrix H = DMatrix([Harr.length,1],Harr);
@@ -303,16 +307,13 @@ LMM lmm_fit(const LMM lmmobject, const DMatrix X_param, const ulong ngrids=100,
   return LMM(lmmobject, L, H, fit_hmax, ll.LL, ll.beta, ll.sigma);
 }
 
-auto lmm_association(const LMM lmmobject, const DMatrix param_X,
-                     const bool stack=true, const bool REML=true,
-                     const bool return_beta=false) {
+auto lmm_association(const LMM lmmobject, const DMatrix param_X, const DMatrix KveT) {
+  auto stack=true;
+  auto REML=true;
   //  Calculates association for the SNPs encoded in the vector X of size n.
   //  If h is None, the optimal h stored in opt_H is used.
-  DMatrix X;
-  if(stack) {
-    DMatrix m = matrix_mult(lmmobject.KveT, param_X);
-    X = set_col(lmmobject.X0t_stack,lmmobject.q,m);
-  }
+  DMatrix m = matrix_mult(KveT, param_X);
+  DMatrix X = set_col(lmmobject.X0t_stack,lmmobject.q,m);
   LLTuple ll = get_LL(lmmobject.opt_H, X, lmmobject.N, lmmobject.Kva, lmmobject.Yt, lmmobject.X0t, false, REML);
   auto q = ll.beta.elements.length;
   const ulong df = lmmobject.N - q;

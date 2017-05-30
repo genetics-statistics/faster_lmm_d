@@ -57,16 +57,17 @@ auto gwas(immutable double[] Y, const DMatrix G, const DMatrix K, const bool rem
 
   info(G.shape);
 
+  DMatrix KveT = lmm.Kve.T; // out of the loop
   for(int i=0; i<snps; i++){
     DMatrix x = get_row(G, i);
     x.shape = [inds, 1];
-    auto tsps = lmm_association(lmm, x, true,true);
+    auto tsps = lmm_association(lmm, x, KveT);
     ps[i]  = tsps[1];
     ts[i]  = tsps[0];
     lod[i] = tsps[2];
 
     if(i%1000 == 0){
-      log(i, " snps processed");
+      info(i, " snps processed");
     }
   }
 
