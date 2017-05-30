@@ -208,7 +208,7 @@ double optimize_brent(const LMM lmmobject, const DMatrix X, const bool REML,
   F.function_ = &LL_brent;
   auto LMMglob = LMM(lmmobject);
   auto Xglob = DMatrix(X);
-  auto params = Tuple!(LMM,DMatrix)(LMMglob,Xglob);
+  auto params = LL_brent_params(LMMglob,Xglob);
   F.params = cast(void *)&params;
 
   T = gsl_min_fminimizer_brent;
