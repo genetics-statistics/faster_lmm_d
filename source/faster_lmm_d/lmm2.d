@@ -132,13 +132,13 @@ MLSol getMLSoln(const double h, const DMatrix X, const DMatrix _Yt, const DMatri
   DMatrix S = divide_num_dmatrix(1,add_dmatrix_num(multiply_dmatrix_num(Kva,h),(1.0 - h)));
   auto temp = S.shape.dup_fast;
   S.shape = [temp[1], temp[0]];
-  DMatrix Xt = multiply_dmatrix(slow_matrix_transpose(X), S);
+  DMatrix Xt = slow_multiply_dmatrix(slow_matrix_transpose(X), S);
   DMatrix XX = matrix_mult(Xt,X);
   DMatrix XX_i = inverse(XX);
   DMatrix beta =  matrix_mult(matrix_mult(XX_i,Xt),_Yt);
-  DMatrix Yt = sub_dmatrix(_Yt, matrix_mult(X,beta));
+  DMatrix Yt = subtract_dmatrix(_Yt, matrix_mult(X,beta));
   DMatrix YtT = slow_matrix_transpose(Yt);
-  DMatrix YtTS = multiply_dmatrix(YtT, S);
+  DMatrix YtTS = slow_multiply_dmatrix(YtT, S);
   DMatrix Q = matrix_mult(YtTS,Yt);
   double sigma = Q.elements[0] * 1.0 / (to!double(N) - to!double(X.shape[1]));
   return MLSol(beta, sigma, Q, XX_i, XX);
