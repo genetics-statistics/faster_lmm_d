@@ -31,7 +31,7 @@ import core.stdc.stdlib : exit;
 alias Tuple!(immutable double, "LL", const DMatrix, "beta", immutable double, "sigma", const DMatrix, "beta_var") LLTuple;
 alias Tuple!(const DMatrix, "beta", immutable double, "sigma", const DMatrix, "Q", const DMatrix, "XX_i", const DMatrix, "XX") MLSol;
 
-struct LMM{
+struct LMM {
   m_items q, N;
   double opt_H, opt_sigma, opt_LL;
   DMatrix X0, Y, Kva, Kve, KveT;
