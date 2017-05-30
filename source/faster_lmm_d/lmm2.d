@@ -34,7 +34,8 @@ alias Tuple!(const DMatrix, "beta", immutable double, "sigma", const DMatrix, "Q
 struct LMM {
   m_items q, N;
   double opt_H, opt_sigma, opt_LL;
-  DMatrix X0, Y, Kva, Kve, KveT;
+  DMatrix X0, Y, Kva, Kve;
+  // , KveT;
   DMatrix Yt, X0t, X0t_stack;
   DMatrix H, opt_beta, LLs;
 
@@ -60,13 +61,13 @@ struct LMM {
   }
 
   this(const LMM lmmobject, const DMatrix Yt, const DMatrix X0t,
-       const DMatrix X0t_stack, const DMatrix KveT, ulong q) {
+       const DMatrix X0t_stack, ulong q) {
     this(lmmobject);
     this.Yt = DMatrix(Yt);
     this.X0 = X0;
     this.X0t = DMatrix(X0t);
     this.X0t_stack = DMatrix(X0t_stack);
-    this.KveT = DMatrix(KveT);
+    // this.KveT = DMatrix(KveT);
     this.q = q;
   }
 
@@ -91,7 +92,7 @@ struct LMM {
     this.X0 = DMatrix(lmmobject.X0);
     this.X0t = DMatrix(lmmobject.X0t);
     this.X0t_stack = DMatrix(lmmobject.X0t_stack);
-    this.KveT = DMatrix(lmmobject.KveT);
+    // this.KveT = DMatrix(lmmobject.KveT);
     this.q = lmmobject.q;
 
     this.LLs = DMatrix(lmmobject.LLs);
@@ -109,13 +110,13 @@ LMM lmm_transform(const LMM lmmobject) {
   //   multiplying each parameter by the transpose of the eigenvector
   //   matrix of K (the kinship).
 
-  trace("In lmm_transform");
+  // trace("In lmm_transform");
   DMatrix KveT = matrix_transpose(lmmobject.Kve);
   DMatrix Yt = matrix_mult(KveT, lmmobject.Y);
   DMatrix X0t = matrix_mult(KveT, lmmobject.X0);
   DMatrix X0t_stack = horizontally_stack(X0t, ones_dmatrix(lmmobject.N,1));
   auto q = X0t.shape[1];
-  return LMM(lmmobject, Yt, X0t, X0t_stack, KveT, q);
+  return LMM(lmmobject, Yt, X0t, X0t_stack, q);
 }
 
 MLSol getMLSoln(const double h, const DMatrix X, const DMatrix _Yt, const DMatrix Kva, const m_items N) {
@@ -282,7 +283,6 @@ LMM lmm_fit(const LMM lmmobject, const DMatrix X_param, const ulong ngrids=100,
     X = DMatrix(lmmobject.X0t);
   }
   else{
-    DMatrix KveTX = matrix_mult(lmmobject.KveT,  X_param);
     X = DMatrix(lmmobject.X0t_stack);
   }
   double[] Harr = new double[ngrids];
@@ -303,14 +303,15 @@ LMM lmm_fit(const LMM lmmobject, const DMatrix X_param, const ulong ngrids=100,
   return LMM(lmmobject, L, H, fit_hmax, ll.LL, ll.beta, ll.sigma);
 }
 
-auto lmm_association(const LMM lmmobject, const DMatrix param_X,
-                     const bool stack=true, const bool REML=true,
-                     const bool return_beta=false) {
+auto lmm_association(const LMM lmmobject, const DMatrix param_X) {
+  auto stack=true;
+  auto REML=true;
+  // auto return_beta = false;
   //  Calculates association for the SNPs encoded in the vector X of size n.
   //  If h is None, the optimal h stored in opt_H is used.
   DMatrix X;
   if(stack) {
-    DMatrix m = matrix_mult(lmmobject.KveT, param_X);
+    DMatrix m = matrix_mult(lmmobject.Kve.T, param_X);
     X = set_col(lmmobject.X0t_stack,lmmobject.q,m);
   }
   LLTuple ll = get_LL(lmmobject.opt_H, X, lmmobject.N, lmmobject.Kva, lmmobject.Yt, lmmobject.X0t, false, REML);

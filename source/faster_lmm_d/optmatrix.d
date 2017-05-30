@@ -62,7 +62,7 @@ DMatrix cpu_matrix_mult(const DMatrix lha,const DMatrix rha) {
   return DMatrix(res_shape, C);
 }
 
-DMatrix matrix_mult_transpose(const DMatrix lha, const DMatrix rha) {
+DMatrix cpu_matrix_mult_transpose(const DMatrix lha, const DMatrix rha) {
   double[] C = new double[lha.rows()*rha.rows()];
   gemm(Order.RowMajor, Transpose.NoTrans, Transpose.NoTrans, to!int(lha.rows), to!int(rha.rows), to!int(lha.cols), /*no scaling*/
        1,lha.elements.ptr, to!int(lha.cols), rha.elements.ptr, to!int(rha.rows), /*no addition*/0, C.ptr, to!int(rha.rows));

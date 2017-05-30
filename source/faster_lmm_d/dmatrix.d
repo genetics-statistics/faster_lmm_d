@@ -43,6 +43,8 @@ struct DMatrix{
   pragma(inline) const m_items n_pheno() { return cols; }
   pragma(inline) const m_items m_geno() { return rows; }
   pragma(inline) const bool is_square() { return rows == cols; };
+  pragma(inline) const DMatrix T() { return matrix_transpose(this); };
+
 
   /*
    * Validate by comparing two Dmatrices.
