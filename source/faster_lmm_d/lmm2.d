@@ -303,14 +303,14 @@ LMM lmm_fit(const LMM lmmobject, const DMatrix X_param, const ulong ngrids=100,
   return LMM(lmmobject, L, H, fit_hmax, ll.LL, ll.beta, ll.sigma);
 }
 
-auto lmm_association(const LMM lmmobject, const DMatrix param_X) {
+auto lmm_association(const LMM lmmobject, const DMatrix param_X, const DMatrix KveT) {
   auto stack=true;
   auto REML=true;
   //  Calculates association for the SNPs encoded in the vector X of size n.
   //  If h is None, the optimal h stored in opt_H is used.
   DMatrix X;
   if(stack) {
-    DMatrix m = matrix_mult(lmmobject.Kve.T, param_X);
+    DMatrix m = matrix_mult(KveT, param_X);
     X = set_col(lmmobject.X0t_stack,lmmobject.q,m);
   }
   LLTuple ll = get_LL(lmmobject.opt_H, X, lmmobject.N, lmmobject.Kva, lmmobject.Yt, lmmobject.X0t, false, REML);
