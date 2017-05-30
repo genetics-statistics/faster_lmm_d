@@ -177,7 +177,7 @@ LLTuple get_LL(const double h, const DMatrix param_X,
 }
 
 DMatrix Xglob;
-LMM LMMglob;
+// LMM LMMglob;
 
 /*
  * This function is passed into the GSL resolver
@@ -190,6 +190,8 @@ extern(C) double LL_brent(double h, void *params) {
   // computation during the search.
 
   if( h < 0) { return 1e6; }
+  auto LMMglob_ptr = cast(LMM *)params;
+  auto LMMglob = *LMMglob_ptr;
   return -get_LL(h, Xglob, LMMglob.N, LMMglob.Kva, LMMglob.Yt, LMMglob.X0t, false, true).LL;
 }
 
@@ -204,9 +206,10 @@ double optimize_brent(const LMM lmmobject, const DMatrix X, const bool REML,
   double m = (a+b)/2;
   gsl_function F;
   F.function_ = &LL_brent;
+  auto LMMglob = LMM(lmmobject);
+  F.params = cast(void *)&LMMglob;
 
   Xglob = DMatrix(X);
-  LMMglob = LMM(lmmobject);
   T = gsl_min_fminimizer_brent;
   s = gsl_min_fminimizer_alloc (T);
   enforce(s);
