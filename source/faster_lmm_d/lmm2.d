@@ -61,10 +61,7 @@ struct LMM{
 
   this(const LMM lmmobject, const DMatrix Yt, const DMatrix X0t,
        const DMatrix X0t_stack, const DMatrix KveT, ulong q) {
-    this.Kve = DMatrix(lmmobject.Kve);
-    this.Kva = DMatrix(lmmobject.Kva);
-    this.N = lmmobject.N;
-    this.Y = DMatrix(lmmobject.Y);
+    this(lmmobject);
     this.Yt = DMatrix(Yt);
     this.X0 = X0;
     this.X0t = DMatrix(X0t);
@@ -76,17 +73,7 @@ struct LMM{
   this(const LMM lmmobject, const DMatrix LLs, const DMatrix H,
        immutable double hmax, immutable double opt_LL,
        const DMatrix opt_beta, immutable double opt_sigma) {
-    this.Kve = DMatrix(lmmobject.Kve);
-    this.Kva = DMatrix(lmmobject.Kva);
-    this.N = lmmobject.N;
-    this.Y = DMatrix(lmmobject.Y);
-    this.Yt = DMatrix(lmmobject.Yt);
-    this.X0 = DMatrix(lmmobject.X0);
-    this.X0t = DMatrix(lmmobject.X0t);
-    this.X0t_stack = DMatrix(lmmobject.X0t_stack);
-    this.KveT = DMatrix(lmmobject.KveT);
-    this.q = lmmobject.q;
-
+    this(lmmobject);
     this.LLs =  DMatrix(LLs);
     this.H = DMatrix(H);
     this.opt_H = hmax;
