@@ -176,8 +176,7 @@ LLTuple get_LL(const double h, const DMatrix param_X,
   return LLTuple(LL, ml.beta, ml.sigma, ml.XX_i);
 }
 
-DMatrix Xglob;
-// LMM LMMglob;
+alias LL_brent_params = Tuple!(LMM,DMatrix);
 
 /*
  * This function is passed into the GSL resolver
@@ -190,11 +189,12 @@ extern(C) double LL_brent(double h, void *params) {
   // computation during the search.
 
   if( h < 0) { return 1e6; }
-  auto LMMglob_ptr = cast(LMM *)params;
-  auto LMMglob = *LMMglob_ptr;
+  auto ptr = cast(LL_brent_params *)params;
+  auto tup = *ptr;
+  auto LMMglob = tup[0];
+  auto Xglob = tup[1];
   return -get_LL(h, Xglob, LMMglob.N, LMMglob.Kva, LMMglob.Yt, LMMglob.X0t, false, true).LL;
 }
-
 
 double optimize_brent(const LMM lmmobject, const DMatrix X, const bool REML,
                       const double lower, const double upper) {
@@ -207,9 +207,10 @@ double optimize_brent(const LMM lmmobject, const DMatrix X, const bool REML,
   gsl_function F;
   F.function_ = &LL_brent;
   auto LMMglob = LMM(lmmobject);
-  F.params = cast(void *)&LMMglob;
+  auto Xglob = DMatrix(X);
+  auto params = Tuple!(LMM,DMatrix)(LMMglob,Xglob);
+  F.params = cast(void *)&params;
 
-  Xglob = DMatrix(X);
   T = gsl_min_fminimizer_brent;
   s = gsl_min_fminimizer_alloc (T);
   enforce(s);
@@ -297,7 +298,6 @@ LMM lmm_fit(const LMM lmmobject, const DMatrix X_param, const ulong ngrids=100,
   double[] elm = new double[ngrids];
   for(auto h = 0; h < ngrids; h++) {
     elm[h] = get_LL(Harr[h], X, lmmobject.N, lmmobject.Kva, lmmobject.Yt, lmmobject.X0t, false, REML).LL;
-    check_memory();
   }
   DMatrix L = DMatrix([elm.length,1],elm);
   DMatrix H = DMatrix([Harr.length,1],Harr);
