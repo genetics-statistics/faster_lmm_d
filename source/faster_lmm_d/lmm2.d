@@ -144,23 +144,6 @@ MLSol getMLSoln(const double h, const DMatrix X, const DMatrix _Yt, const DMatri
   return MLSol(beta, sigma, Q, XX_i, XX);
 }
 
-DMatrix Xglob;
-LMM LMMglob;
-
-/*
- * This function is passed into the GSL resolver
- */
-
-extern(C) double LL_brent(double h, void *params) {
-
-  // brent will not be bounded by the specified bracket.  I return a
-  // large number if we encounter h < 0 to avoid errors in LL
-  // computation during the search.
-
-  if( h < 0) { return 1e6; }
-  return -get_LL(h, Xglob, LMMglob.N, LMMglob.Kva, LMMglob.Yt, LMMglob.X0t, false, true).LL;
-}
-
 LLTuple get_LL(const double h, const DMatrix param_X,
                m_items N, const DMatrix Kva, const DMatrix Yt, const DMatrix X0t,
                const bool stack=true, const bool REML=false) {
@@ -192,6 +175,24 @@ LLTuple get_LL(const double h, const DMatrix param_X,
 
   return LLTuple(LL, ml.beta, ml.sigma, ml.XX_i);
 }
+
+DMatrix Xglob;
+LMM LMMglob;
+
+/*
+ * This function is passed into the GSL resolver
+ */
+
+extern(C) double LL_brent(double h, void *params) {
+
+  // brent will not be bounded by the specified bracket.  I return a
+  // large number if we encounter h < 0 to avoid errors in LL
+  // computation during the search.
+
+  if( h < 0) { return 1e6; }
+  return -get_LL(h, Xglob, LMMglob.N, LMMglob.Kva, LMMglob.Yt, LMMglob.X0t, false, true).LL;
+}
+
 
 double optimize_brent(const LMM lmmobject, const DMatrix X, const bool REML,
                       const double lower, const double upper) {
