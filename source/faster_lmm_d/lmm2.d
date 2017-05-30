@@ -8,10 +8,11 @@
 module faster_lmm_d.lmm2;
 
 import std.conv;
-import std.experimental.logger;
+import std.exception;
 import std.math;
 alias mlog = std.math.log;
 import std.typecons;
+import std.experimental.logger;
 
 import dstats.distrib;
 import gsl.errno;
@@ -64,7 +65,7 @@ struct LMM{
     this.Kva = keigh.kva;
     this.Kve = keigh.kve;
     this.N = K.shape[0];
-    this.Y = DMatrix([K.shape[0],1] ,Y);
+    this.Y = DMatrix([K.shape[0],1], Y);
     this.X0 = X0_new;
   }
 
@@ -238,6 +239,7 @@ double optimize_brent(const LMM lmmobject, const DMatrix X, const bool REML,
   LMMglob = LMM(lmmobject);
   T = gsl_min_fminimizer_brent;
   s = gsl_min_fminimizer_alloc (T);
+  enforce(s);
   gsl_min_fminimizer_set (s, &F, m, a, b);
 
   do
@@ -312,7 +314,7 @@ LMM lmm_fit(const LMM lmmobject, const DMatrix X_param, const ulong ngrids=100,
     X = DMatrix(lmmobject.X0t);
   }
   else{
-    DMatrix KveTX = matrix_mult(lmmobject.KveT , X_param);
+    DMatrix KveTX = matrix_mult(lmmobject.KveT,  X_param);
     X = DMatrix(lmmobject.X0t_stack);
   }
   double[] Harr = new double[ngrids];
@@ -336,7 +338,7 @@ LMM lmm_fit(const LMM lmmobject, const DMatrix X_param, const ulong ngrids=100,
 auto lmm_association(const LMM lmmobject, const DMatrix param_X,
                      const bool stack=true, const bool REML=true,
                      const bool return_beta=false) {
-  //  Calculates association statitics for the SNPs encoded in the vector X of size n.
+  //  Calculates association for the SNPs encoded in the vector X of size n.
   //  If h is None, the optimal h stored in opt_H is used.
   DMatrix X;
   if(stack) {
