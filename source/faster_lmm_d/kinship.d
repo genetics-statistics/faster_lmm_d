@@ -24,7 +24,7 @@ DMatrix kinship_full(const DMatrix G)
   m_items n = G.cols(); // inds
   log(m," SNPs");
   assert(m>n, "n should be larger than m");
-  DMatrix temp = matrix_transpose(G);
+  DMatrix temp = slow_matrix_transpose(G);
   DMatrix mmT = matrix_mult(temp, G);
   info("normalize K");
   DMatrix K = divide_dmatrix_num(mmT, m);

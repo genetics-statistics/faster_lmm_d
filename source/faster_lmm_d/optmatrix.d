@@ -70,7 +70,8 @@ DMatrix cpu_matrix_mult_transpose(const DMatrix lha, const DMatrix rha) {
   return DMatrix(res_shape, C);
 }
 
-DMatrix matrix_transpose(const DMatrix input) {
+DMatrix slow_matrix_transpose(const DMatrix input) {
+  trace("slow_matrix_transpose");
   m_items total_elements = input.size();
   auto dim = total_elements;
   double[] output = new double[total_elements];

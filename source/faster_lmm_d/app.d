@@ -168,10 +168,10 @@ void main(string[] args)
       }
     }
 
-    DMatrix g_transposed = matrix_transpose(g);
+    DMatrix g_transposed = slow_matrix_transpose(g);
     DMatrix sliced_mat = slice_dmatrix(g_transposed, gidx);
     trace(sliced_mat.shape);
-    geno_matrix = matrix_transpose(sliced_mat);
+    geno_matrix = slow_matrix_transpose(sliced_mat);
     trace("geno matrix ", g.shape, " reshaped to ", geno_matrix.shape);
   }
 

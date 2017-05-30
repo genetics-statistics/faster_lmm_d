@@ -111,7 +111,7 @@ LMM lmm_transform(const LMM lmmobject) {
   //   matrix of K (the kinship).
 
   // trace("In lmm_transform");
-  DMatrix KveT = matrix_transpose(lmmobject.Kve);
+  DMatrix KveT = slow_matrix_transpose(lmmobject.Kve);
   DMatrix Yt = matrix_mult(KveT, lmmobject.Y);
   DMatrix X0t = matrix_mult(KveT, lmmobject.X0);
   DMatrix X0t_stack = horizontally_stack(X0t, ones_dmatrix(lmmobject.N,1));
@@ -132,12 +132,12 @@ MLSol getMLSoln(const double h, const DMatrix X, const DMatrix _Yt, const DMatri
   DMatrix S = divide_num_dmatrix(1,add_dmatrix_num(multiply_dmatrix_num(Kva,h),(1.0 - h)));
   auto temp = S.shape.dup_fast;
   S.shape = [temp[1], temp[0]];
-  DMatrix Xt = multiply_dmatrix(matrix_transpose(X), S);
+  DMatrix Xt = multiply_dmatrix(slow_matrix_transpose(X), S);
   DMatrix XX = matrix_mult(Xt,X);
   DMatrix XX_i = inverse(XX);
   DMatrix beta =  matrix_mult(matrix_mult(XX_i,Xt),_Yt);
   DMatrix Yt = sub_dmatrix(_Yt, matrix_mult(X,beta));
-  DMatrix YtT = matrix_transpose(Yt);
+  DMatrix YtT = slow_matrix_transpose(Yt);
   DMatrix YtTS = multiply_dmatrix(YtT, S);
   DMatrix Q = matrix_mult(YtTS,Yt);
   double sigma = Q.elements[0] * 1.0 / (to!double(N) - to!double(X.shape[1]));
@@ -185,7 +185,7 @@ LLTuple get_LL(const double h, const DMatrix param_X,
 
   if(REML) {
     double LL_REML_part = 0;
-    DMatrix XT = matrix_transpose(X);
+    DMatrix XT = slow_matrix_transpose(X);
     LL_REML_part = q*mlog(2.0*PI* ml.sigma) + mlog(det(matrix_mult(XT, X))) - mlog(det(ml.XX));
     LL = LL + 0.5*LL_REML_part;
   }
@@ -306,7 +306,6 @@ LMM lmm_fit(const LMM lmmobject, const DMatrix X_param, const ulong ngrids=100,
 auto lmm_association(const LMM lmmobject, const DMatrix param_X) {
   auto stack=true;
   auto REML=true;
-  // auto return_beta = false;
   //  Calculates association for the SNPs encoded in the vector X of size n.
   //  If h is None, the optimal h stored in opt_H is used.
   DMatrix X;
