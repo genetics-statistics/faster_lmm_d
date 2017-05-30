@@ -35,9 +35,8 @@ struct LMM{
   m_items q, N;
   double opt_H, opt_sigma, opt_LL;
   bool init = false;
-  bool verbose = false;
   DMatrix X0, Y, Kva, Kve, KveT;
-  DMatrix K;
+  // DMatrix K;
   DMatrix Yt, X0t, X0t_stack;
   DMatrix H, opt_beta, LLs;
 
@@ -51,17 +50,13 @@ struct LMM{
   //represent a mean effect.
 
   this(const double[] Y, const DMatrix K, const DMatrix Kva, const DMatrix Kve,
-       const DMatrix X0, bool verbose) {
-    trace("Y => ",Y[0..3],"...",Y[$-3..$]);
-
+       const DMatrix X0) {
     auto X0_new = (!X0.init ? ones_dmatrix(Y.length,1) : DMatrix(X0) );
-
-    this.verbose = verbose;
     bool[] v = is_nan(Y);
     bool[] x = negate_bool(v);
     EighTuple keigh = kvakve(K);
     this.init = true;
-    this.K = DMatrix(K);
+    //this.K = DMatrix(K);
     this.Kva = keigh.kva;
     this.Kve = keigh.kve;
     this.N = K.shape[0];
@@ -71,9 +66,8 @@ struct LMM{
 
   this(const LMM lmmobject, const DMatrix Yt, const DMatrix X0t,
        const DMatrix X0t_stack, const DMatrix KveT, ulong q) {
-    this.verbose = lmmobject.verbose;
     this.init = true;
-    this.K = DMatrix(lmmobject.K);
+    //this.K = DMatrix(lmmobject.K);
     this.Kve = DMatrix(lmmobject.Kve);
     this.Kva = DMatrix(lmmobject.Kva);
     this.N = lmmobject.N;
@@ -89,9 +83,8 @@ struct LMM{
   this(const LMM lmmobject, const DMatrix LLs, const DMatrix H,
        immutable double hmax, immutable double opt_LL,
        const DMatrix opt_beta, immutable double opt_sigma) {
-    this.verbose = lmmobject.verbose;
     this.init = true;
-    this.K = DMatrix(lmmobject.K);
+    //this.K = DMatrix(lmmobject.K);
     this.Kve = DMatrix(lmmobject.Kve);
     this.Kva = DMatrix(lmmobject.Kva);
     this.N = lmmobject.N;
@@ -112,9 +105,8 @@ struct LMM{
   }
 
   this(const LMM lmmobject) {
-    this.verbose = lmmobject.verbose;
     this.init = true;
-    this.K = DMatrix(lmmobject.K);
+    //this.K = DMatrix(lmmobject.K);
     this.Kve = DMatrix(lmmobject.Kve);
     this.Kva = DMatrix(lmmobject.Kva);
     this.N = lmmobject.N;
