@@ -70,6 +70,19 @@ DMatrix cpu_matrix_mult_transpose(const DMatrix lha, const DMatrix rha) {
   return DMatrix(res_shape, C);
 }
 
+DMatrix large_matrix_mult(const DMatrix lha,const DMatrix rha) {
+
+  MatrixSplit mat =  mat_split_along_row(lha);
+  MatrixSplit nat =  mat_split_along_col(rha);
+
+  DMatrix res_ul = matrix_mult(mat.first, nat.first);
+  DMatrix res_ur = matrix_mult(mat.first, nat.last );
+  DMatrix res_dl = matrix_mult(mat.last,  nat.first);
+  DMatrix res_dr = matrix_mult(mat.last,  nat.last) ;
+
+  return matrix_join(res_ul, res_ur, res_dl, res_dr);
+}
+
 DMatrix slow_matrix_transpose(const DMatrix input) {
   trace("slow_matrix_transpose");
   m_items total_elements = input.size();
