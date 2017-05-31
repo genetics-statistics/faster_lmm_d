@@ -31,8 +31,10 @@ import core.stdc.stdlib : exit;
 alias Tuple!(immutable double, "LL", const DMatrix, "beta", immutable double, "sigma", const DMatrix, "beta_var") LLTuple;
 alias Tuple!(const DMatrix, "beta", immutable double, "sigma", const DMatrix, "Q", const DMatrix, "XX_i", const DMatrix, "XX") MLSol;
 
+alias Individuals = immutable uint;
+
 struct LMM {
-  immutable m_items N; // n individuals
+  // immutable m_items N; // n individuals
   immutable m_items q; // q covariates
   immutable double opt_H, opt_sigma, opt_LL;
   DMatrix X0, Y, Kva, Kve;
@@ -49,14 +51,13 @@ struct LMM {
   //represent a mean effect.
 
   this(const double[] Y, const DMatrix Kva, const DMatrix Kve,
-       m_items N, const DMatrix X0, EighTuple keigh) {
+      const DMatrix X0, EighTuple keigh) {
     auto X0_new = (!X0.shape ? ones_dmatrix(Y.length,1) : DMatrix(X0) );
     bool[] v = is_nan(Y);
     bool[] x = negate_bool(v);
     this.Kva = keigh.kva;
     this.Kve = keigh.kve;
-    this.N = N;
-    this.Y = DMatrix([N,1], Y);
+    this.Y = DMatrix([Y.length,1], Y);
     this.X0 = X0_new;
   }
 
@@ -86,7 +87,6 @@ struct LMM {
   this(const LMM lmmobject) {
     this.Kve = DMatrix(lmmobject.Kve);
     this.Kva = DMatrix(lmmobject.Kva);
-    this.N = lmmobject.N;
     this.Y = DMatrix(lmmobject.Y);
     this.Yt = DMatrix(lmmobject.Yt);
     this.X0 = DMatrix(lmmobject.X0);
@@ -103,7 +103,7 @@ struct LMM {
   }
 }
 
-LMM lmm_transform(const LMM lmmobject) {
+LMM lmm_transform(const LMM lmmobject, Individuals N) {
 
   //   Computes a transformation on the phenotype vector and the
   //   covariate matrix.  The transformation is obtained by left
@@ -114,12 +114,12 @@ LMM lmm_transform(const LMM lmmobject) {
   DMatrix KveT = slow_matrix_transpose(lmmobject.Kve);
   DMatrix Yt = matrix_mult(KveT, lmmobject.Y);
   DMatrix X0t = matrix_mult(KveT, lmmobject.X0);
-  DMatrix X0t_stack = horizontally_stack(X0t, ones_dmatrix(lmmobject.N,1));
+  DMatrix X0t_stack = horizontally_stack(X0t, ones_dmatrix(N,1));
   auto q = X0t.shape[1];
   return LMM(lmmobject, Yt, X0t, X0t_stack, q);
 }
 
-MLSol getMLSoln(const double h, const DMatrix X, const DMatrix _Yt, const DMatrix Kva, const m_items N) {
+MLSol getMLSoln(const double h, const DMatrix X, const DMatrix _Yt, const DMatrix Kva, Individuals N) {
 
   //   Obtains the maximum-likelihood estimates for the covariate
   //   coefficients (beta), the total variance of the trait (sigma)
@@ -145,7 +145,7 @@ MLSol getMLSoln(const double h, const DMatrix X, const DMatrix _Yt, const DMatri
 }
 
 LLTuple get_LL(const double h, const DMatrix param_X,
-               m_items N, const DMatrix Kva, const DMatrix Yt, const DMatrix X0t,
+               Individuals N, const DMatrix Kva, const DMatrix Yt, const DMatrix X0t,
                const bool stack=true, const bool REML=false) {
 
   //   Computes the log-likelihood for a given heritability (h).  If
@@ -193,7 +193,8 @@ extern(C) double LL_brent(double h, void *params) {
   auto tup = *ptr;
   auto LMMglob = tup[0];
   auto Xglob = tup[1];
-  return -get_LL(h, Xglob, LMMglob.N, LMMglob.Kva, LMMglob.Yt, LMMglob.X0t, false, true).LL;
+  auto N = cast(Individuals)Xglob.shape[0];
+  return -get_LL(h, Xglob, N, LMMglob.Kva, LMMglob.Yt, LMMglob.X0t, false, true).LL;
 }
 
 double optimize_brent(const LMM lmmobject, const DMatrix X, const bool REML,
@@ -270,7 +271,7 @@ double get_max(const LMM lmmobject, const DMatrix L, const DMatrix H,
   }
 }
 
-LMM lmm_fit(const LMM lmmobject, const DMatrix X_param, const ulong ngrids=100,
+LMM lmm_fit(const LMM lmmobject, Individuals N, const DMatrix X_param, const ulong ngrids=100,
             const bool REML=true) {
 
   //   Finds the maximum-likelihood solution for the heritability (h)
@@ -290,26 +291,26 @@ LMM lmm_fit(const LMM lmmobject, const DMatrix X_param, const ulong ngrids=100,
 
   double[] elm = new double[ngrids];
   for(auto h = 0; h < ngrids; h++) {
-    elm[h] = get_LL(Harr[h], X, lmmobject.N, lmmobject.Kva, lmmobject.Yt, lmmobject.X0t, false, REML).LL;
+    elm[h] = get_LL(Harr[h], X, N, lmmobject.Kva, lmmobject.Yt, lmmobject.X0t, false, REML).LL;
   }
   DMatrix L = DMatrix([elm.length,1],elm);
   DMatrix H = DMatrix([Harr.length,1],Harr);
   double fit_hmax = get_max(lmmobject, L, H, X, REML);
-  LLTuple ll = get_LL(fit_hmax, X, lmmobject.N, lmmobject.Kva, lmmobject.Yt, lmmobject.X0t, false, REML);
+  LLTuple ll = get_LL(fit_hmax, X, N, lmmobject.Kva, lmmobject.Yt, lmmobject.X0t, false, REML);
 
   return LMM(lmmobject, L, H, fit_hmax, ll.LL, ll.beta, ll.sigma);
 }
 
-auto lmm_association(const LMM lmmobject, const DMatrix param_X, const DMatrix KveT) {
+auto lmm_association(const LMM lmmobject, Individuals N, const DMatrix param_X, const DMatrix KveT) {
   auto stack=true;
   auto REML=true;
   //  Calculates association for the SNPs encoded in the vector X of size n.
   //  If h is None, the optimal h stored in opt_H is used.
   DMatrix m = matrix_mult(KveT, param_X);
   DMatrix X = set_col(lmmobject.X0t_stack,lmmobject.q,m);
-  LLTuple ll = get_LL(lmmobject.opt_H, X, lmmobject.N, lmmobject.Kva, lmmobject.Yt, lmmobject.X0t, false, REML);
+  LLTuple ll = get_LL(lmmobject.opt_H, X, N, lmmobject.Kva, lmmobject.Yt, lmmobject.X0t, false, REML);
   auto q = ll.beta.elements.length;
-  const ulong df = lmmobject.N - q;
+  const ulong df = N - q;
   return tstat(ll.beta.elements[q-1], accessor(ll.beta_var,q-1,q-1), ll.sigma, q, df);
 }
 

@@ -41,12 +41,13 @@ auto gwas(immutable double[] Y, const DMatrix G, const DMatrix K){
 
   check_memory("Before gwas");
 
-  LMM lmm1 = LMM(Y, Kva, Kve, K.shape[0], X0, kvakve(K));
-  auto lmm2 = lmm_transform(lmm1);
+  auto N = cast(Individuals)K.shape[0];
+  LMM lmm1 = LMM(Y, Kva, Kve, X0, kvakve(K));
+  auto lmm2 = lmm_transform(lmm1,N);
 
   trace("Computing fit for null model");
   DMatrix X;
-  auto lmm = lmm_fit(lmm2, X);
+  auto lmm = lmm_fit(lmm2, N, X);
   log("heritability= ", lmm.opt_H, " sigma= ", lmm.opt_sigma, " LL= ", lmm.opt_LL);
 
   check_memory();
@@ -61,7 +62,7 @@ auto gwas(immutable double[] Y, const DMatrix G, const DMatrix K){
   for(int i=0; i<snps; i++){
     DMatrix x = get_row(G, i);
     x.shape = [inds, 1];
-    auto tsps = lmm_association(lmm, x, KveT);
+    auto tsps = lmm_association(lmm, N, x, KveT);
     ps[i]  = tsps[1];
     ts[i]  = tsps[0];
     lod[i] = tsps[2];
