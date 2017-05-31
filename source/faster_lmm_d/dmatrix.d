@@ -32,6 +32,10 @@ struct DMatrix{
     elements = e.dup_fast;
   }
 
+  this(const double[] list) {
+    this([list.length,1],list);
+  }
+
   const sum() { return reduce!"a + b"(0.0, elements); }
 
   pragma(inline) const m_items cols() { return shape[1]; }

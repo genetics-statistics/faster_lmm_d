@@ -43,7 +43,7 @@ auto gwas(immutable double[] Y, const DMatrix G, const DMatrix K){
 
   auto N = cast(N_Individuals)K.shape[0];
   LMM lmm1 = LMM(Y, Kva, Kve, X0, kvakve(K));
-  auto lmm2 = lmm_transform(lmm1,N);
+  auto lmm2 = lmm_transform(lmm1,N,Y);
 
   trace("Computing fit for null model");
   DMatrix X;

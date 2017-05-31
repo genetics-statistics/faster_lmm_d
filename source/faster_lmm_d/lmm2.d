@@ -35,9 +35,8 @@ alias N_Individuals = immutable uint;
 alias N_Covariates = immutable uint;
 
 struct LMM {
-  // immutable m_items q; // q covariates
   immutable double opt_H, opt_sigma, opt_LL;
-  DMatrix X0, Y, Kva, Kve;
+  DMatrix X0, Kva, Kve;
   DMatrix Yt;
   DMatrix X0t, X0t_stack;
   DMatrix H, opt_beta, LLs;
@@ -57,7 +56,6 @@ struct LMM {
     bool[] x = negate_bool(v);
     this.Kva = keigh.kva;
     this.Kve = keigh.kve;
-    this.Y = DMatrix([Y.length,1], Y);
     this.X0 = X0_new;
   }
 
@@ -68,8 +66,6 @@ struct LMM {
     this.X0 = X0;
     this.X0t = DMatrix(X0t);
     this.X0t_stack = DMatrix(X0t_stack);
-    // this.KveT = DMatrix(KveT);
-    // this.q = q;
   }
 
   this(const LMM lmmobject, const DMatrix LLs, const DMatrix H,
@@ -87,13 +83,10 @@ struct LMM {
   this(const LMM lmmobject) {
     this.Kve = DMatrix(lmmobject.Kve);
     this.Kva = DMatrix(lmmobject.Kva);
-    this.Y = DMatrix(lmmobject.Y);
     this.Yt = DMatrix(lmmobject.Yt);
     this.X0 = DMatrix(lmmobject.X0);
     this.X0t = DMatrix(lmmobject.X0t);
     this.X0t_stack = DMatrix(lmmobject.X0t_stack);
-    // this.KveT = DMatrix(lmmobject.KveT);
-    //this.q = lmmobject.q;
 
     this.LLs = DMatrix(lmmobject.LLs);
     this.H = DMatrix(lmmobject.H);
@@ -103,16 +96,15 @@ struct LMM {
   }
 }
 
-LMM lmm_transform(const LMM lmmobject, N_Individuals N) {
+LMM lmm_transform(const LMM lmmobject, N_Individuals N, const double[] Y) {
 
   //   Computes a transformation on the phenotype vector and the
   //   covariate matrix.  The transformation is obtained by left
   //   multiplying each parameter by the transpose of the eigenvector
   //   matrix of K (the kinship).
 
-  // trace("In lmm_transform");
   DMatrix KveT = slow_matrix_transpose(lmmobject.Kve);
-  DMatrix Yt = matrix_mult(KveT, lmmobject.Y);
+  DMatrix Yt = matrix_mult(KveT, DMatrix(Y));
   DMatrix X0t = matrix_mult(KveT, lmmobject.X0);
   DMatrix X0t_stack = horizontally_stack(X0t, ones_dmatrix(N,1));
   auto q = X0t.shape[1];
