@@ -39,8 +39,8 @@ struct LMM {
   DMatrix X0, Kva, Kve;
   DMatrix Yt;
   DMatrix X0t, X0t_stack;
-  // DMatrix H
-  DMatrix opt_beta, LLs;
+  DMatrix opt_beta;
+  // , LLs;
 
   //The constructor takes a phenotype vector or array Y of size n. It
   //takes a kinship matrix K of size n x n.  Kva and Kve can be
@@ -69,11 +69,11 @@ struct LMM {
     this.X0t_stack = DMatrix(X0t_stack);
   }
 
-  this(const LMM lmmobject, const DMatrix LLs, const DMatrix H,
+  this(const LMM lmmobject,
        immutable double hmax, immutable double opt_LL,
        const DMatrix opt_beta, immutable double opt_sigma) {
     this(lmmobject);
-    this.LLs =  DMatrix(LLs);
+    // this.LLs = DMatrix(LLs);
     // this.H = DMatrix(H);
     this.opt_H = hmax;
     this.opt_LL = opt_LL;
@@ -89,7 +89,7 @@ struct LMM {
     this.X0t = DMatrix(lmmobject.X0t);
     this.X0t_stack = DMatrix(lmmobject.X0t_stack);
 
-    this.LLs = DMatrix(lmmobject.LLs);
+    // this.LLs = DMatrix(lmmobject.LLs);
     // this.H = DMatrix(lmmobject.H);
     this.opt_LL = lmmobject.opt_LL;
     this.opt_beta = DMatrix(lmmobject.opt_beta);
@@ -291,7 +291,7 @@ LMM lmm_fit(const LMM lmmobject, N_Individuals N, const DMatrix X_param, const u
   double fit_hmax = get_max(lmmobject, L, H, X, REML);
   LLTuple ll = get_LL(fit_hmax, X, N, lmmobject.Kva, lmmobject.Yt, lmmobject.X0t, false, REML);
 
-  return LMM(lmmobject, L, H, fit_hmax, ll.LL, ll.beta, ll.sigma);
+  return LMM(lmmobject, fit_hmax, ll.LL, ll.beta, ll.sigma);
 }
 
 auto lmm_association(const LMM lmmobject, N_Individuals N, const DMatrix param_X, const DMatrix KveT) {
