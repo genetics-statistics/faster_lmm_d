@@ -282,14 +282,7 @@ LMM lmm_fit(const LMM lmmobject, const DMatrix X_param, const ulong ngrids=100,
   //   .get_max(...) to find the optimum.  Given this optimum, the
   //   function computes the LL and associated ML solutions.
 
-  DMatrix X;
-
-  if(!X_param.shape) {
-    X = DMatrix(lmmobject.X0t);
-  }
-  else{
-    X = DMatrix(lmmobject.X0t_stack);
-  }
+  DMatrix X = (!X_param.shape ? DMatrix(lmmobject.X0t) : DMatrix(lmmobject.X0t_stack));
   double[] Harr = new double[ngrids];
   for(auto m = 0; m < ngrids; m++) {
     Harr[m] = m / to!double(ngrids);
