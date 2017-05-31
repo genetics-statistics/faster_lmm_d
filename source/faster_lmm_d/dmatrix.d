@@ -352,11 +352,10 @@ unittest{
   assert(add_dmatrix(d, d2) == d3);
   assert(add_dmatrix_num(d, 0) == d);
 
-  assert(sub_dmatrix(d3, d2) == d);
-  assert(sub_dmatrix_num(d, 0) == d);
+  assert(subtract_dmatrix(d3, d2) == d);
 
   auto d4 = DMatrix([2,2],[6,24,40,60]);
-  assert(multiply_dmatrix(d2,d3) == d4);
+  assert(slow_multiply_dmatrix(d2,d3) == d4);
   assert(multiply_dmatrix_num(d2,1) == d2);
 
   assert(divide_dmatrix_num(d2,1) == d2);
