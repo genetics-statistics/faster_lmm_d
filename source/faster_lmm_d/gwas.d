@@ -35,15 +35,13 @@ auto gwas(immutable double[] Y, const DMatrix G, const DMatrix K){
     log("snps should be larger than inds (snps=%d,inds=%d)", snps,inds);
   }
 
-  DMatrix Kva;
-  DMatrix Kve;
-  DMatrix X0;
-
   check_memory("Before gwas");
 
   auto N = cast(N_Individuals)K.shape[0];
-  LMM lmm1 = LMM(Y, Kva, Kve, X0, kvakve(K));
-  auto lmm2 = lmm_transform(lmm1,N,Y);
+  auto kvakve = kvakve(K);
+  DMatrix Dummy_X0;
+  LMM lmm1 = LMM(Y, kvakve.kva, Dummy_X0);
+  auto lmm2 = lmm_transform(lmm1,N,Y,kvakve.kve);
 
   trace("Computing fit for null model");
   DMatrix X;
@@ -58,7 +56,7 @@ auto gwas(immutable double[] Y, const DMatrix G, const DMatrix K){
 
   info(G.shape);
 
-  DMatrix KveT = lmm.Kve.T; // out of the loop
+  DMatrix KveT = kvakve.kve.T; // out of the loop
   for(int i=0; i<snps; i++){
     DMatrix x = get_row(G, i);
     x.shape = [inds, 1];

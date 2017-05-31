@@ -36,7 +36,8 @@ alias N_Covariates = immutable uint;
 
 struct LMM {
   immutable double opt_H, opt_sigma, opt_LL;
-  DMatrix X0, Kva, Kve;
+  DMatrix X0, Kva;
+  // Kve;
   DMatrix Yt;
   DMatrix X0t, X0t_stack;
   DMatrix opt_beta;
@@ -50,13 +51,10 @@ struct LMM {
   //constructor will set X0 to an n x 1 matrix of all ones to
   //represent a mean effect.
 
-  this(const double[] Y, const DMatrix Kva, const DMatrix Kve,
-      const DMatrix X0, EighTuple keigh) {
+  this(const double[] Y, const DMatrix Kva, const DMatrix X0) {
     auto X0_new = (!X0.shape ? ones_dmatrix(Y.length,1) : DMatrix(X0) );
     bool[] v = is_nan(Y);
     bool[] x = negate_bool(v);
-    this.Kva = keigh.kva;
-    this.Kve = keigh.kve;
     this.X0 = X0_new;
   }
 
@@ -82,7 +80,7 @@ struct LMM {
   }
 
   this(const LMM lmmobject) {
-    this.Kve = DMatrix(lmmobject.Kve);
+    // this.Kve = DMatrix(lmmobject.Kve);
     this.Kva = DMatrix(lmmobject.Kva);
     this.Yt = DMatrix(lmmobject.Yt);
     this.X0 = DMatrix(lmmobject.X0);
@@ -97,14 +95,13 @@ struct LMM {
   }
 }
 
-LMM lmm_transform(const LMM lmmobject, N_Individuals N, const double[] Y) {
-
+LMM lmm_transform(const LMM lmmobject, N_Individuals N, const double[] Y, const DMatrix Kve) {
   //   Computes a transformation on the phenotype vector and the
   //   covariate matrix.  The transformation is obtained by left
   //   multiplying each parameter by the transpose of the eigenvector
   //   matrix of K (the kinship).
 
-  DMatrix KveT = slow_matrix_transpose(lmmobject.Kve);
+  DMatrix KveT = slow_matrix_transpose(Kve);
   DMatrix Yt = matrix_mult(KveT, DMatrix(Y));
   DMatrix X0t = matrix_mult(KveT, lmmobject.X0);
   DMatrix X0t_stack = horizontally_stack(X0t, ones_dmatrix(N,1));
