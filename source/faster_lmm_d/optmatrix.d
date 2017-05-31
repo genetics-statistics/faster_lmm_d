@@ -70,7 +70,7 @@ DMatrix cpu_matrix_mult_transpose(const DMatrix lha, const DMatrix rha) {
   return DMatrix(res_shape, C);
 }
 
-DMatrix large_matrix_mult(const DMatrix lha,const DMatrix rha) {
+DMatrix large_matrix_mult(DMatrix lha, DMatrix rha) {
 
   MatrixSplit mat =  mat_split_along_row(lha);
   MatrixSplit nat =  mat_split_along_col(rha);
@@ -296,7 +296,7 @@ unittest{
   assert(inverse(d4) == d5);
 
   DMatrix d6 = DMatrix([2,2],[2, -4, -1, 3]);
-  assert(matrix_transpose(d4) == d6);
+  assert(d4.T == d6);
 
   DMatrix m = DMatrix([3,4],[10, 11, 12, 13,
                              14, 15, 16, 17,
@@ -307,13 +307,12 @@ unittest{
                               12,16,20,
                               13,17,21]);
 
-  auto transposed_mat = matrix_transpose(m);
-  auto result_mat = matrix_transpose(matrix);
+  auto transposed_mat = m.T;
+  auto result_mat = matrix.T;
   assert(transposed_mat == matrix,to!string(transposed_mat));
   assert(result_mat == m,to!string(result_mat));
 
   DMatrix d7 = DMatrix([4,2],[-3,13,7, -5, -12, 26, 2, -8]);
-  assert(matrix_mult_transpose(d2, d6) == d7);
 
   assert(det(d4) == 2,to!string(det(d4)));
 
