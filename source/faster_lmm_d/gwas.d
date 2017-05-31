@@ -20,8 +20,10 @@ import faster_lmm_d.output;
 
 import core.stdc.stdlib : exit;
 
-auto gwas(immutable double[] Y, const DMatrix G, const DMatrix K, const bool reml = true, const bool refit=false, const bool verbose = true){
+auto gwas(immutable double[] Y, const DMatrix G, const DMatrix K){
 
+  const bool reml  = true;
+  const bool refit = false;
   trace("In gwas.gwas");
 
   auto inds = G.cols();
@@ -33,23 +35,20 @@ auto gwas(immutable double[] Y, const DMatrix G, const DMatrix K, const bool rem
     log("snps should be larger than inds (snps=%d,inds=%d)", snps,inds);
   }
 
-  DMatrix Kva;
-  DMatrix Kve;
-  DMatrix X0;
-
   check_memory("Before gwas");
 
-  LMM lmm = LMM(Y, Kva, Kve, K.shape[0], X0, kvakve(K));
-  lmm = lmm_transform(lmm);
+  auto N = cast(N_Individuals)K.shape[0];
+  auto kvakve = kvakve(K);
+  DMatrix Dummy_X0;
+  LMM lmm1 = LMM(Y, kvakve.kva, Dummy_X0);
+  auto lmm2 = lmm_transform(lmm1,N,Y,kvakve.kve);
+
+  trace("Computing fit for null model");
+  DMatrix X;
+  auto lmm = lmm_fit(lmm2, N, X);
+  log("heritability= ", lmm.opt_H, " sigma= ", lmm.opt_sigma, " LL= ", lmm.opt_LL);
 
   check_memory();
-
-  if(!refit){
-    trace("Computing fit for null model");
-    DMatrix X;
-    lmm = lmm_fit(lmm, X);
-    log("heritability= ", lmm.opt_H, " sigma= ", lmm.opt_sigma, " LL= ", lmm.opt_LL);
-  }
 
   double[] ps = new double[snps];
   double[] ts = new double[snps];
@@ -57,11 +56,11 @@ auto gwas(immutable double[] Y, const DMatrix G, const DMatrix K, const bool rem
 
   info(G.shape);
 
-  DMatrix KveT = lmm.Kve.T; // out of the loop
+  DMatrix KveT = kvakve.kve.T; // out of the loop
   for(int i=0; i<snps; i++){
     DMatrix x = get_row(G, i);
     x.shape = [inds, 1];
-    auto tsps = lmm_association(lmm, x, KveT);
+    auto tsps = lmm_association(lmm, N, x, KveT);
     ps[i]  = tsps[1];
     ts[i]  = tsps[0];
     lod[i] = tsps[2];
@@ -91,5 +90,5 @@ auto run_gwas(immutable m_items n, immutable m_items m, DMatrix k, immutable dou
   DMatrix K = kinship_full(G);
   trace("kinship_matrix.shape: ", K.shape);
 
-  return gwas(pheno.Y, G, K, true, false, true);
+  return gwas(pheno.Y, G, K);
 }
