@@ -41,7 +41,7 @@ auto gwas(immutable double[] Y, const DMatrix G, const DMatrix K){
 
   check_memory("Before gwas");
 
-  auto N = cast(Individuals)K.shape[0];
+  auto N = cast(N_Individuals)K.shape[0];
   LMM lmm1 = LMM(Y, Kva, Kve, X0, kvakve(K));
   auto lmm2 = lmm_transform(lmm1,N);
 

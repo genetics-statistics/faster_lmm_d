@@ -31,11 +31,11 @@ import core.stdc.stdlib : exit;
 alias Tuple!(immutable double, "LL", const DMatrix, "beta", immutable double, "sigma", const DMatrix, "beta_var") LLTuple;
 alias Tuple!(const DMatrix, "beta", immutable double, "sigma", const DMatrix, "Q", const DMatrix, "XX_i", const DMatrix, "XX") MLSol;
 
-alias Individuals = immutable uint;
+alias N_Individuals = immutable uint;
+alias N_Covariates = immutable uint;
 
 struct LMM {
-  // immutable m_items N; // n individuals
-  immutable m_items q; // q covariates
+  // immutable m_items q; // q covariates
   immutable double opt_H, opt_sigma, opt_LL;
   DMatrix X0, Y, Kva, Kve;
   DMatrix Yt;
@@ -62,14 +62,14 @@ struct LMM {
   }
 
   this(const LMM lmmobject, const DMatrix Yt, const DMatrix X0t,
-       const DMatrix X0t_stack, ulong q) {
+       const DMatrix X0t_stack) {
     this(lmmobject);
     this.Yt = DMatrix(Yt);
     this.X0 = X0;
     this.X0t = DMatrix(X0t);
     this.X0t_stack = DMatrix(X0t_stack);
     // this.KveT = DMatrix(KveT);
-    this.q = q;
+    // this.q = q;
   }
 
   this(const LMM lmmobject, const DMatrix LLs, const DMatrix H,
@@ -93,7 +93,7 @@ struct LMM {
     this.X0t = DMatrix(lmmobject.X0t);
     this.X0t_stack = DMatrix(lmmobject.X0t_stack);
     // this.KveT = DMatrix(lmmobject.KveT);
-    this.q = lmmobject.q;
+    //this.q = lmmobject.q;
 
     this.LLs = DMatrix(lmmobject.LLs);
     this.H = DMatrix(lmmobject.H);
@@ -103,7 +103,7 @@ struct LMM {
   }
 }
 
-LMM lmm_transform(const LMM lmmobject, Individuals N) {
+LMM lmm_transform(const LMM lmmobject, N_Individuals N) {
 
   //   Computes a transformation on the phenotype vector and the
   //   covariate matrix.  The transformation is obtained by left
@@ -116,10 +116,10 @@ LMM lmm_transform(const LMM lmmobject, Individuals N) {
   DMatrix X0t = matrix_mult(KveT, lmmobject.X0);
   DMatrix X0t_stack = horizontally_stack(X0t, ones_dmatrix(N,1));
   auto q = X0t.shape[1];
-  return LMM(lmmobject, Yt, X0t, X0t_stack, q);
+  return LMM(lmmobject, Yt, X0t, X0t_stack);
 }
 
-MLSol getMLSoln(const double h, const DMatrix X, const DMatrix _Yt, const DMatrix Kva, Individuals N) {
+MLSol getMLSoln(const double h, const DMatrix X, const DMatrix _Yt, const DMatrix Kva, N_Individuals N) {
 
   //   Obtains the maximum-likelihood estimates for the covariate
   //   coefficients (beta), the total variance of the trait (sigma)
@@ -145,7 +145,7 @@ MLSol getMLSoln(const double h, const DMatrix X, const DMatrix _Yt, const DMatri
 }
 
 LLTuple get_LL(const double h, const DMatrix param_X,
-               Individuals N, const DMatrix Kva, const DMatrix Yt, const DMatrix X0t,
+               N_Individuals N, const DMatrix Kva, const DMatrix Yt, const DMatrix X0t,
                const bool stack=true, const bool REML=false) {
 
   //   Computes the log-likelihood for a given heritability (h).  If
@@ -193,7 +193,7 @@ extern(C) double LL_brent(double h, void *params) {
   auto tup = *ptr;
   auto LMMglob = tup[0];
   auto Xglob = tup[1];
-  auto N = cast(Individuals)Xglob.shape[0];
+  auto N = cast(N_Individuals)Xglob.shape[0];
   return -get_LL(h, Xglob, N, LMMglob.Kva, LMMglob.Yt, LMMglob.X0t, false, true).LL;
 }
 
@@ -271,7 +271,7 @@ double get_max(const LMM lmmobject, const DMatrix L, const DMatrix H,
   }
 }
 
-LMM lmm_fit(const LMM lmmobject, Individuals N, const DMatrix X_param, const ulong ngrids=100,
+LMM lmm_fit(const LMM lmmobject, N_Individuals N, const DMatrix X_param, const ulong ngrids=100,
             const bool REML=true) {
 
   //   Finds the maximum-likelihood solution for the heritability (h)
@@ -301,13 +301,14 @@ LMM lmm_fit(const LMM lmmobject, Individuals N, const DMatrix X_param, const ulo
   return LMM(lmmobject, L, H, fit_hmax, ll.LL, ll.beta, ll.sigma);
 }
 
-auto lmm_association(const LMM lmmobject, Individuals N, const DMatrix param_X, const DMatrix KveT) {
+auto lmm_association(const LMM lmmobject, N_Individuals N, const DMatrix param_X, const DMatrix KveT) {
   auto stack=true;
   auto REML=true;
   //  Calculates association for the SNPs encoded in the vector X of size n.
   //  If h is None, the optimal h stored in opt_H is used.
   DMatrix m = matrix_mult(KveT, param_X);
-  DMatrix X = set_col(lmmobject.X0t_stack,lmmobject.q,m);
+  N_Covariates n_covariates = 1;
+  DMatrix X = set_col(lmmobject.X0t_stack,n_covariates,m);
   LLTuple ll = get_LL(lmmobject.opt_H, X, N, lmmobject.Kva, lmmobject.Yt, lmmobject.X0t, false, REML);
   auto q = ll.beta.elements.length;
   const ulong df = N - q;
