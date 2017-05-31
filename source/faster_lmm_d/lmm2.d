@@ -39,7 +39,8 @@ struct LMM {
   DMatrix X0, Kva, Kve;
   DMatrix Yt;
   DMatrix X0t, X0t_stack;
-  DMatrix H, opt_beta, LLs;
+  // DMatrix H
+  DMatrix opt_beta, LLs;
 
   //The constructor takes a phenotype vector or array Y of size n. It
   //takes a kinship matrix K of size n x n.  Kva and Kve can be
@@ -73,7 +74,7 @@ struct LMM {
        const DMatrix opt_beta, immutable double opt_sigma) {
     this(lmmobject);
     this.LLs =  DMatrix(LLs);
-    this.H = DMatrix(H);
+    // this.H = DMatrix(H);
     this.opt_H = hmax;
     this.opt_LL = opt_LL;
     this.opt_beta = DMatrix(opt_beta);
@@ -89,7 +90,7 @@ struct LMM {
     this.X0t_stack = DMatrix(lmmobject.X0t_stack);
 
     this.LLs = DMatrix(lmmobject.LLs);
-    this.H = DMatrix(lmmobject.H);
+    // this.H = DMatrix(lmmobject.H);
     this.opt_LL = lmmobject.opt_LL;
     this.opt_beta = DMatrix(lmmobject.opt_beta);
     this.opt_sigma = lmmobject.opt_sigma;
