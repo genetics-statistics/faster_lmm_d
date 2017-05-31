@@ -342,4 +342,13 @@ unittest{
                                         0,         0,       0,
                                  -1.22474,         0, 1.22474]);
   assert(eqeq(normalize_along_row(mat), norm_mat));
+
+  DMatrix lmatrix = DMatrix([2,3],[1,2,3,
+                                  4,5,6]);
+
+  DMatrix rmatrix = DMatrix([3,5],[1,2,3,4,5,
+                                   4,5,6,4,6,
+                                   7,8,9,7,8]);
+
+  assert(matrix_mult(lmatrix, rmatrix) == large_matrix_mult(lmatrix, rmatrix));
 }
