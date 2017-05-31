@@ -50,7 +50,7 @@ struct LMM {
 
   this(const double[] Y, const DMatrix Kva, const DMatrix Kve,
        m_items N, const DMatrix X0, EighTuple keigh) {
-    auto X0_new = (!X0.init ? ones_dmatrix(Y.length,1) : DMatrix(X0) );
+    auto X0_new = (!X0.shape ? ones_dmatrix(Y.length,1) : DMatrix(X0) );
     bool[] v = is_nan(Y);
     bool[] x = negate_bool(v);
     this.Kva = keigh.kva;
@@ -154,7 +154,7 @@ LLTuple get_LL(const double h, const DMatrix param_X,
   //   X.  If stack is false, then X is used in place of X0t in the LL
   //   calculation.  REML is computed by adding additional terms to
   //   the standard LL and can be computed by setting REML=True.
-  const DMatrix X = ( param_X.init != true ? X0t : param_X );
+  const DMatrix X = ( !param_X.shape ? X0t : param_X );
 
   double n = to!double(N);
   double q = to!double(X.shape[1]);
@@ -284,7 +284,7 @@ LMM lmm_fit(const LMM lmmobject, const DMatrix X_param, const ulong ngrids=100,
 
   DMatrix X;
 
-  if(X_param.init == false) {
+  if(!X_param.shape) {
     X = DMatrix(lmmobject.X0t);
   }
   else{

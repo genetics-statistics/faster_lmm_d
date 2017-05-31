@@ -22,7 +22,6 @@ alias size_t m_items; // dimensions are never negative
 struct DMatrix{
   m_items[] shape;
   double[] elements;
-  bool init = false;
 
   this(const DMatrix m) {
     this(m.shape,m.elements);
@@ -31,7 +30,6 @@ struct DMatrix{
   this(const m_items[] shape_in, const double[] e) {
     shape    = shape_in.dup_fast;
     elements = e.dup_fast;
-    init     = true;
   }
 
   const sum() { return reduce!"a + b"(0.0, elements); }
@@ -319,7 +317,6 @@ MatrixSplit mat_split_along_col(DMatrix matrix){
 DMatrix matrix_join(DMatrix ul, DMatrix ur, DMatrix dl, DMatrix dr){
   DMatrix result;
   result.shape = [ul.rows + dl.rows, ul.cols + ur.cols];
-  result.init = true;
   ulong rows = result.rows;
   ulong cols = result.cols;
   for(ulong i = 0; i < ul.rows; i++){
