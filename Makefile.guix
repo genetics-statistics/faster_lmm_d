@@ -59,7 +59,7 @@ guix:        DFLAGS += -O -g -inline
 guix-debug:  DFLAGS += -O0 -g -d-debug -unittest
 
 # The development options are run from ~/.guix-profile and need to inject the RPATH
-debug:       DFLAGS += -O0 -g -d-debug $(RPATH) -link-debuglib
+debug:       DFLAGS += -O0 -g -d-debug $(RPATH) -link-debuglib -disable-fp-elim
 
 release:     DFLAGS += -O -release $(RPATH)
 
