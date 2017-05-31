@@ -34,7 +34,7 @@ alias Tuple!(const DMatrix, "beta", immutable double, "sigma", const DMatrix, "Q
 struct LMM {
   immutable m_items N; // n individuals
   immutable m_items q; // q covariates
-  double opt_H, opt_sigma, opt_LL;
+  immutable double opt_H, opt_sigma, opt_LL;
   DMatrix X0, Y, Kva, Kve;
   DMatrix Yt;
   DMatrix X0t, X0t_stack;
