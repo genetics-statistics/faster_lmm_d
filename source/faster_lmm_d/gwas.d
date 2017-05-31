@@ -20,8 +20,10 @@ import faster_lmm_d.output;
 
 import core.stdc.stdlib : exit;
 
-auto gwas(immutable double[] Y, const DMatrix G, const DMatrix K, const bool reml = true, const bool refit=false, const bool verbose = true){
+auto gwas(immutable double[] Y, const DMatrix G, const DMatrix K){
 
+  const bool reml  = true;
+  const bool refit = false;
   trace("In gwas.gwas");
 
   auto inds = G.cols();
@@ -39,17 +41,15 @@ auto gwas(immutable double[] Y, const DMatrix G, const DMatrix K, const bool rem
 
   check_memory("Before gwas");
 
-  LMM lmm = LMM(Y, Kva, Kve, K.shape[0], X0, kvakve(K));
-  lmm = lmm_transform(lmm);
+  LMM lmm1 = LMM(Y, Kva, Kve, K.shape[0], X0, kvakve(K));
+  auto lmm2 = lmm_transform(lmm1);
+
+  trace("Computing fit for null model");
+  DMatrix X;
+  auto lmm = lmm_fit(lmm2, X);
+  log("heritability= ", lmm.opt_H, " sigma= ", lmm.opt_sigma, " LL= ", lmm.opt_LL);
 
   check_memory();
-
-  if(!refit){
-    trace("Computing fit for null model");
-    DMatrix X;
-    lmm = lmm_fit(lmm, X);
-    log("heritability= ", lmm.opt_H, " sigma= ", lmm.opt_sigma, " LL= ", lmm.opt_LL);
-  }
 
   double[] ps = new double[snps];
   double[] ts = new double[snps];
@@ -91,5 +91,5 @@ auto run_gwas(immutable m_items n, immutable m_items m, DMatrix k, immutable dou
   DMatrix K = kinship_full(G);
   trace("kinship_matrix.shape: ", K.shape);
 
-  return gwas(pheno.Y, G, K, true, false, true);
+  return gwas(pheno.Y, G, K);
 }

@@ -32,7 +32,8 @@ alias Tuple!(immutable double, "LL", const DMatrix, "beta", immutable double, "s
 alias Tuple!(const DMatrix, "beta", immutable double, "sigma", const DMatrix, "Q", const DMatrix, "XX_i", const DMatrix, "XX") MLSol;
 
 struct LMM {
-  m_items q, N;
+  immutable m_items N; // n individuals
+  immutable m_items q; // q covariates
   double opt_H, opt_sigma, opt_LL;
   DMatrix X0, Y, Kva, Kve;
   DMatrix Yt;
@@ -41,8 +42,7 @@ struct LMM {
 
   //The constructor takes a phenotype vector or array Y of size n. It
   //takes a kinship matrix K of size n x n.  Kva and Kve can be
-  //computed as Kva,Kve = linalg.eigh(K) and cached.  If they are
-  //not provided, the constructor will calculate them.  X0 is an
+  //computed as Kva,Kve = linalg.eigh(K) and cached.  X0 is an
   //optional covariate matrix of size n x q, where there are q
   //covariates.  When this parameter is not provided, the
   //constructor will set X0 to an n x 1 matrix of all ones to
