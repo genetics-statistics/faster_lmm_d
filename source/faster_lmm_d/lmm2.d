@@ -33,6 +33,7 @@ alias Tuple!(const DMatrix, "beta", immutable double, "sigma", const DMatrix, "Q
 
 alias N_Individuals = immutable uint;
 alias N_Covariates = immutable uint;
+alias Tuple!(const double,"ts",const double,"p_value",const double,"lod") TStat;
 
 struct LMM {
   immutable double opt_H, opt_sigma, opt_LL;
@@ -300,7 +301,7 @@ auto lmm_association(const LMM lmmobject, N_Individuals N, const DMatrix param_X
   return tstat(ll.beta.elements[q-1], accessor(ll.beta_var,q-1,q-1), ll.sigma, q, df);
 }
 
-auto tstat(const double beta, const double var, const double sigma,
+TStat tstat(const double beta, const double var, const double sigma,
            const double q, const ulong df) {
   //   Calculates a t-statistic and associated p-value given the
   //   estimate of beta and its standard error.  This is actually an
@@ -310,5 +311,5 @@ auto tstat(const double beta, const double var, const double sigma,
   double ps = 2.0*( 1 -  studentsTCDF(abs(ts), df));
   double lod = chiSquareCDF(ps, 1);
 
-  return Tuple!(double, double, double)(ts, ps, lod);
+  return TStat(ts, ps, lod);
 }
