@@ -8,6 +8,7 @@
 module faster_lmm_d.gwas;
 
 import std.experimental.logger;
+import std.parallelism;
 import std.typecons;
 
 import faster_lmm_d.dmatrix;
@@ -56,11 +57,14 @@ auto gwas(immutable double[] Y, const DMatrix G, const DMatrix K){
 
   info(G.shape);
 
-  DMatrix KveT = kvakve.kve.T; // out of the loop
+  auto task_pool = new TaskPool(8);
+  scope(exit) task_pool.finish();
+  DMatrix KveT = kvakve.kve.T; // compute out of the loop
   for(int i=0; i<snps; i++){
     DMatrix x = get_row(G, i);
     x.shape = [inds, 1];
-    auto tsps = lmm_association(lmm, N, x, KveT);
+    tasks.push(task!lmm_association(lmm, N, x, KveT));
+    auto tsps =
     ps[i]  = tsps[1];
     ts[i]  = tsps[0];
     lod[i] = tsps[2];
