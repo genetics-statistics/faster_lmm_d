@@ -57,12 +57,10 @@ auto gwas(immutable double[] Y, const DMatrix G, const DMatrix K){
 
   DMatrix KveT = kvakve.kve.T; // compute out of the loop
   TStat[] tsps;
-  foreach(i; 0..snps) {
-    DMatrix x = get_row(G, i);
-    x.shape = [inds, 1];
-    tsps ~= lmm_association(lmm, N, x, KveT);
-    if(i%1000 == 0){
-      info(i, " snps processed");
+  foreach(snp; 0..snps) {
+    tsps ~= lmm_association(snp, lmm, N, G, KveT);
+    if(snp % 1000 == 0){
+      info(snp, " snps processed");
     }
   }
 

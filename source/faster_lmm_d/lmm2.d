@@ -287,12 +287,15 @@ LMM lmm_fit(const LMM lmmobject, N_Individuals N, const DMatrix X_param, const u
   return LMM(lmmobject, fit_hmax, ll.LL, ll.beta, ll.sigma);
 }
 
-auto lmm_association(const LMM lmmobject, N_Individuals N, const DMatrix param_X, const DMatrix KveT) {
+auto lmm_association(m_items i, const LMM lmmobject, N_Individuals N, const DMatrix G, const DMatrix KveT) {
   auto stack=true;
   auto REML=true;
+  DMatrix _X = get_row(G, i);
+  _X.shape = [N, 1];
+
   //  Calculates association for the SNPs encoded in the vector X of size n.
   //  If h is None, the optimal h stored in opt_H is used.
-  DMatrix m = matrix_mult(KveT, param_X);
+  DMatrix m = matrix_mult(KveT, _X);
   N_Covariates n_covariates = 1;
   DMatrix X = set_col(lmmobject.X0t_stack,n_covariates,m);
   LLTuple ll = get_LL(lmmobject.opt_H, X, N, lmmobject.Kva, lmmobject.Yt, lmmobject.X0t, false, REML);
