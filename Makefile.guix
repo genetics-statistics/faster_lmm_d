@@ -9,9 +9,8 @@
 #   ./build/faster_lmm_d
 
 # The following two are modified by the Guix package:
-D_COMPILER=ldc2
-# LDC_LIB_PATH=$(HOME)/.guix-profile/lib
-LDC_LIB_PATH=~/opt/ldc2-1.1.0-linux-x86_64/lib
+D_COMPILER=$(shell which ldc2)
+LDC_LIB_PATH=$(shell dirname $(shell dirname $(D_COMPILER)))/lib
 
 ifdef CUDA
   CUDA_LIB_PATH=/usr/local/cuda-7.0/lib64
