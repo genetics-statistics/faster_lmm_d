@@ -33,7 +33,7 @@ alias Tuple!(const DMatrix, "beta", immutable double, "sigma", const DMatrix, "Q
 
 alias N_Individuals = immutable uint;
 alias N_Covariates = immutable uint;
-alias Tuple!(const double,"ts",const double,"p_value",const double,"lod") TStat;
+alias Tuple!(double,"ts",double,"p_value",double,"lod") TStat;
 
 struct LMM {
   immutable double opt_H, opt_sigma, opt_LL;
