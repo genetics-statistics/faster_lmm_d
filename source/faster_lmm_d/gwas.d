@@ -50,31 +50,23 @@ auto gwas(immutable double[] Y, const DMatrix G, const DMatrix K){
   log("heritability= ", lmm.opt_H, " sigma= ", lmm.opt_sigma, " LL= ", lmm.opt_LL);
 
   check_memory();
-
-  double[] ps = new double[snps];
-  double[] ts = new double[snps];
-  double[] lod = new double[snps];
-
   info(G.shape);
 
   auto task_pool = new TaskPool(8);
   scope(exit) task_pool.finish();
+
   DMatrix KveT = kvakve.kve.T; // compute out of the loop
-  for(int i=0; i<snps; i++){
+  TStat[] tsps;
+  foreach(i; 0..snps) {
     DMatrix x = get_row(G, i);
     x.shape = [inds, 1];
-    tasks.push(task!lmm_association(lmm, N, x, KveT));
-    auto tsps =
-    ps[i]  = tsps[1];
-    ts[i]  = tsps[0];
-    lod[i] = tsps[2];
-
+    tsps ~= lmm_association(lmm, N, x, KveT);
     if(i%1000 == 0){
       info(i, " snps processed");
     }
   }
 
-  return Tuple!(double[], double[], double[])(ts, ps, lod);
+  return tsps;
 }
 
 
