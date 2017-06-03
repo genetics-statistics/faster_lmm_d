@@ -206,7 +206,7 @@ void main(string[] args)
     }
     if(option_geno == "data/test8000.geno"){
       info("Validating results for ",option_geno," ",sum(p_values));
-      enforce(round(sum(p_values)) == 4070);
+      enforce(round(sum(p_values)) == 4070, to!string(sum(p_values)));
       enforce(p_values.length == 8000);
       enforce(round(p_values[3]*10000) == 7503,"P-value[3] " ~ to!string(round(p_values[3]*10000)));
     }

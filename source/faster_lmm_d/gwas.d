@@ -62,7 +62,7 @@ auto gwas(immutable double[] Y, const DMatrix G, const DMatrix K){
     auto tsps = new TStat[snps];
     auto items = iota(0,snps).array;
 
-    foreach (ref snp; taskPool.parallel(items,10)) {
+    foreach (ref snp; taskPool.parallel(items,100)) {
       print(".");
       tsps[snp] = lmm_association(snp, lmm, N, G, KveT);
     }
@@ -71,7 +71,7 @@ auto gwas(immutable double[] Y, const DMatrix G, const DMatrix K){
     foreach(snp; 0..snps) {
       tsps ~= lmm_association(snp, lmm, N, G, KveT);
       if(snp % 1000 == 0){
-        info(snp, " snps processed");
+        println(snp, " snps processed");
       }
     }
   }

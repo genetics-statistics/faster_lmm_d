@@ -296,8 +296,7 @@ auto lmm_association(m_items i, const LMM lmmobject, N_Individuals N, const DMat
   //  Calculates association for the SNPs encoded in the vector X of size n.
   //  If h is None, the optimal h stored in opt_H is used.
   DMatrix m = matrix_mult(KveT, _X);
-  N_Covariates n_covariates = 1;
-  DMatrix X = set_col(lmmobject.X0t_stack,n_covariates,m);
+  DMatrix X = set_col(lmmobject.X0t_stack,1,m);
   LLTuple ll = get_LL(lmmobject.opt_H, X, N, lmmobject.Kva, lmmobject.Yt, lmmobject.X0t, false, REML);
   auto q = ll.beta.elements.length;
   const ulong df = N - q;

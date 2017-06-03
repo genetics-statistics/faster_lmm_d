@@ -11,12 +11,12 @@ import std.stdio;
 
 import faster_lmm_d.dmatrix;
 
-void print(string msg) {
-  stderr.write(msg);
+void print(T...)(T args) {
+  stderr.write(args);
 }
 
-void println(string msg) {
-  stderr.writeln(msg);
+void println(T...)(T args) {
+  stderr.writeln(args);
 }
 
 
