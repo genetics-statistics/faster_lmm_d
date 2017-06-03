@@ -250,25 +250,26 @@ DMatrix get_row(const DMatrix input, const ulong row_no) {
   return DMatrix([1,cols],arr);
 }
 
-
-DMatrix set_col(const DMatrix input, const ulong colNo, const DMatrix arr) {
-  m_items rows = input.rows();
-  m_items cols = input.cols();
-  auto result = input.elements.dup_fast;
-  for(auto i=0; i < rows; i++) {
-    result[i*cols + colNo] = arr.elements[i];
+/*
+ * set_col sets the column at colNo to arr
+ */
+DMatrix set_col(const DMatrix input, const ulong col_no, const DMatrix arr) {
+  assert(arr.cols == 1);
+  assert(arr.rows == input.rows);
+  auto result = input.elements.dup;
+  foreach(row; 0..input.rows) {
+    result[row*input.cols + col_no] = arr.elements[row];
   }
   return DMatrix(input.shape, result);
 }
 
 DMatrix set_row(const DMatrix input, const ulong row_no, const DMatrix arr) {
-  auto index =  row_no*input.cols();
-  auto end =  (row_no+1)*input.cols();
-  auto result = input.elements.dup_fast;
-  auto k = 0;
-  for(auto i=index; i<end; i++) {
-    result[i] = arr.elements[k];
-    k++;
+  assert(arr.cols == 1);
+  assert(arr.rows == input.cols);
+  auto result = input.elements.dup;
+  auto i = 0;
+  foreach(col; row_no*input.cols..(row_no+1)*input.cols) {
+    result[col] = arr.elements[i++];
   }
   return DMatrix(input.shape, result);
 }

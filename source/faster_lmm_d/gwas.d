@@ -8,6 +8,8 @@
 module faster_lmm_d.gwas;
 
 import std.experimental.logger;
+import std.parallelism;
+import std.range;
 import std.typecons;
 
 import faster_lmm_d.dmatrix;
@@ -37,6 +39,7 @@ auto gwas(immutable double[] Y, const DMatrix G, const DMatrix K){
 
   check_memory("Before gwas");
 
+  println("Compute GWAS");
   auto N = cast(N_Individuals)K.shape[0];
   auto kvakve = kvakve(K);
   DMatrix Dummy_X0;
@@ -49,28 +52,34 @@ auto gwas(immutable double[] Y, const DMatrix G, const DMatrix K){
   log("heritability= ", lmm.opt_H, " sigma= ", lmm.opt_sigma, " LL= ", lmm.opt_LL);
 
   check_memory();
-
-  double[] ps = new double[snps];
-  double[] ts = new double[snps];
-  double[] lod = new double[snps];
-
   info(G.shape);
 
-  DMatrix KveT = kvakve.kve.T; // out of the loop
-  for(int i=0; i<snps; i++){
-    DMatrix x = get_row(G, i);
-    x.shape = [inds, 1];
-    auto tsps = lmm_association(lmm, N, x, KveT);
-    ps[i]  = tsps[1];
-    ts[i]  = tsps[0];
-    lod[i] = tsps[2];
+  auto task_pool = new TaskPool(8);
+  scope(exit) task_pool.finish();
 
-    if(i%1000 == 0){
-      info(i, " snps processed");
+  DMatrix KveT = kvakve.kve.T; // compute out of loop
+  version(PARALLEL) {
+    auto tsps = new TStat[snps];
+    auto items = iota(0,snps).array;
+
+    println("Parallel");
+    foreach (ref snp; taskPool.parallel(items,100)) {
+      tsps[snp] = lmm_association(snp, lmm, N, G, KveT);
+      if((snp+1) % 1000 == 0){
+        println(snp+1, " snps processed");
+      }
+    }
+  } else {
+    TStat[] tsps;
+    foreach(snp; 0..snps) {
+      tsps ~= lmm_association(snp, lmm, N, G, KveT);
+      if((snp+1) % 1000 == 0){
+        println(snp+1, " snps processed");
+      }
     }
   }
 
-  return Tuple!(double[], double[], double[])(ts, ps, lod);
+  return tsps;
 }
 
 

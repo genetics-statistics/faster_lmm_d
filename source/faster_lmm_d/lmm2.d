@@ -33,6 +33,7 @@ alias Tuple!(const DMatrix, "beta", immutable double, "sigma", const DMatrix, "Q
 
 alias N_Individuals = immutable uint;
 alias N_Covariates = immutable uint;
+alias Tuple!(double,"ts",double,"p_value",double,"lod") TStat;
 
 struct LMM {
   immutable double opt_H, opt_sigma, opt_LL;
@@ -286,21 +287,23 @@ LMM lmm_fit(const LMM lmmobject, N_Individuals N, const DMatrix X_param, const u
   return LMM(lmmobject, fit_hmax, ll.LL, ll.beta, ll.sigma);
 }
 
-auto lmm_association(const LMM lmmobject, N_Individuals N, const DMatrix param_X, const DMatrix KveT) {
+auto lmm_association(m_items i, const LMM lmmobject, N_Individuals N, const DMatrix G, const DMatrix KveT) {
   auto stack=true;
   auto REML=true;
+  DMatrix _X = get_row(G, i);
+  _X.shape = [N, 1];
+
   //  Calculates association for the SNPs encoded in the vector X of size n.
   //  If h is None, the optimal h stored in opt_H is used.
-  DMatrix m = matrix_mult(KveT, param_X);
-  N_Covariates n_covariates = 1;
-  DMatrix X = set_col(lmmobject.X0t_stack,n_covariates,m);
+  DMatrix m = matrix_mult(KveT, _X);
+  DMatrix X = set_col(lmmobject.X0t_stack,1,m);
   LLTuple ll = get_LL(lmmobject.opt_H, X, N, lmmobject.Kva, lmmobject.Yt, lmmobject.X0t, false, REML);
   auto q = ll.beta.elements.length;
   const ulong df = N - q;
   return tstat(ll.beta.elements[q-1], accessor(ll.beta_var,q-1,q-1), ll.sigma, q, df);
 }
 
-auto tstat(const double beta, const double var, const double sigma,
+TStat tstat(const double beta, const double var, const double sigma,
            const double q, const ulong df) {
   //   Calculates a t-statistic and associated p-value given the
   //   estimate of beta and its standard error.  This is actually an
@@ -309,6 +312,7 @@ auto tstat(const double beta, const double var, const double sigma,
   double ts = beta / sqrt(var*sigma);
   double ps = 2.0*( 1 -  studentsTCDF(abs(ts), df));
   double lod = chiSquareCDF(ps, 1);
+  // double lod = 0.0;
 
-  return Tuple!(double, double, double)(ts, ps, lod);
+  return TStat(ts, ps, lod);
 }

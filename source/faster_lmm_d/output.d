@@ -11,6 +11,15 @@ import std.stdio;
 
 import faster_lmm_d.dmatrix;
 
+void print(T...)(T args) {
+  stderr.write(args);
+}
+
+void println(T...)(T args) {
+  stderr.writeln(args);
+}
+
+
 void pretty_print(string msg, const DMatrix input) {
   m_items cols = input.cols();
   m_items rows = input.rows();

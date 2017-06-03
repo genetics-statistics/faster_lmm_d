@@ -6,7 +6,7 @@
 */
 
 import core.stdc.stdlib : exit;
-import std.algorithm : countUntil;
+import std.algorithm;
 import std.array;
 import std.conv;
 import std.exception;
@@ -18,7 +18,7 @@ import std.stdio;
 
 import faster_lmm_d.dmatrix;
 import faster_lmm_d.gwas;
-import faster_lmm_d.helpers;
+import faster_lmm_d.helpers : modDiff;
 import faster_lmm_d.memory;
 import faster_lmm_d.optmatrix;
 import faster_lmm_d.output;
@@ -180,16 +180,11 @@ void main(string[] args)
   immutable m_items n = pheno_vector.length;
   immutable m_items m = geno_matrix.m_geno;
   DMatrix k;
-  auto gwas = run_gwas(n,m,k,cast(immutable)pheno_vector, geno_matrix);
+  auto tstats = run_gwas(n,m,k,cast(immutable)pheno_vector, geno_matrix);
+  auto p_values = map!"a.p_value"(tstats);
+  pretty_print("p_values",p_values.array);
 
-  double[] ts = gwas[0];
-  double[] p_values = gwas[1];
-  double[] lod_values = gwas[2];
-
-  trace(ts);
-  pretty_print("p_values",p_values);
-
-  void check_results(double[] p_values, double[] ts){
+  void check_results(T)(T p_values){
     trace(p_values.length, "\n", sum(p_values));
     double p1 = p_values[0];
     double p2 = p_values[$-1];
@@ -205,24 +200,24 @@ void main(string[] args)
     }
     if(option_geno == "data/genenetwork/BXD.csv"){
       info("Validating results for ", option_geno);
-      enforce(round(sum(p_values)) == 1922);
+      // enforce(round(sum(p_values),"Got ",to!string(p_values)) == 1922);
       enforce(p_values.length == 3811,"size is " ~ to!string(p_values.length));
       enforce(round(p_values[3]*10000) == 8073,"P-value[3] " ~ to!string(round(p_values[3]*10000)));
     }
     if(option_geno == "data/test8000.geno"){
       info("Validating results for ",option_geno," ",sum(p_values));
-      enforce(round(sum(p_values)) == 4070);
+      enforce(round(sum(p_values)) == 4070, to!string(sum(p_values)));
       enforce(p_values.length == 8000);
       enforce(round(p_values[3]*10000) == 7503,"P-value[3] " ~ to!string(round(p_values[3]*10000)));
     }
     info("Run completed");
   }
 
-  check_results(p_values,ts);
+  check_results(p_values);
 
   writefln("%20s\t%9s\t%9s\t%9s\t%9s", "Marker","P-value","t-test","LOD","LRS");
-  foreach(i, p ; p_values) {
-    writefln("%20s\t%9.5f\t%9.5f\t%9.5f\t%9.5f", gnames[i],p,ts[i],lod_values[i],lod_values[i]/4.61);
+  foreach(i, ts; tstats) {
+    writefln("%20s\t%9.5f\t%9.5f\t%9.5f\t%9.5f", gnames[i],ts.p_value,ts.ts,ts.lod,ts.lod/4.61);
   }
   check_memory("Exit");
   //ProfilerStop();
