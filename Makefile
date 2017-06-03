@@ -1,3 +1,24 @@
+# To build faster_lmm_d:
+#
+#   make [CUDA=1] [VALIDATE=1] [FORCE_DUPLICATE=1] [debug|release|check]
+#
+# run with
+#
+#   ./build/faster_lmm_d
+#
+# where
+#
+#   CUDA=1            builds with CUDA support
+#   FORCE_DUPLICATE=1 prevents overwrites (purity)
+#   PARALLEL=1        switch on parallel compute
+#   VALIDATE=1        validates matrix multiplication
+#
+#  current combinations are
+#
+#   Default:          -
+#   Parallel version: PARALLEL=1
+#   CUDA version:     CUDA=1
+
 D_COMPILER=ldc2
 
 LDMD=ldmd2
@@ -71,6 +92,17 @@ build-setup:
 
 build-cuda-setup:
 	mkdir -p build/cuda/
+
+ifeq ($(FORCE_DUPLICATE),1)
+  DFLAGS += -d-version=FORCE_DUPLICATE
+endif
+ifeq ($(PARALLEL),1)
+  DFLAGS += -d-version=PARALLEL
+endif
+ifeq ($(VALIDATE),1)
+  DFLAGS += -d-version=VALIDATE
+endif
+
 
 default debug release profile getIR getBC gperf: $(OUT)
 
