@@ -14,11 +14,13 @@ import faster_lmm_d.cuda;
 import faster_lmm_d.dmatrix;
 import faster_lmm_d.helpers;
 import faster_lmm_d.optmatrix;
+import faster_lmm_d.output;
 import faster_lmm_d.memory;
 
 DMatrix kinship_full(const DMatrix G)
 {
   info("Full kinship matrix used");
+  println("Compute K");
   check_memory();
   m_items m = G.rows(); // snps
   m_items n = G.cols(); // inds

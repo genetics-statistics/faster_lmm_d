@@ -313,6 +313,7 @@ TStat tstat(const double beta, const double var, const double sigma,
   double ts = beta / sqrt(var*sigma);
   double ps = 2.0*( 1 -  studentsTCDF(abs(ts), df));
   double lod = chiSquareCDF(ps, 1);
+  // double lod = 0.0;
 
   return TStat(ts, ps, lod);
 }

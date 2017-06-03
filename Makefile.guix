@@ -2,11 +2,18 @@
 #
 # To build faster_lmm_d on GNU Guix:
 #
-#   make -f Makefile.guix [CUDA=1] [VALIDATE=1] [debug|release|check]
+#   make -f Makefile.guix [CUDA=1] [VALIDATE=1] [FORCE_DUPLICATE=1] [BLAS=1] [debug|release|check]
 #
 # run with
 #
 #   ./build/faster_lmm_d
+#
+# where
+#
+#   CUDA=1            builds with CUDA support
+#   VALIDATE=1        validates matrix multiplication\
+#   FORCE_DUPLICATE=1 prevents overwrites (purity)
+#   BLAS=1            builds with standard BLAS instead of OpenBLAS
 
 # The following two are modified by the Guix package:
 D_COMPILER=$(shell which ldc2)
@@ -41,7 +48,13 @@ DFLAGS = -wi -I./source $(DUB_INCLUDE)
 DLIBS  = $(LDC_LIB_PATH)/libphobos2-ldc.a $(LDC_LIB_PATH)/libdruntime-ldc.a $(DUB_LIBS)
 DLIBS_DEBUG = $(LDC_LIB_PATH)/libphobos2-ldc-debug.a $(LDC_LIB_PATH)/libdruntime-ldc-debug.a $(DUB_LIBS)
 RPATH  =
-LIBS   = -L-L$(LDC_LIB_PATH) -L-lgsl -L-lopenblas -L-llapacke
+LIBS   = -L-L$(LDC_LIB_PATH) -L-lgsl
+ifdef BLAS
+  LIBS += -L-lgslcblas -L-lblas
+else
+  LIBS += -L-lopenblas
+endif
+LIBS   += -L-llapacke
 SRC    = $(wildcard source/faster_lmm_d/*.d)
 OBJ    = $(SRC:.d=.o)
 OUT    = build/faster_lmm_d

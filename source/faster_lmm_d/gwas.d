@@ -39,6 +39,7 @@ auto gwas(immutable double[] Y, const DMatrix G, const DMatrix K){
 
   check_memory("Before gwas");
 
+  println("Compute GWAS");
   auto N = cast(N_Individuals)K.shape[0];
   auto kvakve = kvakve(K);
   DMatrix Dummy_X0;
@@ -70,6 +71,7 @@ auto gwas(immutable double[] Y, const DMatrix G, const DMatrix K){
   auto items = iota(0,snps).array;
 
   foreach (ref snp; taskPool.parallel(items,10)) {
+    print(".");
     tsps[snp] = lmm_association(snp, lmm, N, G, KveT);
   }
 
