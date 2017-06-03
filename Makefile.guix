@@ -10,10 +10,17 @@
 #
 # where
 #
-#   CUDA=1            builds with CUDA support
-#   VALIDATE=1        validates matrix multiplication\
-#   FORCE_DUPLICATE=1 prevents overwrites (purity)
 #   BLAS=1            builds with standard BLAS instead of OpenBLAS
+#   CUDA=1            builds with CUDA support
+#   FORCE_DUPLICATE=1 prevents overwrites (purity)
+#   PARALLEL=1        switch on parallel compute
+#   VALIDATE=1        validates matrix multiplication
+#
+#  current combinations are
+#
+#   Default:          -
+#   Parallel version: PARALLEL=1 BLAS=1 FORCE_DUPLICATE=1
+#   CUDA version:     CUDA=1
 
 # The following two are modified by the Guix package:
 D_COMPILER=$(shell which ldc2)
@@ -103,11 +110,14 @@ guix guix-debug default debug release profile getIR getBC gperf: $(OUT)
 ifdef CUDA
   DFLAGS += -d-version=CUDA
 endif
-ifdef VALIDATE
-  DFLAGS += -d-version=VALIDATE
-endif
 ifdef FORCE_DUPLICATE
   DFLAGS += -d-version=FORCE_DUPLICATE
+endif
+ifdef PARALLEL
+  DFLAGS += -d-version=PARALLEL
+endif
+ifdef VALIDATE
+  DFLAGS += -d-version=VALIDATE
 endif
 
 # ---- Compile step

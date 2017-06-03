@@ -57,22 +57,23 @@ auto gwas(immutable double[] Y, const DMatrix G, const DMatrix K){
   auto task_pool = new TaskPool(8);
   scope(exit) task_pool.finish();
 
-  DMatrix KveT = kvakve.kve.T; // compute out of the loop
-  /*
-  TStat[] tsps;
-  foreach(snp; 0..snps) {
-    tsps ~= lmm_association(snp, lmm, N, G, KveT);
-    if(snp % 1000 == 0){
-      info(snp, " snps processed");
-    }
-  }
-  */
-  auto tsps = new TStat[snps];
-  auto items = iota(0,snps).array;
+  DMatrix KveT = kvakve.kve.T; // compute out of loop
+  version(PARALLEL) {
+    auto tsps = new TStat[snps];
+    auto items = iota(0,snps).array;
 
-  foreach (ref snp; taskPool.parallel(items,10)) {
-    print(".");
-    tsps[snp] = lmm_association(snp, lmm, N, G, KveT);
+    foreach (ref snp; taskPool.parallel(items,10)) {
+      print(".");
+      tsps[snp] = lmm_association(snp, lmm, N, G, KveT);
+    }
+  } else {
+    TStat[] tsps;
+    foreach(snp; 0..snps) {
+      tsps ~= lmm_association(snp, lmm, N, G, KveT);
+      if(snp % 1000 == 0){
+        info(snp, " snps processed");
+      }
+    }
   }
 
   return tsps;
