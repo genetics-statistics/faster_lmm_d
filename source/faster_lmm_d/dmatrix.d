@@ -264,13 +264,12 @@ DMatrix set_col(const DMatrix input, const ulong col_no, const DMatrix arr) {
 }
 
 DMatrix set_row(const DMatrix input, const ulong row_no, const DMatrix arr) {
-  auto index =  row_no*input.cols();
-  auto end =  (row_no+1)*input.cols();
+  assert(arr.cols == 1);
+  assert(arr.rows == input.cols);
   auto result = input.elements.dup;
-  auto k = 0;
-  for(auto i=index; i<end; i++) {
-    result[i] = arr.elements[k];
-    k++;
+  auto i = 0;
+  foreach(col; row_no*input.cols..(row_no+1)*input.cols) {
+    result[col] = arr.elements[i++];
   }
   return DMatrix(input.shape, result);
 }

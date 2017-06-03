@@ -62,16 +62,19 @@ auto gwas(immutable double[] Y, const DMatrix G, const DMatrix K){
     auto tsps = new TStat[snps];
     auto items = iota(0,snps).array;
 
+    println("Parallel");
     foreach (ref snp; taskPool.parallel(items,100)) {
-      print(".");
       tsps[snp] = lmm_association(snp, lmm, N, G, KveT);
+      if((snp+1) % 1000 == 0){
+        println(snp+1, " snps processed");
+      }
     }
   } else {
     TStat[] tsps;
     foreach(snp; 0..snps) {
       tsps ~= lmm_association(snp, lmm, N, G, KveT);
-      if(snp % 1000 == 0){
-        println(snp, " snps processed");
+      if((snp+1) % 1000 == 0){
+        println(snp+1, " snps processed");
       }
     }
   }

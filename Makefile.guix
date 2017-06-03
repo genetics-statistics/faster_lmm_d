@@ -19,7 +19,7 @@
 #  current combinations are
 #
 #   Default:          -
-#   Parallel version: PARALLEL=1 BLAS=1 FORCE_DUPLICATE=1
+#   Parallel version: PARALLEL=1 BLAS=1
 #   CUDA version:     CUDA=1
 
 # The following two are modified by the Guix package:
