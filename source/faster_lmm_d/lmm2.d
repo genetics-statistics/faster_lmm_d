@@ -118,14 +118,14 @@ MLSol getMLSoln(const double h, const DMatrix X, const DMatrix _Yt, const DMatri
   DMatrix S = divide_num_dmatrix(1,add_dmatrix_num(multiply_dmatrix_num(Kva,h),(1.0 - h)));
   auto temp = S.shape.dup_fast;
   S.shape = [temp[1], temp[0]];
-  DMatrix Xt = slow_multiply_dmatrix(slow_matrix_transpose(X), S);
-  DMatrix XX = matrix_mult("Xt", Xt, "X", X);
+  DMatrix Xt   = slow_multiply_dmatrix(slow_matrix_transpose(X), S);
+  DMatrix XX   = matrix_mult("Xt", Xt, "X", X);
   DMatrix XX_i = inverse(XX);
-  DMatrix beta =  matrix_mult("(XX_i x Xt)",matrix_mult("XX_i",XX_i,"Xt",Xt),"Yt",_Yt);
-  DMatrix Yt = subtract_dmatrix(_Yt, matrix_mult("X",X,"beta",beta));
-  DMatrix YtT = slow_matrix_transpose(Yt);
+  DMatrix beta = matrix_mult("(XX_i x Xt)", matrix_mult("XX_i",XX_i,"Xt",Xt), "Yt", _Yt);
+  DMatrix Yt   = subtract_dmatrix(_Yt, matrix_mult("X",X,"beta",beta));
+  DMatrix YtT  = slow_matrix_transpose(Yt);
   DMatrix YtTS = slow_multiply_dmatrix(YtT, S);
-  DMatrix Q = matrix_mult("YtTs",YtTS,"Yt",Yt);
+  DMatrix Q    = matrix_mult("YtTs",YtTS,"Yt",Yt);
   double sigma = Q.elements[0] * 1.0 / (to!double(N) - to!double(X.shape[1]));
   return MLSol(beta, sigma, Q, XX_i, XX);
 }
