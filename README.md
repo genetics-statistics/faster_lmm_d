@@ -43,7 +43,7 @@ sudo apt-get install ldc2
 ### On GNU Guix
 
 ```sh
-guix package -i ldc dub openblas gsl lapack
+guix package -i ldc dub openblas gsl lapack ld-wrapper gcc glibc
 ```
 
 ## Get the source
@@ -57,14 +57,24 @@ cd faster_lmm_d
 
 Fetch dependencies and compile
 
+CPU Backend:
 ```sh
-dub --compiler=ldc2
+make
+```
+CUDA Backend:
+```sh
+make CUDA=1
+```
+ARRAYFIRE Backend:
+```sh
+make ARRAYFIRE=1
 ```
 
 or in the case of GNU Guix (because dub does not honour the
 LIBRARY_PATH):
 
 ```sh
+export LIBRARY_PATH=~/.guix-profile/lib
 env LD_LIBRARY_PATH=$LIBRARY_PATH dub --compiler=ldc2
 ```
 

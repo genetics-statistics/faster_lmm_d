@@ -19,11 +19,11 @@ import std.typecons;
 import faster_lmm_d.dmatrix;
 import faster_lmm_d.optmatrix;
 
-auto tsvpheno(string fn, ulong p_column= 0){
+auto tsvpheno(const string fn, const ulong p_column= 0){
 	trace("In tsvpheno");
 	double[] y;
   string[] phenotypes;
-  string input = cast(string)std.file.read(fn);
+  string input = to!string(std.file.read(fn));
 
   string[] lines = input.split("\n");
   assert(lines[0] == "# Phenotype format version 1.0");
@@ -31,20 +31,15 @@ auto tsvpheno(string fn, ulong p_column= 0){
   foreach(line; lines){
   	if(line != ""){
   		string[] row = line.split("\t");
-      if(row[1] == "NA"){
-        y ~=  double.nan;// <--- slow
-      }
-      else{
-        y ~=  to!double(row[1]);// <--- slow
-      }
+      y ~= ( row[1] == "NA" ? double.nan : to!double(row[1]) );
 	  	phenotypes ~= to!string(row[0]);
   	}
 
   }
-  return Tuple!(double[], string[])(y, phenotypes);
+  return Tuple!(const double[], immutable(string[]))(y, cast(immutable)phenotypes);
 }// # FIXME: column not used
 
-genoObj tsvgeno(string fn, JSONValue ctrl){
+GenoObj tsvgeno(const string fn, JSONValue ctrl){
 
   trace("in geno function");
   string s = `{"A":0,"H":1,"B":2,"-":3}`;
@@ -64,7 +59,7 @@ genoObj tsvgeno(string fn, JSONValue ctrl){
   log("hab_mapper", hab_mapper);
   log("faster_lmm_d_mapper", faster_lmm_d_mapper);
 
-  string input = cast(string)std.file.read(fn);
+  string input = to!string(std.file.read(fn));
   string[] rows = input.split("\n");
 
   immutable(string[]) ynames = rows[4].split("\t");
@@ -72,7 +67,7 @@ genoObj tsvgeno(string fn, JSONValue ctrl){
   auto rowCount = rows.length - 6;
   auto colCount = ynames.length - 1;
 
-  dmatrix geno;
+  DMatrix geno;
   string[] gnames = [];
   foreach(line; rows[5..$]){
     if(line != ""){
@@ -83,9 +78,9 @@ genoObj tsvgeno(string fn, JSONValue ctrl){
       }
     }
   }
-  genoObj geno_obj = genoObj(geno,gnames,ynames[1..$]);
+  geno.shape = [rowCount, colCount];
+  GenoObj geno_obj = GenoObj(geno, cast(immutable)gnames,ynames[1..$]);
 
-  geno_obj.geno.shape = [rowCount, colCount];
   info("Genotype Matrix created");
   return geno_obj;
 }

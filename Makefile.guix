@@ -2,38 +2,75 @@
 #
 # To build faster_lmm_d on GNU Guix:
 #
-#   make -f Makefile.guix
+#   make -f Makefile.guix [CUDA=1] [VALIDATE=1] [FORCE_DUPLICATE=1] [BLAS=1] [debug|release|check]
 #
 # run with
 #
 #   ./build/faster_lmm_d
+#
+# where
+#
+#   BLAS=1            builds with standard BLAS instead of OpenBLAS
+#   CUDA=1            builds with CUDA support
+#   FORCE_DUPLICATE=1 prevents overwrites (purity)
+#   PARALLEL=1        switch on parallel compute
+#   VALIDATE=1        validates matrix multiplication
+#
+#  current combinations are
+#
+#   Default:          -
+#   Parallel version: PARALLEL=1 BLAS=1
+#   CUDA version:     CUDA=1
 
 # The following two are modified by the Guix package:
-D_COMPILER=ldc2
-LDC_LIB_PATH=$(HOME)/.guix-profile/lib
+D_COMPILER=$(shell which ldc2)
+LDC_LIB_PATH=$(shell dirname $(shell dirname $(D_COMPILER)))/lib
+
+ifdef CUDA
+  CUDA_LIB_PATH=/usr/local/cuda-7.0/lib64
+endif
 
 DUB_INCLUDE = \
 -I~/.dub/packages/dstats-1.0.3/dstats/source/ \
 -I~/.dub/packages/gsl-0.1.8/gsl/source/ \
 -I~/.dub/packages/cblas-1.0.0/cblas/source/ \
 -I~/.dub/packages/dyaml-0.5.3/dyaml/source/ \
--I~/.dub/packages/tinyendian-0.1.2/tinyendian/source/
+-I~/.dub/packages/tinyendian-0.1.2/tinyendian/source/ \
+-I~/.dub/packages/resusage-0.2.4/resusage/source/
 
 DUB_LIBS = \
 $(HOME)/.dub/packages/dstats-1.0.3/dstats/libdstats.a \
 $(HOME)/.dub/packages/dyaml-0.5.3/dyaml/libdyaml.a \
 $(HOME)/.dub/packages/gsl-0.1.8/gsl/libgsl.a \
 $(HOME)/.dub/packages/lapack-0.1.2/lapack/liblapack.a \
-$(HOME)/.dub/packages/tinyendian-0.1.2/tinyendian/libtinyendian.a
+$(HOME)/.dub/packages/tinyendian-0.1.2/tinyendian/libtinyendian.a \
+$(HOME)/.dub/packages/resusage-0.2.4/resusage/lib/libresusage.a
+
+ifdef CUDA
+  DUB_INCLUDE += -I~/.dub/packages/cuda_d-0.1.0/cuda_d/source/
+  DUB_LIBS += $(HOME)/.dub/packages/cuda_d-0.1.0/cuda_d/libcuda_d.a
+endif
 
 DFLAGS = -wi -I./source $(DUB_INCLUDE)
 DLIBS  = $(LDC_LIB_PATH)/libphobos2-ldc.a $(LDC_LIB_PATH)/libdruntime-ldc.a $(DUB_LIBS)
 DLIBS_DEBUG = $(LDC_LIB_PATH)/libphobos2-ldc-debug.a $(LDC_LIB_PATH)/libdruntime-ldc-debug.a $(DUB_LIBS)
 RPATH  =
-LIBS   = -L-L$(LDC_LIB_PATH) -L-lgsl -L-lopenblas -L-llapacke
+LIBS   = -L-L$(LDC_LIB_PATH) -L-lgsl
+ifdef BLAS
+  LIBS += -L-lgslcblas -L-lblas
+else
+  LIBS += -L-lopenblas
+endif
+LIBS   += -L-llapacke
 SRC    = $(wildcard source/faster_lmm_d/*.d)
 OBJ    = $(SRC:.d=.o)
 OUT    = build/faster_lmm_d
+
+ifdef CUDA
+  LIBS += -L-L/usr/local/cuda-7.0/lib64 -L=-lcublas -L=-lcudart
+  # LIBS += $(CUDA_LIB_PATH)/libcublas_static.a $(CUDA_LIB_PATH)/libcudart_static.a /usr/lib/x86_64-linux-gnu/crti.o /usr/lib/x86_64-linux-gnu/crt1.o
+  # LIBS += $(CUDA_LIB_PATH)/libcublas_static.a $(CUDA_LIB_PATH)/libcudart_static.a /usr/lib/x86_64-linux-gnu/crti.o /usr/lib/x86_64-linux-gnu/crt1.o
+endif
 
 # The Guix targets resolve the RPATH automatically
 guix:        DFLAGS += -O -g -inline
@@ -41,7 +78,7 @@ guix:        DFLAGS += -O -g -inline
 guix-debug:  DFLAGS += -O0 -g -d-debug -unittest
 
 # The development options are run from ~/.guix-profile and need to inject the RPATH
-debug:       DFLAGS += -O0 -g -d-debug $(RPATH) -link-debuglib
+debug:       DFLAGS += -O0 -g -d-debug $(RPATH) -link-debuglib -disable-fp-elim
 
 release:     DFLAGS += -O -release $(RPATH)
 
@@ -70,6 +107,19 @@ build-setup:
 
 guix guix-debug default debug release profile getIR getBC gperf: $(OUT)
 
+ifdef CUDA
+  DFLAGS += -d-version=CUDA
+endif
+ifdef FORCE_DUPLICATE
+  DFLAGS += -d-version=FORCE_DUPLICATE
+endif
+ifdef PARALLEL
+  DFLAGS += -d-version=PARALLEL
+endif
+ifdef VALIDATE
+  DFLAGS += -d-version=VALIDATE
+endif
+
 # ---- Compile step
 %.o: %.d
 	$(D_COMPILER) $(DFLAGS) -c $< -od=$(dir $@)
@@ -79,7 +129,9 @@ $(OUT): build-setup $(OBJ)
 	$(D_COMPILER) $(DFLAGS) -of=build/faster_lmm_d $(OBJ) $(LIBS)
 
 test:
-	env LD_LIBRARY_PATH=$(LDC_LIB_PATH) ./run_tests.sh
+	./run_tests.sh
+
+check:  test  # alias
 
 debug-strip: debug
 	objcopy --only-keep-debug build/faster_lmm_d faster_lmm_d.debug

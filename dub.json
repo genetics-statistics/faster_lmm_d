@@ -4,14 +4,17 @@
     "prasunanand"
   ],
   "dependencies": {
-  	"dyaml": "~>0.5.0",
-  	"cblas": "~>1.0.0",
-  	"dstats": "~>1.0.3",
-  	"gsl": "~>0.1.7",
-    "gperftools_d": "~>0.1.0"
+    "dyaml": "~>0.5.0",
+    "cblas": "~>1.0.0",
+    "dstats": "~>1.0.3",
+    "gsl": "~>0.1.7",
+    "gperftools_d": "~>0.1.0",
+    "cuda_d": "~>0.1.0",
+    "lapack": "~>0.1.2",
+    "resusage": "~>0.2.4"
   },
   "description": "Experiment lmm",
   "copyright": "Copyright © 2016, 2017, Prasun Anand and Pjotr Prins",
   "license": "GPL3",
-  "libs": ["openblas", "gsl", "lapacke", "afcuda"],
+  "libs": ["openblas", "gsl", "lapacke", "cuda", "cublas"],
 }

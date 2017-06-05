@@ -15,3 +15,5 @@ faster_lmm_d-profiler.out
 faster_lmm_d.profdata
 prof.out
 build/
+source/test/test.geno
+source/test/test.pheno

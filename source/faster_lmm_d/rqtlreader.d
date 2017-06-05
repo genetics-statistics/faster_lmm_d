@@ -19,13 +19,13 @@ import dyaml.all;
 
 import faster_lmm_d.dmatrix;
 
-JSONValue control(string fn){
-  string input = cast(string)std.file.read(fn);
+JSONValue control(const string fn){
+  string input = to!string(std.file.read(fn));
   JSONValue j = parseJSON(input);
   return j;
 }
 
-auto pheno(string fn, ulong p_column= 0){
+auto pheno(const string fn, const ulong p_column= 0){
   Regex!char Pattern = regex("\\.json$", "i");
   double[] y;
   string[] phenotypes;
@@ -34,19 +34,14 @@ auto pheno(string fn, ulong p_column= 0){
   {
     Node gn2_pheno = Loader(fn).load();
     foreach(Node strain; gn2_pheno){
-      if(strain[2] == "NA"){
-        y ~=  double.nan;// <--- slow
-      }
-      else{
-        y ~= strain[2].as!double;
-      }
+      y ~= ( strain[2] == "NA" ? double.nan : strain[2].as!double);
       phenotypes ~= strain[1].as!string;
     }
   }
-  return Tuple!(double[], string[])(y, phenotypes);
+  return Tuple!(const double[], immutable(string[]))(y, cast(immutable)phenotypes);
 }
 
-genoObj geno(string fn, JSONValue ctrl){
+GenoObj geno(const string fn, JSONValue ctrl){
 
   trace("in geno function");
   //FIXME
@@ -74,12 +69,12 @@ genoObj geno(string fn, JSONValue ctrl){
   log("hab_mapper", hab_mapper);
   log("faster_lmm_d_mapper", faster_lmm_d_mapper);
 
-  string input = cast(string)std.file.read(fn);
+  string input = to!string(std.file.read(fn));
   auto tsv = csvReader!(string, Malformed.ignore)(input, null);
 
   auto ynames = cast(immutable(string[]))tsv.header[1..$];
 
-  dmatrix geno;
+  DMatrix geno;
   string[] gnames = [];
   auto rowCount = 0;
   auto colCount = ynames.length;
@@ -92,9 +87,9 @@ genoObj geno(string fn, JSONValue ctrl){
     }
     rowCount++;
   }
-  genoObj geno_obj = genoObj(geno,gnames,ynames[1..$]);
+  geno.shape = [rowCount, colCount];
+  GenoObj geno_obj = GenoObj(geno, cast(immutable)gnames, ynames);
 
-  geno_obj.geno.shape = [rowCount, colCount];
   info("Genotype Matrix created");
   return geno_obj;
 }

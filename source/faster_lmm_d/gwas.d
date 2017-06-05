@@ -8,20 +8,28 @@
 module faster_lmm_d.gwas;
 
 import std.experimental.logger;
+import std.parallelism;
+import std.range;
 import std.typecons;
 
-import dstats.distrib;
 import faster_lmm_d.dmatrix;
+import faster_lmm_d.kinship;
+import faster_lmm_d.phenotype;
 import faster_lmm_d.lmm2;
+import faster_lmm_d.memory;
 import faster_lmm_d.optmatrix;
+import faster_lmm_d.output;
 
+import core.stdc.stdlib : exit;
 
-auto gwas(double[] Y, dmatrix G, dmatrix K, bool restricted_max_likelihood = true, bool refit=false, bool verbose = true){
+auto gwas(immutable double[] Y, const DMatrix G, const DMatrix K){
 
+  const bool reml  = true;
+  const bool refit = false;
   trace("In gwas.gwas");
 
-  auto inds = G.shape[1];
-  auto snps = G.shape[0];
+  auto inds = G.cols();
+  auto snps = G.rows();
 
   infof("%d SNPs",snps);
 
@@ -29,38 +37,67 @@ auto gwas(double[] Y, dmatrix G, dmatrix K, bool restricted_max_likelihood = tru
     log("snps should be larger than inds (snps=%d,inds=%d)", snps,inds);
   }
 
-  dmatrix Kva;
-  dmatrix Kve;
-  dmatrix X0;
+  check_memory("Before gwas");
 
-  LMM2 lmm2 = LMM2(Y,K,Kva,Kve,X0, true);
-  lmm2 = lmm2transform(lmm2);
-  dmatrix X;
+  println("Compute GWAS");
+  auto N = cast(N_Individuals)K.shape[0];
+  auto kvakve = kvakve(K);
+  DMatrix Dummy_X0;
+  LMM lmm1 = LMM(Y, kvakve.kva, Dummy_X0);
+  auto lmm2 = lmm_transform(lmm1,N,Y,kvakve.kve);
 
-  if(!refit){
-    trace("Computing fit for null model");
-    double fit_hmax, fit_sigma, fit_LL;
-    dmatrix fit_beta;
-    fitTuple fit = lmm2fit(lmm2, X); // # follow GN model in run_other;
-    lmm2 = fit.lmmobj;
-    log("heritability= ", lmm2.optH, " sigma= ", lmm2.optSigma, " LL= ", fit.fit_LL);
-  }
+  trace("Computing fit for null model");
+  DMatrix X;
+  auto lmm = lmm_fit(lmm2, N, X);
+  log("heritability= ", lmm.opt_H, " sigma= ", lmm.opt_sigma, " LL= ", lmm.opt_LL);
 
-  double[] ps = new double[snps];
-  double[] ts = new double[snps];
+  check_memory();
   info(G.shape);
-  info("snps is ", snps);
 
-  for(int i=0; i<snps; i++){
-    dmatrix x = getRow(G, i);
-    x.shape = [inds, 1];
-    auto tsps = lmm2association(lmm2, x, true,true);
-    ps[i] = tsps[1];
-    ts[i] = tsps[0];
-    if(i%1000 == 0){
-      log(i, " snps processed");
+  auto task_pool = new TaskPool(8);
+  scope(exit) task_pool.finish();
+
+  DMatrix KveT = kvakve.kve.T; // compute out of loop
+  version(PARALLEL) {
+    auto tsps = new TStat[snps];
+    auto items = iota(0,snps).array;
+
+    println("Parallel");
+    foreach (ref snp; taskPool.parallel(items,100)) {
+      tsps[snp] = lmm_association(snp, lmm, N, G, KveT);
+      if((snp+1) % 1000 == 0){
+        println(snp+1, " snps processed");
+      }
+    }
+  } else {
+    TStat[] tsps;
+    foreach(snp; 0..snps) {
+      tsps ~= lmm_association(snp, lmm, N, G, KveT);
+      if((snp+1) % 1000 == 0){
+        println(snp+1, " snps processed");
+      }
     }
   }
 
-  return Tuple!(double[], double[])(ts,ps);
+  return tsps;
+}
+
+
+auto run_gwas(immutable m_items n, immutable m_items m, DMatrix k, immutable double[] y, const DMatrix geno) {
+  trace("run_gwas");
+  trace("pheno ", y.length," ", y[0..4]);
+  trace(geno.shape,m);
+  check_memory("before run_gwas");
+  assert(y.length == n);
+  assert(geno.m_geno == m);
+
+  PhenoStruct pheno = remove_missing(n,y);
+
+  auto geno2 = remove_cols(geno,pheno.keep);
+  DMatrix G = normalize_along_row(geno2);
+  trace("run_other_new genotype_matrix: ", G.shape);
+  DMatrix K = kinship_full(G);
+  trace("kinship_matrix.shape: ", K.shape);
+
+  return gwas(pheno.Y, G, K);
 }
