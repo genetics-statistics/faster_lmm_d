@@ -23,8 +23,8 @@ as input.
 ## Requirements
 
 `faster_lmm_d` is written in the fast D language and requires a D
-compiler. At the moment we also use openblas, lapacke and gsl
-libraries.
+compiler. At the moment we also use openblas (>0.2.19), lapacke, gsl
+and a bunch of D libraries.
 
 ### On Debian/Ubuntu
 
