@@ -83,6 +83,15 @@ DMatrix large_matrix_mult(DMatrix lha, DMatrix rha) {
   return matrix_join(res_ul, res_ur, res_dl, res_dr);
 }
 
+/*
+ * Base call for matrix multiplication
+ */
+
+DMatrix matrix_mult(string lname, const DMatrix lha, string rname, const DMatrix rha) {
+  trace(lname," x ",rname," (",lha.cols,",",lha.rows," x ",rha.cols,",",rha.rows,")");
+  return matrix_mult(lha,rha);
+}
+
 DMatrix slow_matrix_transpose(const DMatrix input) {
   trace("slow_matrix_transpose");
   m_items total_elements = input.size();
