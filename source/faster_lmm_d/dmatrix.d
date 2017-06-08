@@ -374,7 +374,7 @@ unittest{
   auto row_matrix = DMatrix([1,2], [3,4]);
   assert( get_row(d, 1) == row_matrix );
 
-  auto row = DMatrix([1,2], [3.5,4.2]);
+  auto row = DMatrix([2,1], [3.5,4.2]);
 
   auto new_dmatrix =  DMatrix([2,2], [1, 2, 3.5, 4.2]);
 

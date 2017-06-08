@@ -22,7 +22,7 @@ import faster_lmm_d.helpers;
 extern (C) {
   void dgetrf_ (int* m, int* n, double* a, int* lda, int* ipiv, int* info);
   void dgetri_ (int* n, double* a, int* lda, const(int)* ipiv, double* work, int* lwork, int* info);
-  // int LAPACKE_dgetrf (int matrix_layout, int m, int n, double* a, int lda, int* ipiv);
+  int LAPACKE_dgetrf (int matrix_layout, int m, int n, double* a, int lda, int* ipiv);
   int LAPACKE_dsyevr (int matrix_layout, char jobz, char range, char uplo, int n,
                       double* a, int lda, double vl, double vu, int il, int iu, double abstol,
                       int* m, double* w, double* z, int ldz, int* isuppz);
@@ -193,15 +193,6 @@ DMatrix remove_cols(const DMatrix input, const bool[] keep) {
   return DMatrix(shape, arr);
 }
 
-double[] rounded_nearest_old(const double[] input) {
-  m_items total_elements = input.length;
-  double[] arr = new double[total_elements];
-  for(auto i = 0; i < total_elements; i++) {
-    arr[i] = round(input[i]*1000)/1000;
-  }
-  return arr;
-}
-
 DMatrix rounded_nearest(const DMatrix input) {
   m_items total_elements = input.elements.length;
   double[] arr = new double[total_elements];
@@ -211,10 +202,13 @@ DMatrix rounded_nearest(const DMatrix input) {
   return DMatrix(input.shape, arr);
 }
 
-//Obtain eigendecomposition for K and return Kva,Kve where Kva is cleaned
-//of small values < 1e-6 (notably smaller than zero)
 
 alias Tuple!(DMatrix,"kva",DMatrix,"kve") EighTuple;
+
+/*
+ *  Obtain eigendecomposition for K and return Kva,Kve where Kva is
+ *  cleaned of small values < 1e-6 (notably smaller than zero)
+ */
 
 EighTuple eigh(const DMatrix input) {
   int n = to!int(input.rows);
@@ -265,11 +259,9 @@ in {
   assert(input.is_square, "Input matrix should be square");
 }
 body {
-  m_items rows = input.rows;
-  m_items cols = input.cols;
-  auto rf = getrf(input.elements, cols);
-  auto pivot = rf[0];
-  auto m2 = cast(immutable(double[]))rf[1];
+  auto rf = getrf(input); // getrf(input.elements, cols);
+  auto pivot = rf.ipiv;
+  auto m2    = rf.arr;
 
   auto num_perm = 0;
   auto j = 0;
@@ -279,9 +271,9 @@ body {
   }
   // odd permutations => negative:
   double prod = (num_perm % 2 == 1.0 ? 1 : -1.0 );
-  auto min = ( rows < cols ? rows : cols );
+  auto min = ( input.rows < input.cols ? input.rows : input.cols );
   for(auto i =0; i < min; i++) {
-    prod *= m2[cols*i + i];
+    prod *= m2[input.cols*i + i];
   }
   return prod;
 }
@@ -295,8 +287,10 @@ LUtup getrf(const double[] arr, const m_items cols, const m_items rows = 1) {
   auto arr2 = arr.dup; // to store the result
   auto ipiv = new int[min(m,n)+1];
   int info;
-  dgetrf_(&m, &n, arr2.ptr, &m, ipiv.ptr, &info);
-  enforce(info == 0);
+  // dgetrf_(&m, &n, arr2.ptr, &m, ipiv.ptr, &info);
+  // enforce(info == 0);
+  int i_cols = to!int(cols);
+  enforce(LAPACKE_dgetrf(101,m,m,arr2.ptr,m,ipiv.ptr)==0);
   LUtup t;
   t.ipiv = ipiv;
   t.arr = arr2;
@@ -311,7 +305,9 @@ DMatrix inverse(const DMatrix input) {
   auto res = getrf(input);
   auto n = to!int(input.cols);
   auto m = to!int(input.rows);
-  enforce(LAPACKE_dgetri(101, m, res.arr.ptr, m, res.ipiv.ptr)==0);
+  assert(m == n); // this implementation
+  auto lda = n;
+  enforce(LAPACKE_dgetri(101, n, res.arr.ptr, lda, res.ipiv.ptr)==0);
   return DMatrix(input.shape, res.arr);
 }
 
@@ -323,9 +319,26 @@ unittest{
   DMatrix d3 = DMatrix([3,2], [5,36,23, 99,13,-15]);
   assert(matrix_mult(d1,d2) == d3);
 
+  // > m <- matrix(c(2,-1,-4,3),2,2)
+  // > ginv(m)
+  //      [,1] [,2]
+  // [1,]  1.5    2
+  // [2,]  0.5    1
+
   DMatrix d4 = DMatrix([2,2], [2, -1, -4, 3]);
   DMatrix d5 = DMatrix([2,2], [1.5, 0.5, 2, 1]);
-  assert(inverse(d4) == d5);
+  assert(inverse(d4) == d5, to!string(inverse(d4)));
+
+  // > m <- matrix(c(2,-1,-4,3,1,2),2,3)
+  // > m
+  //      [,1] [,2] [,3]
+  // [1,]    2   -4    1
+  // [2,]   -1    3    2
+  // > ginv(m)
+  //            [,1] [,2]
+  // [1,]  0.1066667 0.02
+  // [2,] -0.1333333 0.10
+  // [3,]  0.2533333 0.36
 
   DMatrix d6 = DMatrix([2,2],[2, -4, -1, 3]);
   assert(d4.T == d6);
@@ -346,7 +359,8 @@ unittest{
 
   DMatrix d7 = DMatrix([4,2],[-3,13,7, -5, -12, 26, 2, -8]);
 
-  assert(det(d4) == 2,to!string(det(d4)));
+  // DMatrix d4 = DMatrix([2,2], [2, -1, -4, 3]);
+  assert(det(d4) == 2,to!string(det(d4)));  // 2*3 - -1*-4 = 6 - 4 = 2
 
   auto d8 = DMatrix([3,3], [21, 14, 12, -11, 22, 1, 31, -11, 42]);
   auto eigh_matrix = eigh(d8);
