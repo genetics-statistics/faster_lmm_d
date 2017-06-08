@@ -13,7 +13,7 @@
 #   BLAS=1            builds with standard BLAS instead of OpenBLAS
 #   CUDA=1            builds with CUDA support
 #   FORCE_DUPLICATE=1 prevents overwrites (purity)
-#   PARALLEL=1        switch on parallel compute
+#   PARALLEL=0        switch off parallel compute
 #   VALIDATE=1        validates matrix multiplication
 #
 #  current combinations are
@@ -112,7 +112,7 @@ endif
 ifdef FORCE_DUPLICATE
   DFLAGS += -d-version=FORCE_DUPLICATE
 endif
-ifdef PARALLEL
+ifndef PARALLEL
   DFLAGS += -d-version=PARALLEL
 endif
 ifdef VALIDATE
