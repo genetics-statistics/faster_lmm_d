@@ -193,7 +193,7 @@ DMatrix remove_cols(const DMatrix input, const bool[] keep) {
   return DMatrix(shape, arr);
 }
 
-double[] rounded_nearest(const double[] input) {
+double[] rounded_nearest_old(const double[] input) {
   m_items total_elements = input.length;
   double[] arr = new double[total_elements];
   for(auto i = 0; i < total_elements; i++) {
