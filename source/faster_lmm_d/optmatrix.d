@@ -8,6 +8,8 @@
 module faster_lmm_d.optmatrix;
 
 import std.experimental.logger;
+import std.algorithm: min, max;
+import std.exception: enforce;
 import std.math: sqrt, round;
 import std.stdio;
 import std.typecons; // for Tuples
@@ -18,6 +20,7 @@ import faster_lmm_d.dmatrix;
 import faster_lmm_d.helpers;
 
 extern (C) {
+  void dgetrf_ (int* m, int* n, double* a, int* lda, int* ipiv, int* info);
   int LAPACKE_dgetrf (int matrix_layout, int m, int n, double* a, int lda, int* ipiv);
   int LAPACKE_dsyevr (int matrix_layout, char jobz, char range, char uplo, int n,
                       double* a, int lda, double vl, double vu, int il, int iu, double abstol,
@@ -270,13 +273,23 @@ body {
   return prod;
 }
 
-Tuple!(immutable(int[]),immutable(double[])) getrf(const double[] arr, const m_items cols) {
-  auto arr2 = arr.dup;
-  auto ipiv = new int[cols+1];
-  int i_cols = to!int(cols);
-  LAPACKE_dgetrf(101,i_cols,i_cols,arr2.ptr,i_cols,ipiv.ptr);
-  return Tuple!(immutable(int[]),immutable(double[]))(cast(immutable(int[]))ipiv,cast(immutable(double[]))arr2);
+alias Tuple!(int[],"ipiv",double[],"arr") LUtup;
+
+LUtup getrf(const double[] arr, const m_items cols, const m_items rows = 1) {
+  auto m = to!int(cols);
+  assert(m>=1);
+  auto n = to!int(rows);
+  auto arr2 = arr.dup; // to store the result
+  auto ipiv = new int[min(m,n)+1];
+  int info;
+  dgetrf_(&m, &n, arr2.ptr, &m, ipiv.ptr, &info);
+  enforce(info == 0);
+  LUtup t;
+  t.ipiv = ipiv;
+  t.arr = arr2;
+  return t;
 }
+
 
 DMatrix inverse(const DMatrix input) {
   m_items total_elements = input.size();
