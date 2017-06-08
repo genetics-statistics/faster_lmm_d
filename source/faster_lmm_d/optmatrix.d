@@ -21,7 +21,8 @@ import faster_lmm_d.helpers;
 
 extern (C) {
   void dgetrf_ (int* m, int* n, double* a, int* lda, int* ipiv, int* info);
-  int LAPACKE_dgetrf (int matrix_layout, int m, int n, double* a, int lda, int* ipiv);
+  void dgetri_ (int* n, double* a, int* lda, const(int)* ipiv, double* work, int* lwork, int* info);
+  // int LAPACKE_dgetrf (int matrix_layout, int m, int n, double* a, int lda, int* ipiv);
   int LAPACKE_dsyevr (int matrix_layout, char jobz, char range, char uplo, int n,
                       double* a, int lda, double vl, double vu, int il, int iu, double abstol,
                       int* m, double* w, double* z, int ldz, int* isuppz);
@@ -230,9 +231,10 @@ EighTuple eigh(const DMatrix input) {
   int ldz = n;
   double abstol = 0.001; //default value for abstol
 
-  LAPACKE_dsyevr(101, 'V', 'A', 'L', n,
+  auto info = LAPACKE_dsyevr(101, 'V', 'A', 'L', n,
                 elements.ptr, n, vl, vu, il, iu, abstol,
                 m.ptr, w.ptr, z.ptr, ldz, isuppz.ptr);
+  enforce(info==0);
 
   DMatrix kva = DMatrix([n,1], w);
   DMatrix kve = DMatrix(input.shape, z);
@@ -290,19 +292,16 @@ LUtup getrf(const double[] arr, const m_items cols, const m_items rows = 1) {
   return t;
 }
 
+auto getrf(const DMatrix m) {
+  return getrf(m.elements, m.cols, m.rows);
+}
 
 DMatrix inverse(const DMatrix input) {
-  m_items total_elements = input.size();
-  m_items rows = input.rows();
-  double[] elements= input.elements.dup; // exactly, elements get changed by LAPACK
-  auto lwork = rows * rows;
-  double[] work = new double[rows*rows];
-  auto ipiv = new int[rows+1];
-  auto result = new double[total_elements];
-  int info;
-  int output = LAPACKE_dgetrf(101, to!int(rows), to!int(rows), elements.ptr, to!int(rows), ipiv.ptr);
-  LAPACKE_dgetri(101, to!int(rows), elements.ptr, to!int(rows), ipiv.ptr);
-  return DMatrix(input.shape, elements);
+  auto res = getrf(input);
+  auto n = to!int(input.cols);
+  auto m = to!int(input.rows);
+  enforce(LAPACKE_dgetri(101, m, res.arr.ptr, m, res.ipiv.ptr)==0);
+  return DMatrix(input.shape, res.arr);
 }
 
 import std.conv;
