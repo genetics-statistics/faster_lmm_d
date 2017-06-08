@@ -42,7 +42,7 @@ DUB_LIBS = \
 $(HOME)/.dub/packages/dstats-1.0.3/dstats/libdstats.a \
 $(HOME)/.dub/packages/dyaml-0.5.3/dyaml/libdyaml.a \
 $(HOME)/.dub/packages/gsl-0.1.8/gsl/libgsl.a \
-$(HOME)/.dub/packages/lapack-0.1.2/lapack/liblapack.a \
+$(HOME)/.dub/packages/lapack-0.0.2/lapack/liblapack.a \
 $(HOME)/.dub/packages/tinyendian-0.1.2/tinyendian/libtinyendian.a \
 $(HOME)/.dub/packages/resusage-0.2.4/resusage/lib/libresusage.a
 

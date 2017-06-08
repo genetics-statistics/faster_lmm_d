@@ -90,6 +90,7 @@ version(CUDA) {
     }
   }
 
+
   void cuda_init() {
     trace("Initializing CUDA on separate thread");
     auto t = task!gpu_startup();
