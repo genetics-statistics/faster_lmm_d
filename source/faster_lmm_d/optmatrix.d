@@ -217,23 +217,34 @@ DMatrix rounded_nearest(const DMatrix input) {
 alias Tuple!(DMatrix,"kva",DMatrix,"kve") EighTuple;
 
 EighTuple eigh(const DMatrix input) {
-  double[] z = new double[input.rows() * input.cols()]; //eigenvalues
-  double[] w = new double[input.rows()];  // eigenvectors
-  double[] elements = input.elements.dup;
-
-  double wi;
   int n = to!int(input.rows);
-  double vu, vl;
-  int[] m = new int[n];
-  int[] isuppz = new int[2*n];
-  int il = 1;
-  int iu = to!int(input.cols);
+  int m = to!int(input.cols);
+  double[] elements = input.elements.dup; // will contain output
+  int lda = n;
+  assert(elements.length >= lda*n); // dimension (LDA, N)
+
+  double vl_unused, vu_unused;
+  int il_unused, iu_unused;
+  double abstol = 0.001;
+
+  int out_m;
+  auto out_m_array = new int[n];
   int ldz = n;
-  double abstol = 0.001; //default value for abstol
+  auto z = new double[m*n];
+  auto isuppz = new int[2*n];
+  double[] w = new double[n];  // eigenvectors
+
+  int lwork = n*2;
+  auto work = new double[lwork];
+  int liwork = n*10;
+  auto iwork = new int[lwork];
+
+  int il = 1;
+  int iu = m;
 
   auto info = LAPACKE_dsyevr(101, 'V', 'A', 'L', n,
-                elements.ptr, n, vl, vu, il, iu, abstol,
-                m.ptr, w.ptr, z.ptr, ldz, isuppz.ptr);
+                elements.ptr, n, vl_unused, vu_unused, il, iu, abstol,
+                out_m_array.ptr, w.ptr, z.ptr, ldz, isuppz.ptr);
   enforce(info==0);
 
   DMatrix kva = DMatrix([n,1], w);
