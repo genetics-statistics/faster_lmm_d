@@ -287,10 +287,9 @@ LUtup getrf(const double[] arr, const m_items cols, const m_items rows = 1) {
   auto arr2 = arr.dup; // to store the result
   auto ipiv = new int[min(m,n)+1];
   int info;
-  // dgetrf_(&m, &n, arr2.ptr, &m, ipiv.ptr, &info);
-  // enforce(info == 0);
   int i_cols = to!int(cols);
-  enforce(LAPACKE_dgetrf(101,m,m,arr2.ptr,m,ipiv.ptr)==0);
+  int lda = m;
+  enforce(LAPACKE_dgetrf(101,m,n,arr2.ptr,lda,ipiv.ptr)==0);
   LUtup t;
   t.ipiv = ipiv;
   t.arr = arr2;
