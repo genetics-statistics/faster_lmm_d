@@ -40,13 +40,15 @@ version(CUDA) {
   GPU_PTRS_SIZE ptr_cache_size;
   bool ptr_cache_initialized = false;
 
-  // Do not call this function outside cuda_init
+  // Do not call this function outside cuda_init - it actually runs on a separate
+  // initialisation thread
   static void gpu_startup() {
     // allocate some CUDA RAM to force early initialization
     auto dummy = gpu_malloc(8000);
     enforce(cudaFree(dummy)==cudaSuccess);
     // Create a handle for CUBLAS
     enforce(cublasCreate(&cublas_handle) == cublasStatus_t.CUBLAS_STATUS_SUCCESS, "CUBLAS initialization failed");
+    init_offload_memory(0);
   }
 
   static GPU_PTR gpu_malloc(ulong size) {
@@ -104,9 +106,9 @@ version(CUDA) {
     foreach (i; 0..gpuCount) {
       cuDeviceGet(&dev,i);
       ulong bytes;
-      enforce(cuDeviceTotalMem(&bytes,dev)==cudaSuccess);
+      enforce(cuDeviceTotalMem(&bytes,dev) == cudaSuccess);
       cuCtxCreate(&ctx, 0, dev);
-      enforce(cuMemGetInfo(&free, &total)==cudaSuccess);
+      enforce(cuMemGetInfo(&free, &total) == cudaSuccess);
       trace("^^^^ Device: ",i," ",free/MB,"MB free out of ",total/MB,"MB (",(free*1.0)/total,"% used) ",bytes/MB,"MB total");
       cuCtxDetach(ctx);
     }
