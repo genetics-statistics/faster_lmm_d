@@ -1,7 +1,7 @@
 {
   "name": "faster_lmm_d",
   "authors": [
-    "prasunanand"
+    "prasunanand", "pjotrp"
   ],
   "dependencies": {
     "dyaml": "~>0.5.0",

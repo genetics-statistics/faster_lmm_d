@@ -14,6 +14,7 @@ version(CUDA) {
   import std.conv;
   import std.exception;
   import std.parallelism;
+  import std.stdio;
   import std.typecons;
 
   import cuda_d.cublas_api;
@@ -90,9 +91,31 @@ version(CUDA) {
     }
   }
 
+  void cuda_get_free_memory() {
+    ulong free, total;
+    int gpuCount;
+    CUresult res;
+    CUdevice dev;
+    CUcontext ctx;
+
+    cuInit(0);
+    cuDeviceGet(&dev,0);
+    res = cuDeviceTotalMem(&free,dev);
+    trace("GPU Total RAM ",res/MB,"MB");
+    cuDeviceGetCount(&gpuCount);
+    trace("Detected "~to!string(gpuCount)~" GPUs");
+    foreach (i; 0..gpuCount) {
+      cuDeviceGet(&dev,i);
+      cuCtxCreate(&ctx, 0, dev);
+      enforce(cuMemGetInfo(&free, &total)==cudaSuccess);
+      writeln("^^^^ Device: ",i," ",free/MB,"MB free out of ",total/MB,"MB");
+      cuCtxDetach(ctx);
+    }
+  }
 
   void cuda_init() {
     trace("Initializing CUDA on separate thread");
+    cuda_get_free_memory();
     auto t = task!gpu_startup();
     t.executeInNewThread();
   }
