@@ -107,7 +107,7 @@ version(CUDA) {
       enforce(cuDeviceTotalMem(&bytes,dev)==cudaSuccess);
       cuCtxCreate(&ctx, 0, dev);
       enforce(cuMemGetInfo(&free, &total)==cudaSuccess);
-      trace("^^^^ Device: ",i," ",free/MB,"MB free out of ",total/MB,"MB (",free/total,"% used) ",bytes/MB,"MB total");
+      trace("^^^^ Device: ",i," ",free/MB,"MB free out of ",total/MB,"MB (",(free*1.0)/total,"% used) ",bytes/MB,"MB total");
       cuCtxDetach(ctx);
     }
   }
@@ -124,6 +124,7 @@ version(CUDA) {
     if (cublas_handle)
       cublasDestroy(cublas_handle);
     gpu_free();
+    cuda_get_free_memory();
   }
 
   /*
