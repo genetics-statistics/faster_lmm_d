@@ -8,7 +8,7 @@
 module faster_lmm_d.optmatrix;
 
 import std.experimental.logger;
-import std.algorithm: min, max;
+import std.algorithm: min, max, reduce;
 import std.exception: enforce;
 import std.math: sqrt, round;
 import std.stdio;
@@ -202,7 +202,6 @@ DMatrix rounded_nearest(const DMatrix input) {
   return DMatrix(input.shape, arr);
 }
 
-
 alias Tuple!(DMatrix,"kva",DMatrix,"kve") EighTuple;
 
 /*
@@ -260,17 +259,13 @@ in {
 }
 body {
   auto rf = getrf(input);
-  auto pivot = rf.ipiv;
-  auto m2    = rf.arr;
-
-  auto num_perm = 0;
   // odd permutations => negative:
-  foreach(j, swap; pivot) {
-    if (swap-1 != j) num_perm++;
-  }
-  auto prod = (num_perm % 2 == 1.0 ? 1.0 : -1.0 );
+  auto idx=1;
+  auto num_perm = reduce!((a,b) => a + ( b != idx++ ? 1 : 0 ) )(0,rf.ipiv);
+  auto prod = (num_perm % 2 ? 1.0 : -1.0 );
+  auto m    = rf.arr;
   foreach(i; 0..min(input.rows,input.cols)) {
-    prod *= m2[input.cols*i + i];
+    prod *= m[input.cols*i + i];
   }
   return prod;
 }
@@ -356,7 +351,7 @@ unittest{
   DMatrix d7 = DMatrix([4,2],[-3,13,7, -5, -12, 26, 2, -8]);
 
   // DMatrix d4 = DMatrix([2,2], [2, -1, -4, 3]);
-  assert(det(d4) == 2,to!string(det(d4)));  // 2*3 - -1*-4 = 6 - 4 = 2
+  assert(det(d4) == 2,"det(d4) expected 2, but have "~to!string(det(d4)));  // 2*3 - -1*-4 = 6 - 4 = 2
 
   auto d8 = DMatrix([3,3], [21, 14, 12, -11, 22, 1, 31, -11, 42]);
   auto eigh_matrix = eigh(d8);
