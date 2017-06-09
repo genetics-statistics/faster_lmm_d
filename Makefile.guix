@@ -66,7 +66,7 @@ OBJ    = $(SRC:.d=.o)
 OUT    = build/faster_lmm_d
 
 ifdef CUDA
-  LIBS += -L-L/usr/local/cuda-7.0/lib64 -L=-lcublas -L=-lcudart
+  LIBS += -L-L/usr/local/cuda-7.0/lib64 -L=-lcublas -L=-lcudart -L=-lcuda
   # LIBS += $(CUDA_LIB_PATH)/libcublas_static.a $(CUDA_LIB_PATH)/libcudart_static.a /usr/lib/x86_64-linux-gnu/crti.o /usr/lib/x86_64-linux-gnu/crt1.o
   # LIBS += $(CUDA_LIB_PATH)/libcublas_static.a $(CUDA_LIB_PATH)/libcudart_static.a /usr/lib/x86_64-linux-gnu/crti.o /usr/lib/x86_64-linux-gnu/crt1.o
 endif
