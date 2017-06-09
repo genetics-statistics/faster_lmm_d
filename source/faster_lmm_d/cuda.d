@@ -99,16 +99,15 @@ version(CUDA) {
     CUcontext ctx;
 
     cuInit(0);
-    cuDeviceGet(&dev,0);
-    res = cuDeviceTotalMem(&free,dev);
-    trace("GPU Total RAM ",res/MB,"MB");
     cuDeviceGetCount(&gpuCount);
     trace("Detected "~to!string(gpuCount)~" GPUs");
     foreach (i; 0..gpuCount) {
       cuDeviceGet(&dev,i);
+      ulong bytes;
+      enforce(cuDeviceTotalMem(&bytes,dev)==cudaSuccess);
       cuCtxCreate(&ctx, 0, dev);
       enforce(cuMemGetInfo(&free, &total)==cudaSuccess);
-      writeln("^^^^ Device: ",i," ",free/MB,"MB free out of ",total/MB,"MB");
+      trace("^^^^ Device: ",i," ",free/MB,"MB free out of ",total/MB,"MB (",free/total,"% used) ",bytes/MB,"MB total");
       cuCtxDetach(ctx);
     }
   }
