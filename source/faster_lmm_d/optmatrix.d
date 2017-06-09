@@ -259,20 +259,17 @@ in {
   assert(input.is_square, "Input matrix should be square");
 }
 body {
-  auto rf = getrf(input); // getrf(input.elements, cols);
+  auto rf = getrf(input);
   auto pivot = rf.ipiv;
   auto m2    = rf.arr;
 
   auto num_perm = 0;
-  auto j = 0;
-  foreach(swap; pivot) {
-    if (swap-1 != j) num_perm += 1;
-    j++;
-  }
   // odd permutations => negative:
-  double prod = (num_perm % 2 == 1.0 ? 1 : -1.0 );
-  auto min = ( input.rows < input.cols ? input.rows : input.cols );
-  for(auto i =0; i < min; i++) {
+  foreach(j, swap; pivot) {
+    if (swap-1 != j) num_perm++;
+  }
+  auto prod = (num_perm % 2 == 1.0 ? 1.0 : -1.0 );
+  foreach(i; 0..min(input.rows,input.cols)) {
     prod *= m2[input.cols*i + i];
   }
   return prod;
