@@ -58,6 +58,8 @@ auto gwas(immutable double[] Y, const DMatrix G, const DMatrix K){
   scope(exit) task_pool.finish();
 
   DMatrix KveT = kvakve.kve.T; // compute out of loop
+  store_offload_data(KveT);    // send this to the cache
+
   version(PARALLEL) {
     auto tsps = new TStat[snps];
     auto items = iota(0,snps).array;

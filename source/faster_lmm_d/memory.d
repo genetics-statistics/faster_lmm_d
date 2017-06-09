@@ -22,6 +22,8 @@ import std.stdio;
 import std.typecons;
 import std.stdio;
 
+import faster_lmm_d.dmatrix;
+
 /*
  * Check available RAM
  */
@@ -49,31 +51,56 @@ void check_memory(string msg = "") {
  * devices, so we have a list per device (currently only one).
  */
 
-alias RAM_PTR = void *;
-alias DEV_PTR = void *;
-// alias GPU_PTRS = Tuple!(GPU_PTR, GPU_PTR, GPU_PTR);
-// alias GPU_PTRS_SIZE = Tuple!(size_t, size_t, size_t);
-
+alias RAM_PTR = ulong;
+alias DEV_PTR = ulong;
 alias CachedPtr = Tuple!(DEV_PTR,size_t);
-CachedPtr[RAM_PTR] ptr_list;
-enum CacheMsg { CacheInit };
 
-void init_offload_memory(uint device) {
-  trace("Initialize cache");
-  Tid pid = spawn(&spawnedReceiver, thisTid);
-  send(pid, CacheMsg.CacheInit);
-  enforce(receiveOnly!(bool));
-  trace("Cache initialized");
-}
+CachedPtr[RAM_PTR] ptr_cache;
+enum CacheMsg { CacheInit, CacheStore };
+__gshared Tid pid; // only set once
+
+alias CacheUpdateMsg = Tuple!(CacheMsg,"msg",RAM_PTR,"ram_ptr",size_t,"size");
+
+void init_offload_memory(uint device)
+  in {
+    enforce(device==0);
+  }
+  body {
+    trace("Initialize cache");
+    pid = spawn(&spawnedReceiver, thisTid);
+    send(pid, CacheMsg.CacheInit);
+    enforce(receiveOnly!(bool));
+    trace("Cache initialized");
+  }
+
 
 void spawnedReceiver(Tid ownerTid)
 {
     // Receive a message from the owner thread.
     receive(
-        (CacheMsg i) { writeln("Received the number ", i);}
+            (CacheMsg i) { trace("Received ", i); },
+            (CacheUpdateMsg msg) {
+              trace("Received update ",msg.msg);
+              if (!(msg.ram_ptr in ptr_cache)) {
+                trace("Add pointer!");
+                ptr_cache[msg.ram_ptr] = tuple(cast(DEV_PTR)msg.ram_ptr,msg.size);
+              }
+            }
     );
 
     // Send a message back to the owner thread
     // indicating success.
     send(ownerTid, true);
+}
+
+void store_offload_data(const(void *)ram_ptr, size_t size) {
+  send(pid,CacheUpdateMsg(CacheMsg.CacheStore,cast(RAM_PTR)ram_ptr,size));
+  enforce(receiveOnly!(bool));
+}
+
+void store_offload_data(DMatrix m) {
+  store_offload_data(m.elements.ptr, m.size);
+}
+
+void get_offload_ptr(RAM_PTR ram_ptr, size_t size) {
 }
