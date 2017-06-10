@@ -123,6 +123,7 @@ version(CUDA) {
 
   void cuda_destroy() {
     trace("Close CUDA environment");
+    offload_destroy(0);
     if (cublas_handle)
       cublasDestroy(cublas_handle);
     gpu_free();

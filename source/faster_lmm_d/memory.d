@@ -56,8 +56,10 @@ alias RAM_PTR = ulong;
 alias GPU_PTR = ulong;
 alias CachedPtr = Tuple!(GPU_PTR,size_t);
 
+GPU_PTR test_ptr;
+
 CachedPtr[RAM_PTR] ptr_cache;
-enum CacheMsg { Init, Store, Get };
+enum CacheMsg { Init, Destroy, Store, Get };
 
 alias CacheUpdateMsg = Tuple!(CacheMsg,"msg",RAM_PTR,"ram_ptr",size_t,"size");
 
@@ -71,21 +73,42 @@ void offload_init(uint device)
     register("MemManageGPU",pid);
     pid.send(thisTid,CacheUpdateMsg(CacheMsg.Init,cast(RAM_PTR)null,0));
     enforce(receiveOnly!(bool));
-    pid.send(thisTid,CacheUpdateMsg(CacheMsg.Init,cast(RAM_PTR)null,0));
-    enforce(receiveOnly!(bool));
     trace("Cache initialized");
   }
 
+void offload_destroy(uint device) {
+  trace("Terminate");
+  auto pid = locate("MemManageGPU");
+  pid.send(thisTid,CacheUpdateMsg(CacheMsg.Destroy,cast(RAM_PTR)null,0));
+  enforce(receiveOnly!(bool));
+}
 
 void spawnedReceiver()
 {
   for (;;) {
     auto m = receiveOnly!(Tid,CacheUpdateMsg);
-    auto pid = locate("MemManageGPU");
-    trace("pid",pid,"tid",m[0]);
     trace(m);
-    m[0].send(true);
-    trace("EXIT");
+    auto tid = m[0];
+    auto message = m[1];
+    // auto pid = locate("MemManageGPU");
+    final switch(message.msg) {
+    case CacheMsg.Init:
+      tid.send(true);
+      break;
+    case CacheMsg.Destroy:
+      tid.send(true);
+      return;
+    case CacheMsg.Store:
+      test_ptr = message.ram_ptr;
+      trace("Storing pointer ",test_ptr);
+      tid.send(true);
+      break;
+    case CacheMsg.Get:
+      trace("Fetching pointer ",test_ptr);
+      tid.send(test_ptr);
+      break;
+    }
+    trace("Wait for next message");
   }
   /*
            (Tid tid, CacheMsg i) {
@@ -116,7 +139,7 @@ void spawnedReceiver()
 void offload_cache(const(void *)ram_ptr, size_t size) {
   auto pid = locate("MemManageGPU");
   trace("pid",pid,"tid",thisTid);
-  pid.send(thisTid,CacheUpdateMsg(CacheMsg.Init,cast(RAM_PTR)null,0));
+  pid.send(thisTid,CacheUpdateMsg(CacheMsg.Store,cast(RAM_PTR)ram_ptr,size));
   trace("Waiting");
   enforce(receiveOnly!(bool));
 }
@@ -133,8 +156,7 @@ GPU_PTR offload_get_ptr(RAM_PTR ram_ptr, size_t size) {
   trace("pid",pid,"tid",thisTid);
   pid.send(thisTid,CacheUpdateMsg(CacheMsg.Get,ram_ptr,size));
   trace("Waiting");
-  enforce(receiveOnly!(bool));
-  return cast(GPU_PTR)null;
+  return receiveOnly!(GPU_PTR);
 }
 
 GPU_PTR offload_get_ptr(DMatrix m) {
