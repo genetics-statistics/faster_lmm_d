@@ -61,9 +61,9 @@ struct DMatrix{
                 const double threshold=1.0) {
     version(VALIDATE) {
       auto other = compute();
-      write("Other result:");
+      writeln("Other result:");
       pretty_print(other);
-      write("Result:");
+      writeln("Result:");
       pretty_print(this);
       assert(rows == other.rows, "rows mismatch, expected "~to!string(other.rows)~" but got "~to!string(rows));
       assert(cols == other.cols, "cols mismatch, expected "~to!string(other.cols)~" but got "~to!string(cols));

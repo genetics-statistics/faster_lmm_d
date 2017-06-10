@@ -27,7 +27,7 @@ version(CUDA) {
   import faster_lmm_d.memory;
 
   const ulong MB = 1024*1024;
-  const RUN_CUDA_AT_SIZE =55*MB;
+  const RUN_CUDA_AT_SIZE =5*MB;
   const cudaSuccess = cudaError.cudaSuccess;
 
   alias GPU_PTR = double *;
@@ -77,7 +77,7 @@ version(CUDA) {
     return ptr_cache;
   }
 
-  static void gpu_free(GPU_PTR p) {
+  void gpu_free(GPU_PTR p) {
     trace("gpu_free");
     enforce(cudaFree(p)==cudaSuccess,"cudaFree error");
   }
@@ -113,6 +113,14 @@ version(CUDA) {
     }
   }
 
+  void cuda_copy_ram_to_gpu(GPU_PTR dest, const(double *)src, size_t size) {
+    enforce(cudaMemcpy(dest, cast(void*)src, size, cudaMemcpyKind.cudaMemcpyHostToDevice)==cudaSuccess);
+  }
+
+  void cuda_copy_ram_to_gpu(GPU_PTR dest, const DMatrix src) {
+    cuda_copy_ram_to_gpu(dest, src.elements.ptr, src.byte_size);
+  }
+
   void cuda_init() {
     trace("Initializing CUDA on separate thread");
     offload_init(0);
@@ -136,14 +144,16 @@ version(CUDA) {
 
   DMatrix cuda_matrix_mult(const DMatrix _B, const DMatrix _A){
 
-    void copy_ram_to_gpu(GPU_PTR dest, const DMatrix src) {
-      enforce(cudaMemcpy(dest, cast(void*)src.elements, src.byte_size, cudaMemcpyKind.cudaMemcpyHostToDevice)==cudaSuccess);
-    }
 
     if (_A.byte_size < RUN_CUDA_AT_SIZE && _B.byte_size < RUN_CUDA_AT_SIZE) {
       trace("Matrix is small: running CPU multiplication instead");
       return cpu_matrix_mult(_B,_A);
     }
+
+    // Check for cached matrices
+    auto cached_B = cast(GPU_PTR)offload_get_ptr(_B);
+    if (cached_B)
+      trace("CACHE HIT!! ",cached_B);
 
     // CUDA is column major ordered by default
     auto A = DMatrix([_A.shape[1],_A.shape[0]],_A.elements);
@@ -162,9 +172,13 @@ version(CUDA) {
     auto d_B = ptrs[1];
     auto d_C = ptrs[2];
 
+
     // ---- Initialize GPU matrices
-    copy_ram_to_gpu(d_A,A);
-    copy_ram_to_gpu(d_B,B);
+    cuda_copy_ram_to_gpu(d_A,A);
+    if (cached_B)
+      d_B = cached_B;
+    else
+      cuda_copy_ram_to_gpu(d_B,B);
     // enforce(cudaMemset(d_C,0,C_byte_size)==cudaSuccess); // skip because beta == 0.0
 
     // C = αAxB + βC
