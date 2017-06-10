@@ -8,6 +8,7 @@
 module faster_lmm_d.gwas;
 
 import std.experimental.logger;
+import std.exception;
 import std.parallelism;
 import std.range;
 import std.typecons;
@@ -58,7 +59,9 @@ auto gwas(immutable double[] Y, const DMatrix G, const DMatrix K){
   scope(exit) task_pool.finish();
 
   DMatrix KveT = kvakve.kve.T; // compute out of loop
-  store_offload_data(KveT);    // send this to the cache
+  trace("Call data offload");
+  offload_cache(KveT);             // send this to the cache
+  enforce(offload_get_ptr(KveT));  // test
 
   version(PARALLEL) {
     auto tsps = new TStat[snps];

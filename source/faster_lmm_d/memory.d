@@ -22,6 +22,7 @@ import std.stdio;
 import std.typecons;
 import std.stdio;
 
+import faster_lmm_d.cuda;
 import faster_lmm_d.dmatrix;
 
 /*
@@ -52,55 +53,90 @@ void check_memory(string msg = "") {
  */
 
 alias RAM_PTR = ulong;
-alias DEV_PTR = ulong;
-alias CachedPtr = Tuple!(DEV_PTR,size_t);
+alias GPU_PTR = ulong;
+alias CachedPtr = Tuple!(GPU_PTR,size_t);
 
 CachedPtr[RAM_PTR] ptr_cache;
-enum CacheMsg { CacheInit, CacheStore };
-__gshared Tid pid; // only set once
+enum CacheMsg { Init, Store, Get };
 
 alias CacheUpdateMsg = Tuple!(CacheMsg,"msg",RAM_PTR,"ram_ptr",size_t,"size");
 
-void init_offload_memory(uint device)
+void offload_init(uint device)
   in {
     enforce(device==0);
   }
   body {
     trace("Initialize cache");
-    pid = spawn(&spawnedReceiver, thisTid);
-    send(pid, CacheMsg.CacheInit);
+    auto pid = spawnLinked(&spawnedReceiver);
+    register("MemManageGPU",pid);
+    pid.send(thisTid,CacheUpdateMsg(CacheMsg.Init,cast(RAM_PTR)null,0));
+    enforce(receiveOnly!(bool));
+    pid.send(thisTid,CacheUpdateMsg(CacheMsg.Init,cast(RAM_PTR)null,0));
     enforce(receiveOnly!(bool));
     trace("Cache initialized");
   }
 
 
-void spawnedReceiver(Tid ownerTid)
+void spawnedReceiver()
 {
-    // Receive a message from the owner thread.
-    receive(
-            (CacheMsg i) { trace("Received ", i); },
-            (CacheUpdateMsg msg) {
-              trace("Received update ",msg.msg);
+  for (;;) {
+    auto m = receiveOnly!(Tid,CacheUpdateMsg);
+    auto pid = locate("MemManageGPU");
+    trace("pid",pid,"tid",m[0]);
+    trace(m);
+    m[0].send(true);
+    trace("EXIT");
+  }
+  /*
+           (Tid tid, CacheMsg i) {
+              trace("Received ", i, " on ",tid);
+              assert(tid == parent);
+              return;
+            },
+            (Tid tid2, CacheUpdateMsg msg) {
+              trace("Received update ",msg.msg, " on ",tid2);
               if (!(msg.ram_ptr in ptr_cache)) {
                 trace("Add pointer!");
-                ptr_cache[msg.ram_ptr] = tuple(cast(DEV_PTR)msg.ram_ptr,msg.size);
+                auto gpu_ptr = gpu_malloc(msg.size);
+                ptr_cache[msg.ram_ptr] = tuple(cast(GPU_PTR)gpu_ptr,msg.size);
               }
+              assert(tid2 == parent);
+              send(tid2, true);
+              return;
             }
-    );
 
-    // Send a message back to the owner thread
-    // indicating success.
-    send(ownerTid, true);
+    );
+    enforce(false); // not supposed to get here
+  */
 }
 
-void store_offload_data(const(void *)ram_ptr, size_t size) {
-  send(pid,CacheUpdateMsg(CacheMsg.CacheStore,cast(RAM_PTR)ram_ptr,size));
+/*
+ * Store a block of data if not already there
+ */
+void offload_cache(const(void *)ram_ptr, size_t size) {
+  auto pid = locate("MemManageGPU");
+  trace("pid",pid,"tid",thisTid);
+  pid.send(thisTid,CacheUpdateMsg(CacheMsg.Init,cast(RAM_PTR)null,0));
+  trace("Waiting");
   enforce(receiveOnly!(bool));
 }
 
-void store_offload_data(DMatrix m) {
-  store_offload_data(m.elements.ptr, m.size);
+void offload_cache(DMatrix m) {
+  offload_cache(m.elements.ptr, m.size);
 }
 
-void get_offload_ptr(RAM_PTR ram_ptr, size_t size) {
+/*
+ * Fetch a pointer. Returns null if not found.
+ */
+GPU_PTR offload_get_ptr(RAM_PTR ram_ptr, size_t size) {
+  auto pid = locate("MemManageGPU");
+  trace("pid",pid,"tid",thisTid);
+  pid.send(thisTid,CacheUpdateMsg(CacheMsg.Get,ram_ptr,size));
+  trace("Waiting");
+  enforce(receiveOnly!(bool));
+  return cast(GPU_PTR)null;
+}
+
+GPU_PTR offload_get_ptr(DMatrix m) {
+  return offload_get_ptr(cast(RAM_PTR)m.elements.ptr, m.size);
 }

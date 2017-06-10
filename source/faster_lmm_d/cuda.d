@@ -48,10 +48,9 @@ version(CUDA) {
     enforce(cudaFree(dummy)==cudaSuccess);
     // Create a handle for CUBLAS
     enforce(cublasCreate(&cublas_handle) == cublasStatus_t.CUBLAS_STATUS_SUCCESS, "CUBLAS initialization failed");
-    init_offload_memory(0);
   }
 
-  static GPU_PTR gpu_malloc(ulong size) {
+  GPU_PTR gpu_malloc(ulong size) {
     void *gpu_mem;
     auto bytes = (size * to!uint(double.sizeof));
     trace("Allocating GPU RAM of ",(bytes>MB ? to!string(bytes/MB)~"MB" : to!string(bytes)));
@@ -116,6 +115,7 @@ version(CUDA) {
 
   void cuda_init() {
     trace("Initializing CUDA on separate thread");
+    offload_init(0);
     cuda_get_free_memory();
     auto t = task!gpu_startup();
     t.executeInNewThread();
