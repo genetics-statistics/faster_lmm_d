@@ -96,21 +96,26 @@ DMatrix matrix_mult(string lname, const DMatrix lha, string rname, const DMatrix
   return matrix_mult(lha,rha);
 }
 
-DMatrix slow_matrix_transpose(const DMatrix input) {
-  trace("slow_matrix_transpose");
-  m_items total_elements = input.size();
-  auto dim = total_elements;
-  double[] output = new double[total_elements];
-  auto index = 0;
-  m_items cols = input.cols();
-  m_items rows = input.rows();
-  for(auto i=0; i < cols; i++) {
-    for(auto j=0; j < rows; j++) {
-      output[index] = input.elements[j*cols + i];
-      index++;
-    }
+DMatrix slow_matrix_transpose(const DMatrix m) {
+  assert(m.cols > 0 && m.rows > 0);
+  if (m.cols == 1 || m.rows == 1) {
+    trace("Fast ",m.cols," x ",m.rows);
+    return DMatrix([m.cols, m.rows],m.elements);
   }
-  return DMatrix([cols, rows],output);
+  else {
+    trace("Slow ", m.cols," x ",m.rows);
+    double[] output = new double[m.size];
+    auto index = 0;
+    auto e = m.elements;
+    auto cols = m.cols;
+    auto rows = m.rows;
+    foreach(i ; 0..cols) {
+      foreach(j ; 0..rows) {
+        output[index++] = e[j*cols + i];
+      }
+    }
+    return DMatrix([m.cols, m.rows],output);
+  }
 }
 
 DMatrix slice_dmatrix(const DMatrix input, const ulong[] along) {
