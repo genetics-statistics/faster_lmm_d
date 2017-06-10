@@ -114,7 +114,7 @@ DMatrix slow_matrix_transpose(const DMatrix m) {
         output[index++] = e[j*cols + i];
       }
     }
-    return DMatrix([m.cols, m.rows],output);
+    return DMatrix([cols, rows],output);
   }
 }
 
