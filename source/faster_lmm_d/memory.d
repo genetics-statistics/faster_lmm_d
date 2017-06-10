@@ -54,7 +54,7 @@ void check_memory(string msg = "") {
 
 alias RAM_PTR = ulong;
 alias GPU_PTR = ulong;
-alias CachedPtr = Tuple!(GPU_PTR,size_t);
+alias CachedPtr = Tuple!(GPU_PTR,"gpu_ptr",size_t,"size");
 
 GPU_PTR test_ptr;
 
@@ -90,47 +90,35 @@ void spawnedReceiver()
     trace(m);
     auto tid = m[0];
     auto message = m[1];
+    auto ram_ptr = message.ram_ptr;
+    auto size = message.size;
     // auto pid = locate("MemManageGPU");
     final switch(message.msg) {
     case CacheMsg.Init:
       tid.send(true);
       break;
     case CacheMsg.Destroy:
+      foreach(k, v; ptr_cache) {
+        gpu_free(cast(GPU_PTR)v.gpu_ptr);
+      }
       tid.send(true);
       return;
     case CacheMsg.Store:
-      test_ptr = message.ram_ptr;
-      trace("Storing pointer ",test_ptr);
+      if (!(ram_ptr in ptr_cache)) {
+        trace("Storing pointer ",ram_ptr);
+        auto gpu_ptr = cast(GPU_PTR)gpu_malloc(size);
+        ptr_cache[ram_ptr] = tuple(gpu_ptr,size);
+      }
       tid.send(true);
       break;
     case CacheMsg.Get:
-      trace("Fetching pointer ",test_ptr);
-      tid.send(test_ptr);
+      trace("Fetching pointer ",ram_ptr);
+      auto gpu_ptr = ( ram_ptr in ptr_cache ? ptr_cache[ram_ptr].gpu_ptr : cast(GPU_PTR)null);
+      tid.send(gpu_ptr);
       break;
     }
     trace("Wait for next message");
   }
-  /*
-           (Tid tid, CacheMsg i) {
-              trace("Received ", i, " on ",tid);
-              assert(tid == parent);
-              return;
-            },
-            (Tid tid2, CacheUpdateMsg msg) {
-              trace("Received update ",msg.msg, " on ",tid2);
-              if (!(msg.ram_ptr in ptr_cache)) {
-                trace("Add pointer!");
-                auto gpu_ptr = gpu_malloc(msg.size);
-                ptr_cache[msg.ram_ptr] = tuple(cast(GPU_PTR)gpu_ptr,msg.size);
-              }
-              assert(tid2 == parent);
-              send(tid2, true);
-              return;
-            }
-
-    );
-    enforce(false); // not supposed to get here
-  */
 }
 
 /*
