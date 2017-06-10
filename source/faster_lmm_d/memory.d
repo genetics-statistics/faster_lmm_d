@@ -22,7 +22,6 @@ import std.stdio;
 import std.typecons;
 import std.stdio;
 
-import faster_lmm_d.cuda;
 import faster_lmm_d.dmatrix;
 
 /*
@@ -52,8 +51,14 @@ void check_memory(string msg = "") {
  * devices, so we have a list per device (currently only one).
  */
 
-alias RAM_PTR = ulong;
+
 alias OFFLOAD_PTR = ulong;
+
+version(CUDA) {
+
+import faster_lmm_d.cuda;
+
+alias RAM_PTR = ulong;
 alias CachedPtr = Tuple!(OFFLOAD_PTR,"gpu_ptr",size_t,"size");
 
 OFFLOAD_PTR test_ptr;
@@ -150,3 +155,12 @@ OFFLOAD_PTR offload_get_ptr(RAM_PTR ram_ptr, size_t size) {
 OFFLOAD_PTR offload_get_ptr(const DMatrix m) {
   return offload_get_ptr(cast(RAM_PTR)m.elements.ptr, m.size);
 }
+
+} else {
+
+  void offload_init(uint device) {};
+  // void offload_cache(const(void *)ram_ptr, size_t size) {};
+  void offload_cache(const DMatrix m) {};
+  OFFLOAD_PTR offload_get_ptr(const DMatrix m) { return cast(OFFLOAD_PTR)0; };
+
+ }

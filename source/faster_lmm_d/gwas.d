@@ -61,7 +61,6 @@ auto gwas(immutable double[] Y, const DMatrix G, const DMatrix K){
   DMatrix KveT = kvakve.kve.T; // compute out of loop
   trace("Call data offload");
   offload_cache(KveT);             // send this to the cache
-  enforce(offload_get_ptr(KveT));  // test
 
   version(PARALLEL) {
     auto tsps = new TStat[snps];
