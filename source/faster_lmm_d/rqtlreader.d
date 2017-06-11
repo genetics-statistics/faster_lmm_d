@@ -79,11 +79,13 @@ GenoObj geno(const string fn, JSONValue ctrl){
   auto rowCount = 0;
   auto colCount = ynames.length;
 
+  m_items pos = 0;
   foreach(row; tsv){
+    geno.elements.length += colCount;
     gnames ~= row.front;
     row.popFront();
     foreach(item; row){
-      geno.elements ~= faster_lmm_d_mapper[hab_mapper[item]];
+      geno.elements[pos++] = faster_lmm_d_mapper[hab_mapper[item]];
     }
     rowCount++;
   }
