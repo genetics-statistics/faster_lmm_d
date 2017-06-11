@@ -79,16 +79,24 @@ GenoObj geno(const string fn, JSONValue ctrl){
   auto rowCount = 0;
   auto colCount = ynames.length;
 
-  double[][] lines = [];
-  m_items pos = 0;
+  double[][] matrix = [];
+  // m_items pos = 0;
   foreach(row; tsv){
-    geno.elements.length += colCount;
+    // geno.elements.length += colCount;
+    auto r = new double[colCount];
     gnames ~= row.front;
-    row.popFront();
+    row.popFront(); // remove header line
+    auto count = 0;
     foreach(item; row){
-      geno.elements[pos++] = faster_lmm_d_mapper[hab_mapper[item]];
+      r[count++] = faster_lmm_d_mapper[hab_mapper[item]];
     }
+    matrix ~= r;
     rowCount++;
+  }
+  geno.elements.length = rowCount * colCount;
+  // sadly we need to copy yet again, though this is a fast copy
+  foreach(j3, r; matrix) {
+    geno.elements[j3*colCount..(j3+1)*colCount] = r[0..colCount];
   }
   geno.shape = [rowCount, colCount];
   GenoObj geno_obj = GenoObj(geno, cast(immutable)gnames, ynames);
