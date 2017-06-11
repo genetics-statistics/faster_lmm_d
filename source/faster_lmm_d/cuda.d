@@ -144,7 +144,6 @@ version(CUDA) {
 
   DMatrix cuda_matrix_mult(const DMatrix _B, const DMatrix _A){
 
-
     if (_A.byte_size < RUN_CUDA_AT_SIZE && _B.byte_size < RUN_CUDA_AT_SIZE) {
       trace("Matrix is small: running CPU multiplication instead");
       return cpu_matrix_mult(_B,_A);
@@ -171,7 +170,6 @@ version(CUDA) {
     auto d_A = ptrs[0];
     auto d_B = ptrs[1];
     auto d_C = ptrs[2];
-
 
     // ---- Initialize GPU matrices
     cuda_copy_ram_to_gpu(d_A,A);

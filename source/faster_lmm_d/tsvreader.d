@@ -69,12 +69,15 @@ GenoObj tsvgeno(const string fn, JSONValue ctrl){
 
   DMatrix geno;
   string[] gnames = [];
+  geno.elements.length = rowCount * colCount;
+
+  m_items pos = 0;
   foreach(line; rows[5..$]){
     if(line != ""){
       string[] row = line.split("\t");
       gnames ~= row[0];
       foreach(dchar item; row[1]){
-        geno.elements ~= faster_lmm_d_mapper[hab_mapper[item]];
+        geno.elements[pos++] = faster_lmm_d_mapper[hab_mapper[item]];
       }
     }
   }
