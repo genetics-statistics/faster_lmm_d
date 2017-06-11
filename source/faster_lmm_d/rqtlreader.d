@@ -79,6 +79,7 @@ GenoObj geno(const string fn, JSONValue ctrl){
   auto rowCount = 0;
   auto colCount = ynames.length;
 
+  double[][] lines = [];
   m_items pos = 0;
   foreach(row; tsv){
     geno.elements.length += colCount;
