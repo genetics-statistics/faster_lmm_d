@@ -1,0 +1,383 @@
+<!doctype html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="author" content="Artem Tarasov" />
+<title>[FaST-LMM] fastlmm/inference/lmm_cov.py, part 1</title>
+
+<script type="text/x-mathjax-config"> 
+MathJax.Hub.Config({ 
+  jax: ["input/TeX","output/HTML-CSS"], 
+  extensions: ["tex2jax.js"], 
+  tex2jax: { 
+    inlineMath: [ ['$','$'], ["\\(","\\)"] ], 
+    displayMath: [ ['$$','$$'], ["\\[","\\]"] ], 
+    processEscapes: true 
+  }, 
+}); 
+</script> 
+<style>
+  .center-image
+  {
+  margin: 0 auto;
+  display: block;
+  width: 90%;
+  }
+  
+pre > code {
+  border: 0;
+  padding-right: 0;
+  padding-left: 0; }
+
+  table{
+    border-collapse: collapse;
+    border: 1px solid black;
+  }
+  table td,th{
+    border: 1px solid black;
+    padding: 3px;
+  }
+
+.highlight pre code * {
+  white-space: nowrap;    // this sets all children inside to nowrap
+}
+
+.highlight pre {
+  overflow-x: auto;       // this sets the scrolling in x
+}
+
+.highlight pre code {
+  white-space: pre;       // forces <code> to respect <pre> formatting
+}
+
+/* github style pygments theme for jekyll */
+/* from https://github.com/aahan/pygments-github-style */
+
+.highlight pre, pre, .highlight .hll { background-color: #f8f8f8; border: 1px solid #ccc; padding: 6px 10px; border-radius: 3px; }
+.highlight .c { color: #999988; font-style: italic; }
+.highlight .err { color: #a61717; background-color: #e3d2d2; }
+.highlight .k { font-weight: bold; }
+.highlight .o { font-weight: bold; }
+.highlight .cm { color: #999988; font-style: italic; }
+.highlight .cp { color: #999999; font-weight: bold; }
+.highlight .c1 { color: #999988; font-style: italic; }
+.highlight .cs { color: #999999; font-weight: bold; font-style: italic; }
+.highlight .gd { color: #000000; background-color: #ffdddd; }
+.highlight .gd .x { color: #000000; background-color: #ffaaaa; }
+.highlight .ge { font-style: italic; }
+.highlight .gr { color: #aa0000; }
+.highlight .gh { color: #999999; }
+.highlight .gi { color: #000000; background-color: #ddffdd; }
+.highlight .gi .x { color: #000000; background-color: #aaffaa; }
+.highlight .go { color: #888888; }
+.highlight .gp { color: #555555; }
+.highlight .gs { font-weight: bold; }
+.highlight .gu { color: #800080; font-weight: bold; }
+.highlight .gt { color: #aa0000; }
+.highlight .kc { font-weight: bold; }
+.highlight .kd { font-weight: bold; }
+.highlight .kn { font-weight: bold; }
+.highlight .kp { font-weight: bold; }
+.highlight .kr { font-weight: bold; }
+.highlight .kt { color: #445588; font-weight: bold; }
+.highlight .m { color: #009999; }
+.highlight .s { color: #dd1144; }
+.highlight .n { color: #333333; }
+.highlight .na { color: teal; }
+.highlight .nb { color: #0086b3; }
+.highlight .nc { color: #445588; font-weight: bold; }
+.highlight .no { color: teal; }
+.highlight .ni { color: purple; }
+.highlight .ne { color: #990000; font-weight: bold; }
+.highlight .nf { color: #990000; font-weight: bold; }
+.highlight .nn { color: #555555; }
+.highlight .nt { color: navy; }
+.highlight .nv { color: teal; }
+.highlight .ow { font-weight: bold; }
+.highlight .w { color: #bbbbbb; }
+.highlight .mf { color: #009999; }
+.highlight .mh { color: #009999; }
+.highlight .mi { color: #009999; }
+.highlight .mo { color: #009999; }
+.highlight .sb { color: #dd1144; }
+.highlight .sc { color: #dd1144; }
+.highlight .sd { color: #dd1144; }
+.highlight .s2 { color: #dd1144; }
+.highlight .se { color: #dd1144; }
+.highlight .sh { color: #dd1144; }
+.highlight .si { color: #dd1144; }
+.highlight .sx { color: #dd1144; }
+.highlight .sr { color: #009926; }
+.highlight .s1 { color: #dd1144; }
+.highlight .ss { color: #990073; }
+.highlight .bp { color: #999999; }
+.highlight .vc { color: teal; }
+.highlight .vg { color: teal; }
+.highlight .vi { color: teal; }
+.highlight .il { color: #009999; }
+.highlight .gc { color: #999; background-color: #EAF2F5; }
+
+#content {
+  width: 66%;
+}
+
+#list {
+  width: 17%;
+  vertical-align: top;
+}
+
+header {
+  font-family: Sans-serif;
+  font-size: 10pt;
+  text-align: center;
+  background-color: #cdd;
+  max-width: 800px;
+  border-radius: 3px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+section {
+  max-width: 900px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+blockquote {
+  width: 80%;
+}
+</style>
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {
+    skipTags: ['script', 'noscript', 'style', 'textarea', 'pre']
+  }
+});
+
+MathJax.Hub.Queue(function() {
+  var all = MathJax.Hub.getAllJax(), i;
+  for(i=0; i < all.length; i += 1) {
+    all[i].SourceElement().parentNode.className += ' has-jax';
+  }
+});
+</script>
+
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+</head>
+<body>
+<header>
+  <h1>[FaST-LMM] fastlmm/inference/lmm_cov.py, part 1</h1>
+</header>
+<table>
+<tr>
+  <td id="list">
+  
+  
+    <span>March 29, 2015</span>
+    <br/>
+    <a href="performance.html">[LMM] literature overview: performance</a>
+    <hr/>
+  
+  
+  
+    <span>March 27, 2015</span>
+    <br/>
+    <a href="overview.html">[LMM] literature overview: approximate methods</a>
+    <hr/>
+  
+  
+  
+    <span>March 15, 2015</span>
+    <br/>
+    <a href="proximal.html">[FaST-LMM] Proximal contamination</a>
+    <hr/>
+  
+  
+  
+    <span>March 13, 2015</span>
+    <br/>
+    <a href="reml.html">[FaST-LMM] REML estimate</a>
+    <hr/>
+  
+  
+  
+    <span>March 11, 2015</span>
+    <br/>
+    <a href="mixing.html">[FaST-LMM] comparison with PyLMM (continued)</a>
+    <hr/>
+  
+  
+  
+    <span>March 10, 2015</span>
+    <br/>
+    <a href="pylmm.html">[FaST-LMM] comparison with PyLMM (practice)</a>
+    <hr/>
+  
+  
+  
+    <span>March  9, 2015</span>
+    <br/>
+    <a href="pylmm.html">[FaST-LMM] comparison with PyLMM (theory)</a>
+    <hr/>
+  
+  
+  
+    <span>March  3, 2015</span>
+    <br/>
+    <a href="lmm_cov2.html">[FaST-LMM] fastlmm/inference/lmm_cov.py, part 2</a>
+    <hr/>
+  
+  
+  
+    <span>February 27, 2015</span>
+    <br/>
+    <a href="highlevel2.html">[FaST-LMM] high-level overview, part 2</a>
+    <hr/>
+  
+  
+  
+    <span>February 25, 2015</span>
+    <br/>
+    <a href="highlevel.html">[FaST-LMM] high-level overview of the codebase, part 1</a>
+    <hr/>
+  
+  
+  
+    <span>February 18, 2015</span>
+    <br/>
+    <a href="lmm.html">[FaST-LMM] fastlmm/inference/lmm.py</a>
+    <hr/>
+  
+  
+  
+    <span>February 16, 2015</span>
+    <br/>
+    <a href="lmm_cov.html">[FaST-LMM] fastlmm/inference/lmm_cov.py, part 1</a>
+    <hr/>
+  
+  
+  </td>
+<td id="content">
+<section>
+  <p>This post starts the series devoted to studying FaST-LMM source code located 
+<a href="https://github.com/MicrosoftGenomics/FaST-LMM">here</a>.</p>
+
+<p>In these series, ‘thesis’ refers to the publication ‘Linear mixed models for genome-wide association studies’ (C. Lippert)</p>
+
+<p>First of all, some definitions are to be provided:</p>
+
+<ul>
+  <li>$\gamma$ is the ratio $\sigma^2_g / \sigma^2 $ of the variance parameters (genetic variance and level of environmental noise, respectively; see thesis 2.2);</li>
+  <li>$ K $ - genetic similarity matrix, ‘that quantifies the genetic relationship between individuals based on the causal loci’ (also thesis 2.2);</li>
+  <li>$ S = I - XX^\dagger $ (thesis 3.1.1)</li>
+</ul>
+
+<p>The working horse is <code>LMM</code> class, versions of which can be found in as many as three files - <code>lmm2k.py</code>, <code>lmm.py</code>, and <code>lmm_cov.py</code>.
+They are all similar.  The latter is more recently updated, but some of docstrings are not up-to-date.</p>
+
+<p>Nevertheless, let’s start from <code>lmm_cov.py</code>.
+One of the differences it has with <code>lmm.py</code> is that LMM.setK method signature doesn’t include the mixing parameter - its optimal value is searched for automatically.</p>
+
+<hr />
+
+<h2 id="linreg-class">Linreg class</h2>
+
+<p>Linreg(X).regress(Y) returns residuals, i.e. $ Y - X\beta = Y - XX^\dagger Y $.
+Here $ X^\dagger $ is a pseudo-inverse of $ X $ computed by 
+<a href="http://docs.scipy.org/doc/numpy/reference/generated/numpy.linalg.pinv.html">numpy.linalg.pinv</a>.</p>
+
+<p>With our definition of the matrix $S$, its effect can be written simply as $SY$.</p>
+
+<h2 id="lmm-class">LMM class</h2>
+
+<h3 id="setsufromk">setSU_fromK</h3>
+
+<div class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">def</span> <span class="nf">setSU_fromK</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+  <span class="n">N</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">K</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+  <span class="n">D</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">linreg</span><span class="o">.</span><span class="n">D</span>
+  <span class="n">ar</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">K</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+  <span class="bp">self</span><span class="o">.</span><span class="n">K</span><span class="p">[</span><span class="n">ar</span><span class="p">,</span><span class="n">ar</span><span class="p">]</span><span class="o">+=</span><span class="mf">1.0</span>
+  <span class="n">K_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">linreg</span><span class="o">.</span><span class="n">regress</span><span class="p">(</span><span class="n">Y</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">K</span><span class="p">)</span>
+  <span class="n">K_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">linreg</span><span class="o">.</span><span class="n">regress</span><span class="p">(</span><span class="n">Y</span><span class="o">=</span><span class="n">K_</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+  <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">S</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">U</span><span class="p">]</span> <span class="o">=</span> <span class="n">la</span><span class="o">.</span><span class="n">eigh</span><span class="p">(</span><span class="n">K_</span><span class="p">)</span>
+  <span class="bp">self</span><span class="o">.</span><span class="n">U</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">U</span><span class="p">[:,</span><span class="n">D</span><span class="p">:</span><span class="n">N</span><span class="p">]</span>
+  <span class="bp">self</span><span class="o">.</span><span class="n">S</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">S</span><span class="p">[</span><span class="n">D</span><span class="p">:</span><span class="n">N</span><span class="p">]</span> <span class="o">-</span> <span class="mf">1.0</span></code></pre></div>
+
+<p>Here we see that K_ is first set to $S(K+I)$, and then to $S(S(K+I))^T = S(K+I)S\ $ (note that $K$ and $S$ are both symmetric).</p>
+
+<hr />
+
+<p>Thesis 3.1.1. (Maximum likelihood estimation) contains a reference to the lemma C.15, because
+the expression for the likelihood function includes $ S(\gamma K + I) S $.</p>
+
+<p>Lemma C.15 allows to quickly compute eigenpairs of a matrix of this form with any $\gamma$ by considering the matrix
+$S(K + I)S$:</p>
+
+<blockquote>
+  <p>Let $ H_1 $ be defined as $ K + I $ and $ H_γ $ be defined as $ γK + I $, where $ K $ is a
+positive semi-definite matrix and $ γ \geq 0 $. 
+Further, let the economy spectral decomposition of $ SH_1S $ be <script type="math/tex"> U_S ( \Sigma + I_{N-D} ) U_S^T </script> .
+Then, the economy spectral decomposition of $ SH_γ S $ is given by <script type="math/tex"> U (γΣ + I_{N-D} ) U^T </script> , 
+where $ (γΣ + I_{N −D} ) $ is a diagonal matrix holding the
+$ N − D $ non-zero eigenvalues of $ SH_γ S $ and the first $ N − D $ eigenvectors given as columns
+of $ U_S $ are unchanged.</p>
+</blockquote>
+
+<p>Note that although documentation of <a href="http://docs.scipy.org/doc/numpy/reference/generated/numpy.linalg.eigh.html">numpy.linalg.eigh</a> suggests that returned eigenvalues are not necessarily ordered, quick check shows that at least in the real-valued case they are sorted in ascending order. That’s why last $ N - D $ eigenpairs are taken (first D are zeros).</p>
+
+<hr />
+
+<p>Thus we conclude that</p>
+
+<ul>
+  <li>self.S corresponds to $\Sigma$;</li>
+  <li>self.U holds eigenvectors of $S(K + I)S$ corresponding to non-zero eigenvalues.</li>
+</ul>
+
+<hr />
+
+<p><strong>Update</strong> from 04 May 2015:</p>
+
+<ul>
+  <li>
+    <p>Although the lemma is stated in terms of $ \gamma $, the same can be said about matrices of form $ K + \delta I $, and from that it is easily seen that $ \Sigma $ holds eigenvalues of $ SKS $ on the diagonal (set $\delta = 0$). And since the lemma states that $ N - D $ eigenvectors stay the same no matter what $\delta$ is, we get the eigendecomposition of $ SKS $ in this way.</p>
+  </li>
+  <li>
+    <p>The projection onto the subspace orthogonal to fixed effects ($X$) is because REML (restricted maximum likelihood) estimates are calculated in <code>lmm_cov</code> (always! another sign of it is absence of <code>REML</code> parameter in method signatures, which is still seen in copy-pasted comments from old code)</p>
+  </li>
+</ul>
+
+<p>The rationale and approach are described in the thesis 2.2.3</p>
+
+<ul>
+  <li>It’s illustrative to see how the lemma is proved for this simple case:
+<script type="math/tex">
+SKS = S(K+I)S - S = SH_1S - S = U_S(\Sigma + I)U_S^T - U_SU_S^T = 
+U_S\left(\Sigma + I - I\right)U_S^T = U_S\Sigma U_S^T
+</script></li>
+</ul>
+
+<p>Here idempotency of $S$ was used and the fact that $S = U_SU_S^T$ where columns of $U_S$ are eigenvectors of $S(K+I)S$. The latter fact is less trivial, its proof is found in the thesis.</p>
+
+<h2 id="setsufromg">setSU_fromG</h2>
+
+<p>Some branches in the function body are trivial, so let’s skip them and look at the most interesting piece of code:</p>
+
+<div class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">PxG</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">linreg</span><span class="o">.</span><span class="n">regress</span><span class="p">(</span><span class="n">Y</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">G</span><span class="p">)</span>
+<span class="k">try</span><span class="p">:</span>
+   <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">U</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">S</span><span class="p">,</span><span class="n">V</span><span class="p">]</span> <span class="o">=</span> <span class="n">la</span><span class="o">.</span><span class="n">svd</span><span class="p">(</span><span class="n">PxG</span><span class="p">,</span><span class="bp">False</span><span class="p">,</span><span class="bp">True</span><span class="p">)</span>
+   <span class="n">inonzero</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">S</span> <span class="o">&gt;</span> <span class="mf">1E-10</span>
+   <span class="bp">self</span><span class="o">.</span><span class="n">S</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">S</span><span class="p">[</span><span class="n">inonzero</span><span class="p">]</span>
+   <span class="bp">self</span><span class="o">.</span><span class="n">S</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">S</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">S</span>
+   <span class="bp">self</span><span class="o">.</span><span class="n">U</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">U</span><span class="p">[:,</span><span class="n">inonzero</span><span class="p">]</span></code></pre></div>
+
+<p>The $SG$ matrix is decomposed as $U\Sigma^{1/2}V^T$. This corresponds to decomposing $SKS = SGG^TS$ as $U\Sigma U^T$.</p>
+
+</section>
+</td></tr></table>
+
+</div>
+</div>
+</body>
+</html>

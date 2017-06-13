@@ -1,0 +1,318 @@
+<!doctype html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="author" content="Artem Tarasov" />
+<title>[FaST-LMM] comparison with PyLMM (continued)</title>
+
+<script type="text/x-mathjax-config"> 
+MathJax.Hub.Config({ 
+  jax: ["input/TeX","output/HTML-CSS"], 
+  extensions: ["tex2jax.js"], 
+  tex2jax: { 
+    inlineMath: [ ['$','$'], ["\\(","\\)"] ], 
+    displayMath: [ ['$$','$$'], ["\\[","\\]"] ], 
+    processEscapes: true 
+  }, 
+}); 
+</script> 
+<style>
+  .center-image
+  {
+  margin: 0 auto;
+  display: block;
+  width: 90%;
+  }
+  
+pre > code {
+  border: 0;
+  padding-right: 0;
+  padding-left: 0; }
+
+  table{
+    border-collapse: collapse;
+    border: 1px solid black;
+  }
+  table td,th{
+    border: 1px solid black;
+    padding: 3px;
+  }
+
+.highlight pre code * {
+  white-space: nowrap;    // this sets all children inside to nowrap
+}
+
+.highlight pre {
+  overflow-x: auto;       // this sets the scrolling in x
+}
+
+.highlight pre code {
+  white-space: pre;       // forces <code> to respect <pre> formatting
+}
+
+/* github style pygments theme for jekyll */
+/* from https://github.com/aahan/pygments-github-style */
+
+.highlight pre, pre, .highlight .hll { background-color: #f8f8f8; border: 1px solid #ccc; padding: 6px 10px; border-radius: 3px; }
+.highlight .c { color: #999988; font-style: italic; }
+.highlight .err { color: #a61717; background-color: #e3d2d2; }
+.highlight .k { font-weight: bold; }
+.highlight .o { font-weight: bold; }
+.highlight .cm { color: #999988; font-style: italic; }
+.highlight .cp { color: #999999; font-weight: bold; }
+.highlight .c1 { color: #999988; font-style: italic; }
+.highlight .cs { color: #999999; font-weight: bold; font-style: italic; }
+.highlight .gd { color: #000000; background-color: #ffdddd; }
+.highlight .gd .x { color: #000000; background-color: #ffaaaa; }
+.highlight .ge { font-style: italic; }
+.highlight .gr { color: #aa0000; }
+.highlight .gh { color: #999999; }
+.highlight .gi { color: #000000; background-color: #ddffdd; }
+.highlight .gi .x { color: #000000; background-color: #aaffaa; }
+.highlight .go { color: #888888; }
+.highlight .gp { color: #555555; }
+.highlight .gs { font-weight: bold; }
+.highlight .gu { color: #800080; font-weight: bold; }
+.highlight .gt { color: #aa0000; }
+.highlight .kc { font-weight: bold; }
+.highlight .kd { font-weight: bold; }
+.highlight .kn { font-weight: bold; }
+.highlight .kp { font-weight: bold; }
+.highlight .kr { font-weight: bold; }
+.highlight .kt { color: #445588; font-weight: bold; }
+.highlight .m { color: #009999; }
+.highlight .s { color: #dd1144; }
+.highlight .n { color: #333333; }
+.highlight .na { color: teal; }
+.highlight .nb { color: #0086b3; }
+.highlight .nc { color: #445588; font-weight: bold; }
+.highlight .no { color: teal; }
+.highlight .ni { color: purple; }
+.highlight .ne { color: #990000; font-weight: bold; }
+.highlight .nf { color: #990000; font-weight: bold; }
+.highlight .nn { color: #555555; }
+.highlight .nt { color: navy; }
+.highlight .nv { color: teal; }
+.highlight .ow { font-weight: bold; }
+.highlight .w { color: #bbbbbb; }
+.highlight .mf { color: #009999; }
+.highlight .mh { color: #009999; }
+.highlight .mi { color: #009999; }
+.highlight .mo { color: #009999; }
+.highlight .sb { color: #dd1144; }
+.highlight .sc { color: #dd1144; }
+.highlight .sd { color: #dd1144; }
+.highlight .s2 { color: #dd1144; }
+.highlight .se { color: #dd1144; }
+.highlight .sh { color: #dd1144; }
+.highlight .si { color: #dd1144; }
+.highlight .sx { color: #dd1144; }
+.highlight .sr { color: #009926; }
+.highlight .s1 { color: #dd1144; }
+.highlight .ss { color: #990073; }
+.highlight .bp { color: #999999; }
+.highlight .vc { color: teal; }
+.highlight .vg { color: teal; }
+.highlight .vi { color: teal; }
+.highlight .il { color: #009999; }
+.highlight .gc { color: #999; background-color: #EAF2F5; }
+
+#content {
+  width: 66%;
+}
+
+#list {
+  width: 17%;
+  vertical-align: top;
+}
+
+header {
+  font-family: Sans-serif;
+  font-size: 10pt;
+  text-align: center;
+  background-color: #cdd;
+  max-width: 800px;
+  border-radius: 3px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+section {
+  max-width: 900px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+blockquote {
+  width: 80%;
+}
+</style>
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {
+    skipTags: ['script', 'noscript', 'style', 'textarea', 'pre']
+  }
+});
+
+MathJax.Hub.Queue(function() {
+  var all = MathJax.Hub.getAllJax(), i;
+  for(i=0; i < all.length; i += 1) {
+    all[i].SourceElement().parentNode.className += ' has-jax';
+  }
+});
+</script>
+
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+</head>
+<body>
+<header>
+  <h1>[FaST-LMM] comparison with PyLMM (continued)</h1>
+</header>
+<table>
+<tr>
+  <td id="list">
+  
+  
+    <span>March 29, 2015</span>
+    <br/>
+    <a href="performance.html">[LMM] literature overview: performance</a>
+    <hr/>
+  
+  
+  
+    <span>March 27, 2015</span>
+    <br/>
+    <a href="overview.html">[LMM] literature overview: approximate methods</a>
+    <hr/>
+  
+  
+  
+    <span>March 15, 2015</span>
+    <br/>
+    <a href="proximal.html">[FaST-LMM] Proximal contamination</a>
+    <hr/>
+  
+  
+  
+    <span>March 13, 2015</span>
+    <br/>
+    <a href="reml.html">[FaST-LMM] REML estimate</a>
+    <hr/>
+  
+  
+  
+    <span>March 11, 2015</span>
+    <br/>
+    <a href="mixing.html">[FaST-LMM] comparison with PyLMM (continued)</a>
+    <hr/>
+  
+  
+  
+    <span>March 10, 2015</span>
+    <br/>
+    <a href="pylmm.html">[FaST-LMM] comparison with PyLMM (practice)</a>
+    <hr/>
+  
+  
+  
+    <span>March  9, 2015</span>
+    <br/>
+    <a href="pylmm.html">[FaST-LMM] comparison with PyLMM (theory)</a>
+    <hr/>
+  
+  
+  
+    <span>March  3, 2015</span>
+    <br/>
+    <a href="lmm_cov2.html">[FaST-LMM] fastlmm/inference/lmm_cov.py, part 2</a>
+    <hr/>
+  
+  
+  
+    <span>February 27, 2015</span>
+    <br/>
+    <a href="highlevel2.html">[FaST-LMM] high-level overview, part 2</a>
+    <hr/>
+  
+  
+  
+    <span>February 25, 2015</span>
+    <br/>
+    <a href="highlevel.html">[FaST-LMM] high-level overview of the codebase, part 1</a>
+    <hr/>
+  
+  
+  
+    <span>February 18, 2015</span>
+    <br/>
+    <a href="lmm.html">[FaST-LMM] fastlmm/inference/lmm.py</a>
+    <hr/>
+  
+  
+  
+    <span>February 16, 2015</span>
+    <br/>
+    <a href="lmm_cov.html">[FaST-LMM] fastlmm/inference/lmm_cov.py, part 1</a>
+    <hr/>
+  
+  
+  </td>
+<td id="content">
+<section>
+  <p>This post ends the discussion of PyLMM, as there’s almost nothing more to talk about.</p>
+
+<h2 id="is-fit-slow-in-pylmm-no-its-just-the-different-amount-of-grid-points">Is <code>fit()</code> slow in PyLMM? No, it’s just the different amount of grid points.</h2>
+
+<p>Given that the calculation of log-likelihood function takes similar amounts of time, and both tools use similar strategies for finding the optimal value, the difference in performance of fitting <code>h2</code> (the mixing parameter) is due to the number of calls of LL.</p>
+
+<p>Since the results on the test dataset are the same, this suggests that the grid in PyLMM might be too dense. By default, FaST-LMM uses 10 points, whereas PyLMM uses 100. The remaining iterations of Brent method add another 10-25 evaluations, leading to the observed 3x difference.</p>
+
+<p>Indeed, with the parameter <code>nGridH2</code> set to 100 in <code>findH2</code>, the number of LL evaluations becomes roughly the same, and now PyLMM is faster (because of faster log-likelihood calculation).</p>
+
+<h2 id="what-about-remlfalse">What about <code>REML=false</code>?</h2>
+
+<p>I couldn’t get satisfactory results with FaST-LMM, its fitting procedure was unable to estimate <code>h2</code>, always setting it to the maximum value of 0.99999.</p>
+
+<p>I found this weird and decided to look at the plot of log-likelihood function, for at least one of the SNPs:</p>
+
+<div class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">lmm_fast</span><span class="o">.</span><span class="n">setX</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">h2</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">10000</span><span class="p">):</span>
+    <span class="n">res</span> <span class="o">=</span> <span class="n">lmm_fast</span><span class="o">.</span><span class="n">nLLeval</span><span class="p">(</span><span class="n">h2</span><span class="o">/</span><span class="mf">10000.0</span><span class="p">,</span> <span class="n">REML</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">&quot;{0}</span><span class="se">\t</span><span class="s">{1}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">h2</span><span class="o">/</span><span class="mf">10000.0</span><span class="p">,</span> <span class="n">res</span><span class="p">[</span><span class="s">&#39;nLL&#39;</span><span class="p">]))</span></code></pre></div>
+
+<p>The resulting plot indeed shows something interesting:
+<img src="2015-03-11-nLL.png" alt="" class="center-image" /></p>
+
+<p>Just for comparison, below is the plot with <code>REML</code> likelihood. As can be seen, it has no such behaviour near 1.
+<img src="2015-03-11-nLL-REML.png" alt="" class="center-image" /></p>
+
+<p>This is a good example of why full likelihood is not always appropriate!</p>
+
+<h3 id="but-then-why-didnt-pylmm-end-up-in-1">But then, why didn’t PyLMM end up in 1?</h3>
+
+<p>Let’s see what happens after the values on the grid are computed.</p>
+
+<h4 id="pylmm">PyLMM</h4>
+
+<div class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="n">n</span><span class="o">-</span><span class="mi">2</span><span class="p">):</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">LLs</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">LLs</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">LLs</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">LLs</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">]:</span> 
+        <span class="n">HOpt</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">optimize</span><span class="o">.</span><span class="n">brent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">LL_brent</span><span class="p">,</span><span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">X</span><span class="p">,</span><span class="n">REML</span><span class="p">),</span><span class="n">brack</span><span class="o">=</span><span class="p">(</span><span class="n">H</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span><span class="n">H</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">])))</span></code></pre></div>
+
+<p>That’s it, boundaries are <strong>not</strong> checked for possible extrema.</p>
+
+<h4 id="fast-lmm-fastlmmutilmingridminimize1d">FaST-LMM (fastlmm.util.mingrid.minimize1D)</h4>
+
+<p>In addition to considering triplets as candidates for Brent search,
+boundaries are checked by default:</p>
+
+<div class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">if</span> <span class="n">resultgrid</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">&lt;</span><span class="n">resultgrid</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]:</span><span class="c">#if the outer boundary point is a local optimum expand search bounded between the grid points</span>
+  <span class="n">minlocal</span> <span class="o">=</span> <span class="n">opt</span><span class="o">.</span><span class="n">fminbound</span><span class="p">(</span><span class="n">f</span><span class="p">,</span><span class="n">evalgrid</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">],</span><span class="n">evalgrid</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span><span class="n">full_output</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span></code></pre></div>
+
+</section>
+</td></tr></table>
+
+</div>
+</div>
+</body>
+</html>

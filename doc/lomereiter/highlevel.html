@@ -1,0 +1,366 @@
+<!doctype html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="author" content="Artem Tarasov" />
+<title>[FaST-LMM] high-level overview of the codebase, part 1</title>
+
+<script type="text/x-mathjax-config"> 
+MathJax.Hub.Config({ 
+  jax: ["input/TeX","output/HTML-CSS"], 
+  extensions: ["tex2jax.js"], 
+  tex2jax: { 
+    inlineMath: [ ['$','$'], ["\\(","\\)"] ], 
+    displayMath: [ ['$$','$$'], ["\\[","\\]"] ], 
+    processEscapes: true 
+  }, 
+}); 
+</script> 
+<style>
+  .center-image
+  {
+  margin: 0 auto;
+  display: block;
+  width: 90%;
+  }
+  
+pre > code {
+  border: 0;
+  padding-right: 0;
+  padding-left: 0; }
+
+  table{
+    border-collapse: collapse;
+    border: 1px solid black;
+  }
+  table td,th{
+    border: 1px solid black;
+    padding: 3px;
+  }
+
+.highlight pre code * {
+  white-space: nowrap;    // this sets all children inside to nowrap
+}
+
+.highlight pre {
+  overflow-x: auto;       // this sets the scrolling in x
+}
+
+.highlight pre code {
+  white-space: pre;       // forces <code> to respect <pre> formatting
+}
+
+/* github style pygments theme for jekyll */
+/* from https://github.com/aahan/pygments-github-style */
+
+.highlight pre, pre, .highlight .hll { background-color: #f8f8f8; border: 1px solid #ccc; padding: 6px 10px; border-radius: 3px; }
+.highlight .c { color: #999988; font-style: italic; }
+.highlight .err { color: #a61717; background-color: #e3d2d2; }
+.highlight .k { font-weight: bold; }
+.highlight .o { font-weight: bold; }
+.highlight .cm { color: #999988; font-style: italic; }
+.highlight .cp { color: #999999; font-weight: bold; }
+.highlight .c1 { color: #999988; font-style: italic; }
+.highlight .cs { color: #999999; font-weight: bold; font-style: italic; }
+.highlight .gd { color: #000000; background-color: #ffdddd; }
+.highlight .gd .x { color: #000000; background-color: #ffaaaa; }
+.highlight .ge { font-style: italic; }
+.highlight .gr { color: #aa0000; }
+.highlight .gh { color: #999999; }
+.highlight .gi { color: #000000; background-color: #ddffdd; }
+.highlight .gi .x { color: #000000; background-color: #aaffaa; }
+.highlight .go { color: #888888; }
+.highlight .gp { color: #555555; }
+.highlight .gs { font-weight: bold; }
+.highlight .gu { color: #800080; font-weight: bold; }
+.highlight .gt { color: #aa0000; }
+.highlight .kc { font-weight: bold; }
+.highlight .kd { font-weight: bold; }
+.highlight .kn { font-weight: bold; }
+.highlight .kp { font-weight: bold; }
+.highlight .kr { font-weight: bold; }
+.highlight .kt { color: #445588; font-weight: bold; }
+.highlight .m { color: #009999; }
+.highlight .s { color: #dd1144; }
+.highlight .n { color: #333333; }
+.highlight .na { color: teal; }
+.highlight .nb { color: #0086b3; }
+.highlight .nc { color: #445588; font-weight: bold; }
+.highlight .no { color: teal; }
+.highlight .ni { color: purple; }
+.highlight .ne { color: #990000; font-weight: bold; }
+.highlight .nf { color: #990000; font-weight: bold; }
+.highlight .nn { color: #555555; }
+.highlight .nt { color: navy; }
+.highlight .nv { color: teal; }
+.highlight .ow { font-weight: bold; }
+.highlight .w { color: #bbbbbb; }
+.highlight .mf { color: #009999; }
+.highlight .mh { color: #009999; }
+.highlight .mi { color: #009999; }
+.highlight .mo { color: #009999; }
+.highlight .sb { color: #dd1144; }
+.highlight .sc { color: #dd1144; }
+.highlight .sd { color: #dd1144; }
+.highlight .s2 { color: #dd1144; }
+.highlight .se { color: #dd1144; }
+.highlight .sh { color: #dd1144; }
+.highlight .si { color: #dd1144; }
+.highlight .sx { color: #dd1144; }
+.highlight .sr { color: #009926; }
+.highlight .s1 { color: #dd1144; }
+.highlight .ss { color: #990073; }
+.highlight .bp { color: #999999; }
+.highlight .vc { color: teal; }
+.highlight .vg { color: teal; }
+.highlight .vi { color: teal; }
+.highlight .il { color: #009999; }
+.highlight .gc { color: #999; background-color: #EAF2F5; }
+
+#content {
+  width: 66%;
+}
+
+#list {
+  width: 17%;
+  vertical-align: top;
+}
+
+header {
+  font-family: Sans-serif;
+  font-size: 10pt;
+  text-align: center;
+  background-color: #cdd;
+  max-width: 800px;
+  border-radius: 3px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+section {
+  max-width: 900px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+blockquote {
+  width: 80%;
+}
+</style>
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {
+    skipTags: ['script', 'noscript', 'style', 'textarea', 'pre']
+  }
+});
+
+MathJax.Hub.Queue(function() {
+  var all = MathJax.Hub.getAllJax(), i;
+  for(i=0; i < all.length; i += 1) {
+    all[i].SourceElement().parentNode.className += ' has-jax';
+  }
+});
+</script>
+
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+</head>
+<body>
+<header>
+  <h1>[FaST-LMM] high-level overview of the codebase, part 1</h1>
+</header>
+<table>
+<tr>
+  <td id="list">
+  
+  
+    <span>March 29, 2015</span>
+    <br/>
+    <a href="performance.html">[LMM] literature overview: performance</a>
+    <hr/>
+  
+  
+  
+    <span>March 27, 2015</span>
+    <br/>
+    <a href="overview.html">[LMM] literature overview: approximate methods</a>
+    <hr/>
+  
+  
+  
+    <span>March 15, 2015</span>
+    <br/>
+    <a href="proximal.html">[FaST-LMM] Proximal contamination</a>
+    <hr/>
+  
+  
+  
+    <span>March 13, 2015</span>
+    <br/>
+    <a href="reml.html">[FaST-LMM] REML estimate</a>
+    <hr/>
+  
+  
+  
+    <span>March 11, 2015</span>
+    <br/>
+    <a href="mixing.html">[FaST-LMM] comparison with PyLMM (continued)</a>
+    <hr/>
+  
+  
+  
+    <span>March 10, 2015</span>
+    <br/>
+    <a href="pylmm.html">[FaST-LMM] comparison with PyLMM (practice)</a>
+    <hr/>
+  
+  
+  
+    <span>March  9, 2015</span>
+    <br/>
+    <a href="pylmm.html">[FaST-LMM] comparison with PyLMM (theory)</a>
+    <hr/>
+  
+  
+  
+    <span>March  3, 2015</span>
+    <br/>
+    <a href="lmm_cov2.html">[FaST-LMM] fastlmm/inference/lmm_cov.py, part 2</a>
+    <hr/>
+  
+  
+  
+    <span>February 27, 2015</span>
+    <br/>
+    <a href="highlevel2.html">[FaST-LMM] high-level overview, part 2</a>
+    <hr/>
+  
+  
+  
+    <span>February 25, 2015</span>
+    <br/>
+    <a href="highlevel.html">[FaST-LMM] high-level overview of the codebase, part 1</a>
+    <hr/>
+  
+  
+  
+    <span>February 18, 2015</span>
+    <br/>
+    <a href="lmm.html">[FaST-LMM] fastlmm/inference/lmm.py</a>
+    <hr/>
+  
+  
+  
+    <span>February 16, 2015</span>
+    <br/>
+    <a href="lmm_cov.html">[FaST-LMM] fastlmm/inference/lmm_cov.py, part 1</a>
+    <hr/>
+  
+  
+  </td>
+<td id="content">
+<section>
+  <p>Following the meet-in-the-middle approach, after thorough delving into the algorithmic core of the FaST-LMM,
+I decided to finally run the code on test data and see what it does from the user point of view :)</p>
+
+<p>Python notebook infrastructure, and the provided document FaST-LMM.ipynb help immensely with understanding how to run the analysis.
+The notebook will serve as a guide through the available functionality.</p>
+
+<h2 id="required-packages-and-modules">Required packages and modules</h2>
+<ul>
+  <li>python2</li>
+  <li>cython</li>
+  <li>pandas</li>
+  <li>scipy</li>
+  <li>scikit-learn</li>
+  <li>statsmodels</li>
+  <li>pysnptools</li>
+</ul>
+
+<p>(All but the last one, I installed via Pacman)</p>
+
+<h2 id="lmmall">LMM(all)</h2>
+
+<p>The first approach is called ‘traditional’. In order to exclude the tested SNP from the set on which null model is built, it simply skips the whole chromosome when building the model. It’s less sophisticated than the following methods, but has less power (in the statistical sense).</p>
+
+<p>Now let’s go into depth and discover what’s going under the hood in the straightforwardly named <code>single_snp_leave_out_one_chrom</code> function.</p>
+
+<h3 id="singlesnpleaveoutonechrom">single_snp_leave_out_one_chrom</h3>
+
+<p>The code is located in <code>fastlmm/association/single_snp.py</code>.
+It’s very simple to grasp, for each chromosome it builds a kinship matrix, and tests SNPs on this chromosome using the built matrix.
+Internally it uses the LMM class from <code>lmm_cov.py</code> (which lacks documentation, or at least I couldn’t find the paper with algorithm descriptions so far)</p>
+
+<h3 id="input-formats">Input formats</h3>
+
+<ul>
+  <li>
+    <p>SNPs are read with the aid of <code>pysnptools.snpreader.Bed</code>. The name is a bit deceiving, though. In fact, it reads three files with <code>.bed</code>, <code>.bim</code>, and <code>.fam</code> extensions. Also this BED format has nothing to do with UCSC BED; its name stands for ‘Binary PED’ used by PLINK (<a href="http://pngu.mgh.harvard.edu/~purcell/plink/data.shtml">http://pngu.mgh.harvard.edu/~purcell/plink/data.shtml</a>). Non-binary PED and MAP formats described there are simple enough and don’t deserve any more attention.</p>
+  </li>
+  <li>
+    <p>Phenotype data is read via <code>pysnptools.util.pheno.loadPhen</code> function. It’s in yet another PLINK format, mentioned on the same webpage, and contains three columns with family IDs, individual IDs, and phenotype values.</p>
+  </li>
+  <li>
+    <p>As mentioned in the <code>.ipynb</code> document, “The covariate file also uses this format (with additional columns for multiple covariates)”</p>
+  </li>
+</ul>
+
+<h3 id="optional-covar-argument">Optional ‘covar’ argument</h3>
+
+<p>If it’s provided, it’s used as the <strong>X</strong> matrix (without the last column of ones). If not, <strong>X</strong> is just a vector of ones.</p>
+
+<h3 id="final-notes">Final notes</h3>
+<ul>
+  <li>The algorithm seems intended to be used with $G_0$ only, so that $K = G_0G_0^T$. Although the function has the optional $G_1$ parameter, comments indicate that this extra functionality hasn’t been tested.</li>
+</ul>
+
+<h2 id="lmmall--select">LMM(all + select)</h2>
+
+<p>The next algorithm is more complicated. The principal idea is to improve statistical power by removing from GSM those SNPs that are uncorrelated with phenotypes.</p>
+
+<p>A little bit more formal and math-inclined summary (taken from one of the papers) is as follows:</p>
+
+<blockquote>
+  <p>The two main steps of FaST-LMM-Select are ranking SNPs by lin. reg.
+P-values to form the GRM with the top-ranked SNPs and then calculating association statistics in a mixed-model framework, using this
+GRM</p>
+</blockquote>
+
+<p>Mixed-model basically means that the matrix $K$ is now a mix of $G_0G_0^T$ and $G_1G_1^T$ where $G_1$ corresponds to the selected SNPs.</p>
+
+<ul>
+  <li>The first step is feature selection</li>
+</ul>
+
+<div class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">select</span> <span class="o">=</span> <span class="n">FeatureSelectionInSample</span><span class="p">(</span><span class="n">max_log_k</span><span class="o">=</span><span class="mi">7</span><span class="p">,</span> <span class="n">n_folds</span><span class="o">=</span><span class="mi">7</span><span class="p">,</span> <span class="n">order_by_lmm</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">measure</span><span class="o">=</span><span class="s">&quot;ll&quot;</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">42</span><span class="p">)</span>
+
+<span class="n">best_k</span><span class="p">,</span> <span class="n">feat_idx</span><span class="p">,</span> <span class="n">best_mix</span><span class="p">,</span> <span class="n">best_delta</span> <span class="o">=</span> <span class="n">select</span><span class="o">.</span><span class="n">run_select</span><span class="p">(</span><span class="n">G0</span><span class="o">.</span><span class="n">val</span><span class="p">,</span> <span class="n">G0</span><span class="o">.</span><span class="n">val</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">cov</span><span class="o">=</span><span class="n">X_cov</span><span class="p">)</span></code></pre></div>
+
+<p><code>best_k</code> is the number of selected SNPs, <code>feat_idx</code> holds their indices, <code>best_mix</code> is $a_2$ in $K = (1-a_2)K_0 + a_2  K_1 $, and <code>best_delta</code> is $\delta$ in $\delta = \sigma^2 / \sigma^2_g$, the ratio of noise and genetic variance.</p>
+
+<p>How these parameters are searched, is currently beyond my comprehension. As this is a high-level overview, I’ll search for details later on.</p>
+
+<ul>
+  <li>Then the $G_1$ is constructed and all the necessary parameters are fed to the underlying algorithm, <code>single_snp</code>, which calls the same algorithm internally as previously described <code>single_snp_leave_out_one_chrom</code></li>
+</ul>
+
+<div class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">G1</span> <span class="o">=</span> <span class="n">G0</span><span class="p">[:,</span><span class="n">feat_idx</span><span class="p">]</span></code></pre></div>
+
+<h3 id="feature-selection">Feature selection</h3>
+
+<p>Implemented in module
+<code>fastlmm.feature_selection.feature_selection_two_kernel</code></p>
+
+<p>The boolean parameter <code>order_by_lmm</code> controls whether to compute P-values based on linear regression (<code>False</code>) or based on LMM computed with $G_0$ matrix (<code>True</code>).</p>
+
+<p>Another parameter, <code>measure</code>, tells to the routine which statistic to use for the optimization, MSE or log-likelihood.</p>
+
+<h2 id="in-the-next-part-lmmselect--pcs-epistasis-testing-sets-of-snps">In the next part: LMM(select) + PCs; epistasis; testing sets of SNPs</h2>
+
+</section>
+</td></tr></table>
+
+</div>
+</div>
+</body>
+</html>

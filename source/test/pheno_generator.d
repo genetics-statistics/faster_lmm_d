@@ -5,7 +5,7 @@
    Copyright © 2017 Prasun Anand & Pjotr Prins
 */
 
-module test.geno_generator;
+module test.pheno_generator;
 
 import std.conv;
 import std.random;

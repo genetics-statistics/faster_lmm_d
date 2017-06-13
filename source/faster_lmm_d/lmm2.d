@@ -98,8 +98,8 @@ LMM lmm_transform(const LMM lmmobject, N_Individuals N, const double[] Y, const 
   //   matrix of K (the kinship).
 
   DMatrix KveT = slow_matrix_transpose(Kve);
-  DMatrix Yt = matrix_mult(KveT, DMatrix(Y));
-  DMatrix X0t = matrix_mult(KveT, lmmobject.X0);
+  DMatrix Yt = matrix_mult("KveT", KveT, "Y", DMatrix(Y));
+  DMatrix X0t = matrix_mult("KveT", KveT, "X0", lmmobject.X0);
   DMatrix X0t_stack = horizontally_stack(X0t, ones_dmatrix(N,1));
   auto q = X0t.shape[1];
   return LMM(lmmobject, Yt, X0t, X0t_stack);
@@ -118,14 +118,14 @@ MLSol getMLSoln(const double h, const DMatrix X, const DMatrix _Yt, const DMatri
   DMatrix S = divide_num_dmatrix(1,add_dmatrix_num(multiply_dmatrix_num(Kva,h),(1.0 - h)));
   auto temp = S.shape.dup_fast;
   S.shape = [temp[1], temp[0]];
-  DMatrix Xt = slow_multiply_dmatrix(slow_matrix_transpose(X), S);
-  DMatrix XX = matrix_mult(Xt,X);
+  DMatrix Xt   = slow_multiply_dmatrix(slow_matrix_transpose(X), S);
+  DMatrix XX   = matrix_mult("Xt", Xt, "X", X);
   DMatrix XX_i = inverse(XX);
-  DMatrix beta =  matrix_mult(matrix_mult(XX_i,Xt),_Yt);
-  DMatrix Yt = subtract_dmatrix(_Yt, matrix_mult(X,beta));
-  DMatrix YtT = slow_matrix_transpose(Yt);
+  DMatrix beta = matrix_mult("(XX_i x Xt)", matrix_mult("XX_i",XX_i,"Xt",Xt), "Yt", _Yt);
+  DMatrix Yt   = subtract_dmatrix(_Yt, matrix_mult("X",X,"beta",beta));
+  DMatrix YtT  = slow_matrix_transpose(Yt);
   DMatrix YtTS = slow_multiply_dmatrix(YtT, S);
-  DMatrix Q = matrix_mult(YtTS,Yt);
+  DMatrix Q    = matrix_mult("YtTs",YtTS,"Yt",Yt);
   double sigma = Q.elements[0] * 1.0 / (to!double(N) - to!double(X.shape[1]));
   return MLSol(beta, sigma, Q, XX_i, XX);
 }
@@ -155,7 +155,7 @@ LLTuple get_LL(const double h, const DMatrix param_X,
   if(REML) {
     double LL_REML_part = 0;
     DMatrix XT = slow_matrix_transpose(X);
-    LL_REML_part = q*mlog(2.0*PI* ml.sigma) + mlog(det(matrix_mult(XT, X))) - mlog(det(ml.XX));
+    LL_REML_part = q*mlog(2.0*PI* ml.sigma) + mlog(det(matrix_mult("XT",XT,"X",X))) - mlog(det(ml.XX));
     LL = LL + 0.5*LL_REML_part;
   }
 
@@ -295,7 +295,7 @@ auto lmm_association(m_items i, const LMM lmmobject, N_Individuals N, const DMat
 
   //  Calculates association for the SNPs encoded in the vector X of size n.
   //  If h is None, the optimal h stored in opt_H is used.
-  DMatrix m = matrix_mult(KveT, _X);
+  DMatrix m = matrix_mult("KveT",KveT,"_X",_X);
   DMatrix X = set_col(lmmobject.X0t_stack,1,m);
   LLTuple ll = get_LL(lmmobject.opt_H, X, N, lmmobject.Kva, lmmobject.Yt, lmmobject.X0t, false, REML);
   auto q = ll.beta.elements.length;

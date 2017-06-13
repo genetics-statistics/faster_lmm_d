@@ -1,0 +1,367 @@
+<!doctype html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="author" content="Artem Tarasov" />
+<title>[FaST-LMM] REML estimate</title>
+
+<script type="text/x-mathjax-config"> 
+MathJax.Hub.Config({ 
+  jax: ["input/TeX","output/HTML-CSS"], 
+  extensions: ["tex2jax.js"], 
+  tex2jax: { 
+    inlineMath: [ ['$','$'], ["\\(","\\)"] ], 
+    displayMath: [ ['$$','$$'], ["\\[","\\]"] ], 
+    processEscapes: true 
+  }, 
+}); 
+</script> 
+<style>
+  .center-image
+  {
+  margin: 0 auto;
+  display: block;
+  width: 90%;
+  }
+  
+pre > code {
+  border: 0;
+  padding-right: 0;
+  padding-left: 0; }
+
+  table{
+    border-collapse: collapse;
+    border: 1px solid black;
+  }
+  table td,th{
+    border: 1px solid black;
+    padding: 3px;
+  }
+
+.highlight pre code * {
+  white-space: nowrap;    // this sets all children inside to nowrap
+}
+
+.highlight pre {
+  overflow-x: auto;       // this sets the scrolling in x
+}
+
+.highlight pre code {
+  white-space: pre;       // forces <code> to respect <pre> formatting
+}
+
+/* github style pygments theme for jekyll */
+/* from https://github.com/aahan/pygments-github-style */
+
+.highlight pre, pre, .highlight .hll { background-color: #f8f8f8; border: 1px solid #ccc; padding: 6px 10px; border-radius: 3px; }
+.highlight .c { color: #999988; font-style: italic; }
+.highlight .err { color: #a61717; background-color: #e3d2d2; }
+.highlight .k { font-weight: bold; }
+.highlight .o { font-weight: bold; }
+.highlight .cm { color: #999988; font-style: italic; }
+.highlight .cp { color: #999999; font-weight: bold; }
+.highlight .c1 { color: #999988; font-style: italic; }
+.highlight .cs { color: #999999; font-weight: bold; font-style: italic; }
+.highlight .gd { color: #000000; background-color: #ffdddd; }
+.highlight .gd .x { color: #000000; background-color: #ffaaaa; }
+.highlight .ge { font-style: italic; }
+.highlight .gr { color: #aa0000; }
+.highlight .gh { color: #999999; }
+.highlight .gi { color: #000000; background-color: #ddffdd; }
+.highlight .gi .x { color: #000000; background-color: #aaffaa; }
+.highlight .go { color: #888888; }
+.highlight .gp { color: #555555; }
+.highlight .gs { font-weight: bold; }
+.highlight .gu { color: #800080; font-weight: bold; }
+.highlight .gt { color: #aa0000; }
+.highlight .kc { font-weight: bold; }
+.highlight .kd { font-weight: bold; }
+.highlight .kn { font-weight: bold; }
+.highlight .kp { font-weight: bold; }
+.highlight .kr { font-weight: bold; }
+.highlight .kt { color: #445588; font-weight: bold; }
+.highlight .m { color: #009999; }
+.highlight .s { color: #dd1144; }
+.highlight .n { color: #333333; }
+.highlight .na { color: teal; }
+.highlight .nb { color: #0086b3; }
+.highlight .nc { color: #445588; font-weight: bold; }
+.highlight .no { color: teal; }
+.highlight .ni { color: purple; }
+.highlight .ne { color: #990000; font-weight: bold; }
+.highlight .nf { color: #990000; font-weight: bold; }
+.highlight .nn { color: #555555; }
+.highlight .nt { color: navy; }
+.highlight .nv { color: teal; }
+.highlight .ow { font-weight: bold; }
+.highlight .w { color: #bbbbbb; }
+.highlight .mf { color: #009999; }
+.highlight .mh { color: #009999; }
+.highlight .mi { color: #009999; }
+.highlight .mo { color: #009999; }
+.highlight .sb { color: #dd1144; }
+.highlight .sc { color: #dd1144; }
+.highlight .sd { color: #dd1144; }
+.highlight .s2 { color: #dd1144; }
+.highlight .se { color: #dd1144; }
+.highlight .sh { color: #dd1144; }
+.highlight .si { color: #dd1144; }
+.highlight .sx { color: #dd1144; }
+.highlight .sr { color: #009926; }
+.highlight .s1 { color: #dd1144; }
+.highlight .ss { color: #990073; }
+.highlight .bp { color: #999999; }
+.highlight .vc { color: teal; }
+.highlight .vg { color: teal; }
+.highlight .vi { color: teal; }
+.highlight .il { color: #009999; }
+.highlight .gc { color: #999; background-color: #EAF2F5; }
+
+#content {
+  width: 66%;
+}
+
+#list {
+  width: 17%;
+  vertical-align: top;
+}
+
+header {
+  font-family: Sans-serif;
+  font-size: 10pt;
+  text-align: center;
+  background-color: #cdd;
+  max-width: 800px;
+  border-radius: 3px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+section {
+  max-width: 900px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+blockquote {
+  width: 80%;
+}
+</style>
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {
+    skipTags: ['script', 'noscript', 'style', 'textarea', 'pre']
+  }
+});
+
+MathJax.Hub.Queue(function() {
+  var all = MathJax.Hub.getAllJax(), i;
+  for(i=0; i < all.length; i += 1) {
+    all[i].SourceElement().parentNode.className += ' has-jax';
+  }
+});
+</script>
+
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+</head>
+<body>
+<header>
+  <h1>[FaST-LMM] REML estimate</h1>
+</header>
+<table>
+<tr>
+  <td id="list">
+  
+  
+    <span>March 29, 2015</span>
+    <br/>
+    <a href="performance.html">[LMM] literature overview: performance</a>
+    <hr/>
+  
+  
+  
+    <span>March 27, 2015</span>
+    <br/>
+    <a href="overview.html">[LMM] literature overview: approximate methods</a>
+    <hr/>
+  
+  
+  
+    <span>March 15, 2015</span>
+    <br/>
+    <a href="proximal.html">[FaST-LMM] Proximal contamination</a>
+    <hr/>
+  
+  
+  
+    <span>March 13, 2015</span>
+    <br/>
+    <a href="reml.html">[FaST-LMM] REML estimate</a>
+    <hr/>
+  
+  
+  
+    <span>March 11, 2015</span>
+    <br/>
+    <a href="mixing.html">[FaST-LMM] comparison with PyLMM (continued)</a>
+    <hr/>
+  
+  
+  
+    <span>March 10, 2015</span>
+    <br/>
+    <a href="pylmm.html">[FaST-LMM] comparison with PyLMM (practice)</a>
+    <hr/>
+  
+  
+  
+    <span>March  9, 2015</span>
+    <br/>
+    <a href="pylmm.html">[FaST-LMM] comparison with PyLMM (theory)</a>
+    <hr/>
+  
+  
+  
+    <span>March  3, 2015</span>
+    <br/>
+    <a href="lmm_cov2.html">[FaST-LMM] fastlmm/inference/lmm_cov.py, part 2</a>
+    <hr/>
+  
+  
+  
+    <span>February 27, 2015</span>
+    <br/>
+    <a href="highlevel2.html">[FaST-LMM] high-level overview, part 2</a>
+    <hr/>
+  
+  
+  
+    <span>February 25, 2015</span>
+    <br/>
+    <a href="highlevel.html">[FaST-LMM] high-level overview of the codebase, part 1</a>
+    <hr/>
+  
+  
+  
+    <span>February 18, 2015</span>
+    <br/>
+    <a href="lmm.html">[FaST-LMM] fastlmm/inference/lmm.py</a>
+    <hr/>
+  
+  
+  
+    <span>February 16, 2015</span>
+    <br/>
+    <a href="lmm_cov.html">[FaST-LMM] fastlmm/inference/lmm_cov.py, part 1</a>
+    <hr/>
+  
+  
+  </td>
+<td id="content">
+<section>
+  <p>It turns out that I had wrong understanding of how REML estimate can be computed. It was confusing to see that both <code>lmm.py</code> and <code>lmm_cov.py</code> give the same results although using completely different approaches.
+Now that I’ve studied the literature I can summarize what I learned.</p>
+
+<h2 id="reference-paper">Reference paper</h2>
+
+<p>It took me a while to find the original derivations, but here they are:</p>
+
+<ul>
+  <li><a href="https://dspace.library.cornell.edu/bitstream/1813/32741/1/BU-640-M.pdf">S. R. Searle, 1978</a></li>
+</ul>
+
+<h3 id="the-simplest-form-of-the-equation-conceptually">The simplest form of the equation (conceptually)</h3>
+
+<p>The advantage of REML estimate of the variance component is that it’s unbiased. </p>
+
+<p>For that, we get rid of $\beta$, fixed-effect coefficients, by taking a matrix $S$ such that $SX = 0$. </p>
+
+<p>The idea behind it is this: if $y$ has gaussian distribution with mean $X\beta + Gu$ and var.-covar. matrix $V=\sigma_g^2GG^T + \sigma^2I$, the transformed phenotype vector $Sy$ will still have gaussian distribution (because the transformation is linear) but with mean $0$ and variance $SVS^T$, containing no trace of $\beta$. Then ML estimate of $Sy$ is maximized to obtain the optimal variance ratio $\gamma=\frac{\sigma_g^2}{\sigma^2}$.</p>
+
+<p>Now, $ SX = 0 $ means that rows of $ S $ are in the orthogonal complement of $ \mathrm{colspace}(X),\  $ and if $X$ has $D$ linearly independent columns, rank of $S$ can’t be more than $ N - D$. It makes sense to take $S$ with this maximal rank. And because of this, the number of individuals is effectively reduced from $N$ to $N-D$.</p>
+
+<p>Thus the REML estimate of $\gamma$ is just the ML estimate with $Sy$ instead of $y$ and $N-D$ instead of $N$ because now we effectively have $N-D$ individuals:</p>
+
+<script type="math/tex; mode=display">
+\gamma = \mathrm{argmax} \left(-\frac12(N-D)\log(2\pi) - \frac12 \log\left|SVS^T\right| - \frac12 (Sy)^T(SVS^T)^{-1}(Sy)\right)
+</script>
+
+<p>In our case, $V$ is $\sigma^2(\gamma K + I)$, therefore we can pull $\sigma^2$ out of the determinant and rewrite the expression in the parentheses as</p>
+
+<script type="math/tex; mode=display">
+ -\frac12(N-D)\log(2\pi) - \frac12 \left((N-D)\log(\sigma^2) + \log\left|S(\gamma K+ I)S^T\right|\right) - \frac{1}{2\sigma^2} (Sy)^T(S(\gamma K+ I)S^T)^{-1}(Sy)
+</script>
+
+<p>Instead of the unknown $\sigma^2$ we put its ML estimate, which is </p>
+
+<script type="math/tex; mode=display">
+\frac{1}{N-D}(Sy)^T(S(\gamma K+I)S^T)^{-1}(Sy)
+</script>
+
+<p>and get</p>
+
+<script type="math/tex; mode=display">
+-\frac12(N-D)\log\left(2\pi\sigma^2\right) - \frac12\log\left|S(\gamma K+ I)S^T\right| - \frac{N-D}{2}
+</script>
+
+<p>This expression is used in <code>fastlmm.inference.lmm_cov</code> module for REML derivation:</p>
+
+<div class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">nLL</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">logdetK</span> <span class="o">+</span> <span class="n">N</span> <span class="o">*</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">sigma2</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span></code></pre></div>
+
+<h3 id="removing-s-from-the-equation">Removing $S$ from the equation</h3>
+
+<p>Remarkably, that happens to be possible.</p>
+
+<p>Details can be found in <a href="https://dspace.library.cornell.edu/bitstream/1813/32741/1/BU-640-M.pdf">Searle</a> on pages 89–90, where the following facts are obtained, with the aid of formulas derived on pages 29-30:</p>
+
+<ul>
+  <li>
+    <p>$
+\log\left|SVS^T\right| = \log|V| + \log\left|X^TV^{-1}X\right| - \log\left|X^TX\right| + C,\quad
+$ where $C$ is a constant that depends on the choice of $S$</p>
+  </li>
+  <li>
+    <p>$S$ can be taken to be $I - XX^{\dagger}$, and in this case $C = 0$.</p>
+  </li>
+  <li>
+    <p>$ (Sy)^T(SVS^T)^{-1}(Sy) = y^TPy \ $
+where $P = V^{-1} - V^{-1}X(X^TV^{-1}X)X^TV^{-1}$</p>
+  </li>
+  <li>
+    <p>$y^TPy$ can also be calculated as $ (y-X\hat{\beta})^TV^{-1}(y-X\hat{\beta}) \ $ where $\hat{\beta}$ is estimated as usual, i.e. 
+$\hat{\beta} = \left(X^TV^{-1}X\right)^{-1}X^TV^{-1}y$</p>
+  </li>
+</ul>
+
+<p>Therefore we obtain the following expression for the REML log-likelihood:</p>
+
+<script type="math/tex; mode=display">
+-\frac12 (N-D)\log(2\pi) - \frac{C}{2} + \frac12\log\left|X^TX\right| - \frac12 \log|V| -\frac12\log\left|X^TV^{-1}X\right| - \frac12 (y-X\hat{\beta})^TV^{-1}(y-X\hat{\beta})
+</script>
+
+<p>Again, after pulling out $\sigma^2$ and ignoring the constant, it gets transformed into</p>
+
+<script type="math/tex; mode=display">
+-\frac12(N-D)\log(2\pi) +\frac12\log\left|X^TX\right| - \left(\frac{N}{2}\log(\sigma^2) + \frac12\log|\gamma K+ I|\right)
+-\left(-\frac{D}{2}\log(\sigma^2)+\frac12\log\left|X^T(\gamma K+ I)^{-1}X\right|\right) - \frac{N-D}{2}
+</script>
+
+<p>which simplifies to</p>
+
+<script type="math/tex; mode=display">
+-\frac12(N-D)\log(2\pi\sigma^2) - \frac12\log|\gamma K+ I| - \frac12\log\left|X^T(\gamma K+ I)^{-1}X\right| +\frac12\log\left|X^TX\right| - \frac{N-D}{2}
+</script>
+
+<p>Compare with this line from <code>fastlmm.inference.lmm</code>:</p>
+
+<div class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">nLL</span> <span class="o">=</span>  <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span> <span class="n">logdetK</span> <span class="o">+</span> <span class="n">logdetXKX</span> <span class="o">-</span> <span class="n">logdetXX</span> <span class="o">+</span> <span class="p">(</span><span class="n">N</span><span class="o">-</span><span class="n">D</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span> <span class="n">SP</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mf">2.0</span><span class="o">*</span><span class="n">SP</span><span class="o">.</span><span class="n">pi</span><span class="o">*</span><span class="n">sigma2</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span> <span class="p">)</span> <span class="p">)</span></code></pre></div>
+
+
+</section>
+</td></tr></table>
+
+</div>
+</div>
+</body>
+</html>

@@ -1,0 +1,348 @@
+<!doctype html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="author" content="Artem Tarasov" />
+<title>[LMM] literature overview: approximate methods</title>
+
+<script type="text/x-mathjax-config"> 
+MathJax.Hub.Config({ 
+  jax: ["input/TeX","output/HTML-CSS"], 
+  extensions: ["tex2jax.js"], 
+  tex2jax: { 
+    inlineMath: [ ['$','$'], ["\\(","\\)"] ], 
+    displayMath: [ ['$$','$$'], ["\\[","\\]"] ], 
+    processEscapes: true 
+  }, 
+}); 
+</script> 
+<style>
+  .center-image
+  {
+  margin: 0 auto;
+  display: block;
+  width: 90%;
+  }
+  
+pre > code {
+  border: 0;
+  padding-right: 0;
+  padding-left: 0; }
+
+  table{
+    border-collapse: collapse;
+    border: 1px solid black;
+  }
+  table td,th{
+    border: 1px solid black;
+    padding: 3px;
+  }
+
+.highlight pre code * {
+  white-space: nowrap;    // this sets all children inside to nowrap
+}
+
+.highlight pre {
+  overflow-x: auto;       // this sets the scrolling in x
+}
+
+.highlight pre code {
+  white-space: pre;       // forces <code> to respect <pre> formatting
+}
+
+/* github style pygments theme for jekyll */
+/* from https://github.com/aahan/pygments-github-style */
+
+.highlight pre, pre, .highlight .hll { background-color: #f8f8f8; border: 1px solid #ccc; padding: 6px 10px; border-radius: 3px; }
+.highlight .c { color: #999988; font-style: italic; }
+.highlight .err { color: #a61717; background-color: #e3d2d2; }
+.highlight .k { font-weight: bold; }
+.highlight .o { font-weight: bold; }
+.highlight .cm { color: #999988; font-style: italic; }
+.highlight .cp { color: #999999; font-weight: bold; }
+.highlight .c1 { color: #999988; font-style: italic; }
+.highlight .cs { color: #999999; font-weight: bold; font-style: italic; }
+.highlight .gd { color: #000000; background-color: #ffdddd; }
+.highlight .gd .x { color: #000000; background-color: #ffaaaa; }
+.highlight .ge { font-style: italic; }
+.highlight .gr { color: #aa0000; }
+.highlight .gh { color: #999999; }
+.highlight .gi { color: #000000; background-color: #ddffdd; }
+.highlight .gi .x { color: #000000; background-color: #aaffaa; }
+.highlight .go { color: #888888; }
+.highlight .gp { color: #555555; }
+.highlight .gs { font-weight: bold; }
+.highlight .gu { color: #800080; font-weight: bold; }
+.highlight .gt { color: #aa0000; }
+.highlight .kc { font-weight: bold; }
+.highlight .kd { font-weight: bold; }
+.highlight .kn { font-weight: bold; }
+.highlight .kp { font-weight: bold; }
+.highlight .kr { font-weight: bold; }
+.highlight .kt { color: #445588; font-weight: bold; }
+.highlight .m { color: #009999; }
+.highlight .s { color: #dd1144; }
+.highlight .n { color: #333333; }
+.highlight .na { color: teal; }
+.highlight .nb { color: #0086b3; }
+.highlight .nc { color: #445588; font-weight: bold; }
+.highlight .no { color: teal; }
+.highlight .ni { color: purple; }
+.highlight .ne { color: #990000; font-weight: bold; }
+.highlight .nf { color: #990000; font-weight: bold; }
+.highlight .nn { color: #555555; }
+.highlight .nt { color: navy; }
+.highlight .nv { color: teal; }
+.highlight .ow { font-weight: bold; }
+.highlight .w { color: #bbbbbb; }
+.highlight .mf { color: #009999; }
+.highlight .mh { color: #009999; }
+.highlight .mi { color: #009999; }
+.highlight .mo { color: #009999; }
+.highlight .sb { color: #dd1144; }
+.highlight .sc { color: #dd1144; }
+.highlight .sd { color: #dd1144; }
+.highlight .s2 { color: #dd1144; }
+.highlight .se { color: #dd1144; }
+.highlight .sh { color: #dd1144; }
+.highlight .si { color: #dd1144; }
+.highlight .sx { color: #dd1144; }
+.highlight .sr { color: #009926; }
+.highlight .s1 { color: #dd1144; }
+.highlight .ss { color: #990073; }
+.highlight .bp { color: #999999; }
+.highlight .vc { color: teal; }
+.highlight .vg { color: teal; }
+.highlight .vi { color: teal; }
+.highlight .il { color: #009999; }
+.highlight .gc { color: #999; background-color: #EAF2F5; }
+
+#content {
+  width: 66%;
+}
+
+#list {
+  width: 17%;
+  vertical-align: top;
+}
+
+header {
+  font-family: Sans-serif;
+  font-size: 10pt;
+  text-align: center;
+  background-color: #cdd;
+  max-width: 800px;
+  border-radius: 3px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+section {
+  max-width: 900px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+blockquote {
+  width: 80%;
+}
+</style>
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {
+    skipTags: ['script', 'noscript', 'style', 'textarea', 'pre']
+  }
+});
+
+MathJax.Hub.Queue(function() {
+  var all = MathJax.Hub.getAllJax(), i;
+  for(i=0; i < all.length; i += 1) {
+    all[i].SourceElement().parentNode.className += ' has-jax';
+  }
+});
+</script>
+
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+</head>
+<body>
+<header>
+  <h1>[LMM] literature overview: approximate methods</h1>
+</header>
+<table>
+<tr>
+  <td id="list">
+  
+  
+    <span>March 29, 2015</span>
+    <br/>
+    <a href="performance.html">[LMM] literature overview: performance</a>
+    <hr/>
+  
+  
+  
+    <span>March 27, 2015</span>
+    <br/>
+    <a href="overview.html">[LMM] literature overview: approximate methods</a>
+    <hr/>
+  
+  
+  
+    <span>March 15, 2015</span>
+    <br/>
+    <a href="proximal.html">[FaST-LMM] Proximal contamination</a>
+    <hr/>
+  
+  
+  
+    <span>March 13, 2015</span>
+    <br/>
+    <a href="reml.html">[FaST-LMM] REML estimate</a>
+    <hr/>
+  
+  
+  
+    <span>March 11, 2015</span>
+    <br/>
+    <a href="mixing.html">[FaST-LMM] comparison with PyLMM (continued)</a>
+    <hr/>
+  
+  
+  
+    <span>March 10, 2015</span>
+    <br/>
+    <a href="pylmm.html">[FaST-LMM] comparison with PyLMM (practice)</a>
+    <hr/>
+  
+  
+  
+    <span>March  9, 2015</span>
+    <br/>
+    <a href="pylmm.html">[FaST-LMM] comparison with PyLMM (theory)</a>
+    <hr/>
+  
+  
+  
+    <span>March  3, 2015</span>
+    <br/>
+    <a href="lmm_cov2.html">[FaST-LMM] fastlmm/inference/lmm_cov.py, part 2</a>
+    <hr/>
+  
+  
+  
+    <span>February 27, 2015</span>
+    <br/>
+    <a href="highlevel2.html">[FaST-LMM] high-level overview, part 2</a>
+    <hr/>
+  
+  
+  
+    <span>February 25, 2015</span>
+    <br/>
+    <a href="highlevel.html">[FaST-LMM] high-level overview of the codebase, part 1</a>
+    <hr/>
+  
+  
+  
+    <span>February 18, 2015</span>
+    <br/>
+    <a href="lmm.html">[FaST-LMM] fastlmm/inference/lmm.py</a>
+    <hr/>
+  
+  
+  
+    <span>February 16, 2015</span>
+    <br/>
+    <a href="lmm_cov.html">[FaST-LMM] fastlmm/inference/lmm_cov.py, part 1</a>
+    <hr/>
+  
+  
+  </td>
+<td id="content">
+<section>
+  <p>Let’s now look at the big picture. There are two recent reviews of various methods:</p>
+
+<ul>
+  <li><a href="http://www.nature.com/ng/journal/v46/n2/full/ng.2876.html">‘Advantages and pitfalls in the application of mixed-model association methods’</a> — January 2014 <br />
+    <ul>
+      <li>the authors strongly suggest excluding the tested marker from GRM, either by correcting a single global GRM as it’s done in FaST-LMM, or simply by using the LOCO approach (leave-one-chromosome-out), i.e. computing as many kinship matrices as there are chromosomes</li>
+      <li>a <a href="http://www.nature.com/ng/journal/v46/n2/fig_tab/ng.2876_T1.html">table</a> is provided giving computational cost of EMMAX, FaST-LMM, GEMMA, GRAMMAR-Gamma, and GCTA methods (the second column is a bit incorrect, though - in some places there should be $\mathcal{O}(MN^2)$ instead of $\mathcal{O}(N^3)$)</li>
+      <li>GRAMMAR-Gamma is an approximate method that gives $\mathcal{O}(MN)$ time of SNP testing instead of $\mathcal{O}(MN^2)\ $ <br />($M$ is the number of SNPs, $N$ - that of individuals)</li>
+    </ul>
+  </li>
+  <li><a href="http://www.biomedcentral.com/1753-6561/8/S1/S79">‘Accounting for relatedness in family-based association studies: application to Genetic Analysis Workshop 18 data’</a> — June 2014
+    <ul>
+      <li>tested methods: EMMAX, FaST-LMM, GEMMA, and GenABEL (FASTA/GRAMMAR-Gamma)</li>
+      <li>the authors conclude that ‘from a practical point of view &lt;…&gt; it makes little difference to the results which method/software package is used, and the user can make the choice of package on the basis of personal taste or computational speed/convenience.’</li>
+    </ul>
+  </li>
+</ul>
+
+<p>Thus we shouldn’t disregard approximate methods if speed is important. At the very least, they can filter out SNPs that are definitely not significant. Also one shouldn’t forget that LMM is itself an approximation, typically the model is built with assumptions of infinitesimal genetic architecture and gaussian noise.</p>
+
+<h2 id="approximate-methods">Approximate methods</h2>
+
+<p>They are based on the score test statistic instead of the LRT statistic considered gold-standard. The two statistics are asymptotically equivalent (<a href="https://en.wikipedia.org/wiki/Score_test">read</a> about the score test on Wikipedia).</p>
+
+<h3 id="score-test">Score test</h3>
+<p>Applying the general theory to our case goes as follows:</p>
+
+<ul>
+  <li>the parameter of interest is $\beta$, and we test the hypothesis $\mathcal{H}_0: \beta = 0$</li>
+  <li>$\mathcal{U}(0)$, the partial derivative of LL at $\beta = 0$, equals to $X^TV^{-1}y\ $ (here $V = \sigma^2(h^2K + (1-h^2)I)\,$)</li>
+  <li>Fisher information, $\mathcal{I}(0)$, is $X^TV^{-1}X$</li>
+  <li>thus the score test statistic is <script type="math/tex"> (X^TV^{-1}y)^T(X^TV^{-1}X)^{-1}(X^TV^{-1}y) </script></li>
+</ul>
+
+<p>In the simplest and most common case $X$ is a single tested SNP, so that the multipliers in the above expression are scalars, and </p>
+
+<script type="math/tex; mode=display"> T^2_{\mathrm{score}} = \frac{(X^TV^{-1}y)^2}{X^TV^{-1}X} </script>
+
+<h3 id="grammar-gamma-approximation">GRAMMAR-Gamma approximation</h3>
+
+<p>The computation of $T^2_{\mathrm{score}}$ requires $\mathcal{O}(N^2)$ operations - for calculating $V^{-1}y$ and $V^{-1}X$. The first, $V^{-1}y$, can be computed once for all SNPs, but $V^{-1}X$ must be computed each time.</p>
+
+<p>Authors of <a href="http://www.ncbi.nlm.nih.gov/pubmed/22983301">GRAMMAR-Gamma</a> paper (2012) suggest that the ratio of $X^TV^{-1}X$ and $X^TX$ is nearly constant in practice, and therefore suggest another statistic:</p>
+
+<script type="math/tex; mode=display">
+T^2_{\mathrm{new}} = \frac{(X^TV^{-1}y)^2}{X^TX},
+</script>
+
+<p>and <script type="math/tex">T^2_{\mathrm{score}}</script> is approximated as <script type="math/tex">T^2_{\mathrm{new}}/\gamma</script>, where $\gamma$ is a correction factor, for which the analytical expression is derived:</p>
+
+<script type="math/tex; mode=display">
+\gamma = \frac{1}{\sigma^2h^2}\left(1 - \frac{\sigma^2(1-h^2)}{N-1}\mathrm{tr}(V^{-1})\right)
+</script>
+
+<p>This approach allows to approximate $T^2_{\mathrm{score}}$ statistic in $\mathcal{O}(N)$ time for each SNP instead of $\mathcal{O}(N^2)$ needed for exact computation.</p>
+
+<h3 id="bolt-lmm">BOLT-LMM</h3>
+
+<p>Borrowing some ideas from earlier methods, BOLT-LMM avoids matrix decomposition (or inversion) that other methods require, which has complexity $\mathcal{O}(MN^2)$
+The approach is described in a recent <a href="http://www.nature.com/ng/journal/v47/n3/full/ng.3190.html">paper</a> published in Nature and freely available on <a href="http://biorxiv.org/content/early/2014/08/09/007799">bioarxiv</a>.</p>
+
+<p>Computing $V^{-1}y$ and $V^{-1}X$ is done through <a href="https://en.wikipedia.org/wiki/Conjugate_gradient_method">conjugate gradient method</a>, taking around $\mathcal{O}(\sqrt{N})$ iterations to converge (empirical estimate made by the authors), on each iteration computing matrix-vector products ($\mathcal{O}(MN)$), leading to total runtime of $\mathcal{O}(MN^{1.5})$ for each such computation. The trick is to compute $V^{-1}X$ only for a few (pseudo-)randomly taken non-causal SNPs, and the suggested statistic is</p>
+
+<script type="math/tex; mode=display">
+T^2_{\mathrm{BOLT-LMM-inf}} = \frac{(X^TV^{-1}y)^2}{c_{\mathrm{inf}}},
+</script>
+
+<p>where $c_{\mathrm{inf}}$ is taken to be the following ratio</p>
+
+<script type="math/tex; mode=display">
+\frac{\mathrm{Mean} (X_{\mathrm{test}}^TV^{-1}y)^2}{\mathrm{Mean}\dfrac{(X_{\mathrm{test}}^TV^{-1}y)^2}{X_{\mathrm{test}}^TV^{-1}X_{\mathrm{test}}}}
+</script>
+
+<p>with the averages taken over a few (authors suggests 30) random SNPs.</p>
+
+<p>Another trick is in estimating the variance parameter ($h^2$), also allowing to avoid decomposition/inversion of $V$.</p>
+
+<p>In short, a few smart approximations allow to perform GWAS in $\mathcal{O}(MN^{1.5})$ time instead of the usual $\mathcal{O}(MN^2)$, retaining almost the same power. The method is highly promising, I will look into it further.</p>
+
+</section>
+</td></tr></table>
+
+</div>
+</div>
+</body>
+</html>

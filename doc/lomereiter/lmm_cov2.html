@@ -1,0 +1,440 @@
+<!doctype html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="author" content="Artem Tarasov" />
+<title>[FaST-LMM] fastlmm/inference/lmm_cov.py, part 2</title>
+
+<script type="text/x-mathjax-config"> 
+MathJax.Hub.Config({ 
+  jax: ["input/TeX","output/HTML-CSS"], 
+  extensions: ["tex2jax.js"], 
+  tex2jax: { 
+    inlineMath: [ ['$','$'], ["\\(","\\)"] ], 
+    displayMath: [ ['$$','$$'], ["\\[","\\]"] ], 
+    processEscapes: true 
+  }, 
+}); 
+</script> 
+<style>
+  .center-image
+  {
+  margin: 0 auto;
+  display: block;
+  width: 90%;
+  }
+  
+pre > code {
+  border: 0;
+  padding-right: 0;
+  padding-left: 0; }
+
+  table{
+    border-collapse: collapse;
+    border: 1px solid black;
+  }
+  table td,th{
+    border: 1px solid black;
+    padding: 3px;
+  }
+
+.highlight pre code * {
+  white-space: nowrap;    // this sets all children inside to nowrap
+}
+
+.highlight pre {
+  overflow-x: auto;       // this sets the scrolling in x
+}
+
+.highlight pre code {
+  white-space: pre;       // forces <code> to respect <pre> formatting
+}
+
+/* github style pygments theme for jekyll */
+/* from https://github.com/aahan/pygments-github-style */
+
+.highlight pre, pre, .highlight .hll { background-color: #f8f8f8; border: 1px solid #ccc; padding: 6px 10px; border-radius: 3px; }
+.highlight .c { color: #999988; font-style: italic; }
+.highlight .err { color: #a61717; background-color: #e3d2d2; }
+.highlight .k { font-weight: bold; }
+.highlight .o { font-weight: bold; }
+.highlight .cm { color: #999988; font-style: italic; }
+.highlight .cp { color: #999999; font-weight: bold; }
+.highlight .c1 { color: #999988; font-style: italic; }
+.highlight .cs { color: #999999; font-weight: bold; font-style: italic; }
+.highlight .gd { color: #000000; background-color: #ffdddd; }
+.highlight .gd .x { color: #000000; background-color: #ffaaaa; }
+.highlight .ge { font-style: italic; }
+.highlight .gr { color: #aa0000; }
+.highlight .gh { color: #999999; }
+.highlight .gi { color: #000000; background-color: #ddffdd; }
+.highlight .gi .x { color: #000000; background-color: #aaffaa; }
+.highlight .go { color: #888888; }
+.highlight .gp { color: #555555; }
+.highlight .gs { font-weight: bold; }
+.highlight .gu { color: #800080; font-weight: bold; }
+.highlight .gt { color: #aa0000; }
+.highlight .kc { font-weight: bold; }
+.highlight .kd { font-weight: bold; }
+.highlight .kn { font-weight: bold; }
+.highlight .kp { font-weight: bold; }
+.highlight .kr { font-weight: bold; }
+.highlight .kt { color: #445588; font-weight: bold; }
+.highlight .m { color: #009999; }
+.highlight .s { color: #dd1144; }
+.highlight .n { color: #333333; }
+.highlight .na { color: teal; }
+.highlight .nb { color: #0086b3; }
+.highlight .nc { color: #445588; font-weight: bold; }
+.highlight .no { color: teal; }
+.highlight .ni { color: purple; }
+.highlight .ne { color: #990000; font-weight: bold; }
+.highlight .nf { color: #990000; font-weight: bold; }
+.highlight .nn { color: #555555; }
+.highlight .nt { color: navy; }
+.highlight .nv { color: teal; }
+.highlight .ow { font-weight: bold; }
+.highlight .w { color: #bbbbbb; }
+.highlight .mf { color: #009999; }
+.highlight .mh { color: #009999; }
+.highlight .mi { color: #009999; }
+.highlight .mo { color: #009999; }
+.highlight .sb { color: #dd1144; }
+.highlight .sc { color: #dd1144; }
+.highlight .sd { color: #dd1144; }
+.highlight .s2 { color: #dd1144; }
+.highlight .se { color: #dd1144; }
+.highlight .sh { color: #dd1144; }
+.highlight .si { color: #dd1144; }
+.highlight .sx { color: #dd1144; }
+.highlight .sr { color: #009926; }
+.highlight .s1 { color: #dd1144; }
+.highlight .ss { color: #990073; }
+.highlight .bp { color: #999999; }
+.highlight .vc { color: teal; }
+.highlight .vg { color: teal; }
+.highlight .vi { color: teal; }
+.highlight .il { color: #009999; }
+.highlight .gc { color: #999; background-color: #EAF2F5; }
+
+#content {
+  width: 66%;
+}
+
+#list {
+  width: 17%;
+  vertical-align: top;
+}
+
+header {
+  font-family: Sans-serif;
+  font-size: 10pt;
+  text-align: center;
+  background-color: #cdd;
+  max-width: 800px;
+  border-radius: 3px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+section {
+  max-width: 900px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+blockquote {
+  width: 80%;
+}
+</style>
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {
+    skipTags: ['script', 'noscript', 'style', 'textarea', 'pre']
+  }
+});
+
+MathJax.Hub.Queue(function() {
+  var all = MathJax.Hub.getAllJax(), i;
+  for(i=0; i < all.length; i += 1) {
+    all[i].SourceElement().parentNode.className += ' has-jax';
+  }
+});
+</script>
+
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+</head>
+<body>
+<header>
+  <h1>[FaST-LMM] fastlmm/inference/lmm_cov.py, part 2</h1>
+</header>
+<table>
+<tr>
+  <td id="list">
+  
+  
+    <span>March 29, 2015</span>
+    <br/>
+    <a href="performance.html">[LMM] literature overview: performance</a>
+    <hr/>
+  
+  
+  
+    <span>March 27, 2015</span>
+    <br/>
+    <a href="overview.html">[LMM] literature overview: approximate methods</a>
+    <hr/>
+  
+  
+  
+    <span>March 15, 2015</span>
+    <br/>
+    <a href="proximal.html">[FaST-LMM] Proximal contamination</a>
+    <hr/>
+  
+  
+  
+    <span>March 13, 2015</span>
+    <br/>
+    <a href="reml.html">[FaST-LMM] REML estimate</a>
+    <hr/>
+  
+  
+  
+    <span>March 11, 2015</span>
+    <br/>
+    <a href="mixing.html">[FaST-LMM] comparison with PyLMM (continued)</a>
+    <hr/>
+  
+  
+  
+    <span>March 10, 2015</span>
+    <br/>
+    <a href="pylmm.html">[FaST-LMM] comparison with PyLMM (practice)</a>
+    <hr/>
+  
+  
+  
+    <span>March  9, 2015</span>
+    <br/>
+    <a href="pylmm.html">[FaST-LMM] comparison with PyLMM (theory)</a>
+    <hr/>
+  
+  
+  
+    <span>March  3, 2015</span>
+    <br/>
+    <a href="lmm_cov2.html">[FaST-LMM] fastlmm/inference/lmm_cov.py, part 2</a>
+    <hr/>
+  
+  
+  
+    <span>February 27, 2015</span>
+    <br/>
+    <a href="highlevel2.html">[FaST-LMM] high-level overview, part 2</a>
+    <hr/>
+  
+  
+  
+    <span>February 25, 2015</span>
+    <br/>
+    <a href="highlevel.html">[FaST-LMM] high-level overview of the codebase, part 1</a>
+    <hr/>
+  
+  
+  
+    <span>February 18, 2015</span>
+    <br/>
+    <a href="lmm.html">[FaST-LMM] fastlmm/inference/lmm.py</a>
+    <hr/>
+  
+  
+  
+    <span>February 16, 2015</span>
+    <br/>
+    <a href="lmm_cov.html">[FaST-LMM] fastlmm/inference/lmm_cov.py, part 1</a>
+    <hr/>
+  
+  
+  </td>
+<td id="content">
+<section>
+  <p><a href="http://www.nature.com/nmeth/journal/v9/n6/extref/nmeth.2037-S1.pdf">OPEN/DOWNLOAD THE SUPPLEMENTARY NOTE</a></p>
+
+<p>Notes on various functions, not easy to grasp from the first sight.</p>
+
+<p>Also note that all the referred formulae relate to the ML case, but the code implements restricted maximum likelihood (ML), which means that every occurrence of <script type="math/tex"> K + \delta I </script> must be mentally replaced with <script type="math/tex"> SH_{\gamma}S </script> where <script type="math/tex">S = I - XX^{\dagger}</script> and <script type="math/tex">H_{\gamma} = \gamma K + I</script>, <script type="math/tex">\gamma = 1/\delta</script>. However, in the formulae below, $ S $ has a different meaning of the diagonal matrix in eigendecomposition of <script type="math/tex"> K = USU^T</script>.</p>
+
+<h2 id="computeaka">computeAKA</h2>
+
+<p>Computes $A^T (K + \delta I)^{-1} A$, see explanations below for <code>computeAKB</code></p>
+
+<h2 id="computeakb">computeAKB</h2>
+
+<p>Computes $ A^T (K + \delta I)^{-1} B $</p>
+
+<p>It’s not obvious what’s going inside the function, so let’s examine it in detail.</p>
+
+<h3 id="if-uua-argument-is-not-provided">if UUA argument is not provided</h3>
+
+<ul>
+  <li><code>UAS</code> is set to $ (S + \delta I)^{-1} U^T A $</li>
+  <li><code>AKB</code> is set to $ A^T U (S + \delta I)^{-1} U^T B $</li>
+</ul>
+
+<p>The result is $ A^T U(S + \delta I)^{-1}U^T B $</p>
+
+<h3 id="if-uua-argument-is-provided">if UUA argument is provided</h3>
+<p>In this case the result is $ A^T U_1(S_1 + \delta I)^{-1} U_1^T B + \frac{1}{\delta}A^T(I-U_1U_1^T) B $</p>
+
+<h3 id="what-are-these-cases-for">What are these cases for?</h3>
+<p>If the matrix $ K = WW^T = USU^T$ is full-rank, then $ UU^T $ gives identity, so that the returned value is that of $ A^T (K+\delta I)^{-1}B $.</p>
+
+<p>If it is low-rank, we use the economy eigendecomposition instead, given by $K = U_1 S_1 U_1^T$. Let’s check that the returned value also gives $ A^T (K+\delta I)^{-1} B $.</p>
+
+<p>In the low-rank case the following equality holds:
+<script type="math/tex">
+K + \delta I = U_1S_1U_1^T + \delta I = U_1(S_1 + \delta I)U_1^T + \delta(I - U_1U_1^T)
+</script></p>
+
+<p>One can see that</p>
+
+<script type="math/tex; mode=display">
+\left( U_1(S_1 + \delta I)U_1^T + \delta(I - U_1U_1^T) \right)
+\left( U_1(S_1 + \delta I)^{-1} U_1^T + \frac{1}{\delta}(I - U_1U_1^T) \right) = 
+U_1U_1^T + (I - U_1U_1^T) + 0 + 0 = I
+</script>
+
+<p>(zeros are due to $U_1^TU_1U_1^T = U_1^T$)</p>
+
+<p>The other identity is checked similarly.</p>
+
+<h2 id="nllcore">nLLcore</h2>
+
+<p>The most important and math-heavy function.</p>
+
+<p>In order to understand it, Supplementary Note 2 is absolutely required.</p>
+
+<h3 id="fast-computation-of-the-log-determinant">fast computation of the log-determinant</h3>
+
+<p>The formula for computing</p>
+
+<p><script type="math/tex"> \log\left(\left|U_1S_1U_1^T + \delta I - \tilde{W}\tilde{W}^T\right|\right)\quad </script> 
+is given in the end of the section 2.2 of the supplementary note (formula 2.5):</p>
+
+<script type="math/tex; mode=display">
+\sum_{i=1}^{s_c}\log\left([S]_{ii}+\delta\right) + (n-s_c)(\log\delta) + \log{\left(\left| I-\tilde{W}^T\left(U_1S_1U_1^T + \delta I\right)^{-1}\tilde{W}\right|\right)}
+</script>
+
+<p>In the first lines of the function body first two summands are computed, and <code>YKY</code> variable is initialized to $Y^T(K+\delta I)^{-1}Y$. The <code>k</code> variable corresponds to $s_c$ in the formula.</p>
+
+<div class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">N</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Y</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">linreg</span><span class="o">.</span><span class="n">D</span>
+      
+<span class="n">S</span><span class="p">,</span><span class="n">U</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">getSU</span><span class="p">()</span>
+<span class="n">k</span> <span class="o">=</span> <span class="n">S</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+<span class="n">UY</span><span class="p">,</span><span class="n">UUY</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">getUY</span><span class="p">(</span><span class="n">idx_pheno</span> <span class="o">=</span> <span class="n">idx_pheno</span><span class="p">)</span>
+<span class="n">P</span> <span class="o">=</span> <span class="n">UY</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>	<span class="c">#number of phenotypes used</span>
+<span class="n">YKY</span> <span class="o">=</span> <span class="n">computeAKA</span><span class="p">(</span><span class="n">Sd</span><span class="o">=</span><span class="n">Sd</span><span class="p">,</span> <span class="n">denom</span><span class="o">=</span><span class="n">denom</span><span class="p">,</span> <span class="n">UA</span><span class="o">=</span><span class="n">UY</span><span class="p">,</span> <span class="n">UUA</span><span class="o">=</span><span class="n">UUY</span><span class="p">)</span>
+<span class="n">logdetK</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">Sd</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+
+<span class="k">if</span> <span class="p">(</span><span class="n">UUY</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">):</span><span class="c">#low rank part</span>
+    <span class="n">logdetK</span><span class="o">+=</span><span class="p">(</span><span class="n">N</span> <span class="o">-</span> <span class="n">k</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">denom</span><span class="p">)</span></code></pre></div>
+
+<p>The last summand is computed later by taking eigendecomposition of $I - \tilde{W}^T(K+\delta I)^{-1}\tilde{W}$ and summing over the eigenvalues.</p>
+
+<h3 id="auxiliary-matrices">Auxiliary matrices</h3>
+
+<ul>
+  <li><code>snps</code> is $ X $ in math notation, and in this module it is perceived to be a vector, i.e. the module is suitable for a single SNP only</li>
+  <li><code>snpsKsnps</code> corresponds to $ X^T(K + \delta I)^{-1}X $, and it’s a number</li>
+  <li><code>snpsKY</code> corresponds to $ X^T(K + \delta I)^{-1}Y$ where $Y$ is the matrix, each column of which holds values of a phenotype</li>
+  <li><code>num_exclude</code> is the number of surrounding SNPs to exclude, i.e. $k \leq k_{\mathrm{up}}$ (can be less because of zero weights)</li>
+  <li><code>WW</code> is, in the simplest case when weights are set to -1, equal to <script type="math/tex"> -I_k + \tilde{W}^T(S + \delta I)^{-1}\tilde{W} </script></li>
+  <li><code>S_WW</code> is the vector of eigenvalues of <code>WW</code>; denote the corresponding diagonal matrix by $S_{ww}$</li>
+  <li>columns of <code>U_WW</code> are eigenvectors of <code>WW</code>, let’s denote it in math notation by $U_{ww}$</li>
+</ul>
+
+<h3 id="a-pattern">A pattern</h3>
+<p>The following pattern is found twice in the source code:</p>
+
+<div class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">WY</span> <span class="o">=</span> <span class="n">computeAKB</span><span class="p">(</span><span class="n">Sd</span><span class="o">=</span><span class="n">Sd</span><span class="p">,</span> <span class="n">denom</span><span class="o">=</span><span class="n">denom</span><span class="p">,</span> <span class="n">UA</span><span class="o">=</span><span class="n">UW</span><span class="p">,</span> <span class="n">UUA</span><span class="o">=</span><span class="n">UUW</span><span class="p">,</span> <span class="n">UB</span><span class="o">=</span><span class="n">UY</span><span class="p">,</span> <span class="n">UUB</span><span class="o">=</span><span class="n">UUY</span><span class="p">)</span>
+<span class="n">UWY</span> <span class="o">=</span> <span class="n">U_WW</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">WY</span><span class="p">)</span>
+<span class="n">WY</span> <span class="o">=</span> <span class="n">UWY</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">lib</span><span class="o">.</span><span class="n">stride_tricks</span><span class="o">.</span><span class="n">as_strided</span><span class="p">(</span><span class="n">S_WW</span><span class="p">,</span> <span class="p">(</span><span class="n">S_WW</span><span class="o">.</span><span class="n">size</span><span class="p">,</span><span class="n">UWY</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span> <span class="p">(</span><span class="n">S_WW</span><span class="o">.</span><span class="n">itemsize</span><span class="p">,</span><span class="mi">0</span><span class="p">))</span></code></pre></div>
+
+<div class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">Wsnps</span> <span class="o">=</span> <span class="n">computeAKB</span><span class="p">(</span><span class="n">Sd</span><span class="o">=</span><span class="n">Sd</span><span class="p">,</span> <span class="n">denom</span><span class="o">=</span><span class="n">denom</span><span class="p">,</span> <span class="n">UA</span><span class="o">=</span><span class="n">UW</span><span class="p">,</span> <span class="n">UUA</span><span class="o">=</span><span class="n">UUW</span><span class="p">,</span> <span class="n">UB</span><span class="o">=</span><span class="n">Usnps</span><span class="p">,</span> <span class="n">UUB</span><span class="o">=</span><span class="n">UUsnps</span><span class="p">)</span>
+<span class="n">UWsnps</span> <span class="o">=</span> <span class="n">U_WW</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">Wsnps</span><span class="p">)</span>
+<span class="n">Wsnps</span> <span class="o">=</span> <span class="n">UWsnps</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">lib</span><span class="o">.</span><span class="n">stride_tricks</span><span class="o">.</span><span class="n">as_strided</span><span class="p">(</span><span class="n">S_WW</span><span class="p">,</span> <span class="p">(</span><span class="n">S_WW</span><span class="o">.</span><span class="n">size</span><span class="p">,</span><span class="n">UWsnps</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span> <span class="p">(</span><span class="n">S_WW</span><span class="o">.</span><span class="n">itemsize</span><span class="p">,</span><span class="mi">0</span><span class="p">))</span></code></pre></div>
+
+<p>What happens here is that for a matrix $ A $ the matrix</p>
+
+<script type="math/tex; mode=display"> S_{ww}^{-1} U_{ww}^T \tilde{W} (K + \delta I)^{-1} A = -U_{ww}^T \left(I_k - \tilde{W}^T (K + \delta I)^{-1} \tilde{W}\right)^{-1} \tilde{W} (K + \delta I)^{-1} A </script>
+
+<p>is computed.</p>
+
+<p>Recall that the expression</p>
+
+<script type="math/tex; mode=display">
+I_k - \tilde{W}^T (K + \delta I)^{-1} \tilde{W}\,,
+</script>
+
+<p>also known as <code>WW</code> in the code (but with the negative sign),
+is under the determinant sign in the formula (2.5), this is the matrix whose determinant we have to compute.</p>
+
+<p>For convenience, let’s denote <code>WW</code> matrix as $\Omega$ in the formulae. Recall that <script type="math/tex"> \Omega = U_{ww}S_{ww}U_{ww}^T </script></p>
+
+<h3 id="low-rank-updates">Low-rank updates</h3>
+
+<ul>
+  <li>Low-rank update to <code>YKY</code>:</li>
+</ul>
+
+<div class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">YKY</span> <span class="o">-=</span> <span class="p">(</span><span class="n">UWY</span> <span class="o">*</span> <span class="n">WY</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span></code></pre></div>
+
+<p>After this update, <code>YKY</code> equals to</p>
+
+<script type="math/tex; mode=display">
+Y^T(K+\delta I)^{-1} Y +
+Y^T (K + \delta I) \tilde{W}^T \Omega^{-1} U_{ww} S_{ww} U_{ww}^T \Omega^{-1} \tilde{W} (K + \delta I)^{-1} Y =
+Y^T\left( (K+\delta I)^{-1} + (K+\delta I)^{-1}\tilde{W}^T\Omega^{-1}\tilde{W} (K + \delta I)^{-1} \right)Y
+</script>
+
+<p>If we ignore $Y^T$ and $Y$ on the ends of the expression, the remaining part of it is exactly the inverse of the updated GSM given in section 2.3 of the supplementary note. Bingo!</p>
+
+<ul>
+  <li>Low-rank updates to snpsKY and snpsKsnps</li>
+</ul>
+
+<p>Similarly, for updating <code>snpsKY</code> we subtract from it
+<script type="math/tex">
+-\left(
+S_{ww} U_{ww}^T \Omega^{-1} \tilde{W} (K + \delta I)^{-1} X
+\right)^T
+U_{ww}^T \Omega^{-1} \tilde{W} (K + \delta I)^{-1} Y
+</script></p>
+
+<p>The expression for subtracting from <code>snpsKsnps</code> is obtained by replacing <code>Y</code> with <code>X</code> in the above.</p>
+
+<h3 id="estimating-beta-coefficients-and-variance">Estimating beta (coefficients) and variance</h3>
+
+<p>The hard part is over, and all left is calculation of estimates from the computed matrices.</p>
+
+<ul>
+  <li>Using formula (2.3), we set $\hat{\beta}$ to be the vector <code>snpsKY</code> divided by <code>snpsKsnps</code> which is assumed to be a number in the code (i.e. a single SNP)</li>
+  <li>The variable <code>r2</code> is calculated according to the formula (2.4). Well, not exactly so, but one can quickly recognize that
+<script type="math/tex">
+(Y-X\beta)^T\left(K+\delta I - \tilde{W}\tilde{W}^T\right)^{-1}(Y-X\beta) =
+Y^T \left(K+\delta I - \tilde{W}\tilde{W}^T\right)^{-1} Y -
+\beta^T X^T \left(K+\delta I - \tilde{W}\tilde{W}^T\right)^{-1} Y
+</script>
+with $\beta$ given by the formula (2.3)</li>
+</ul>
+
+</section>
+</td></tr></table>
+
+</div>
+</div>
+</body>
+</html>

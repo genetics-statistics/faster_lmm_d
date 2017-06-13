@@ -1,0 +1,367 @@
+<!doctype html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="author" content="Artem Tarasov" />
+<title>[FaST-LMM] comparison with PyLMM (theory)</title>
+
+<script type="text/x-mathjax-config"> 
+MathJax.Hub.Config({ 
+  jax: ["input/TeX","output/HTML-CSS"], 
+  extensions: ["tex2jax.js"], 
+  tex2jax: { 
+    inlineMath: [ ['$','$'], ["\\(","\\)"] ], 
+    displayMath: [ ['$$','$$'], ["\\[","\\]"] ], 
+    processEscapes: true 
+  }, 
+}); 
+</script> 
+<style>
+  .center-image
+  {
+  margin: 0 auto;
+  display: block;
+  width: 90%;
+  }
+  
+pre > code {
+  border: 0;
+  padding-right: 0;
+  padding-left: 0; }
+
+  table{
+    border-collapse: collapse;
+    border: 1px solid black;
+  }
+  table td,th{
+    border: 1px solid black;
+    padding: 3px;
+  }
+
+.highlight pre code * {
+  white-space: nowrap;    // this sets all children inside to nowrap
+}
+
+.highlight pre {
+  overflow-x: auto;       // this sets the scrolling in x
+}
+
+.highlight pre code {
+  white-space: pre;       // forces <code> to respect <pre> formatting
+}
+
+/* github style pygments theme for jekyll */
+/* from https://github.com/aahan/pygments-github-style */
+
+.highlight pre, pre, .highlight .hll { background-color: #f8f8f8; border: 1px solid #ccc; padding: 6px 10px; border-radius: 3px; }
+.highlight .c { color: #999988; font-style: italic; }
+.highlight .err { color: #a61717; background-color: #e3d2d2; }
+.highlight .k { font-weight: bold; }
+.highlight .o { font-weight: bold; }
+.highlight .cm { color: #999988; font-style: italic; }
+.highlight .cp { color: #999999; font-weight: bold; }
+.highlight .c1 { color: #999988; font-style: italic; }
+.highlight .cs { color: #999999; font-weight: bold; font-style: italic; }
+.highlight .gd { color: #000000; background-color: #ffdddd; }
+.highlight .gd .x { color: #000000; background-color: #ffaaaa; }
+.highlight .ge { font-style: italic; }
+.highlight .gr { color: #aa0000; }
+.highlight .gh { color: #999999; }
+.highlight .gi { color: #000000; background-color: #ddffdd; }
+.highlight .gi .x { color: #000000; background-color: #aaffaa; }
+.highlight .go { color: #888888; }
+.highlight .gp { color: #555555; }
+.highlight .gs { font-weight: bold; }
+.highlight .gu { color: #800080; font-weight: bold; }
+.highlight .gt { color: #aa0000; }
+.highlight .kc { font-weight: bold; }
+.highlight .kd { font-weight: bold; }
+.highlight .kn { font-weight: bold; }
+.highlight .kp { font-weight: bold; }
+.highlight .kr { font-weight: bold; }
+.highlight .kt { color: #445588; font-weight: bold; }
+.highlight .m { color: #009999; }
+.highlight .s { color: #dd1144; }
+.highlight .n { color: #333333; }
+.highlight .na { color: teal; }
+.highlight .nb { color: #0086b3; }
+.highlight .nc { color: #445588; font-weight: bold; }
+.highlight .no { color: teal; }
+.highlight .ni { color: purple; }
+.highlight .ne { color: #990000; font-weight: bold; }
+.highlight .nf { color: #990000; font-weight: bold; }
+.highlight .nn { color: #555555; }
+.highlight .nt { color: navy; }
+.highlight .nv { color: teal; }
+.highlight .ow { font-weight: bold; }
+.highlight .w { color: #bbbbbb; }
+.highlight .mf { color: #009999; }
+.highlight .mh { color: #009999; }
+.highlight .mi { color: #009999; }
+.highlight .mo { color: #009999; }
+.highlight .sb { color: #dd1144; }
+.highlight .sc { color: #dd1144; }
+.highlight .sd { color: #dd1144; }
+.highlight .s2 { color: #dd1144; }
+.highlight .se { color: #dd1144; }
+.highlight .sh { color: #dd1144; }
+.highlight .si { color: #dd1144; }
+.highlight .sx { color: #dd1144; }
+.highlight .sr { color: #009926; }
+.highlight .s1 { color: #dd1144; }
+.highlight .ss { color: #990073; }
+.highlight .bp { color: #999999; }
+.highlight .vc { color: teal; }
+.highlight .vg { color: teal; }
+.highlight .vi { color: teal; }
+.highlight .il { color: #009999; }
+.highlight .gc { color: #999; background-color: #EAF2F5; }
+
+#content {
+  width: 66%;
+}
+
+#list {
+  width: 17%;
+  vertical-align: top;
+}
+
+header {
+  font-family: Sans-serif;
+  font-size: 10pt;
+  text-align: center;
+  background-color: #cdd;
+  max-width: 800px;
+  border-radius: 3px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+section {
+  max-width: 900px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+blockquote {
+  width: 80%;
+}
+</style>
+
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {
+    skipTags: ['script', 'noscript', 'style', 'textarea', 'pre']
+  }
+});
+
+MathJax.Hub.Queue(function() {
+  var all = MathJax.Hub.getAllJax(), i;
+  for(i=0; i < all.length; i += 1) {
+    all[i].SourceElement().parentNode.className += ' has-jax';
+  }
+});
+</script>
+
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+</head>
+<body>
+<header>
+  <h1>[FaST-LMM] comparison with PyLMM (theory)</h1>
+</header>
+<table>
+<tr>
+  <td id="list">
+  
+  
+    <span>March 29, 2015</span>
+    <br/>
+    <a href="performance.html">[LMM] literature overview: performance</a>
+    <hr/>
+  
+  
+  
+    <span>March 27, 2015</span>
+    <br/>
+    <a href="overview.html">[LMM] literature overview: approximate methods</a>
+    <hr/>
+  
+  
+  
+    <span>March 15, 2015</span>
+    <br/>
+    <a href="proximal.html">[FaST-LMM] Proximal contamination</a>
+    <hr/>
+  
+  
+  
+    <span>March 13, 2015</span>
+    <br/>
+    <a href="reml.html">[FaST-LMM] REML estimate</a>
+    <hr/>
+  
+  
+  
+    <span>March 11, 2015</span>
+    <br/>
+    <a href="mixing.html">[FaST-LMM] comparison with PyLMM (continued)</a>
+    <hr/>
+  
+  
+  
+    <span>March 10, 2015</span>
+    <br/>
+    <a href="pylmm.html">[FaST-LMM] comparison with PyLMM (practice)</a>
+    <hr/>
+  
+  
+  
+    <span>March  9, 2015</span>
+    <br/>
+    <a href="pylmm.html">[FaST-LMM] comparison with PyLMM (theory)</a>
+    <hr/>
+  
+  
+  
+    <span>March  3, 2015</span>
+    <br/>
+    <a href="lmm_cov2.html">[FaST-LMM] fastlmm/inference/lmm_cov.py, part 2</a>
+    <hr/>
+  
+  
+  
+    <span>February 27, 2015</span>
+    <br/>
+    <a href="highlevel2.html">[FaST-LMM] high-level overview, part 2</a>
+    <hr/>
+  
+  
+  
+    <span>February 25, 2015</span>
+    <br/>
+    <a href="highlevel.html">[FaST-LMM] high-level overview of the codebase, part 1</a>
+    <hr/>
+  
+  
+  
+    <span>February 18, 2015</span>
+    <br/>
+    <a href="lmm.html">[FaST-LMM] fastlmm/inference/lmm.py</a>
+    <hr/>
+  
+  
+  
+    <span>February 16, 2015</span>
+    <br/>
+    <a href="lmm_cov.html">[FaST-LMM] fastlmm/inference/lmm_cov.py, part 1</a>
+    <hr/>
+  
+  
+  </td>
+<td id="content">
+<section>
+  <h2 id="news">[NEWS]</h2>
+
+<p>During the last month, the github repository of FaST-LMM has seen some updates, including much awaited addition of comments in <code>lmm_cov.py</code>, so that it is now not as puzzling as before. In particular, the filename now makes sense for me: ‘cov’ stays for ‘covariates regressed out’.</p>
+
+<hr />
+<hr />
+
+<p>I’ve downloaded source code of PyLMM which looks extremely simplistic after so much time spent on FaST-LMM, and below are my notes about the differences between the two.</p>
+
+<p>The next step will be running the relevant pieces of code and comparing their results and runtime.</p>
+
+<hr />
+
+<h2 id="kinship-matrix-calculation">Kinship matrix calculation</h2>
+
+<h3 id="pylmm-lmmpy-calculatekinship">PyLMM (lmm.py, calculateKinship)</h3>
+
+<p>Given $ W $, “an n x m matrix encoding SNP minor alleles”, it performs
+matrix multiplication to get $ \frac1m W W^T $. Nothing fancy.</p>
+
+<h3 id="fast-lmm">FaST-LMM</h3>
+
+<p>The distinguishing feature of the method is that it makes a distinction between low-rank case and full-rank case. </p>
+
+<p>In full-rank case, when the number of SNPs is equal or greater than the number of individuals, it computes $ K $ as $ G G^T $, as usual. </p>
+
+<p>However, if the number of individuals exceeds the number of SNPs (i.e. the matrix $ K $ is not full-rank), the method computes SVD of $ G $ instead of taking eigendecomposition of $ K $. All the remaining computations are then performed with the $ U $ and $ S $, where $ K = USU^T $.</p>
+
+<hr />
+
+<h2 id="handling-xkx-matrix">Handling XKX matrix</h2>
+
+<p>This difference is going to be seen only when the number of covariates is large, and that’s, I guess, extremely rare.</p>
+
+<h3 id="pylmm-lmmpy-getmlsoln">PyLMM (lmm.py, getMLsoln)</h3>
+
+<p>Straightforwardly computes inverse of <script type="math/tex"> (U^T X)^T S (U^T X) </script>, and then does two matrix multiplications to obtain <script type="math/tex"> \hat{\beta} = ((U^T X)^T S (U^T X))^{-1}(U^TX)^T S U^T y = (X^T K X)^{-1} XKy </script></p>
+
+<h3 id="fast-lmm-full-rank-case">FaST-LMM (full-rank case)</h3>
+
+<p>Instead of inverting $ X K X $, computes its eigendecomposition. Part of the rationale is that in REML log-likelihood calculation, we need the determinant of this matrix, and where PyLMM computes it as <code>numpy.log(scipy.linalg.det(XX))</code> (which internally takes a decomposition), FaST-LMM simply calculates <code>scipy.log(SxKx).sum()</code></p>
+
+<hr />
+
+<h2 id="refitting">Refitting</h2>
+
+<h3 id="pylmm">PyLMM</h3>
+
+<p>If <code>refit</code> parameter set to <code>True</code>, each SNP is included in the <code>X</code> matrix, and the mixing parameter is reestimated before computing the p-value. Otherwise, log-likelihood is computed with the mixing coefficient taken from the null model.</p>
+
+<p>Default value is <code>false</code>, presumably the effect of a single SNP is not large to cause a significant change in $\delta$</p>
+
+<h3 id="fast-lmm-1">FaST-LMM</h3>
+
+<p>I couldn’t find such an option. Seemingly FaST-LMM aims to be used for larger datasets, where this approach is unaffordable.</p>
+
+<hr />
+
+<h2 id="fitting-a-model-with-two-variance-components">Fitting a model with two variance components</h2>
+
+<h3 id="pylmm-miscpy">PyLMM: misc.py</h3>
+
+<p>With fixed $ n $ (<code>wgrids</code>, default 100), for multiple LMMs with kinship matrices of form <script type="math/tex"> \frac{k}{n}K_1 + \frac{n-k}{n}K_2 </script> likelihood is computed, and the model with the largest value is selected.</p>
+
+<p>Although it’s possible to use two kernels, there’s no way to select which SNPs will go into the foreground kernel.</p>
+
+<h3 id="fast-lmm-featureselectionfeatureselectiontwokernelpy">FaST-LMM: feature_selection/feature_selection_two_kernel.py</h3>
+
+<p>This much more computation-intensive procedure does the following by searching on a 2D grid (the first dimension is the number of SNPs, and the second one is the mixing coefficient):</p>
+
+<blockquote>
+  <p>This method selects SNPs for a foreground kernel, given a background kernel.
+The background kernel is obtained from all SNPs and is intended to capture
+population structure, as well as family structure.</p>
+
+  <p>Selection is performed by first ranking SNPs based on a LMM using
+the full kernel according to their univariate association with the phenotype
+and then choosing a number to cut off using cross-validation.</p>
+</blockquote>
+
+<p>Cross-validation also adds to the run time.</p>
+
+<hr />
+
+<h3 id="what-is-missing-in-pylmm-compared-to-fast-lmm">What is missing in PyLMM (compared to FaST-LMM)</h3>
+
+<h4 id="two-kernel-case">Two-kernel case</h4>
+
+<p>As mentioned above, feature selection and estimating the mixing parameters are not implemented.</p>
+
+<h4 id="proximal-contamination-handling">Proximal contamination handling</h4>
+
+<p>FaST-LMM applies smart updates to many involved matrices so as to virtually eliminate the tested SNP (and a few nearby) from the kinship matrix.</p>
+
+<h4 id="efficient-evaluation-of-various-expressions">Efficient evaluation of various expressions</h4>
+
+<p>The thesis devotes a section (3.3.1) to the issue of efficient evaluation.</p>
+
+</section>
+</td></tr></table>
+
+</div>
+</div>
+</body>
+</html>
