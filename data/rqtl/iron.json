@@ -1,0 +1,1 @@
+{"crosstype":"f2","geno":"iron_geno.csv","pheno":"iron_pheno.csv","phenocovar":"iron_phenocovar.csv","covar":"iron_covar.csv","gmap":"iron_gmap.csv","alleles":["S","B"],"genotypes":{"SS":1,"SB":2,"BB":3},"sex":{"covar":"sex","f":"female","m":"male"},"cross_info":{"covar":"cross_direction","(SxB)x(SxB)":0,"(BxS)x(BxS)":1},"x_chr":"X","na.strings":["-","NA"]}

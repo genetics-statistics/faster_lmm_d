@@ -26,7 +26,7 @@ auto tsvpheno(const string fn, const ulong p_column= 0){
   string input = to!string(std.file.read(fn));
 
   string[] lines = input.split("\n");
-  assert(lines[0] == "# Phenotype format version 1.0");
+  assert(lines[0] == "# Phenotype format version 1.0", "test for Phenotype format version 1.0");
   lines = lines[4..$];
   foreach(line; lines){
   	if(line != ""){
