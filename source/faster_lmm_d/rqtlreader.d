@@ -14,6 +14,7 @@ import std.file;
 import std.json;
 import std.regex;
 import std.typecons;
+import std.string;
 
 import dyaml.all;
 
@@ -25,7 +26,7 @@ JSONValue control(const string fn){
   return j;
 }
 
-auto pheno(const string fn, const ulong p_column= 0){
+auto pheno(const string fn, const ulong p_column= 1){
   Regex!char Pattern = regex("\\.json$", "i");
   double[] y;
   string[] phenotypes;
@@ -36,6 +37,14 @@ auto pheno(const string fn, const ulong p_column= 0){
     foreach(Node strain; gn2_pheno){
       y ~= ( strain[2] == "NA" ? double.nan : strain[2].as!double);
       phenotypes ~= strain[1].as!string;
+    }
+  }else{
+    string input = to!string(std.file.read(fn));
+    string[] tsv = input.split("\n");
+    foreach(row; tsv[1..$]){
+      auto vec = row.split(",");
+      y ~= ( vec[p_column] == "NA" ? double.nan : to!double(vec[p_column] ));
+      phenotypes ~= vec[0];
     }
   }
   return Tuple!(const double[], immutable(string[]))(y, cast(immutable)phenotypes);

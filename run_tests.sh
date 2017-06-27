@@ -9,7 +9,7 @@ echo "Running small_na test"
 if [ $? -ne 0 ]; then echo "ERR1b small_na test failed" ; exit 1 ; fi
 
 echo "iron"
-./build/faster_lmm_d --control=data/rqtl/iron.json --pheno=data/rqtl/iron_pheno.csv --geno=data/rqtl/iron_geno.csv --cmd=run $*
+./build/faster_lmm_d --control=data/rqtl/iron.json --pheno=data/rqtl/iron_pheno.csv --geno=data/rqtl/iron_geno.csv --cmd=rqtl $*
 if [ $? -ne 0 ]; then echo "ERR2a iron test failed" ; exit 1 ; fi
 
 echo "Running 104617_at"
