@@ -257,6 +257,8 @@ double get_max(const LMM lmmobject, const DMatrix L, const DMatrix H,
   }
 }
 
+// FIXME: try reducing ngrids (see Karl's blog)
+
 LMM lmm_fit(const LMM lmmobject, N_Individuals N, const DMatrix X_param, const ulong ngrids=100,
             const bool REML=true) {
 
