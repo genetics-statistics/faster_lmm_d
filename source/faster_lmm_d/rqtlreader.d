@@ -26,7 +26,8 @@ JSONValue control(const string fn){
   return j;
 }
 
-auto pheno(const string fn, const ulong p_column= 1){
+auto pheno(const string fn, const ulong p_column){
+  ulong pheno_column = p_column + 1;
   Regex!char Pattern = regex("\\.json$", "i");
   double[] y;
   string[] phenotypes;
@@ -43,7 +44,7 @@ auto pheno(const string fn, const ulong p_column= 1){
     string[] tsv = input.split("\n");
     foreach(row; tsv[1..$]){
       auto vec = row.split(",");
-      y ~= ( vec[p_column] == "NA" ? double.nan : to!double(vec[p_column] ));
+      y ~= ( vec[pheno_column] == "NA" ? double.nan : to!double(vec[pheno_column] ));
       phenotypes ~= vec[0];
     }
   }

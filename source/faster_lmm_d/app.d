@@ -61,7 +61,7 @@ void main(string[] args)
 
   string cmd, option_control, option_kinship, option_pheno, option_geno, useBLAS, noBLAS, noCUDA, option_logging;
   bool option_help = false;
-  ulong option_pheno_column;
+  ulong option_pheno_column = 0;
 
   globalLogLevel(LogLevel.warning); //default
   check_memory("App: Start");
