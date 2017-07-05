@@ -152,7 +152,7 @@ void main(string[] args)
 
   // ---- If there are less phenotypes than strains, reduce the genotype matrix:
   check_memory("App: reduce genotype matrix");
-  if(g.rows != y.sizeof){
+  if(g.cols != y.length){
     info("Reduce geno matrix to match # strains in phenotype");
     trace("gnames and phenotypes");
     pretty_print("gnames",gnames);
@@ -174,11 +174,15 @@ void main(string[] args)
     geno_matrix = slow_matrix_transpose(sliced_mat);
     trace("geno matrix ", g.shape, " reshaped to ", geno_matrix.shape);
   }
+  else{
+    pheno_vector = y.dup;
+    geno_matrix = DMatrix(g.shape.dup, g.elements.dup);
+  }
 
   // ---- Run GWAS
   check_memory("App: run GWAS");
   immutable m_items n = pheno_vector.length;
-  immutable m_items m = geno_matrix.m_geno;
+  immutable m_items m = geno_matrix.n_pheno;
   DMatrix k;
   auto tstats = run_gwas(n,m,k,cast(immutable)pheno_vector, geno_matrix);
   auto p_values = map!"a.p_value"(tstats);

@@ -93,7 +93,7 @@ auto run_gwas(immutable m_items n, immutable m_items m, DMatrix k, immutable dou
   trace(geno.shape,m);
   check_memory("before run_gwas");
   assert(y.length == n);
-  assert(geno.m_geno == m);
+  assert(geno.n_pheno == m);
 
   PhenoStruct pheno = remove_missing(n,y);
 

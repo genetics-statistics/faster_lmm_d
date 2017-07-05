@@ -39,7 +39,7 @@ auto pheno(const string fn, const ulong p_column= 1){
       phenotypes ~= strain[1].as!string;
     }
   }else{
-    string input = to!string(std.file.read(fn));
+    string input = (to!string(std.file.read(fn))).strip();
     string[] tsv = input.split("\n");
     foreach(row; tsv[1..$]){
       auto vec = row.split(",");
@@ -77,7 +77,6 @@ GenoObj geno(const string fn, JSONValue ctrl){
 
   log("hab_mapper", hab_mapper);
   log("faster_lmm_d_mapper", faster_lmm_d_mapper);
-
   string input = to!string(std.file.read(fn));
   auto tsv = csvReader!(string, Malformed.ignore)(input, null);
 
@@ -89,9 +88,7 @@ GenoObj geno(const string fn, JSONValue ctrl){
   auto colCount = ynames.length;
 
   double[][] matrix = [];
-  // m_items pos = 0;
   foreach(row; tsv){
-    // geno.elements.length += colCount;
     auto r = new double[colCount];
     gnames ~= row.front;
     row.popFront(); // remove header line
@@ -99,17 +96,24 @@ GenoObj geno(const string fn, JSONValue ctrl){
     foreach(item; row){
       r[count++] = faster_lmm_d_mapper[hab_mapper[item]];
     }
-    matrix ~= r;
+    geno.elements ~= r;
     rowCount++;
   }
   geno.elements.length = rowCount * colCount;
-  // sadly we need to copy yet again, though this is a fast copy
-  foreach(j3, r; matrix) {
-    geno.elements[j3*colCount..(j3+1)*colCount] = r[0..colCount];
-  }
-  geno.shape = [rowCount, colCount];
-  GenoObj geno_obj = GenoObj(geno, cast(immutable)gnames, ynames);
 
+  geno.shape = [rowCount, colCount];
+
+  DMatrix genotype_matrix;
+  if(const(JSONValue)* p = "geno_transposed" in ctrl){
+    if(to!bool(p.toString())){
+      genotype_matrix = geno;
+    }
+  }
+  else{
+    genotype_matrix= geno.T;
+  }
+
+  GenoObj geno_obj = GenoObj(genotype_matrix, cast(immutable)gnames, ynames);
   info("Genotype Matrix created");
   return geno_obj;
 }
