@@ -53,25 +53,28 @@ auto pheno(const string fn, const ulong p_column= 1){
 GenoObj geno(const string fn, JSONValue ctrl){
 
   trace("in geno function");
-  //FIXME
-  string s = `{"-" : "0","NA": "0", "U": "0"}`;
-  ctrl["na-strings"] = parseJSON(s);
+  const(JSONValue)* na_strings = "na.strings" in ctrl;
+  if(na_strings  == null){
+    ctrl["na.strings"] = JSONValue(["-" ,"NA"]);
+  }
   int[string] hab_mapper;
   int idx = 0;
 
   foreach( key, value; ctrl["genotypes"].object){
+    string a  = to!string(key);
     string b = to!string(value);
     int c = to!int(b);
-    hab_mapper[key] = c;
+    hab_mapper[a] = c;
     idx++;
   }
+
 
   assert(idx == 3);
   double[] faster_lmm_d_mapper = [double.nan, 0.0, 0.5, 1.0];
 
-  foreach( key,value; ctrl["na-strings"].object){
+  foreach( JSONValue key; ctrl["na.strings"].array){
     idx += 1;
-    hab_mapper[to!string(key)] = idx;
+    hab_mapper[key.str] = idx;
     faster_lmm_d_mapper ~= double.nan;
   }
 
