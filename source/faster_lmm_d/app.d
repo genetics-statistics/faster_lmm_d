@@ -151,7 +151,7 @@ void main(string[] args)
   auto ynames = g1.ynames;
   trace(g.shape);
 
-  //DMatrix covar_matrix = covar(option_covar, ctrl);
+  DMatrix covar_matrix; //= covar(option_covar, ctrl);
 
   // ---- If there are less phenotypes than strains, reduce the genotype matrix:
   check_memory("App: reduce genotype matrix");
@@ -187,7 +187,7 @@ void main(string[] args)
   immutable m_items n = pheno_vector.length;
   immutable m_items m = geno_matrix.n_pheno;
   DMatrix k;
-  auto tstats = run_gwas(n,m,k,cast(immutable)pheno_vector, geno_matrix);
+  auto tstats = run_gwas(n,m,k,cast(immutable)pheno_vector, geno_matrix, covar_matrix);
   auto p_values = map!"a.p_value"(tstats);
   pretty_print("p_values",p_values.array);
 

@@ -126,9 +126,17 @@ DMatrix covar(const string fn, JSONValue ctrl){
 
   string input = (to!string(std.file.read(fn))).strip();
   string[] tsv = input.split("\n");
+  string[] keys = [];
+  double[] P = [];
   foreach(row; tsv[1..$]){
     auto vec = row.split(",");
-
+    //keys ~= [vec[0], vec[1]];
+    //P ~= (x == "NA") ?
+  }
+  double[string] D;
+  double[] L = [];
+  foreach(i; keys){
+    //D[i] = i;
   }
   return DMatrix([],[]);
 }

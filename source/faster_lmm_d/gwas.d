@@ -23,7 +23,7 @@ import faster_lmm_d.output;
 
 import core.stdc.stdlib : exit;
 
-auto gwas(immutable double[] Y, const DMatrix G, const DMatrix K){
+auto gwas(immutable double[] Y, const DMatrix G, const DMatrix K, const DMatrix covar_matrix){
 
   const bool reml  = true;
   const bool refit = false;
@@ -48,7 +48,7 @@ auto gwas(immutable double[] Y, const DMatrix G, const DMatrix K){
   auto lmm2 = lmm_transform(lmm1,N,Y,kvakve.kve);
 
   trace("Computing fit for null model");
-  DMatrix X;
+  DMatrix X; // = covar_matrix;
   auto lmm = lmm_fit(lmm2, N, X);
   log("heritability= ", lmm.opt_H, " sigma= ", lmm.opt_sigma, " LL= ", lmm.opt_LL);
 
@@ -87,7 +87,7 @@ auto gwas(immutable double[] Y, const DMatrix G, const DMatrix K){
 }
 
 
-auto run_gwas(immutable m_items n, immutable m_items m, DMatrix k, immutable double[] y, const DMatrix geno) {
+auto run_gwas(immutable m_items n, immutable m_items m, DMatrix k, immutable double[] y, const DMatrix geno, const DMatrix covar_matrix) {
   trace("run_gwas");
   trace("pheno ", y.length," ", y[0..4]);
   trace(geno.shape,m);
@@ -103,5 +103,5 @@ auto run_gwas(immutable m_items n, immutable m_items m, DMatrix k, immutable dou
   DMatrix K = kinship_full(G);
   trace("kinship_matrix.shape: ", K.shape);
 
-  return gwas(pheno.Y, G, K);
+  return gwas(pheno.Y, G, K, covar_matrix);
 }
