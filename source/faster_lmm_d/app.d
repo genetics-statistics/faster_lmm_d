@@ -152,7 +152,7 @@ void main(string[] args)
   trace(g.shape);
 
   DMatrix covar_matrix;
-  if(option_covar != "") covar_matrix = covar(option_covar, 1);
+  if(option_covar != "") covar_matrix = covar(option_covar, ctrl);
   writeln(covar_matrix);
 
   // ---- If there are less phenotypes than strains, reduce the genotype matrix:

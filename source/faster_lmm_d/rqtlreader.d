@@ -14,6 +14,7 @@ import std.file;
 import std.json;
 import std.regex;
 import std.string;
+import std.stdio;
 import std.typecons;
 
 import dyaml.all;
@@ -122,8 +123,44 @@ GenoObj geno(const string fn, JSONValue ctrl){
   return geno_obj;
 }
 
-DMatrix covar(const string fn, const ulong col_no){
+struct Covariate{
+  string id;
+  string[string] items;
+}
 
+DMatrix covar(const string fn, JSONValue ctrl){
+
+  Covariate[] covars;
+  int num_covars = 0;
+  foreach(key, value; ctrl.object){
+    writeln(key.str);
+    if (value.type() == JSON_TYPE.OBJECT){
+      const(JSONValue)* p = "covar" in value.object;
+      if(p == null){
+        continue;
+      }else{
+        num_covars += 1;
+        Covariate c;
+        c.id = p.str;
+        foreach(value_key, value_value; value.object){
+          if(value_key.str != "covar"){
+            if(value_value.type() == JSON_TYPE.STRING){
+              c.items[value_key.str] = value_value.str;
+            }
+            else{
+              c.items[value_key.str] = to!string(value_value);
+            }
+          }
+
+        }
+        covars ~= c;
+      }
+
+    }
+    //
+
+  }
+  writeln(covars);
   double[] covar_elements;
   string input = (to!string(std.file.read(fn))).strip();
   string[] tsv = input.split("\n");
@@ -134,5 +171,5 @@ DMatrix covar(const string fn, const ulong col_no){
     covar_elements ~= (vec[2] == "(BxS)x(BxS)") ? 1 : 0;
   }
 
-  return DMatrix([covar_elements.length/3, 3], covar_elements);
+  return DMatrix([covar_elements.length/num_covars, num_covars], covar_elements);
 }
