@@ -43,8 +43,8 @@ auto gwas(immutable double[] Y, const DMatrix G, const DMatrix K, const DMatrix 
   println("Compute GWAS");
   auto N = cast(N_Individuals)K.shape[0];
   auto kvakve = kvakve(K);
-  DMatrix Dummy_X0;
-  LMM lmm1 = LMM(Y, kvakve.kva, Dummy_X0);
+  DMatrix Dummy_X0;// = covar_matrix;
+  LMM lmm1 = LMM(Y, kvakve.kva, covar_matrix);
   auto lmm2 = lmm_transform(lmm1,N,Y,kvakve.kve);
 
   trace("Computing fit for null model");

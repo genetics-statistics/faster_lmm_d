@@ -151,7 +151,9 @@ void main(string[] args)
   auto ynames = g1.ynames;
   trace(g.shape);
 
-  DMatrix covar_matrix; //= covar(option_covar, ctrl);
+  DMatrix covar_matrix;
+  if(option_covar != "") covar_matrix = covar(option_covar, 1);
+  writeln(covar_matrix);
 
   // ---- If there are less phenotypes than strains, reduce the genotype matrix:
   check_memory("App: reduce genotype matrix");

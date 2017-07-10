@@ -13,8 +13,8 @@ import std.experimental.logger;
 import std.file;
 import std.json;
 import std.regex;
-import std.typecons;
 import std.string;
+import std.typecons;
 
 import dyaml.all;
 
@@ -122,21 +122,16 @@ GenoObj geno(const string fn, JSONValue ctrl){
   return geno_obj;
 }
 
-DMatrix covar(const string fn, JSONValue ctrl){
+DMatrix covar(const string fn, const ulong col_no){
 
+  double[] covar_elements;
   string input = (to!string(std.file.read(fn))).strip();
   string[] tsv = input.split("\n");
-  string[] keys = [];
-  double[] P = [];
   foreach(row; tsv[1..$]){
     auto vec = row.split(",");
-    //keys ~= [vec[0], vec[1]];
-    //P ~= (x == "NA") ?
+    covar_elements ~= to!double(vec[0]);
+    covar_elements ~= (vec[1] == "m") ? 1 : 0;
   }
-  double[string] D;
-  double[] L = [];
-  foreach(i; keys){
-    //D[i] = i;
-  }
-  return DMatrix([],[]);
+
+  return DMatrix([covar_elements.length/2, 2], covar_elements);
 }
