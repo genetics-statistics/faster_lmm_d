@@ -121,3 +121,14 @@ GenoObj geno(const string fn, JSONValue ctrl){
   info("Genotype Matrix created");
   return geno_obj;
 }
+
+DMatrix covar(const string fn, JSONValue ctrl){
+
+  string input = (to!string(std.file.read(fn))).strip();
+  string[] tsv = input.split("\n");
+  foreach(row; tsv[1..$]){
+    auto vec = row.split(",");
+
+  }
+  return DMatrix([],[]);
+}

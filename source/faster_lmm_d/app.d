@@ -59,7 +59,7 @@ void main(string[] args)
 {
   //ProfilerStart();
 
-  string cmd, option_control, option_kinship, option_pheno, option_geno, useBLAS, noBLAS, noCUDA, option_logging;
+  string cmd, option_control, option_kinship, option_pheno, option_geno, option_covar, useBLAS, noBLAS, noCUDA, option_logging;
   bool option_help = false;
   ulong option_pheno_column = 0;
 
@@ -73,6 +73,7 @@ void main(string[] args)
     "pheno", &option_pheno,
     "pheno-column", &option_pheno_column,
     "geno", &option_geno,
+    "covar", &option_covar,
     "blas", &useBLAS,
     "no-blas", &noBLAS,
     "no-cuda", &noCUDA,
@@ -149,6 +150,8 @@ void main(string[] args)
   auto gnames = g1.gnames;
   auto ynames = g1.ynames;
   trace(g.shape);
+
+  //DMatrix covar_matrix = covar(option_covar, ctrl);
 
   // ---- If there are less phenotypes than strains, reduce the genotype matrix:
   check_memory("App: reduce genotype matrix");
