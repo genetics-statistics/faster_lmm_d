@@ -131,7 +131,8 @@ DMatrix covar(const string fn, const ulong col_no){
     auto vec = row.split(",");
     covar_elements ~= to!double(vec[0]);
     covar_elements ~= (vec[1] == "m") ? 1 : 0;
+    covar_elements ~= (vec[2] == "(BxS)x(BxS)") ? 1 : 0;
   }
 
-  return DMatrix([covar_elements.length/2, 2], covar_elements);
+  return DMatrix([covar_elements.length/3, 3], covar_elements);
 }
