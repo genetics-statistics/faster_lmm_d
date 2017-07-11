@@ -213,6 +213,13 @@ void main(string[] args)
       enforce(p_values.length == 3811,"size is " ~ to!string(p_values.length));
       enforce(round(p_values[3]*10000) == 8073,"P-value[3] " ~ to!string(round(p_values[3]*10000)));
     }
+    if(option_geno == "data/rqtl/recla_geno.csv"){
+      info("Validating results for ", option_geno);
+      enforce(modDiff(p1, 0.49338)<0.001);
+      enforce(modDiff(p2, 0.74974)<0.001);
+      enforce(modDiff(sum(p_values), 3204.42)<0.001);
+      enforce(p_values.length == 6370);
+    }
     if(option_geno == "data/rqtl/iron_geno.csv"){
       info("Validating results for ",option_geno," ",sum(p_values));
       enforce(modDiff(p1, 0.41140)<0.001);
