@@ -50,7 +50,7 @@ auto gwas(immutable double[] Y, const DMatrix G, const DMatrix K, const DMatrix 
   trace("Computing fit for null model");
   DMatrix X; // FIXME;
   auto lmm = lmm_fit(lmm2, N, X);
-  log("heritability= ", lmm.opt_H, " sigma= ", lmm.opt_sigma, " LL= ", lmm.opt_LL);
+  log("heritability= ", lmm.opt_H, " beta= ", lmm.opt_beta, " sigma= ", lmm.opt_sigma, " LL= ", lmm.opt_LL);
 
   check_memory();
   info(G.shape);
