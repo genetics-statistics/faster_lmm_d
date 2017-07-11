@@ -52,17 +52,15 @@ struct LMM {
 
   this(const double[] Y, const DMatrix Kva, const DMatrix X0) {
     this.Kva = DMatrix(Kva);
-    auto X0_new = (!X0.shape ? ones_dmatrix(Y.length,1) : DMatrix(X0) );
     bool[] v = is_nan(Y);
     bool[] x = negate_bool(v);
-    this.X0 = X0_new;
+    this.X0 = (!X0.shape ? ones_dmatrix(Y.length,1) : DMatrix(X0) );
   }
 
   this(const LMM lmmobject, const DMatrix Yt, const DMatrix X0t,
        const DMatrix X0t_stack) {
     this(lmmobject);
     this.Yt = DMatrix(Yt);
-    this.X0 = X0;
     this.X0t = DMatrix(X0t);
     this.X0t_stack = DMatrix(X0t_stack);
   }
@@ -271,7 +269,7 @@ LMM lmm_fit(const LMM lmmobject, N_Individuals N, const DMatrix X_param, const u
   //   .get_max(...) to find the optimum.  Given this optimum, the
   //   function computes the LL and associated ML solutions.
 
-  DMatrix X = (!X_param.shape ? DMatrix(lmmobject.X0t) : DMatrix(lmmobject.X0t_stack));
+  DMatrix X = (!X_param.shape ? DMatrix(lmmobject.X0t) : DMatrix(X_param));
   double[] Harr = new double[ngrids];
   for(auto m = 0; m < ngrids; m++) {
     Harr[m] = m / to!double(ngrids);
