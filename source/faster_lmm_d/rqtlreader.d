@@ -64,9 +64,15 @@ GenoObj geno(const string fn, JSONValue ctrl){
 
   foreach( key, value; ctrl["genotypes"].object){
     string a  = to!string(key);
-    string b = to!string(value);
-    int c = to!int(b);
-    hab_mapper[a] = c;
+    if(value.type() == JSON_TYPE.INTEGER){
+      hab_mapper[a] = to!int(value.integer);
+    }
+    else{
+      string b = value.str;
+      int c = to!int(b);
+      hab_mapper[a] = c;
+    }
+
     idx++;
   }
 
@@ -117,7 +123,6 @@ GenoObj geno(const string fn, JSONValue ctrl){
   else{
     genotype_matrix= geno.T;
   }
-
   GenoObj geno_obj = GenoObj(genotype_matrix, cast(immutable)gnames, ynames);
   info("Genotype Matrix created");
   return geno_obj;
@@ -151,13 +156,10 @@ DMatrix covar(const string fn, JSONValue ctrl){
               c.items[value_key.str] = to!string(value_value);
             }
           }
-
         }
         covars ~= c;
       }
-
     }
-    //
 
   }
   writeln(covars);
@@ -167,8 +169,8 @@ DMatrix covar(const string fn, JSONValue ctrl){
   foreach(row; tsv[1..$]){
     auto vec = row.split(",");
     covar_elements ~= to!double(vec[0]);
-    covar_elements ~= (vec[1] == "m") ? 1 : 0;
-    covar_elements ~= (vec[2] == "(BxS)x(BxS)") ? 1 : 0;
+    covar_elements ~= (vec[1] == "male") ? 1 : 0;
+    //covar_elements ~= (vec[2] == "(BxS)x(BxS)") ? 1 : 0;
   }
 
   return DMatrix([covar_elements.length/num_covars, num_covars], covar_elements);
