@@ -92,18 +92,18 @@ DMatrix large_matrix_mult(DMatrix lha, DMatrix rha) {
  */
 
 DMatrix matrix_mult(string lname, const DMatrix lha, string rname, const DMatrix rha) {
-  trace(lname," x ",rname," (",lha.cols,",",lha.rows," x ",rha.cols,",",rha.rows,")");
+  //trace(lname," x ",rname," (",lha.cols,",",lha.rows," x ",rha.cols,",",rha.rows,")");
   return matrix_mult(lha,rha);
 }
 
 DMatrix slow_matrix_transpose(const DMatrix m) {
   assert(m.cols > 0 && m.rows > 0);
   if (m.cols == 1 || m.rows == 1) {
-    trace("Fast ",m.cols," x ",m.rows);
+    //trace("Fast ",m.cols," x ",m.rows);
     return DMatrix([m.cols, m.rows],m.elements);
   }
   else {
-    trace("Slow ", m.cols," x ",m.rows);
+    //trace("Slow ", m.cols," x ",m.rows);
     double[] output = new double[m.size];
     auto index = 0;
     auto e = m.elements;
