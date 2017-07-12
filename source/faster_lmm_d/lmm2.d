@@ -277,12 +277,12 @@ LMM lmm_fit(const LMM lmmobject, N_Individuals N, const DMatrix X_param, const u
 
   double[] elm = new double[ngrids];
   for(auto h = 0; h < ngrids; h++) {
-    elm[h] = get_LL(Harr[h], X, N, lmmobject.Kva, lmmobject.Yt, lmmobject.X0t, false, REML).LL;
+    elm[h] = get_LL(Harr[h], X, N, lmmobject.Kva, lmmobject.Yt, X, false, REML).LL;
   }
   DMatrix L = DMatrix([elm.length,1],elm);
   DMatrix H = DMatrix([Harr.length,1],Harr);
   double fit_hmax = get_max(lmmobject, L, H, X, REML);
-  LLTuple ll = get_LL(fit_hmax, X, N, lmmobject.Kva, lmmobject.Yt, lmmobject.X0t, false, REML);
+  LLTuple ll = get_LL(fit_hmax, X, N, lmmobject.Kva, lmmobject.Yt, X, false, REML);
 
   return LMM(lmmobject, fit_hmax, ll.LL, ll.beta, ll.sigma);
 }
