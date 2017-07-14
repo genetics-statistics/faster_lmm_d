@@ -199,6 +199,36 @@ void main(string[] args)
       enforce(modDiff(k2,0.5202)<0.001);
       enforce(modDiff(kl,0.6597)<0.001);
     }
+    if(option_geno == "data/small_na.geno"){
+      info("Validating results for ", option_geno);
+      enforce(modDiff(k1, 1.25) <0.001);
+      enforce(modDiff(k2,-0.41666)<0.001);
+      enforce(modDiff(kl, 1)<0.001);
+    }
+    if(option_geno == "data/genenetwork/BXD.csv"){
+      info("Validating results for ", option_geno);
+      enforce(modDiff(k1, 1.02346)<0.001);
+      enforce(modDiff(k2,-0.10832)<0.001);
+      enforce(modDiff(kl, 0.98783)<0.001);
+    }
+    if(option_geno == "data/rqtl/recla_geno.csv"){
+      info("Validating results for ", option_geno);
+      enforce(modDiff(k1, 0.97429)<0.001);
+      enforce(modDiff(k2, 0.03363)<0.001);
+      enforce(modDiff(kl, 0.98084)<0.001);
+    }
+    if(option_geno == "data/rqtl/iron_geno.csv"){
+      info("Validating results for ", option_geno);
+      enforce(modDiff(k1, 0.98876)<0.001);
+      enforce(modDiff(k2, 0.07252)<0.001);
+      enforce(modDiff(kl, 0.96619)<0.001);
+    }
+    if(option_geno == "data/test8000.geno"){
+      info("Validating results for ", option_geno);
+      enforce(modDiff(k1, 1.43484)<0.001);
+      enforce(modDiff(k2, 1.43484)<0.001);
+      enforce(modDiff(kl, 1.26798)<0.001);
+    }
     info("Kinship test successful");
   }
 
