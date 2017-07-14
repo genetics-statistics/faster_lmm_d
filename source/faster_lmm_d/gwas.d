@@ -88,7 +88,7 @@ auto gwas(immutable double[] Y, const DMatrix G, const DMatrix K, const DMatrix 
 }
 
 
-auto run_gwas(immutable m_items n, immutable m_items m, DMatrix k, immutable double[] y, const DMatrix geno, const DMatrix covar_matrix) {
+auto run_gwas(immutable m_items n, immutable m_items m, immutable double[] y, const DMatrix geno, const DMatrix covar_matrix) {
   trace("run_gwas");
   trace("pheno ", y.length," ", y[0..4]);
   trace(geno.shape,m);

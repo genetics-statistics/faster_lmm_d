@@ -61,6 +61,7 @@ void main(string[] args)
 
   string cmd, option_control, option_kinship, option_pheno, option_geno, option_covar, useBLAS, noBLAS, noCUDA, option_logging;
   bool option_help = false;
+  bool option_test_kinship = false;
   ulong option_pheno_column = 0;
 
   globalLogLevel(LogLevel.warning); //default
@@ -79,6 +80,7 @@ void main(string[] args)
     "no-cuda", &noCUDA,
     "cmd", &cmd,
     "logging", &option_logging,
+    "test-kinship", &option_test_kinship,
     "help", &option_help
   );
 
@@ -189,7 +191,7 @@ void main(string[] args)
   immutable m_items n = pheno_vector.length;
   immutable m_items m = geno_matrix.n_pheno;
   DMatrix k;
-  auto tstats = run_gwas(n,m,k,cast(immutable)pheno_vector, geno_matrix, covar_matrix);
+  auto tstats = run_gwas(n, m, cast(immutable)pheno_vector, geno_matrix, covar_matrix);
   auto p_values = map!"a.p_value"(tstats);
   pretty_print("p_values",p_values.array);
 

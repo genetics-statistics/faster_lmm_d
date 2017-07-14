@@ -37,6 +37,7 @@ DMatrix kinship_full(const DMatrix G)
   ulong lr = n*n-1;
   ulong ll = (n-1)*n;
   log(K.elements[ll],",",K.elements[ll+1],",",K.elements[ll+2],"...",K.elements[lr-2],",",K.elements[lr-1],",",K.elements[lr]);
+  //if(test_kinship){ check_kinship(p_values); }
   check_memory();
   return K;
 }
