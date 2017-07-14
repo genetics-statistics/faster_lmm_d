@@ -15,7 +15,6 @@ import std.typecons;
 
 import faster_lmm_d.dmatrix;
 import faster_lmm_d.kinship;
-import faster_lmm_d.phenotype;
 import faster_lmm_d.lmm2;
 import faster_lmm_d.memory;
 import faster_lmm_d.optmatrix;
@@ -85,24 +84,4 @@ auto gwas(immutable double[] Y, const DMatrix G, const DMatrix K, const DMatrix 
   }
 
   return tsps;
-}
-
-
-auto run_gwas(immutable m_items n, immutable m_items m, immutable double[] y, const DMatrix geno, const DMatrix covar_matrix) {
-  trace("run_gwas");
-  trace("pheno ", y.length," ", y[0..4]);
-  trace(geno.shape,m);
-  check_memory("before run_gwas");
-  assert(y.length == n);
-  assert(geno.n_pheno == m);
-
-  PhenoStruct pheno = remove_missing(n,y);
-
-  auto geno2 = remove_cols(geno,pheno.keep);
-  DMatrix G = normalize_along_row(geno2);
-  trace("run_other_new genotype_matrix: ", G.shape);
-  DMatrix K = kinship_full(G);
-  trace("kinship_matrix.shape: ", K.shape);
-
-  return gwas(pheno.Y, G, K, covar_matrix);
 }
