@@ -188,6 +188,20 @@ void main(string[] args)
     geno_matrix = DMatrix(g.shape.dup, g.elements.dup);
   }
 
+  void check_kinship(DMatrix K){
+    trace(K.shape, "\n", K.elements[0], K.elements[1], K.elements[2], "...", K.elements[$-3], K.elements[$-2], K.elements[$-1]);
+    double k1 = K.elements[0];
+    double k2 = K.elements[1];
+    double kl = K.elements[$-1];
+    if(option_geno == "data/small.geno"){
+      info("Validating results for ", option_geno);
+      enforce(modDiff(k1,0.9375)<0.001);
+      enforce(modDiff(k2,0.5202)<0.001);
+      enforce(modDiff(kl,0.6597)<0.001);
+    }
+    info("Kinship test successful");
+  }
+
 
   auto run_gwas(immutable m_items n, immutable m_items m, immutable double[] y, const DMatrix geno, const DMatrix covar_matrix) {
     trace("run_gwas");
@@ -204,6 +218,8 @@ void main(string[] args)
     trace("run_other_new genotype_matrix: ", G.shape);
     DMatrix K = kinship_full(G);
     trace("kinship_matrix.shape: ", K.shape);
+
+    if(option_test_kinship){check_kinship(K);}
 
     return gwas(pheno.Y, G, K, covar_matrix);
   }
