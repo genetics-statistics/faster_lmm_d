@@ -7,6 +7,8 @@
 
 module faster_lmm_d.gwas;
 
+import core.stdc.stdlib : exit;
+
 import std.experimental.logger;
 import std.exception;
 import std.parallelism;
@@ -19,8 +21,10 @@ import faster_lmm_d.lmm2;
 import faster_lmm_d.memory;
 import faster_lmm_d.optmatrix;
 import faster_lmm_d.output;
+import faster_lmm_d.phenotype;
 
-import core.stdc.stdlib : exit;
+import test.kinship;
+
 
 auto gwas(immutable double[] Y, const DMatrix G, const DMatrix K, const DMatrix covar_matrix){
 
@@ -84,4 +88,28 @@ auto gwas(immutable double[] Y, const DMatrix G, const DMatrix K, const DMatrix 
   }
 
   return tsps;
+}
+
+auto run_gwas(immutable m_items n, immutable m_items m, immutable double[] y,
+                const DMatrix geno, const DMatrix covar_matrix,
+                const string geno_fn, bool test_kinship = false) {
+
+  trace("run_gwas");
+  trace("pheno ", y.length," ", y[0..4]);
+  trace(geno.shape,m);
+  check_memory("before run_gwas");
+  assert(y.length == n);
+  assert(geno.n_pheno == m);
+
+  PhenoStruct pheno = remove_missing(n,y);
+
+  auto geno2 = remove_cols(geno,pheno.keep);
+  DMatrix G = normalize_along_row(geno2);
+  trace("run_other_new genotype_matrix: ", G.shape);
+  DMatrix K = kinship_full(G);
+  trace("kinship_matrix.shape: ", K.shape);
+
+  if(test_kinship){check_kinship(K, geno_fn);}
+
+  return gwas(pheno.Y, G, K, covar_matrix);
 }
