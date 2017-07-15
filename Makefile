@@ -51,9 +51,9 @@ $(HOME)/.dub/packages/resusage-0.2.4/resusage/lib/libresusage.a
 DFLAGS = -wi -I./source $(DUB_INCLUDE)
 RPATH  =
 LIBS   = -L=-llapacke -L=-llapack -L=-lblas -L=-lgsl -L=-lgslcblas -L=-lm -L=-lopenblas -L=-lm -L=-lgslcblas
-SRC    = $(wildcard source/faster_lmm_d/*.d)
-IR     = $(wildcard source/faster_lmm_d/*.ll)
-BC     = $(wildcard source/faster_lmm_d/*.bc)
+SRC    = $(wildcard source/faster_lmm_d/*.d  source/test/*.d)
+IR     = $(wildcard source/faster_lmm_d/*.ll source/test/*.ll)
+BC     = $(wildcard source/faster_lmm_d/*.bc source/test/*.bc)
 OBJ    = $(SRC:.d=.o)
 OUT    = build/faster_lmm_d
 
