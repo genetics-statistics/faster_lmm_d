@@ -27,6 +27,8 @@ import faster_lmm_d.phenotype;
 import faster_lmm_d.rqtlreader;
 import faster_lmm_d.tsvreader;
 
+import test.kinship;
+
 version(CUDA) {
   import faster_lmm_d.cuda : cuda_init, cuda_destroy;
 }
@@ -188,50 +190,6 @@ void main(string[] args)
     geno_matrix = DMatrix(g.shape.dup, g.elements.dup);
   }
 
-  void check_kinship(DMatrix K){
-    trace(K.shape, "\n", K.elements[0], K.elements[1], K.elements[2], "...", K.elements[$-3], K.elements[$-2], K.elements[$-1]);
-    double k1 = K.elements[0];
-    double k2 = K.elements[1];
-    double kl = K.elements[$-1];
-    if(option_geno == "data/small.geno"){
-      info("Validating results for ", option_geno);
-      enforce(modDiff(k1,0.9375)<0.001);
-      enforce(modDiff(k2,0.5202)<0.001);
-      enforce(modDiff(kl,0.6597)<0.001);
-    }
-    if(option_geno == "data/small_na.geno"){
-      info("Validating results for ", option_geno);
-      enforce(modDiff(k1, 1.25) <0.001);
-      enforce(modDiff(k2,-0.41666)<0.001);
-      enforce(modDiff(kl, 1)<0.001);
-    }
-    if(option_geno == "data/genenetwork/BXD.csv"){
-      info("Validating results for ", option_geno);
-      enforce(modDiff(k1, 1.02346)<0.001);
-      enforce(modDiff(k2,-0.10832)<0.001);
-      enforce(modDiff(kl, 0.98783)<0.001);
-    }
-    if(option_geno == "data/rqtl/recla_geno.csv"){
-      info("Validating results for ", option_geno);
-      enforce(modDiff(k1, 0.97429)<0.001);
-      enforce(modDiff(k2, 0.03363)<0.001);
-      enforce(modDiff(kl, 0.98084)<0.001);
-    }
-    if(option_geno == "data/rqtl/iron_geno.csv"){
-      info("Validating results for ", option_geno);
-      enforce(modDiff(k1, 0.98876)<0.001);
-      enforce(modDiff(k2, 0.07252)<0.001);
-      enforce(modDiff(kl, 0.96619)<0.001);
-    }
-    if(option_geno == "data/test8000.geno"){
-      info("Validating results for ", option_geno);
-      enforce(modDiff(k1, 1.43484)<0.001);
-      enforce(modDiff(k2, 1.43484)<0.001);
-      enforce(modDiff(kl, 1.26798)<0.001);
-    }
-    info("Kinship test successful");
-  }
-
 
   auto run_gwas(immutable m_items n, immutable m_items m, immutable double[] y, const DMatrix geno, const DMatrix covar_matrix) {
     trace("run_gwas");
@@ -249,7 +207,7 @@ void main(string[] args)
     DMatrix K = kinship_full(G);
     trace("kinship_matrix.shape: ", K.shape);
 
-    if(option_test_kinship){check_kinship(K);}
+    if(option_test_kinship){check_kinship(K, option_geno);}
 
     return gwas(pheno.Y, G, K, covar_matrix);
   }
