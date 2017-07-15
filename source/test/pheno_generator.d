@@ -11,7 +11,7 @@ import std.conv;
 import std.random;
 import std.stdio;
 
-void main(string[] args)
+void generate_pheno_file(string[] args)
 {
   writeln("# Phenotype format version 1.0");
   writeln("# Individuals = 1219");
