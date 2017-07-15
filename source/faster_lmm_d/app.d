@@ -26,6 +26,8 @@ import faster_lmm_d.output;
 import faster_lmm_d.rqtlreader;
 import faster_lmm_d.tsvreader;
 
+import test.pheno_vector;
+
 version(CUDA) {
   import faster_lmm_d.cuda : cuda_init, cuda_destroy;
 }
@@ -186,6 +188,8 @@ void main(string[] args)
     pheno_vector = y.dup;
     geno_matrix = DMatrix(g.shape.dup, g.elements.dup);
   }
+
+  check_pheno_vector(pheno_vector, option_geno);
 
   // ---- Run GWAS
   check_memory("App: run GWAS");
