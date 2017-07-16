@@ -24,8 +24,9 @@ import faster_lmm_d.output;
 import faster_lmm_d.phenotype;
 import faster_lmm_d.helpers : sum;
 
-import test.kinship;
 import test.fit;
+import test.geno_matrix;
+import test.kinship;
 
 auto gwas(immutable double[] Y, const DMatrix G, const DMatrix K, const DMatrix covar_matrix, string geno_fn){
 
@@ -51,14 +52,12 @@ auto gwas(immutable double[] Y, const DMatrix G, const DMatrix K, const DMatrix 
   LMM lmm1 = LMM(Y, kvakve.kva, covar_matrix);
   auto lmm2 = lmm_transform(lmm1,N,Y,kvakve.kve);
 
+  check_X0t_matrix(lmm2.X0t, geno_fn);
+
   trace("Computing fit for null model");
+
   DMatrix X; // FIXME;
   auto lmm = lmm_fit(lmm2, N, X);
-
-  check_lmm_fit(lmm, geno_fn);
-
-  trace("heritability= ", lmm.opt_H, " beta= ", lmm.opt_beta, " sigmasq_g = ", lmm.opt_H * lmm.opt_sigma, " sigmasq_e = ", (1-lmm.opt_H)*lmm.opt_sigma,
-    " LL= ", lmm.opt_LL);
 
   trace(
     "\nheritability = ", lmm.opt_H,
@@ -69,6 +68,7 @@ auto gwas(immutable double[] Y, const DMatrix G, const DMatrix K, const DMatrix 
     "\nsigmasq_e = ", (1 - lmm.opt_H) * lmm.opt_sigma,
     "\nlog-likelihood = ", lmm.opt_LL,
   );
+  check_lmm_fit(lmm, geno_fn);
 
   check_memory();
   info(G.shape);
