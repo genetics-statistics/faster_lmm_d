@@ -52,5 +52,5 @@ void check_geno_matrix(DMatrix  geno_matrix, string geno_fn){
     enforce(modDiff(g2, 0) < 0.001);
     enforce(modDiff(gl, 0) < 0.001);
   }
-  info("Phenotype Vector test successful");
+  info("Genotype Matrix test successful");
 }
