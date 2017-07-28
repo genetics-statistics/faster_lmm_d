@@ -61,7 +61,7 @@ void check_geno_matrix(DMatrix  geno_matrix, string geno_fn){
   info("Genotype Matrix test successful");
 }
 
-void check_X0t_matrix(DMatrix  geno_matrix, string geno_fn){
+void check_X0_matrix_with_covariates(DMatrix  geno_matrix, string geno_fn){
   trace("geno_matrix.shape: ", geno_matrix.shape, "\n",
         geno_matrix.elements[0],  ",", geno_matrix.elements[1], ",", geno_matrix.elements[2], "...",
         geno_matrix.elements[$-3], ",", geno_matrix.elements[$-2], ",", geno_matrix.elements[$-1]);

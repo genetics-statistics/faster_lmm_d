@@ -52,8 +52,6 @@ auto gwas(immutable double[] Y, const DMatrix G, const DMatrix K, const DMatrix 
   LMM lmm1 = LMM(Y, kvakve.kva, covar_matrix);
   auto lmm2 = lmm_transform(lmm1,N,Y,kvakve.kve);
 
-  check_X0t_matrix(lmm2.X0t, geno_fn);
-
   trace("Computing fit for null model");
 
   DMatrix X; // FIXME;
