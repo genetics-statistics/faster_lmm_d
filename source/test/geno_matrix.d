@@ -8,7 +8,10 @@ import std.stdio;
 import faster_lmm_d.dmatrix;
 import faster_lmm_d.helpers : modDiff, sum;
 
-void check_geno_matrix(DMatrix  geno_matrix, string geno_fn){
+void check_geno_matrix(DMatrix  geno_matrix, string geno_fn, bool covariates = false){
+  if(covariates){
+    return check_geno_matrix_with_covariates(geno_matrix, geno_fn);
+  }
   trace("geno_matrix.shape: ", geno_matrix.shape, "\n",
         geno_matrix.elements[0],  ",", geno_matrix.elements[1], ",", geno_matrix.elements[2], "...",
         geno_matrix.elements[$-3], ",", geno_matrix.elements[$-2], ",", geno_matrix.elements[$-1]);
@@ -61,7 +64,7 @@ void check_geno_matrix(DMatrix  geno_matrix, string geno_fn){
   info("Genotype Matrix test successful");
 }
 
-void check_X0_matrix_with_covariates(DMatrix  geno_matrix, string geno_fn){
+void check_geno_matrix_with_covariates(DMatrix  geno_matrix, string geno_fn){
   trace("geno_matrix.shape: ", geno_matrix.shape, "\n",
         geno_matrix.elements[0],  ",", geno_matrix.elements[1], ",", geno_matrix.elements[2], "...",
         geno_matrix.elements[$-3], ",", geno_matrix.elements[$-2], ",", geno_matrix.elements[$-1]);

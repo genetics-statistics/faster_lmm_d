@@ -157,9 +157,13 @@ void main(string[] args)
   auto ynames = g1.ynames;
   trace(g.shape);
 
+  bool covar_flag = false;
   DMatrix covar_matrix;
-  if(option_covar != "") covar_matrix = covar(option_covar, ctrl);
-  writeln(covar_matrix);
+  if(option_covar != ""){
+    covar_matrix = covar(option_covar, ctrl);
+    covar_flag = true;
+    trace(covar_matrix);
+  }
 
   // ---- If there are less phenotypes than strains, reduce the genotype matrix:
   check_memory("App: reduce genotype matrix");
@@ -191,7 +195,7 @@ void main(string[] args)
   }
 
   check_pheno_vector(pheno_vector, option_geno);
-  check_geno_matrix(geno_matrix, option_geno);
+  check_geno_matrix(geno_matrix, option_geno, covar_flag);
 
   // ---- Run GWAS
   check_memory("App: run GWAS");
