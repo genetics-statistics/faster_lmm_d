@@ -26,8 +26,9 @@ import faster_lmm_d.output;
 import faster_lmm_d.rqtlreader;
 import faster_lmm_d.tsvreader;
 
-import test.pheno_vector;
+import test.covar_matrix;
 import test.geno_matrix;
+import test.pheno_vector;
 
 version(CUDA) {
   import faster_lmm_d.cuda : cuda_init, cuda_destroy;
@@ -163,6 +164,7 @@ void main(string[] args)
     covar_matrix = covar(option_covar, ctrl);
     covar_flag = true;
     trace(covar_matrix);
+    check_covar_matrix(covar_matrix, option_geno);
   }
 
   // ---- If there are less phenotypes than strains, reduce the genotype matrix:
@@ -195,7 +197,7 @@ void main(string[] args)
   }
 
   check_pheno_vector(pheno_vector, option_geno);
-  check_geno_matrix(geno_matrix, option_geno, covar_flag);
+  check_geno_matrix(geno_matrix, option_geno);
 
   // ---- Run GWAS
   check_memory("App: run GWAS");
@@ -231,10 +233,18 @@ void main(string[] args)
     }
     if(option_geno == "data/rqtl/recla_geno.csv"){
       info("Validating results for ", option_geno);
-      enforce(modDiff(p1, 0.49338)<0.001);
-      enforce(modDiff(p2, 0.74974)<0.001);
-      enforce(modDiff(sum(p_values), 3204.42)<0.001);
-      enforce(p_values.length == 6370);
+      if(!covar_matrix.shape){
+        enforce(modDiff(p1, 0.49338)<0.001);
+        enforce(modDiff(p2, 0.74974)<0.001);
+        enforce(modDiff(sum(p_values), 3204.42)<0.001);
+        enforce(p_values.length == 6370);
+      }
+      else{
+        enforce(modDiff(p1, 0.70970)<0.001);
+        enforce(modDiff(p2, 0.69634)<0.001);
+        enforce(modDiff(sum(p_values), 4587.86)<0.001);
+        enforce(p_values.length == 6370);
+      }
     }
     if(option_geno == "data/rqtl/iron_geno.csv"){
       info("Validating results for ",option_geno," ",sum(p_values));

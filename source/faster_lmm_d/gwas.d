@@ -24,6 +24,7 @@ import faster_lmm_d.output;
 import faster_lmm_d.phenotype;
 import faster_lmm_d.helpers : sum;
 
+import test.covar_matrix;
 import test.fit;
 import test.geno_matrix;
 import test.kinship;
@@ -54,8 +55,7 @@ auto gwas(immutable double[] Y, const DMatrix G, const DMatrix K, const DMatrix 
 
   trace("Computing fit for null model");
 
-  DMatrix X; // FIXME;
-  auto lmm = lmm_fit(lmm2, N, X);
+  auto lmm = lmm_fit(lmm2, N);
 
   trace(
     "\nheritability = ", lmm.opt_H,
@@ -66,7 +66,8 @@ auto gwas(immutable double[] Y, const DMatrix G, const DMatrix K, const DMatrix 
     "\nsigmasq_e = ", (1 - lmm.opt_H) * lmm.opt_sigma,
     "\nlog-likelihood = ", lmm.opt_LL,
   );
-  check_lmm_fit(lmm, geno_fn);
+
+  !covar_matrix.shape ? check_lmm_fit(lmm, geno_fn) :  check_lmm_fit_with_covariates(lmm, geno_fn) ;
 
   check_memory();
   info(G.shape);

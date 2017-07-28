@@ -257,7 +257,7 @@ double get_max(const LMM lmmobject, const DMatrix L, const DMatrix H,
 
 // FIXME: try reducing ngrids (see Karl's blog)
 
-LMM lmm_fit(const LMM lmmobject, N_Individuals N, const DMatrix X_param, const ulong ngrids=100,
+LMM lmm_fit(const LMM lmmobject, N_Individuals N, const ulong ngrids=100,
             const bool REML=true) {
 
   //   Finds the maximum-likelihood solution for the heritability (h)
@@ -269,7 +269,7 @@ LMM lmm_fit(const LMM lmmobject, N_Individuals N, const DMatrix X_param, const u
   //   .get_max(...) to find the optimum.  Given this optimum, the
   //   function computes the LL and associated ML solutions.
 
-  DMatrix X = (!X_param.shape ? DMatrix(lmmobject.X0t) : DMatrix(X_param));
+  DMatrix X = DMatrix(lmmobject.X0t);
   double[] Harr = new double[ngrids];
   for(auto m = 0; m < ngrids; m++) {
     Harr[m] = m / to!double(ngrids);
@@ -277,12 +277,12 @@ LMM lmm_fit(const LMM lmmobject, N_Individuals N, const DMatrix X_param, const u
 
   double[] elm = new double[ngrids];
   for(auto h = 0; h < ngrids; h++) {
-    elm[h] = get_LL(Harr[h], X, N, lmmobject.Kva, lmmobject.Yt, X, false, REML).LL;
+    elm[h] = get_LL(Harr[h], X, N, lmmobject.Kva, lmmobject.Yt, lmmobject.X0t, false, REML).LL;
   }
   DMatrix L = DMatrix([elm.length,1],elm);
   DMatrix H = DMatrix([Harr.length,1],Harr);
   double fit_hmax = get_max(lmmobject, L, H, X, REML);
-  LLTuple ll = get_LL(fit_hmax, X, N, lmmobject.Kva, lmmobject.Yt, X, false, REML);
+  LLTuple ll = get_LL(fit_hmax, X, N, lmmobject.Kva, lmmobject.Yt, lmmobject.X0t, false, REML);
 
   return LMM(lmmobject, fit_hmax, ll.LL, ll.beta, ll.sigma);
 }
