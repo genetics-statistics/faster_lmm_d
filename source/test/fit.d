@@ -80,3 +80,36 @@ void check_lmm_fit(LMM lmm_object, string geno_fn){
   }
   info("LMM fit test successful");
 }
+
+void check_lmm_fit_with_covariates(LMM lmm_object, string geno_fn){
+
+  double heritability = lmm_object.opt_H;
+  DMatrix beta= lmm_object.opt_beta;
+  double sigma = lmm_object.opt_sigma;
+  double sigmasq_g =  heritability * sigma;
+  double sigmasq_e = (1- heritability ) * sigma;
+  double loglik = lmm_object.opt_LL;
+
+  if(geno_fn == "data/rqtl/recla_geno.csv"){
+    info("Validating results for ", geno_fn);
+    enforce(modDiff(heritability, 0.4581) < 0.001);
+    enforce(beta.shape == [2,1]);
+    enforce(modDiff(beta.elements[0], 6.08218) < 0.001);
+    enforce(modDiff(beta.elements[1], 729.694) < 0.001);
+    enforce(modDiff(sigma, 713616.2985) < 0.001);
+    enforce(modDiff(sigmasq_g, 326907.5516) < 0.001);
+    enforce(modDiff(sigmasq_e, 386708.7471) < 0.001);
+    enforce(modDiff(loglik, -2099.4425) < 0.001);
+  }
+  if(geno_fn == "data/rqtl/iron_geno.csv"){
+    info("Validating results for ", geno_fn);
+    enforce(modDiff(heritability, 0.428702) < 0.001);
+    enforce(beta.shape == [1,1]);
+    enforce(modDiff(beta.elements[0], 94.5198) < 0.001);
+    enforce(modDiff(sigma, 1544.856) < 0.001);
+    enforce(modDiff(sigmasq_g, 662.282) < 0.001);
+    enforce(modDiff(sigmasq_e, 882.573) < 0.001);
+    enforce(modDiff(loglik, -1391.851) < 0.001);
+  }
+  info("LMM fit test successful");
+}
