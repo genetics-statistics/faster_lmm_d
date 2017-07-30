@@ -55,35 +55,55 @@ auto pheno(const string fn, const ulong p_column){
 GenoObj geno(const string fn, JSONValue ctrl){
 
   trace("in geno function");
-  const(JSONValue)* na_strings = "na.strings" in ctrl;
-  if(na_strings  == null){
-    ctrl["na.strings"] = JSONValue(["-" ,"NA"]);
-  }
   int[string] hab_mapper;
-  int idx = 0;
+  double[] faster_lmm_d_mapper;
 
-  foreach( key, value; ctrl["genotypes"].object){
-    string a  = to!string(key);
-    if(value.type() == JSON_TYPE.INTEGER){
-      hab_mapper[a] = to!int(value.integer);
+  if(ctrl.type == JSON_TYPE.OBJECT){
+    const(JSONValue)* na_strings = "na.strings" in ctrl;
+    if(na_strings  == null){
+      ctrl["na.strings"] = JSONValue(["-" ,"NA"]);
     }
-    else{
-      string b = value.str;
+
+    int idx = 0;
+
+    foreach( key, value; ctrl["genotypes"].object){
+      string a  = to!string(key);
+      if(value.type() == JSON_TYPE.INTEGER){
+        hab_mapper[a] = to!int(value.integer);
+      }
+      else{
+        string b = value.str;
+        int c = to!int(b);
+        hab_mapper[a] = c;
+      }
+
+      idx++;
+    }
+
+    assert(idx == 3);
+    faster_lmm_d_mapper = [double.nan, 0.0, 0.5, 1.0];
+
+    foreach( JSONValue key; ctrl["na.strings"].array){
+      idx += 1;
+      hab_mapper[key.str] = idx;
+      faster_lmm_d_mapper ~= double.nan;
+    }
+
+  }
+  else{
+    trace("in geno function");
+    string s = `{"A":0,"H":1,"B":2,"-":3}`;
+    ctrl["na-strings"] = parseJSON(s);
+
+
+    foreach( key, value; ctrl["na-strings"].object){
+      string a  = key;
+      string b = to!string(value);
       int c = to!int(b);
       hab_mapper[a] = c;
     }
 
-    idx++;
-  }
-
-
-  assert(idx == 3);
-  double[] faster_lmm_d_mapper = [double.nan, 0.0, 0.5, 1.0];
-
-  foreach( JSONValue key; ctrl["na.strings"].array){
-    idx += 1;
-    hab_mapper[key.str] = idx;
-    faster_lmm_d_mapper ~= double.nan;
+    faster_lmm_d_mapper = [ 0.0, 0.5, 1.0, double.nan,];
   }
 
   log("hab_mapper", hab_mapper);

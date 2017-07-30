@@ -81,6 +81,7 @@ GenoObj tsvgeno(const string fn, JSONValue ctrl){
       }
     }
   }
+
   geno.shape = [rowCount, colCount];
   GenoObj geno_obj = GenoObj(geno, cast(immutable)gnames,ynames[1..$]);
 
