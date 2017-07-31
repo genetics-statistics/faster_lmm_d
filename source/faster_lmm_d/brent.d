@@ -11,8 +11,10 @@ import core.stdc.float_;
 
 import std.math;
 
-double qtl2_Brent_fmin(double ax, double bx,  double function(double, void*) f,
-                       void *info, double tol)
+import faster_lmm_d.lmm2;
+
+double qtl2_Brent_fmin(double ax, double bx,  double function(double, args_params) f,
+                       args_params info, double tol)
 {
     /*  c is the squared inverse of the golden ratio */
     const double c = (3. - sqrt(5.)) * .5;

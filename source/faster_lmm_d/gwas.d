@@ -56,7 +56,6 @@ auto gwas(immutable double[] Y, const DMatrix G, const DMatrix K, const DMatrix 
   trace("Computing fit for null model");
 
   auto lmm = lmm_fit(lmm2, N);
-
   trace(
     "\nheritability = ", lmm.opt_H,
     "\nsum = ", sum(lmm.opt_beta.elements),
@@ -65,6 +64,18 @@ auto gwas(immutable double[] Y, const DMatrix G, const DMatrix K, const DMatrix 
     "\nsigmasq_g = ", lmm.opt_H * lmm.opt_sigma,
     "\nsigmasq_e = ", (1 - lmm.opt_H) * lmm.opt_sigma,
     "\nlog-likelihood = ", lmm.opt_LL,
+  );
+
+  auto lmm_qtl = qtl_fit(lmm2, N);
+  trace(
+    "\nFit results from qtl_fit",
+    "\nheritability = ", lmm_qtl.opt_H,
+    "\nsum = ", sum(lmm_qtl.opt_beta.elements),
+    "\nbeta = ", lmm_qtl.opt_beta,
+    "\nsigma = ", lmm_qtl.opt_sigma,
+    "\nsigmasq_g = ", lmm_qtl.opt_H * lmm_qtl.opt_sigma,
+    "\nsigmasq_e = ", (1 - lmm_qtl.opt_H) * lmm_qtl.opt_sigma,
+    "\nlog-likelihood = ", lmm_qtl.opt_LL,
   );
 
   !covar_matrix.shape ? check_lmm_fit(lmm, geno_fn) :  check_lmm_fit_with_covariates(lmm, geno_fn) ;

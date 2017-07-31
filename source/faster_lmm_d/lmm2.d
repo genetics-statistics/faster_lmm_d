@@ -19,6 +19,7 @@ import gsl.errno;
 import gsl.math;
 import gsl.min;
 
+import faster_lmm_d.brent;
 import faster_lmm_d.cuda;
 import faster_lmm_d.dmatrix;
 import faster_lmm_d.helpers;
@@ -161,6 +162,8 @@ LLTuple get_LL(const double h, const DMatrix param_X,
 }
 
 alias LL_brent_params = Tuple!(LMM,DMatrix);
+alias args_params = Tuple!(double,  DMatrix,
+               N_Individuals ,  DMatrix,  DMatrix,  DMatrix);
 
 /*
  * This function is passed into the GSL resolver
@@ -282,6 +285,35 @@ LMM lmm_fit(const LMM lmmobject, N_Individuals N, const ulong ngrids=100,
   DMatrix L = DMatrix([elm.length,1],elm);
   DMatrix H = DMatrix([Harr.length,1],Harr);
   double fit_hmax = get_max(lmmobject, L, H, X, REML);
+  LLTuple ll = get_LL(fit_hmax, X, N, lmmobject.Kva, lmmobject.Yt, lmmobject.X0t, false, REML);
+
+  return LMM(lmmobject, fit_hmax, ll.LL, ll.beta, ll.sigma);
+}
+
+double negLL(double x, args_params params)
+{
+    LLTuple result = get_LL(params[0], params[1], params[2], params[3],
+      params[4], params[5]);
+
+    return -result.LL;
+}
+
+LMM qtl_fit(const LMM lmmobject, N_Individuals N, const ulong ngrids=100,
+            const bool REML=true) {
+
+  //   Finds the maximum-likelihood solution for the heritability (h)
+  //   given the current parameters.  X can be passed and will
+  //   transformed and concatenated to X0t.  Otherwise, X0t is used as
+  //   the covariate matrix.
+
+  //   This function calculates the LLs over a grid and then uses
+  //   .get_max(...) to find the optimum.  Given this optimum, the
+  //   function computes the LL and associated ML solutions.
+
+  DMatrix X = DMatrix(lmmobject.X0t);
+  auto params = args_params(0.0, X, to!uint(N), DMatrix(lmmobject.Kva), DMatrix(lmmobject.Yt), DMatrix(lmmobject.X0t));
+
+  double fit_hmax = qtl2_Brent_fmin(0.0, 1.0, &negLL, params, 1e-6);
   LLTuple ll = get_LL(fit_hmax, X, N, lmmobject.Kva, lmmobject.Yt, lmmobject.X0t, false, REML);
 
   return LMM(lmmobject, fit_hmax, ll.LL, ll.beta, ll.sigma);
