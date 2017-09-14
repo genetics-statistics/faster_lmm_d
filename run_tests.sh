@@ -31,3 +31,7 @@ if [ $? -ne 0 ]; then echo "ERR4a iron test failed" ; exit 1 ; fi
 echo "recla with covar"
 ./build/faster_lmm_d --control=data/rqtl/recla.json --covar=data/rqtl/recla_covar.csv --pheno=data/rqtl/recla_pheno.csv --geno=data/rqtl/recla_geno.csv --test-kinship=true --cmd=rqtl $*
 if [ $? -ne 0 ]; then echo "ERR4b recla test failed" ; exit 1 ; fi
+
+echo "recla with kinship"
+./build/faster_lmm_d --control=data/rqtl/recla.json --covar=data/rqtl/recla_covar.csv --pheno=data/rqtl/recla_pheno.csv --geno=data/rqtl/recla_geno.csv --kinship=data/rqtl/recla_kinship.csv --test-kinship=true --cmd=rqtl $*
+if [ $? -ne 0 ]; then echo "ERR4c recla test failed: Must fail for now" ; exit 1 ; fi
