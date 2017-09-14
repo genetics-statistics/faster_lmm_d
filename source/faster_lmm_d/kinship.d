@@ -7,8 +7,11 @@
 
 module faster_lmm_d.kinship;
 
+import std.csv;
+import std.conv;
 import std.exception;
 import std.experimental.logger;
+import std.file;
 
 import faster_lmm_d.cuda;
 import faster_lmm_d.dmatrix;
@@ -46,4 +49,16 @@ EighTuple kvakve(const DMatrix K)
 {
   tracef("Obtaining eigendecomposition for %dx%d matrix",K.rows(),K.cols());
   return eigh(K);
+}
+
+DMatrix kinship_from_file(const string fn){
+  string input = to!string(std.file.read(fn));
+  auto csv = csvReader!(string, Malformed.ignore)(input);
+  double[] elements;
+  foreach(row; csv){
+    foreach(cell; row){
+      elements ~= to!double(cell);
+    }
+  }
+  return DMatrix([elements.length/261, 261], elements);
 }
