@@ -292,10 +292,9 @@ LMM lmm_fit(const LMM lmmobject, N_Individuals N, const ulong ngrids=100,
 
 double negLL(double x, args_params params)
 {
-    LLTuple result = get_LL(params[0], params[1], params[2], params[3],
-      params[4], params[5]);
-
-    return -result.LL;
+  LLTuple result = get_LL(x, params[1], params[2], params[3],
+    params[4], params[5]);
+  return -result.LL;
 }
 
 LMM qtl_fit(const LMM lmmobject, N_Individuals N, const ulong ngrids=100,
