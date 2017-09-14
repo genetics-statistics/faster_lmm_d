@@ -1,6 +1,6 @@
 # Faster_lmm_d
 
-A faster lmm for GWAS. GPU support coming soon.
+A faster lmm for GWAS. It has multi-core and GPU support.
 
 NOTICE: this software is under active development. YMMV.
 
@@ -17,6 +17,19 @@ and pylmm are part of the
 can parse data in
 [R/qtl2 format](http://kbroman.org/qtl2/assets/vignettes/input_files.html)
 as input.
+
+# GPU Support
+
+Faster_lmm_d has two GPU backends:
+
+CUDA backend which helps it directly interact with CUBLAS libraries and runs
+only on Nvidia Hardware. For CUDA backend, Faster_LMM_D uses [cuda_d](https://github.com/prasunanand/cuda_d)
+(The D bindings I wrote for CUDA libraries).
+
+ArrayFire backend which helps it run on all major GPU vendors(Nvidia, Intel, AMD)
+by calling CUDA, CuBLAS, OpenCL, clBLAS libraries using the ArrayFire library.
+For ArrayFire backend, Faster_LMM_D uses [arrayfire-d](https://github.com/arrayfire/arrayfire-d)
+(The D bindings I wrote for ArrayFire library).
 
 # Install
 
