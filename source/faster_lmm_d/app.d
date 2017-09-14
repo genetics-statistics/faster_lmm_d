@@ -196,8 +196,8 @@ void main(string[] args)
     geno_matrix = DMatrix(g.shape.dup, g.elements.dup);
   }
 
-  check_pheno_vector(pheno_vector, option_geno);
-  check_geno_matrix(geno_matrix, option_geno);
+  //check_pheno_vector(pheno_vector, option_geno);
+  //check_geno_matrix(geno_matrix, option_geno);
 
   // ---- Run GWAS
   check_memory("App: run GWAS");
@@ -205,7 +205,7 @@ void main(string[] args)
   immutable m_items m = geno_matrix.n_pheno;
 
   auto tstats = run_gwas(n, m, cast(immutable)pheno_vector, geno_matrix,
-                          covar_matrix, option_geno, option_test_kinship);
+                          covar_matrix, option_geno, option_kinship, option_test_kinship);
   auto p_values = map!"a.p_value"(tstats);
   pretty_print("p_values",p_values.array);
 

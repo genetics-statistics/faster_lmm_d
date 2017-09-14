@@ -116,7 +116,7 @@ auto gwas(immutable double[] Y, const DMatrix G, const DMatrix K, const DMatrix 
 
 auto run_gwas(immutable m_items n, immutable m_items m, immutable double[] y,
                 const DMatrix geno, const DMatrix covar_matrix,
-                const string geno_fn, bool test_kinship = false) {
+                const string geno_fn, const string kinship_fn, bool test_kinship = false) {
 
   trace("run_gwas");
   trace("pheno ", y.length," ", y[0..4]);
@@ -129,11 +129,12 @@ auto run_gwas(immutable m_items n, immutable m_items m, immutable double[] y,
 
   auto geno2 = remove_cols(geno,pheno.keep);
   DMatrix G = normalize_along_row(geno2);
+
   trace("run_other_new genotype_matrix: ", G.shape);
-  DMatrix K = kinship_full(G);
+  DMatrix K = (kinship_fn == "") ?  kinship_full(G) : kinship_from_file(kinship_fn);
   trace("kinship_matrix.shape: ", K.shape);
 
-  if(test_kinship){check_kinship(K, geno_fn);}
+  //if(test_kinship){check_kinship(K, geno_fn);}
 
   return gwas(pheno.Y, G, K, covar_matrix, geno_fn);
 }
