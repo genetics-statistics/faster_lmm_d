@@ -18,6 +18,7 @@ import std.stdio;
 
 import faster_lmm_d.dmatrix;
 import faster_lmm_d.gwas;
+import faster_lmm_d.gemma;
 import faster_lmm_d.helpers : modDiff;
 import faster_lmm_d.kinship;
 import faster_lmm_d.memory;
@@ -68,6 +69,8 @@ void main(string[] args)
   bool option_help = false;
   bool option_test_kinship = false;
   ulong option_pheno_column = 0;
+  ulong option_ni_test = 1;
+  ulong option_ni_ph = 1;
 
   globalLogLevel(LogLevel.warning); //default
   check_memory("App: Start");
@@ -86,6 +89,8 @@ void main(string[] args)
     "cmd", &cmd,
     "logging", &option_logging,
     "test-kinship", &option_test_kinship,
+    "ni_test", &option_ni_test,
+    "ni_ph", &option_ni_ph,
     "help", &option_help
   );
 
@@ -128,6 +133,11 @@ void main(string[] args)
         assert(false); // should never happen
     }
   }
+
+  if(option_kinship != ""){
+    writeln("Running via GEMMA");
+    run_gemma(option_kinship, option_pheno, option_covar, option_geno);
+  }else{
 
   // ---- Control
   JSONValue ctrl;
@@ -270,4 +280,5 @@ void main(string[] args)
   }
   check_memory("Exit");
   //ProfilerStop();
+}
 }
