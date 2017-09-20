@@ -136,6 +136,17 @@ DMatrix slow_multiply_dmatrix(const DMatrix lha, const DMatrix rha) {
   return DMatrix(lha.shape, elements);
 }
 
+DMatrix divide_dmatrix(const DMatrix lha, const DMatrix rha) {
+  assert(lha.rows() == rha.rows());
+  assert(lha.cols() == rha.cols());
+  m_items total_items = lha.size();
+  double[] elements = new double[total_items];
+  foreach(i ,lha_element; lha.elements) {
+    elements[i] = lha_element / rha.elements[i];
+  }
+  return DMatrix(lha.shape, elements);
+}
+
 /*
  * Add a number to all elements
  */
