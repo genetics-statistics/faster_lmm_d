@@ -1193,3 +1193,83 @@ void Calcab(DMatrix W, DMatrix y, DMatrix x, DMatrix ab) {
   return;
 }
 
+// Obtain REML estimate for Vg and Ve using lambda_remle.
+// Obtain beta and se(beta) for coefficients.
+// ab is not used when e_mode==0.
+void CalcLmmVgVeBeta(DMatrix eval, DMatrix UtW,
+                     DMatrix Uty, double lambda, double vg,
+                     double ve, DMatrix beta, DMatrix se_beta) {
+  size_t n_cvt = UtW.shape[1], ni_test = UtW.shape[0];
+  size_t n_index = (n_cvt + 2 + 1) * (n_cvt + 2) / 2;
+
+  DMatrix Uab;
+  Uab.shape = [ni_test, n_index];
+
+  DMatrix ab;
+  ab.shape =[1, n_index];
+
+  DMatrix Pab;
+  Pab.shape = [n_cvt + 2, n_index];
+
+  DMatrix Hi_eval;
+  Hi_eval.shape =[1, eval.shape[1]];
+
+  DMatrix v_temp;
+  v_temp.shape =[1, eval.shape[1]];
+
+  DMatrix HiW;
+  HiW.shape = [eval.shape[1], UtW.shape[1]];
+
+  DMatrix WHiW;
+  WHiW.shape = [UtW.shape[1], UtW.shape[1]];
+
+  DMatrix WHiy;
+  WHiy.shape =[1, UtW.shape[1]];
+
+  DMatrix Vbeta;
+  Vbeta.shape = [UtW.shape[1], UtW.shape[1]];
+
+  //gsl_matrix_set_zero(Uab);
+  CalcUab(UtW, Uty, Uab);
+
+  v_temp.elements = eval.elements;
+  v_temp = multiply_dmatrix_num(v_temp, lambda);
+  //gsl_vector_set_all(Hi_eval, 1.0);
+  v_temp = add_dmatrix_num(v_temp, 1.0);
+  Hi_eval = divide_dmatrix(Hi_eval, v_temp);
+
+  // Calculate beta.
+  HiW.elements = UtW.elements.dup;
+  for (size_t i = 0; i < UtW.shape[1]; i++) {
+    DMatrix HiW_col = get_col(HiW, i);
+    HiW_col = slow_multiply_dmatrix(HiW_col, Hi_eval);
+  }
+  WHiW = matrix_mult(HiW, UtW);
+  WHiy = matrix_mult(HiW, Uty);
+
+  int sig;
+  //gsl_permutation *pmt = gsl_permutation_alloc(UtW.shape[1]);
+  //LUDecomp(WHiW, pmt, &sig);
+  //LUSolve(WHiW, pmt, WHiy, beta);
+  //LUInvert(WHiW, pmt, Vbeta);
+
+  // Calculate vg and ve.
+  CalcPab(n_cvt, 0, Hi_eval, Uab, ab, Pab);
+
+  size_t index_yy = GetabIndex(n_cvt + 2, n_cvt + 2, n_cvt);
+  double P_yy = accessor(Pab, n_cvt, index_yy);
+
+  ve = P_yy / to!double(ni_test - n_cvt);
+  vg = ve * lambda;
+
+  // With ve, calculate se(beta).
+  Vbeta = multiply_dmatrix_num(Vbeta, ve);
+
+  // Obtain se_beta.
+  for (size_t i = 0; i < Vbeta.shape[1]; i++) {
+    se_beta.elements[i] = sqrt(accessor(Vbeta, i, i));
+  }
+
+  //gsl_permutation_free(pmt);
+  return;
+}
