@@ -82,3 +82,215 @@ struct HEADER {
   //set<size_t> catc_col;
   //set<size_t> catd_col;
 };
+
+struct Param{
+  bool mode_check = true;   // run data checks (slower)
+  bool mode_strict = false; // exit on some data checks
+  bool mode_silence;
+  bool mode_debug = false;
+  bool faster_lmm_d = false;
+  uint issue; // enable tests for issue on github tracker
+
+  int a_mode; // Analysis mode, 1/2/3/4 for Frequentist tests
+  int k_mode; // Kinship read mode: 1: n by n matrix, 2: id/id/k_value;
+  //vector<size_t> p_column; // Which phenotype column needs analysis.
+  size_t d_pace;           // Display pace
+
+  string file_bfile, file_mbfile;
+  string file_geno, file_mgeno;
+  string file_pheno;
+  string file_anno; // Optional.
+  string file_gxe;  // Optional.
+  string file_cvt;  // Optional.
+  string file_cat, file_mcat;
+  string file_catc, file_mcatc;
+  string file_var;
+  string file_beta;
+  string file_cor;
+  string file_kin, file_mk;
+  string file_ku, file_kd;
+  string file_study, file_mstudy;
+  string file_ref, file_mref;
+  string file_weight, file_wsnp, file_wcat;
+  string file_out;
+  string file_bf, file_hyp;
+  string path_out;
+
+  string file_epm;     // Estimated parameter file.
+  string file_ebv;     // Estimated breeding value file.
+  string file_log;     // Log file containing mean estimate.
+  string file_read;    // File containing total number of reads.
+  string file_gene;    // Gene expression file.
+  string file_snps;    // File containing analyzed SNPs or genes.
+  string file_ksnps;   // File SNPs for computing K
+  string file_gwasnps; // File SNPs for computing GWAS
+
+  // WJA added.
+  string file_oxford;
+
+  // QC-related parameters.
+  double miss_level;
+  double maf_level;
+  double hwe_level;
+  double r2_level;
+
+  // LMM-related parameters.
+  string loco;
+  double l_min;
+  double l_max;
+  size_t n_region;
+  double l_mle_null, l_remle_null;
+  double logl_mle_H0, logl_remle_H0;
+  double pve_null, pve_se_null, pve_total, se_pve_total;
+  double vg_remle_null, ve_remle_null, vg_mle_null, ve_mle_null;
+  //vector<double> Vg_remle_null, Ve_remle_null, Vg_mle_null, Ve_mle_null;
+  //vector<double> VVg_remle_null, VVe_remle_null, VVg_mle_null;
+  //vector<double> VVe_mle_null;
+  //vector<double> beta_remle_null, se_beta_remle_null, beta_mle_null;
+  //vector<double> se_beta_mle_null;
+  double p_nr;
+  double em_prec, nr_prec;
+  size_t em_iter, nr_iter;
+  size_t crt;
+  double pheno_mean; // Phenotype mean from BSLMM fitting or prediction.
+
+  // For fitting multiple variance components.
+  // The first 3 are of size (n_vc), and the next 2 are of size n_vc+1.
+  bool noconstrain;
+  //vector<double> v_traceG;
+  //vector<double> v_pve;
+  //vector<double> v_se_pve;
+
+  //vector<double> v_sigma2;
+  //vector<double> v_se_sigma2;
+  //vector<double> v_enrich;
+  //vector<double> v_se_enrich;
+  //vector<double> v_beta;
+  //vector<double> v_se_beta;
+
+  // BSLMM/MCMC-related parameters.
+  double h_min, h_max, h_scale;          // Priors for h.
+  double rho_min, rho_max, rho_scale;    // Priors for rho.
+  double logp_min, logp_max, logp_scale; // Priors for log(pi).
+  size_t h_ngrid, rho_ngrid;
+  size_t s_min, s_max; // Min & max. number of gammas.
+  size_t w_step;       // # warm up/burn in iter.
+  size_t s_step;       // # sampling iterations.
+  size_t r_pace;       // Record pace.
+  size_t w_pace;       // Write pace.
+  size_t n_accept;     // Number of acceptance.
+  size_t n_mh;         // # MH steps in each iter.
+  double geo_mean;     // Mean of geometric dist.
+  long int randseed;
+  double trace_G;
+
+  //HYPBSLMM cHyp_initial;  <= Param
+
+  // VARCOV-related parameters.
+  double window_cm;
+  size_t window_bp;
+  size_t window_ns;
+
+  // vc-related parameters.
+  size_t n_block;
+
+  // Summary statistics.
+  bool error;
+
+  // Number of individuals.
+  size_t ni_total, ni_test, ni_cvt, ni_study, ni_ref;
+  size_t ni_max = 0; // -nind switch for testing purposes
+
+  // Number of observed and missing phenotypes.
+  size_t np_obs, np_miss;
+
+  // Number of SNPs.
+  size_t ns_total, ns_test, ns_study, ns_ref;
+
+  size_t ng_total, ng_test;   // Number of genes.
+  size_t ni_control, ni_case; // Number of controls and number of cases.
+  size_t ni_subsample;        // Number of subsampled individuals.
+  size_t n_cvt;               // Number of covariates.
+  size_t n_cat;               // Number of continuous categories.
+  size_t n_ph;                // Number of phenotypes.
+  size_t n_vc;                // Number of variance components
+                              // (including the diagonal matrix).
+  double time_total;          // Record total time.
+  double time_G;              // Time spent on reading files the
+                              // second time and calculate K.
+  double time_eigen;          // Time spent on eigen-decomposition.
+  double time_UtX;            // Time spent on calculating UX and Uy.
+  double time_UtZ;            // Time calculating UtZ for probit BSLMM.
+  double time_opt;            // Time on optimization iterations/MCMC.
+  double time_Omega;          // Time spent on calculating Omega.
+  double time_hyp;            // Time sampling hyperparameters in PMM.
+  double time_Proposal;       // Time spent on constructing the
+                              // proposal distribution (i.e. the
+                              // initial LMM or LM analysis).
+
+  // Data.
+  // Vector recording all phenotypes (NA replaced with -9).
+  DMatrix pheno;
+
+  // Vector recording all covariates (NA replaced with -9).
+  DMatrix cvt;
+
+  // Vector recording all covariates (NA replaced with -9).
+  DMatrix gxe;
+
+  // Vector recording weights for the individuals, which is
+  // useful for animal breeding studies.
+  DMatrix weight;
+
+  // Matrix recording when a phenotype is missing for an
+  // individual; 0 missing, 1 available.
+  DMatrix indicator_pheno;
+
+  // Indicator for individuals (phenotypes): 0 missing, 1
+  // available for analysis
+  DMatrix indicator_idv;
+
+  // Sequence indicator for SNPs: 0 ignored because of (a) maf,
+  // (b) miss, (c) non-poly; 1 available for analysis.
+  DMatrix indicator_snp;
+
+  // Sequence indicator for SNPs: 0 ignored because of (a) maf,
+  // (b) miss, (c) non-poly; 1 available for analysis.
+  DMatrix mindicator_snp;
+
+  // Indicator for covariates: 0 missing, 1 available for
+  // analysis.
+  DMatrix indicator_cvt;
+
+  // Indicator for gxe: 0 missing, 1 available for analysis.
+  DMatrix indicator_gxe;
+
+  // Indicator for weight: 0 missing, 1 available for analysis.
+  DMatrix indicator_weight;
+
+  // Indicator for estimated breeding value file: 0 missing, 1
+  // available for analysis.
+  DMatrix indicator_bv;
+
+  // Indicator for read file: 0 missing, 1 available for analysis.
+  DMatrix indicator_read;
+  DMatrix vec_read; // Total number of reads.
+  DMatrix vec_bv;   // Breeding values.
+  DMatrix est_column;
+
+  //map<string, int> mapID2num;             // Map small ID to number, 0 to n-1.
+  //map<string, string> mapRS2chr;          // Map rs# to chromosome location.
+  //map<string, long int> mapRS2bp;         // Map rs# to base position.
+  //map<string, double> mapRS2cM;           // Map rs# to cM.
+  //map<string, double> mapRS2est;          // Map rs# to parameters.
+  //map<string, size_t> mapRS2cat;          // Map rs# to category number.
+  //map<string, DMatrix> mapRS2catc; // Map rs# to cont. cat's.
+  //map<string, double> mapRS2wsnp;         // Map rs# to SNP weights.
+  //map<string, DMatrix> mapRS2wcat; // Map rs# to SNP cat weights.
+
+  //vector<SNPINFO> snpInfo;          // Record SNP information.
+  //vector<vector<SNPINFO>> msnpInfo; // Record SNP information.
+  //set<string> setSnps;              // Set of snps for analysis (-snps).
+  //set<string> setKSnps;             // Set of snps for K (-ksnps and LOCO)
+  //set<string> setGWASnps;           // Set of snps for GWA (-gwasnps and LOCO)
+}
