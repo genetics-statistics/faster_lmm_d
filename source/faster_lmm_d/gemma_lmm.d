@@ -1273,3 +1273,30 @@ void CalcLmmVgVeBeta(DMatrix eval, DMatrix UtW,
   //gsl_permutation_free(pmt);
   return;
 }
+
+// Obtain REMLE estimate for PVE using lambda_remle.
+void CalcPve(DMatrix eval, DMatrix UtW,
+             DMatrix Uty, double lambda, double trace_G,
+             double pve, double pve_se) {
+  size_t n_cvt = UtW.shape[1], ni_test = UtW.shape[0];
+  size_t n_index = (n_cvt + 2 + 1) * (n_cvt + 2) / 2;
+
+  DMatrix Uab;
+  Uab.shape = [ni_test, n_index];
+  DMatrix ab;
+  ab.shape = [1, n_index];
+
+  //gsl_matrix_set_zero(Uab);
+  CalcUab(UtW, Uty, Uab);
+
+  loglikeparam param0;
+  //loglikeparam(true, ni_test, n_cvt, eval, Uab, ab, 0);
+  //write constructor
+
+  double se = sqrt(-1.0 / LogRL_dev2(lambda, &param0));
+
+  pve = trace_G * lambda / (trace_G * lambda + 1.0);
+  pve_se = trace_G / ((trace_G * lambda + 1.0) * (trace_G * lambda + 1.0)) * se;
+
+  return;
+}
