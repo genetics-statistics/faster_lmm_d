@@ -21,6 +21,8 @@ import std.process;
 import std.string;
 
 import faster_lmm_d.dmatrix;
+import faster_lmm_d.gemma_lmm;
+import faster_lmm_d.gemma_param;
 import faster_lmm_d.kinship;
 import faster_lmm_d.lmm2;
 import faster_lmm_d.memory;
@@ -144,4 +146,1348 @@ void run_gemma(string option_kinship, string option_pheno, string option_covar, 
 
   writeln(tsps);
 
+}
+
+
+void batch_run(Param cPar){
+
+  // Read Files.
+  cout << "Reading Files ... " << endl;
+  cPar.ReadFiles();
+  if (cPar.error == true) {
+    cout << "error! fail to read files. " << endl;
+    return;
+  }
+  cPar.CheckData();
+  if (cPar.error == true) {
+    cout << "error! fail to check data. " << endl;
+    return;
+  }
+
+  // Prediction for bslmm
+  if (cPar.a_mode == 41 || cPar.a_mode == 42) {
+    gsl_vector *y_prdt;
+
+    y_prdt = gsl_vector_alloc(cPar.ni_total - cPar.ni_test);
+
+    // set to zero
+    gsl_vector_set_zero(y_prdt);
+
+    PRDT cPRDT;
+    cPRDT.CopyFromParam(cPar);
+
+    // add breeding value if needed
+    if (!cPar.file_kin.empty() && !cPar.file_ebv.empty()) {
+      cout << "Adding Breeding Values ... " << endl;
+
+      gsl_matrix *G = gsl_matrix_alloc(cPar.ni_total, cPar.ni_total);
+      gsl_vector *u_hat = gsl_vector_alloc(cPar.ni_test);
+
+      // read kinship matrix and set u_hat
+      vector<int> indicator_all;
+      size_t c_bv = 0;
+      for (size_t i = 0; i < cPar.indicator_idv.size(); i++) {
+        indicator_all.push_back(1);
+        if (cPar.indicator_bv[i] == 1) {
+          gsl_vector_set(u_hat, c_bv, cPar.vec_bv[i]);
+          c_bv++;
+        }
+      }
+
+      ReadFile_kin(cPar.file_kin, indicator_all, cPar.mapID2num, cPar.k_mode,
+                   cPar.error, G);
+      if (cPar.error == true) {
+        cout << "error! fail to read kinship/relatedness file. " << endl;
+        return;
+      }
+
+      // read u
+      cPRDT.AddBV(G, u_hat, y_prdt);
+
+    }
+
+    // add beta
+    if (!cPar.file_bfile.empty()) {
+      cPRDT.AnalyzePlink(y_prdt);
+    } else {
+      cPRDT.AnalyzeBimbam(y_prdt);
+    }
+
+    // add mu
+    gsl_vector_add_constant(y_prdt, cPar.pheno_mean);
+
+    // convert y to probability if needed
+    if (cPar.a_mode == 42) {
+      double d;
+      for (size_t i = 0; i < y_prdt->size; i++) {
+        d = gsl_vector_get(y_prdt, i);
+        d = gsl_cdf_gaussian_P(d, 1.0);
+        gsl_vector_set(y_prdt, i, d);
+      }
+    }
+
+    cPRDT.CopyToParam(cPar);
+
+    cPRDT.WriteFiles(y_prdt);
+
+    gsl_vector_free(y_prdt);
+  }
+
+  // Prediction with kinship matrix only; for one or more phenotypes
+  if (cPar.a_mode == 43) {
+    // first, use individuals with full phenotypes to obtain estimates of Vg and
+    // Ve
+    gsl_matrix *Y = gsl_matrix_alloc(cPar.ni_test, cPar.n_ph);
+    gsl_matrix *W = gsl_matrix_alloc(Y->size1, cPar.n_cvt);
+    gsl_matrix *G = gsl_matrix_alloc(Y->size1, Y->size1);
+    gsl_matrix *U = gsl_matrix_alloc(Y->size1, Y->size1);
+    gsl_matrix *UtW = gsl_matrix_alloc(Y->size1, W->size2);
+    gsl_matrix *UtY = gsl_matrix_alloc(Y->size1, Y->size2);
+    gsl_vector *eval = gsl_vector_alloc(Y->size1);
+
+    gsl_matrix *Y_full = gsl_matrix_alloc(cPar.ni_cvt, cPar.n_ph);
+    gsl_matrix *W_full = gsl_matrix_alloc(Y_full->size1, cPar.n_cvt);
+
+    // set covariates matrix W and phenotype matrix Y
+    // an intercept should be included in W,
+    cPar.CopyCvtPhen(W, Y, 0);
+    cPar.CopyCvtPhen(W_full, Y_full, 1);
+
+    gsl_matrix *Y_hat = gsl_matrix_alloc(Y_full->size1, cPar.n_ph);
+    gsl_matrix *G_full = gsl_matrix_alloc(Y_full->size1, Y_full->size1);
+    gsl_matrix *H_full = gsl_matrix_alloc(Y_full->size1 * Y_hat->size2,
+                                          Y_full->size1 * Y_hat->size2);
+
+    // read relatedness matrix G, and matrix G_full
+    ReadFile_kin(cPar.file_kin, cPar.indicator_idv, cPar.mapID2num, cPar.k_mode,
+                 cPar.error, G);
+    if (cPar.error == true) {
+      cout << "error! fail to read kinship/relatedness file. " << endl;
+      return;
+    }
+    // This is not so elegant. Reads twice to select on idv and then cvt
+    ReadFile_kin(cPar.file_kin, cPar.indicator_cvt, cPar.mapID2num, cPar.k_mode,
+                 cPar.error, G_full);
+    if (cPar.error == true) {
+      cout << "error! fail to read kinship/relatedness file. " << endl;
+      return;
+    }
+
+    // center matrix G
+    CenterMatrix(G);
+    CenterMatrix(G_full);
+    validate_K(G,cPar.mode_check,cPar.mode_strict);
+
+    // eigen-decomposition and calculate trace_G
+    cout << "Start Eigen-Decomposition..." << endl;
+    cPar.trace_G = EigenDecomp_Zeroed(G, U, eval, 0);
+
+    // calculate UtW and Uty
+    CalcUtX(U, W, UtW);
+    CalcUtX(U, Y, UtY);
+
+    // calculate variance component and beta estimates
+    // and then obtain predicted values
+    if (cPar.n_ph == 1) {
+      gsl_vector *beta = gsl_vector_alloc(W->size2);
+      gsl_vector *se_beta = gsl_vector_alloc(W->size2);
+
+      double lambda, logl, vg, ve;
+      gsl_vector_view UtY_col = gsl_matrix_column(UtY, 0);
+
+      // obtain estimates
+      CalcLambda('R', eval, UtW, &UtY_col.vector, cPar.l_min, cPar.l_max,
+                 cPar.n_region, lambda, logl);
+      CalcLmmVgVeBeta(eval, UtW, &UtY_col.vector, lambda, vg, ve, beta,
+                      se_beta);
+
+      cout << "REMLE estimate for vg in the null model = " << vg << endl;
+      cout << "REMLE estimate for ve in the null model = " << ve << endl;
+      cPar.vg_remle_null = vg;
+      cPar.ve_remle_null = ve;
+
+      // obtain Y_hat from fixed effects
+      gsl_vector_view Yhat_col = gsl_matrix_column(Y_hat, 0);
+      gsl_blas_dgemv(CblasNoTrans, 1.0, W_full, beta, 0.0, &Yhat_col.vector);
+
+      // obtain H
+      gsl_matrix_set_identity(H_full);
+      gsl_matrix_scale(H_full, ve);
+      gsl_matrix_scale(G_full, vg);
+      gsl_matrix_add(H_full, G_full);
+
+      // free matrices
+    } else {
+      gsl_matrix *Vg = gsl_matrix_alloc(cPar.n_ph, cPar.n_ph);
+      gsl_matrix *Ve = gsl_matrix_alloc(cPar.n_ph, cPar.n_ph);
+      gsl_matrix *B = gsl_matrix_alloc(cPar.n_ph, W->size2);
+      gsl_matrix *se_B = gsl_matrix_alloc(cPar.n_ph, W->size2);
+
+      // obtain estimates
+      CalcMvLmmVgVeBeta(eval, UtW, UtY, cPar.em_iter, cPar.nr_iter,
+                        cPar.em_prec, cPar.nr_prec, cPar.l_min, cPar.l_max,
+                        cPar.n_region, Vg, Ve, B, se_B);
+
+      cout << "REMLE estimate for Vg in the null model: " << endl;
+      for (size_t i = 0; i < Vg->size1; i++) {
+        for (size_t j = 0; j <= i; j++) {
+          cout << tab(j) << gsl_matrix_get(Vg, i, j);
+        }
+        cout << endl;
+      }
+      cout << "REMLE estimate for Ve in the null model: " << endl;
+      for (size_t i = 0; i < Ve->size1; i++) {
+        for (size_t j = 0; j <= i; j++) {
+          cout << tab(j) << gsl_matrix_get(Ve, i, j);
+        }
+        cout << endl;
+      }
+      cPar.Vg_remle_null.clear();
+      cPar.Ve_remle_null.clear();
+      for (size_t i = 0; i < Vg->size1; i++) {
+        for (size_t j = i; j < Vg->size2; j++) {
+          cPar.Vg_remle_null.push_back(gsl_matrix_get(Vg, i, j));
+          cPar.Ve_remle_null.push_back(gsl_matrix_get(Ve, i, j));
+        }
+      }
+
+      // obtain Y_hat from fixed effects
+      gsl_blas_dgemm(CblasNoTrans, CblasTrans, 1.0, W_full, B, 0.0, Y_hat);
+
+      // obtain H
+      KroneckerSym(G_full, Vg, H_full);
+      for (size_t i = 0; i < G_full->size1; i++) {
+        gsl_matrix_view H_sub = gsl_matrix_submatrix(
+            H_full, i * Ve->size1, i * Ve->size2, Ve->size1, Ve->size2);
+        gsl_matrix_add(&H_sub.matrix, Ve);
+      }
+
+      // free matrices
+    }
+
+    PRDT cPRDT;
+
+    cPRDT.CopyFromParam(cPar);
+
+    cout << "Predicting Missing Phentypes ... " << endl;
+    cPRDT.MvnormPrdt(Y_hat, H_full, Y_full);
+
+    cPRDT.WriteFiles(Y_full);
+
+  }
+
+  // Generate Kinship matrix (optionally using LOCO)
+  if (cPar.a_mode == 21 || cPar.a_mode == 22) {
+    cout << "Calculating Relatedness Matrix ... " << endl;
+
+    gsl_matrix *G = gsl_matrix_alloc(cPar.ni_total, cPar.ni_total);
+    enforce_msg(G, "allocate G"); // just to be sure
+
+    cPar.CalcKin(G);
+
+    if (cPar.error == true) {
+      cout << "error! fail to calculate relatedness matrix. " << endl;
+      return;
+    }
+
+    // Now we have the Kinship matrix test it
+    validate_K(G,cPar.mode_check,cPar.mode_strict);
+
+    if (cPar.a_mode == 21) {
+      cPar.WriteMatrix(G, "cXX");
+    } else {
+      cPar.WriteMatrix(G, "sXX");
+    }
+
+    gsl_matrix_free(G);
+  }
+
+  // Compute the LDSC weights (not implemented yet)
+  if (cPar.a_mode == 72) {
+    cout << "Calculating Weights ... " << endl;
+
+    VARCOV cVarcov;
+    cVarcov.CopyFromParam(cPar);
+
+    if (!cPar.file_bfile.empty()) {
+      cVarcov.AnalyzePlink();
+    } else {
+      cVarcov.AnalyzeBimbam();
+    }
+
+    cVarcov.CopyToParam(cPar);
+  }
+
+  // Compute the S matrix (and its variance), that is used for
+  // variance component estimation using summary statistics.
+  if (cPar.a_mode == 25 || cPar.a_mode == 26) {
+    cout << "Calculating the S Matrix ... " << endl;
+
+    gsl_matrix *S = gsl_matrix_alloc(cPar.n_vc * 2, cPar.n_vc);
+    gsl_vector *ns = gsl_vector_alloc(cPar.n_vc + 1);
+    gsl_matrix_set_zero(S);
+    gsl_vector_set_zero(ns);
+
+    gsl_matrix_view S_mat = gsl_matrix_submatrix(S, 0, 0, cPar.n_vc, cPar.n_vc);
+    gsl_matrix_view Svar_mat =
+        gsl_matrix_submatrix(S, cPar.n_vc, 0, cPar.n_vc, cPar.n_vc);
+    gsl_vector_view ns_vec = gsl_vector_subvector(ns, 0, cPar.n_vc);
+
+    gsl_matrix *K = gsl_matrix_alloc(cPar.ni_test, cPar.n_vc * cPar.ni_test);
+    gsl_matrix *A = gsl_matrix_alloc(cPar.ni_test, cPar.n_vc * cPar.ni_test);
+    gsl_matrix_set_zero(K);
+    gsl_matrix_set_zero(A);
+
+    gsl_vector *y = gsl_vector_alloc(cPar.ni_test);
+    gsl_matrix *W = gsl_matrix_alloc(cPar.ni_test, cPar.n_cvt);
+
+    cPar.CopyCvtPhen(W, y, 0);
+
+    set<string> setSnps_beta;
+    map<string, double> mapRS2wA, mapRS2wK;
+
+    cPar.ObtainWeight(setSnps_beta, mapRS2wK);
+
+    cPar.CalcS(mapRS2wA, mapRS2wK, W, A, K, &S_mat.matrix, &Svar_mat.matrix,
+               &ns_vec.vector);
+    if (cPar.error == true) {
+      cout << "error! fail to calculate the S matrix. " << endl;
+      return;
+    }
+
+    gsl_vector_set(ns, cPar.n_vc, cPar.ni_test);
+
+    cPar.WriteMatrix(S, "S");
+    cPar.WriteVector(ns, "size");
+    cPar.WriteVar("snps");
+
+  }
+
+  // Compute the q vector, that is used for variance component estimation using
+  // summary statistics
+  if (cPar.a_mode == 27 || cPar.a_mode == 28) {
+    gsl_matrix *Vq = gsl_matrix_alloc(cPar.n_vc, cPar.n_vc);
+    gsl_vector *q = gsl_vector_alloc(cPar.n_vc);
+    gsl_vector *s = gsl_vector_alloc(cPar.n_vc + 1);
+    gsl_vector_set_zero(q);
+    gsl_vector_set_zero(s);
+
+    gsl_vector_view s_vec = gsl_vector_subvector(s, 0, cPar.n_vc);
+
+    vector<size_t> vec_cat, vec_ni;
+    vector<double> vec_weight, vec_z2;
+    map<string, double> mapRS2weight;
+    mapRS2weight.clear();
+
+    time_start = clock();
+    ReadFile_beta(cPar.file_beta, cPar.mapRS2cat, mapRS2weight, vec_cat, vec_ni,
+                  vec_weight, vec_z2, cPar.ni_total, cPar.ns_total,
+                  cPar.ns_test);
+    cout << "## number of total individuals = " << cPar.ni_total << endl;
+    cout << "## number of total SNPs = " << cPar.ns_total << endl;
+    cout << "## number of analyzed SNPs = " << cPar.ns_test << endl;
+    cout << "## number of variance components = " << cPar.n_vc << endl;
+    cout << "Calculating the q vector ... " << endl;
+    Calcq(cPar.n_block, vec_cat, vec_ni, vec_weight, vec_z2, Vq, q,
+          &s_vec.vector);
+
+    if (cPar.error == true) {
+      cout << "error! fail to calculate the q vector. " << endl;
+      return;
+    }
+
+    gsl_vector_set(s, cPar.n_vc, cPar.ni_total);
+
+    cPar.WriteMatrix(Vq, "Vq");
+    cPar.WriteVector(q, "q");
+    cPar.WriteVector(s, "size");
+  }
+
+  // Calculate SNP covariance.
+  if (cPar.a_mode == 71) {
+    VARCOV cVarcov;
+    cVarcov.CopyFromParam(cPar);
+
+    if (!cPar.file_bfile.empty()) {
+      cVarcov.AnalyzePlink();
+    } else {
+      cVarcov.AnalyzeBimbam();
+    }
+
+    cVarcov.CopyToParam(cPar);
+  }
+
+  // LM.
+  if (cPar.a_mode == 51 || cPar.a_mode == 52 || cPar.a_mode == 53 ||
+      cPar.a_mode == 54) { // Fit LM
+    gsl_matrix *Y = gsl_matrix_alloc(cPar.ni_test, cPar.n_ph);
+    gsl_matrix *W = gsl_matrix_alloc(Y->size1, cPar.n_cvt);
+
+    // set covariates matrix W and phenotype matrix Y
+    // an intercept should be included in W,
+    cPar.CopyCvtPhen(W, Y, 0);
+
+    // Fit LM or mvLM
+    if (cPar.n_ph == 1) {
+      LM cLm;
+      cLm.CopyFromParam(cPar);
+
+      gsl_vector_view Y_col = gsl_matrix_column(Y, 0);
+
+      if (!cPar.file_gene.empty()) {
+        cLm.AnalyzeGene(W,
+                        &Y_col.vector); // y is the predictor, not the phenotype
+      } else if (!cPar.file_bfile.empty()) {
+        cLm.AnalyzePlink(W, &Y_col.vector);
+      } else if (!cPar.file_oxford.empty()) {
+        cLm.Analyzebgen(W, &Y_col.vector);
+      } else {
+        cLm.AnalyzeBimbam(W, &Y_col.vector);
+      }
+
+      cLm.WriteFiles();
+      cLm.CopyToParam(cPar);
+    }
+    // release all matrices and vectors
+  }
+
+  // VC estimation with one or multiple kinship matrices
+  // REML approach only
+  // if file_kin or file_ku/kd is provided, then a_mode is changed to 5 already,
+  // in param.cpp
+  // for one phenotype only;
+  if (cPar.a_mode == 61 || cPar.a_mode == 62 || cPar.a_mode == 63) {
+    if (!cPar.file_beta.empty()) {
+      // need to obtain a common set of SNPs between beta file and the genotype
+      // file; these are saved in mapRS2wA and mapRS2wK
+      // normalize the weight in mapRS2wK to have an average of one; each
+      // element of mapRS2wA is 1
+      // update indicator_snps, so that the numbers are in accordance with
+      // mapRS2wK
+      set<string> setSnps_beta;
+      ReadFile_snps_header(cPar.file_beta, setSnps_beta);
+
+      map<string, double> mapRS2wA, mapRS2wK;
+      cPar.ObtainWeight(setSnps_beta, mapRS2wK);
+
+      cPar.UpdateSNP(mapRS2wK);
+
+      // Setup matrices and vectors.
+      gsl_matrix *S = gsl_matrix_alloc(cPar.n_vc * 2, cPar.n_vc);
+      gsl_matrix *Vq = gsl_matrix_alloc(cPar.n_vc, cPar.n_vc);
+      gsl_vector *q = gsl_vector_alloc(cPar.n_vc);
+      gsl_vector *s = gsl_vector_alloc(cPar.n_vc + 1);
+
+      gsl_matrix *K = gsl_matrix_alloc(cPar.ni_test, cPar.n_vc * cPar.ni_test);
+      gsl_matrix *A = gsl_matrix_alloc(cPar.ni_test, cPar.n_vc * cPar.ni_test);
+
+      gsl_vector *y = gsl_vector_alloc(cPar.ni_test);
+      gsl_matrix *W = gsl_matrix_alloc(cPar.ni_test, cPar.n_cvt);
+
+      gsl_matrix_set_zero(K);
+      gsl_matrix_set_zero(A);
+
+      gsl_matrix_set_zero(S);
+      gsl_matrix_set_zero(Vq);
+      gsl_vector_set_zero(q);
+      gsl_vector_set_zero(s);
+
+      cPar.CopyCvtPhen(W, y, 0);
+
+      gsl_matrix_view S_mat =
+          gsl_matrix_submatrix(S, 0, 0, cPar.n_vc, cPar.n_vc);
+      gsl_matrix_view Svar_mat =
+          gsl_matrix_submatrix(S, cPar.n_vc, 0, cPar.n_vc, cPar.n_vc);
+      gsl_vector_view s_vec = gsl_vector_subvector(s, 0, cPar.n_vc);
+
+      vector<size_t> vec_cat, vec_ni;
+      vector<double> vec_weight, vec_z2;
+
+      // read beta, based on the mapRS2wK
+      ReadFile_beta(cPar.file_beta, cPar.mapRS2cat, mapRS2wK, vec_cat, vec_ni,
+                    vec_weight, vec_z2, cPar.ni_study, cPar.ns_study,
+                    cPar.ns_test);
+
+      cout << "Study Panel: " << endl;
+      cout << "## number of total individuals = " << cPar.ni_study << endl;
+      cout << "## number of total SNPs = " << cPar.ns_study << endl;
+      cout << "## number of analyzed SNPs = " << cPar.ns_test << endl;
+      cout << "## number of variance components = " << cPar.n_vc << endl;
+
+      // compute q
+      Calcq(cPar.n_block, vec_cat, vec_ni, vec_weight, vec_z2, Vq, q,
+            &s_vec.vector);
+
+      // compute S
+      cPar.CalcS(mapRS2wA, mapRS2wK, W, A, K, &S_mat.matrix, &Svar_mat.matrix,
+                 &s_vec.vector);
+      cPar.time_G += (clock() - time_start) / (double(CLOCKS_PER_SEC) * 60.0);
+      if (cPar.error == true) {
+        cout << "error! fail to calculate the S matrix. " << endl;
+        return;
+      }
+
+      // compute vc estimates
+      CalcVCss(Vq, &S_mat.matrix, &Svar_mat.matrix, q, &s_vec.vector,
+               cPar.ni_study, cPar.v_pve, cPar.v_se_pve, cPar.pve_total,
+               cPar.se_pve_total, cPar.v_sigma2, cPar.v_se_sigma2,
+               cPar.v_enrich, cPar.v_se_enrich);
+
+      assert(!has_nan(cPar.v_se_pve));
+
+      // if LDSC weights, then compute the weights and run the above steps again
+      if (cPar.a_mode == 62) {
+        // compute the weights and normalize the weights for A
+        cPar.UpdateWeight(1, mapRS2wK, cPar.ni_study, &s_vec.vector, mapRS2wA);
+
+        // read beta file again, and update weigths vector
+        ReadFile_beta(cPar.file_beta, cPar.mapRS2cat, mapRS2wA, vec_cat, vec_ni,
+                      vec_weight, vec_z2, cPar.ni_study, cPar.ns_total,
+                      cPar.ns_test);
+
+        // compute q
+        Calcq(cPar.n_block, vec_cat, vec_ni, vec_weight, vec_z2, Vq, q,
+              &s_vec.vector);
+
+        // compute S
+        cPar.CalcS(mapRS2wA, mapRS2wK, W, A, K, &S_mat.matrix, &Svar_mat.matrix,
+                   &s_vec.vector);
+        cPar.time_G += (clock() - time_start) / (double(CLOCKS_PER_SEC) * 60.0);
+        if (cPar.error == true) {
+          cout << "error! fail to calculate the S matrix. " << endl;
+          return;
+        }
+
+        // compute vc estimates
+        CalcVCss(Vq, &S_mat.matrix, &Svar_mat.matrix, q, &s_vec.vector,
+                 cPar.ni_study, cPar.v_pve, cPar.v_se_pve, cPar.pve_total,
+                 cPar.se_pve_total, cPar.v_sigma2, cPar.v_se_sigma2,
+                 cPar.v_enrich, cPar.v_se_enrich);
+        assert(!has_nan(cPar.v_se_pve));
+      }
+
+
+      gsl_vector_set(s, cPar.n_vc, cPar.ni_test);
+
+      cPar.WriteMatrix(S, "S");
+      cPar.WriteMatrix(Vq, "Vq");
+      cPar.WriteVector(q, "q");
+      cPar.WriteVector(s, "size");
+
+    } else if (!cPar.file_study.empty() || !cPar.file_mstudy.empty()) {
+      if (!cPar.file_study.empty()) {
+        string sfile = cPar.file_study + ".size.txt";
+        CountFileLines(sfile, cPar.n_vc);
+      } else {
+        string file_name;
+        igzstream infile(cPar.file_mstudy.c_str(), igzstream::in);
+        if (!infile) {
+          cout << "error! fail to open mstudy file: " << cPar.file_study
+               << endl;
+          return;
+        }
+
+        safeGetline(infile, file_name);
+
+        infile.clear();
+        infile.close();
+
+        string sfile = file_name + ".size.txt";
+        CountFileLines(sfile, cPar.n_vc);
+      }
+
+      cPar.n_vc = cPar.n_vc - 1;
+
+      gsl_matrix *S = gsl_matrix_alloc(2 * cPar.n_vc, cPar.n_vc);
+      gsl_matrix *Vq = gsl_matrix_alloc(cPar.n_vc, cPar.n_vc);
+      // gsl_matrix *V=gsl_matrix_alloc (cPar.n_vc+1,
+      // (cPar.n_vc*(cPar.n_vc+1))/2*(cPar.n_vc+1) );
+      // gsl_matrix *Vslope=gsl_matrix_alloc (n_lines+1,
+      // (n_lines*(n_lines+1))/2*(n_lines+1) );
+      gsl_vector *q = gsl_vector_alloc(cPar.n_vc);
+      gsl_vector *s_study = gsl_vector_alloc(cPar.n_vc);
+      gsl_vector *s_ref = gsl_vector_alloc(cPar.n_vc);
+      gsl_vector *s = gsl_vector_alloc(cPar.n_vc + 1);
+
+      gsl_matrix_set_zero(S);
+      gsl_matrix_view S_mat =
+          gsl_matrix_submatrix(S, 0, 0, cPar.n_vc, cPar.n_vc);
+      gsl_matrix_view Svar_mat =
+          gsl_matrix_submatrix(S, cPar.n_vc, 0, cPar.n_vc, cPar.n_vc);
+
+      gsl_matrix_set_zero(Vq);
+      // gsl_matrix_set_zero(V);
+      // gsl_matrix_set_zero(Vslope);
+      gsl_vector_set_zero(q);
+      gsl_vector_set_zero(s_study);
+      gsl_vector_set_zero(s_ref);
+
+      if (!cPar.file_study.empty()) {
+        ReadFile_study(cPar.file_study, Vq, q, s_study, cPar.ni_study);
+      } else {
+        ReadFile_mstudy(cPar.file_mstudy, Vq, q, s_study, cPar.ni_study);
+      }
+
+      if (!cPar.file_ref.empty()) {
+        ReadFile_ref(cPar.file_ref, &S_mat.matrix, &Svar_mat.matrix, s_ref,
+                     cPar.ni_ref);
+      } else {
+        ReadFile_mref(cPar.file_mref, &S_mat.matrix, &Svar_mat.matrix, s_ref,
+                      cPar.ni_ref);
+      }
+
+      cout << "## number of variance components = " << cPar.n_vc << endl;
+      cout << "## number of individuals in the sample = " << cPar.ni_study
+           << endl;
+      cout << "## number of individuals in the reference = " << cPar.ni_ref
+           << endl;
+
+      CalcVCss(Vq, &S_mat.matrix, &Svar_mat.matrix, q, s_study, cPar.ni_study,
+               cPar.v_pve, cPar.v_se_pve, cPar.pve_total, cPar.se_pve_total,
+               cPar.v_sigma2, cPar.v_se_sigma2, cPar.v_enrich,
+               cPar.v_se_enrich);
+      assert(!has_nan(cPar.v_se_pve));
+
+      gsl_vector_view s_sub = gsl_vector_subvector(s, 0, cPar.n_vc);
+      gsl_vector_memcpy(&s_sub.vector, s_ref);
+      gsl_vector_set(s, cPar.n_vc, cPar.ni_ref);
+
+      cPar.WriteMatrix(S, "S");
+      cPar.WriteMatrix(Vq, "Vq");
+      cPar.WriteVector(q, "q");
+      cPar.WriteVector(s, "size");
+
+    } else {
+      gsl_matrix *Y = gsl_matrix_alloc(cPar.ni_test, cPar.n_ph);
+      gsl_matrix *W = gsl_matrix_alloc(Y->size1, cPar.n_cvt);
+      gsl_matrix *G = gsl_matrix_alloc(Y->size1, Y->size1 * cPar.n_vc);
+
+      // set covariates matrix W and phenotype matrix Y
+      // an intercept should be included in W,
+      cPar.CopyCvtPhen(W, Y, 0);
+
+      // read kinship matrices
+      if (!(cPar.file_mk).empty()) {
+        ReadFile_mk(cPar.file_mk, cPar.indicator_idv, cPar.mapID2num,
+                    cPar.k_mode, cPar.error, G);
+        if (cPar.error == true) {
+          cout << "error! fail to read kinship/relatedness file. " << endl;
+          return;
+        }
+
+        // center matrix G, and obtain v_traceG
+        double d = 0;
+        (cPar.v_traceG).clear();
+        for (size_t i = 0; i < cPar.n_vc; i++) {
+          gsl_matrix_view G_sub =
+              gsl_matrix_submatrix(G, 0, i * G->size1, G->size1, G->size1);
+          CenterMatrix(&G_sub.matrix);
+          d = 0;
+          for (size_t j = 0; j < G->size1; j++) {
+            d += gsl_matrix_get(&G_sub.matrix, j, j);
+          }
+          d /= (double)G->size1;
+          (cPar.v_traceG).push_back(d);
+        }
+      } else if (!(cPar.file_kin).empty()) {
+        ReadFile_kin(cPar.file_kin, cPar.indicator_idv, cPar.mapID2num,
+                     cPar.k_mode, cPar.error, G);
+        if (cPar.error == true) {
+          cout << "error! fail to read kinship/relatedness file. " << endl;
+          return;
+        }
+
+        // center matrix G
+        CenterMatrix(G);
+        validate_K(G,cPar.mode_check,cPar.mode_strict);
+
+        (cPar.v_traceG).clear();
+        double d = 0;
+        for (size_t j = 0; j < G->size1; j++) {
+          d += gsl_matrix_get(G, j, j);
+        }
+        d /= (double)G->size1;
+        (cPar.v_traceG).push_back(d);
+      }
+      // fit multiple variance components
+      if (cPar.n_ph == 1) {
+        //      if (cPar.n_vc==1) {
+        //      } else {
+        gsl_vector_view Y_col = gsl_matrix_column(Y, 0);
+        VC cVc;
+        cVc.CopyFromParam(cPar);
+        if (cPar.a_mode == 61) {
+          cVc.CalcVChe(G, W, &Y_col.vector);
+        } else if (cPar.a_mode == 62) {
+          cVc.CalcVCreml(cPar.noconstrain, G, W, &Y_col.vector);
+        } else {
+          cVc.CalcVCacl(G, W, &Y_col.vector);
+        }
+        cVc.CopyToParam(cPar);
+        // obtain pve from sigma2
+        // obtain se_pve from se_sigma2
+
+        //}
+      }
+    }
+  }
+
+  // compute confidence intervals with additional summary statistics
+  // we do not check the sign of z-scores here, but they have to be matched with
+  // the genotypes
+  if (cPar.a_mode == 66 || cPar.a_mode == 67) {
+    // read reference file first
+    gsl_matrix *S = gsl_matrix_alloc(cPar.n_vc, cPar.n_vc);
+    gsl_matrix *Svar = gsl_matrix_alloc(cPar.n_vc, cPar.n_vc);
+    gsl_vector *s_ref = gsl_vector_alloc(cPar.n_vc);
+
+    gsl_matrix_set_zero(S);
+    gsl_matrix_set_zero(Svar);
+    gsl_vector_set_zero(s_ref);
+
+    if (!cPar.file_ref.empty()) {
+      ReadFile_ref(cPar.file_ref, S, Svar, s_ref, cPar.ni_ref);
+    } else {
+      ReadFile_mref(cPar.file_mref, S, Svar, s_ref, cPar.ni_ref);
+    }
+
+    // need to obtain a common set of SNPs between beta file and the genotype
+    // file; these are saved in mapRS2wA and mapRS2wK
+    // normalize the weight in mapRS2wK to have an average of one; each element
+    // of mapRS2wA is 1
+    set<string> setSnps_beta;
+    ReadFile_snps_header(cPar.file_beta, setSnps_beta);
+
+    // obtain the weights for wA, which contains the SNP weights for SNPs used
+    // in the model
+    map<string, double> mapRS2wK;
+    cPar.ObtainWeight(setSnps_beta, mapRS2wK);
+
+    // set up matrices and vector
+    gsl_matrix *Xz = gsl_matrix_alloc(cPar.ni_test, cPar.n_vc);
+    gsl_matrix *XWz = gsl_matrix_alloc(cPar.ni_test, cPar.n_vc);
+    gsl_matrix *XtXWz =
+        gsl_matrix_alloc(mapRS2wK.size(), cPar.n_vc * cPar.n_vc);
+    gsl_vector *w = gsl_vector_alloc(mapRS2wK.size());
+    gsl_vector *w1 = gsl_vector_alloc(mapRS2wK.size());
+    gsl_vector *z = gsl_vector_alloc(mapRS2wK.size());
+    gsl_vector *s_vec = gsl_vector_alloc(cPar.n_vc);
+
+    vector<size_t> vec_cat, vec_size;
+    vector<double> vec_z;
+
+    map<string, double> mapRS2z, mapRS2wA;
+    map<string, string> mapRS2A1;
+    string file_str;
+
+    // update s_vec, the number of snps in each category
+    for (size_t i = 0; i < cPar.n_vc; i++) {
+      vec_size.push_back(0);
+    }
+
+    for (map<string, double>::const_iterator it = mapRS2wK.begin();
+         it != mapRS2wK.end(); ++it) {
+      vec_size[cPar.mapRS2cat[it->first]]++;
+    }
+
+    for (size_t i = 0; i < cPar.n_vc; i++) {
+      gsl_vector_set(s_vec, i, vec_size[i]);
+    }
+
+    // update mapRS2wA using v_pve and s_vec
+    if (cPar.a_mode == 66) {
+      for (map<string, double>::const_iterator it = mapRS2wK.begin();
+           it != mapRS2wK.end(); ++it) {
+        mapRS2wA[it->first] = 1;
+      }
+    } else {
+      cPar.UpdateWeight(0, mapRS2wK, cPar.ni_test, s_vec, mapRS2wA);
+    }
+
+    // read in z-scores based on allele 0, and save that into a vector
+    ReadFile_beta(cPar.file_beta, mapRS2wA, mapRS2A1, mapRS2z);
+
+    // update snp indicator, save weights to w, save z-scores to vec_z, save
+    // category label to vec_cat
+    // sign of z is determined by matching alleles
+    cPar.UpdateSNPnZ(mapRS2wA, mapRS2A1, mapRS2z, w, z, vec_cat);
+
+    // compute an n by k matrix of X_iWz
+    cout << "Calculating Xz ... " << endl;
+
+    gsl_matrix_set_zero(Xz);
+    gsl_vector_set_all(w1, 1);
+
+    if (!cPar.file_bfile.empty()) {
+      file_str = cPar.file_bfile + ".bed";
+      PlinkXwz(file_str, cPar.d_pace, cPar.indicator_idv, cPar.indicator_snp,
+               vec_cat, w1, z, 0, Xz);
+    } else if (!cPar.file_geno.empty()) {
+      BimbamXwz(cPar.file_geno, cPar.d_pace, cPar.indicator_idv,
+                cPar.indicator_snp, vec_cat, w1, z, 0, Xz);
+    } else if (!cPar.file_mbfile.empty()) {
+      MFILEXwz(1, cPar.file_mbfile, cPar.d_pace, cPar.indicator_idv,
+               cPar.mindicator_snp, vec_cat, w1, z, Xz);
+    } else if (!cPar.file_mgeno.empty()) {
+      MFILEXwz(0, cPar.file_mgeno, cPar.d_pace, cPar.indicator_idv,
+               cPar.mindicator_snp, vec_cat, w1, z, Xz);
+    }
+    if (cPar.a_mode == 66) {
+      gsl_matrix_memcpy(XWz, Xz);
+    } else if (cPar.a_mode == 67) {
+      cout << "Calculating XWz ... " << endl;
+
+      gsl_matrix_set_zero(XWz);
+
+      if (!cPar.file_bfile.empty()) {
+        file_str = cPar.file_bfile + ".bed";
+        PlinkXwz(file_str, cPar.d_pace, cPar.indicator_idv, cPar.indicator_snp,
+                 vec_cat, w, z, 0, XWz);
+      } else if (!cPar.file_geno.empty()) {
+        BimbamXwz(cPar.file_geno, cPar.d_pace, cPar.indicator_idv,
+                  cPar.indicator_snp, vec_cat, w, z, 0, XWz);
+      } else if (!cPar.file_mbfile.empty()) {
+        MFILEXwz(1, cPar.file_mbfile, cPar.d_pace, cPar.indicator_idv,
+                 cPar.mindicator_snp, vec_cat, w, z, XWz);
+      } else if (!cPar.file_mgeno.empty()) {
+        MFILEXwz(0, cPar.file_mgeno, cPar.d_pace, cPar.indicator_idv,
+                 cPar.mindicator_snp, vec_cat, w, z, XWz);
+      }
+    }
+    // compute an p by k matrix of X_j^TWX_iWz
+    cout << "Calculating XtXWz ... " << endl;
+    gsl_matrix_set_zero(XtXWz);
+
+    if (!cPar.file_bfile.empty()) {
+      file_str = cPar.file_bfile + ".bed";
+      PlinkXtXwz(file_str, cPar.d_pace, cPar.indicator_idv, cPar.indicator_snp,
+                 XWz, 0, XtXWz);
+    } else if (!cPar.file_geno.empty()) {
+      BimbamXtXwz(cPar.file_geno, cPar.d_pace, cPar.indicator_idv,
+                  cPar.indicator_snp, XWz, 0, XtXWz);
+    } else if (!cPar.file_mbfile.empty()) {
+      MFILEXtXwz(1, cPar.file_mbfile, cPar.d_pace, cPar.indicator_idv,
+                 cPar.mindicator_snp, XWz, XtXWz);
+    } else if (!cPar.file_mgeno.empty()) {
+      MFILEXtXwz(0, cPar.file_mgeno, cPar.d_pace, cPar.indicator_idv,
+                 cPar.mindicator_snp, XWz, XtXWz);
+    }
+    // compute confidence intervals
+    CalcCIss(Xz, XWz, XtXWz, S, Svar, w, z, s_vec, vec_cat, cPar.v_pve,
+             cPar.v_se_pve, cPar.pve_total, cPar.se_pve_total, cPar.v_sigma2,
+             cPar.v_se_sigma2, cPar.v_enrich, cPar.v_se_enrich);
+    assert(!has_nan(cPar.v_se_pve));
+
+  }
+
+  // LMM or mvLMM or Eigen-Decomposition
+  if (cPar.a_mode == 1 || cPar.a_mode == 2 || cPar.a_mode == 3 ||
+      cPar.a_mode == 4 || cPar.a_mode == 5 ||
+      cPar.a_mode == 31) { // Fit LMM or mvLMM or eigen
+    gsl_matrix *Y = gsl_matrix_alloc(cPar.ni_test, cPar.n_ph);
+    enforce_msg(Y, "allocate Y"); // just to be sure
+    gsl_matrix *W = gsl_matrix_alloc(Y->size1, cPar.n_cvt);
+    gsl_matrix *B = gsl_matrix_alloc(Y->size2, W->size2); // B is a d by c
+                                                          // matrix
+    gsl_matrix *se_B = gsl_matrix_alloc(Y->size2, W->size2);
+    gsl_matrix *G = gsl_matrix_alloc(Y->size1, Y->size1);
+    gsl_matrix *U = gsl_matrix_alloc(Y->size1, Y->size1);
+    gsl_matrix *UtW = gsl_matrix_calloc(Y->size1, W->size2);
+    gsl_matrix *UtY = gsl_matrix_calloc(Y->size1, Y->size2);
+    gsl_vector *eval = gsl_vector_calloc(Y->size1);
+    gsl_vector *env = gsl_vector_alloc(Y->size1);
+    gsl_vector *weight = gsl_vector_alloc(Y->size1);
+    assert_issue(cPar.issue == 26, UtY->data[0] == 0.0);
+
+    // set covariates matrix W and phenotype matrix Y
+    // an intercept should be included in W,
+    cPar.CopyCvtPhen(W, Y, 0);
+    if (!cPar.file_gxe.empty()) {
+      cPar.CopyGxe(env);
+    }
+
+    // read relatedness matrix G
+    if (!(cPar.file_kin).empty()) {
+      ReadFile_kin(cPar.file_kin, cPar.indicator_idv, cPar.mapID2num,
+                   cPar.k_mode, cPar.error, G);
+      if (cPar.error == true) {
+        cout << "error! fail to read kinship/relatedness file. " << endl;
+        return;
+      }
+
+      // center matrix G
+      CenterMatrix(G);
+      validate_K(G,cPar.mode_check,cPar.mode_strict);
+
+      // is residual weights are provided, then
+      if (!cPar.file_weight.empty()) {
+        cPar.CopyWeight(weight);
+        double d, wi, wj;
+        for (size_t i = 0; i < G->size1; i++) {
+          wi = gsl_vector_get(weight, i);
+          for (size_t j = i; j < G->size2; j++) {
+            wj = gsl_vector_get(weight, j);
+            d = gsl_matrix_get(G, i, j);
+            if (wi <= 0 || wj <= 0) {
+              d = 0;
+            } else {
+              d /= sqrt(wi * wj);
+            }
+            gsl_matrix_set(G, i, j, d);
+            if (j != i) {
+              gsl_matrix_set(G, j, i, d);
+            }
+          }
+        }
+      }
+
+      // eigen-decomposition and calculate trace_G
+      cout << "Start Eigen-Decomposition..." << endl;
+      time_start = clock();
+
+      if (cPar.a_mode == 31) {
+        cPar.trace_G = EigenDecomp_Zeroed(G, U, eval, 1);
+      } else {
+        cPar.trace_G = EigenDecomp_Zeroed(G, U, eval, 0);
+      }
+
+      if (!cPar.file_weight.empty()) {
+        double wi;
+        for (size_t i = 0; i < U->size1; i++) {
+          wi = gsl_vector_get(weight, i);
+          if (wi <= 0) {
+            wi = 0;
+          } else {
+            wi = sqrt(wi);
+          }
+          gsl_vector_view Urow = gsl_matrix_row(U, i);
+          gsl_vector_scale(&Urow.vector, wi);
+        }
+      }
+
+      cPar.time_eigen =
+          (clock() - time_start) / (double(CLOCKS_PER_SEC) * 60.0);
+    } else {
+      ReadFile_eigenU(cPar.file_ku, cPar.error, U);
+      if (cPar.error == true) {
+        cout << "error! fail to read the U file. " << endl;
+        return;
+      }
+
+      ReadFile_eigenD(cPar.file_kd, cPar.error, eval);
+      if (cPar.error == true) {
+        cout << "error! fail to read the D file. " << endl;
+        return;
+      }
+
+      cPar.trace_G = 0.0;
+      for (size_t i = 0; i < eval->size; i++) {
+        if (gsl_vector_get(eval, i) < 1e-10) {
+          gsl_vector_set(eval, i, 0);
+        }
+        cPar.trace_G += gsl_vector_get(eval, i);
+      }
+      cPar.trace_G /= (double)eval->size;
+    }
+
+    if (cPar.a_mode == 31) {
+      cPar.WriteMatrix(U, "eigenU");
+      cPar.WriteVector(eval, "eigenD");
+    } else if (!cPar.file_gene.empty()) {
+      // calculate UtW and Uty
+      CalcUtX(U, W, UtW);
+      CalcUtX(U, Y, UtY);
+
+      assert_issue(cPar.issue == 26, ROUND(UtY->data[0]) == -16.6143);
+
+      LMM cLmm;
+      cLmm.CopyFromParam(cPar);
+
+      gsl_vector_view Y_col = gsl_matrix_column(Y, 0);
+      gsl_vector_view UtY_col = gsl_matrix_column(UtY, 0);
+
+      cLmm.AnalyzeGene(U, eval, UtW, &UtY_col.vector, W,
+                       &Y_col.vector); // y is the predictor, not the phenotype
+
+      cLmm.WriteFiles();
+      cLmm.CopyToParam(cPar);
+    } else {
+      // calculate UtW and Uty
+      CalcUtX(U, W, UtW);
+      CalcUtX(U, Y, UtY);
+      assert_issue(cPar.issue == 26, ROUND(UtY->data[0]) == -16.6143);
+
+      // calculate REMLE/MLE estimate and pve for univariate model
+      if (cPar.n_ph == 1) { // one phenotype
+        gsl_vector_view beta = gsl_matrix_row(B, 0);
+        gsl_vector_view se_beta = gsl_matrix_row(se_B, 0);
+        gsl_vector_view UtY_col = gsl_matrix_column(UtY, 0);
+
+        assert_issue(cPar.issue == 26, ROUND(UtY->data[0]) == -16.6143);
+
+        CalcLambda('L', eval, UtW, &UtY_col.vector, cPar.l_min, cPar.l_max,
+                   cPar.n_region, cPar.l_mle_null, cPar.logl_mle_H0);
+        assert(!std::isnan(UtY->data[0]));
+        assert(!std::isnan(B->data[0]));
+        assert(!std::isnan(se_B->data[0]));
+
+        CalcLmmVgVeBeta(eval, UtW, &UtY_col.vector, cPar.l_mle_null,
+                        cPar.vg_mle_null, cPar.ve_mle_null, &beta.vector,
+                        &se_beta.vector);
+
+        assert(!std::isnan(UtY->data[0]));
+        assert(!std::isnan(B->data[0]));
+        assert(!std::isnan(se_B->data[0]));
+
+        cPar.beta_mle_null.clear();
+        cPar.se_beta_mle_null.clear();
+        for (size_t i = 0; i < B->size2; i++) {
+          cPar.beta_mle_null.push_back(gsl_matrix_get(B, 0, i));
+          cPar.se_beta_mle_null.push_back(gsl_matrix_get(se_B, 0, i));
+        }
+        assert(!std::isnan(UtY->data[0]));
+        assert(!std::isnan(B->data[0]));
+        assert(!std::isnan(se_B->data[0]));
+        assert(!std::isnan(cPar.beta_mle_null.front()));
+        assert(!std::isnan(cPar.se_beta_mle_null.front()));
+
+        CalcLambda('R', eval, UtW, &UtY_col.vector, cPar.l_min, cPar.l_max,
+                   cPar.n_region, cPar.l_remle_null, cPar.logl_remle_H0);
+        CalcLmmVgVeBeta(eval, UtW, &UtY_col.vector, cPar.l_remle_null,
+                        cPar.vg_remle_null, cPar.ve_remle_null, &beta.vector,
+                        &se_beta.vector);
+
+        cPar.beta_remle_null.clear();
+        cPar.se_beta_remle_null.clear();
+        for (size_t i = 0; i < B->size2; i++) {
+          cPar.beta_remle_null.push_back(gsl_matrix_get(B, 0, i));
+          cPar.se_beta_remle_null.push_back(gsl_matrix_get(se_B, 0, i));
+        }
+
+        CalcPve(eval, UtW, &UtY_col.vector, cPar.l_remle_null, cPar.trace_G,
+                cPar.pve_null, cPar.pve_se_null);
+        cPar.PrintSummary();
+
+        // calculate and output residuals
+        if (cPar.a_mode == 5) {
+          gsl_vector *Utu_hat = gsl_vector_alloc(Y->size1);
+          gsl_vector *Ute_hat = gsl_vector_alloc(Y->size1);
+          gsl_vector *u_hat = gsl_vector_alloc(Y->size1);
+          gsl_vector *e_hat = gsl_vector_alloc(Y->size1);
+          gsl_vector *y_hat = gsl_vector_alloc(Y->size1);
+
+          // obtain Utu and Ute
+          gsl_vector_memcpy(y_hat, &UtY_col.vector);
+          gsl_blas_dgemv(CblasNoTrans, -1.0, UtW, &beta.vector, 1.0, y_hat);
+
+          double d, u, e;
+          for (size_t i = 0; i < eval->size; i++) {
+            d = gsl_vector_get(eval, i);
+            u = cPar.l_remle_null * d / (cPar.l_remle_null * d + 1.0) *
+                gsl_vector_get(y_hat, i);
+            e = 1.0 / (cPar.l_remle_null * d + 1.0) * gsl_vector_get(y_hat, i);
+            gsl_vector_set(Utu_hat, i, u);
+            gsl_vector_set(Ute_hat, i, e);
+          }
+
+          // obtain u and e
+          gsl_blas_dgemv(CblasNoTrans, 1.0, U, Utu_hat, 0.0, u_hat);
+          gsl_blas_dgemv(CblasNoTrans, 1.0, U, Ute_hat, 0.0, e_hat);
+
+          // output residuals
+          cPar.WriteVector(u_hat, "residU");
+          cPar.WriteVector(e_hat, "residE");
+        }
+      }
+
+      // Fit LMM or mvLMM (w. LOCO)
+      if (cPar.a_mode == 1 || cPar.a_mode == 2 || cPar.a_mode == 3 ||
+          cPar.a_mode == 4) {
+        if (cPar.n_ph == 1) {
+          LMM cLmm;
+          cLmm.CopyFromParam(cPar);
+
+          gsl_vector_view Y_col = gsl_matrix_column(Y, 0);
+          gsl_vector_view UtY_col = gsl_matrix_column(UtY, 0);
+
+          if (!cPar.file_bfile.empty()) {
+            if (cPar.file_gxe.empty()) {
+              cLmm.AnalyzePlink(U, eval, UtW, &UtY_col.vector, W,
+                                &Y_col.vector);
+            } else {
+              cLmm.AnalyzePlinkGXE(U, eval, UtW, &UtY_col.vector, W,
+                                   &Y_col.vector, env);
+            }
+          }
+          // WJA added
+          else if (!cPar.file_oxford.empty()) {
+            cLmm.Analyzebgen(U, eval, UtW, &UtY_col.vector, W, &Y_col.vector);
+          } else {
+            if (cPar.file_gxe.empty()) {
+              cLmm.AnalyzeBimbam(U, eval, UtW, &UtY_col.vector, W,
+                                 &Y_col.vector, cPar.setGWASnps);
+            } else {
+              cLmm.AnalyzeBimbamGXE(U, eval, UtW, &UtY_col.vector, W,
+                                    &Y_col.vector, env);
+            }
+          }
+
+          cLmm.WriteFiles();
+          cLmm.CopyToParam(cPar);
+        } else {
+          MVLMM cMvlmm;
+          cMvlmm.CopyFromParam(cPar);
+
+          if (!cPar.file_bfile.empty()) {
+            if (cPar.file_gxe.empty()) {
+              cMvlmm.AnalyzePlink(U, eval, UtW, UtY);
+            } else {
+              cMvlmm.AnalyzePlinkGXE(U, eval, UtW, UtY, env);
+            }
+          } else if (!cPar.file_oxford.empty()) {
+            cMvlmm.Analyzebgen(U, eval, UtW, UtY);
+          } else {
+            if (cPar.file_gxe.empty()) {
+              cMvlmm.AnalyzeBimbam(U, eval, UtW, UtY);
+            } else {
+              cMvlmm.AnalyzeBimbamGXE(U, eval, UtW, UtY, env);
+            }
+          }
+
+          cMvlmm.WriteFiles();
+          cMvlmm.CopyToParam(cPar);
+        }
+      }
+    }
+
+    // release all matrices and vectors
+  }
+
+  // BSLMM
+  if (cPar.a_mode == 11 || cPar.a_mode == 12 || cPar.a_mode == 13) {
+    gsl_vector *y = gsl_vector_alloc(cPar.ni_test);
+    gsl_matrix *W = gsl_matrix_alloc(y->size, cPar.n_cvt);
+    gsl_matrix *G = gsl_matrix_alloc(y->size, y->size);
+    gsl_matrix *UtX = gsl_matrix_alloc(y->size, cPar.ns_test);
+
+    // set covariates matrix W and phenotype vector y
+    // an intercept should be included in W,
+    cPar.CopyCvtPhen(W, y, 0);
+
+    // center y, even for case/control data
+    cPar.pheno_mean = CenterVector(y);
+
+    // run bvsr if rho==1
+    if (cPar.rho_min == 1 && cPar.rho_max == 1) {
+      // read genotypes X (not UtX)
+      cPar.ReadGenotypes(UtX, G, false);
+
+      // perform BSLMM analysis
+      BSLMM cBslmm;
+      cBslmm.CopyFromParam(cPar);
+      cBslmm.MCMC(UtX, y);
+      cBslmm.CopyToParam(cPar);
+      // else, if rho!=1
+    } else {
+      gsl_matrix *U = gsl_matrix_alloc(y->size, y->size);
+      gsl_vector *eval = gsl_vector_alloc(y->size);
+      gsl_matrix *UtW = gsl_matrix_alloc(y->size, W->size2);
+      gsl_vector *Uty = gsl_vector_alloc(y->size);
+
+      // read relatedness matrix G
+      if (!(cPar.file_kin).empty()) {
+        cPar.ReadGenotypes(UtX, G, false);
+
+        // read relatedness matrix G
+        ReadFile_kin(cPar.file_kin, cPar.indicator_idv, cPar.mapID2num,
+                     cPar.k_mode, cPar.error, G);
+        if (cPar.error == true) {
+          cout << "error! fail to read kinship/relatedness file. " << endl;
+          return;
+        }
+
+        // center matrix G
+        CenterMatrix(G);
+        validate_K(G,cPar.mode_check,cPar.mode_strict);
+      } else {
+        cPar.ReadGenotypes(UtX, G, true);
+      }
+
+      // eigen-decomposition and calculate trace_G
+      cout << "Start Eigen-Decomposition..." << endl;
+
+      cPar.trace_G = EigenDecomp_Zeroed(G, U, eval, 0);
+
+      // calculate UtW and Uty
+      CalcUtX(U, W, UtW);
+      CalcUtX(U, y, Uty);
+
+      // calculate REMLE/MLE estimate and pve
+      CalcLambda('L', eval, UtW, Uty, cPar.l_min, cPar.l_max, cPar.n_region,
+                 cPar.l_mle_null, cPar.logl_mle_H0);
+      CalcLambda('R', eval, UtW, Uty, cPar.l_min, cPar.l_max, cPar.n_region,
+                 cPar.l_remle_null, cPar.logl_remle_H0);
+      CalcPve(eval, UtW, Uty, cPar.l_remle_null, cPar.trace_G, cPar.pve_null,
+              cPar.pve_se_null);
+
+      cPar.PrintSummary();
+
+      // Creat and calcualte UtX, use a large memory
+      cout << "Calculating UtX..." << endl;
+      CalcUtX(U, UtX);
+
+      // perform BSLMM or BSLMMDAP analysis
+      if (cPar.a_mode == 11 || cPar.a_mode == 12 || cPar.a_mode == 13) {
+        BSLMM cBslmm;
+        cBslmm.CopyFromParam(cPar);
+        if (cPar.a_mode == 12) { // ridge regression
+          cBslmm.RidgeR(U, UtX, Uty, eval, cPar.l_remle_null);
+        } else { // Run MCMC
+          cBslmm.MCMC(U, UtX, Uty, eval, y);
+        }
+        cPar.time_opt =
+            (clock() - time_start) / (double(CLOCKS_PER_SEC) * 60.0);
+        cBslmm.CopyToParam(cPar);
+      } else {
+      }
+    }
+  }
+
+  // BSLMM-DAP
+  if (cPar.a_mode == 14 || cPar.a_mode == 15 || cPar.a_mode == 16) {
+    if (cPar.a_mode == 14) {
+      gsl_vector *y = gsl_vector_alloc(cPar.ni_test);
+      gsl_matrix *W = gsl_matrix_alloc(y->size, cPar.n_cvt);
+      gsl_matrix *G = gsl_matrix_alloc(y->size, y->size);
+      gsl_matrix *UtX = gsl_matrix_alloc(y->size, cPar.ns_test);
+
+      // set covariates matrix W and phenotype vector y
+      // an intercept should be included in W,
+      cPar.CopyCvtPhen(W, y, 0);
+
+      // center y, even for case/control data
+      cPar.pheno_mean = CenterVector(y);
+
+      // run bvsr if rho==1
+      if (cPar.rho_min == 1 && cPar.rho_max == 1) {
+        // read genotypes X (not UtX)
+        cPar.ReadGenotypes(UtX, G, false);
+
+        // perform BSLMM analysis
+        BSLMM cBslmm;
+        cBslmm.CopyFromParam(cPar);
+        cBslmm.MCMC(UtX, y);
+        cBslmm.CopyToParam(cPar);
+        // else, if rho!=1
+      } else {
+        gsl_matrix *U = gsl_matrix_alloc(y->size, y->size);
+        gsl_vector *eval = gsl_vector_alloc(y->size);
+        gsl_matrix *UtW = gsl_matrix_alloc(y->size, W->size2);
+        gsl_vector *Uty = gsl_vector_alloc(y->size);
+
+        // read relatedness matrix G
+        if (!(cPar.file_kin).empty()) {
+          cPar.ReadGenotypes(UtX, G, false);
+
+          // read relatedness matrix G
+          ReadFile_kin(cPar.file_kin, cPar.indicator_idv, cPar.mapID2num,
+                       cPar.k_mode, cPar.error, G);
+          if (cPar.error == true) {
+            cout << "error! fail to read kinship/relatedness file. " << endl;
+            return;
+          }
+
+          // center matrix G
+          CenterMatrix(G);
+          validate_K(G,cPar.mode_check,cPar.mode_strict);
+
+        } else {
+          cPar.ReadGenotypes(UtX, G, true);
+        }
+
+        // eigen-decomposition and calculate trace_G
+        cout << "Start Eigen-Decomposition..." << endl;
+        time_start = clock();
+        cPar.trace_G = EigenDecomp_Zeroed(G, U, eval, 0);
+
+        // calculate UtW and Uty
+        CalcUtX(U, W, UtW);
+        CalcUtX(U, y, Uty);
+
+        // calculate REMLE/MLE estimate and pve
+        CalcLambda('L', eval, UtW, Uty, cPar.l_min, cPar.l_max, cPar.n_region,
+                   cPar.l_mle_null, cPar.logl_mle_H0);
+        CalcLambda('R', eval, UtW, Uty, cPar.l_min, cPar.l_max, cPar.n_region,
+                   cPar.l_remle_null, cPar.logl_remle_H0);
+        CalcPve(eval, UtW, Uty, cPar.l_remle_null, cPar.trace_G, cPar.pve_null,
+                cPar.pve_se_null);
+
+        cPar.PrintSummary();
+
+        // Creat and calcualte UtX, use a large memory
+        cout << "Calculating UtX..." << endl;
+        CalcUtX(U, UtX);
+
+        // perform analysis; assume X and y are already centered
+        BSLMMDAP cBslmmDap;
+        cBslmmDap.CopyFromParam(cPar);
+        time_start = clock();
+        cBslmmDap.DAP_CalcBF(U, UtX, Uty, eval, y);
+
+        cBslmmDap.CopyToParam(cPar);
+
+      }
+
+    } else if (cPar.a_mode == 15) {
+      // perform EM algorithm and estimate parameters
+      vector<string> vec_rs;
+      vector<double> vec_sa2, vec_sb2, wab;
+      vector<vector<vector<double>>> BF;
+
+      // read hyp and bf files (functions defined in BSLMMDAP)
+      ReadFile_hyb(cPar.file_hyp, vec_sa2, vec_sb2, wab);
+      ReadFile_bf(cPar.file_bf, vec_rs, BF);
+
+      cPar.ns_test = vec_rs.size();
+      if (wab.size() != BF[0][0].size()) {
+        cout << "error! hyp and bf files dimension do not match" << endl;
+      }
+
+      // load annotations
+      gsl_matrix *Ac;
+      gsl_matrix_int *Ad;
+      gsl_vector_int *dlevel;
+      size_t kc, kd;
+      if (!cPar.file_cat.empty()) {
+        ReadFile_cat(cPar.file_cat, vec_rs, Ac, Ad, dlevel, kc, kd);
+      } else {
+        kc = 0;
+        kd = 0;
+      }
+
+      cout << "## number of blocks = " << BF.size() << endl;
+      cout << "## number of analyzed SNPs = " << vec_rs.size() << endl;
+      cout << "## grid size for hyperparameters = " << wab.size() << endl;
+      cout << "## number of continuous annotations = " << kc << endl;
+      cout << "## number of discrete annotations = " << kd << endl;
+
+      // DAP_EstimateHyper (const size_t kc, const size_t kd, const
+      // vector<string> &vec_rs, const vector<double> &vec_sa2, const
+      // vector<double> &vec_sb2, const vector<double> &wab, const
+      // vector<vector<vector<double> > > &BF, gsl_matrix *Ac, gsl_matrix_int
+      // *Ad, gsl_vector_int *dlevel);
+
+      // perform analysis
+      BSLMMDAP cBslmmDap;
+      cBslmmDap.CopyFromParam(cPar);
+      cBslmmDap.DAP_EstimateHyper(kc, kd, vec_rs, vec_sa2, vec_sb2, wab, BF, Ac,
+                                  Ad, dlevel);
+      cBslmmDap.CopyToParam(cPar);
+
+    } else {
+      //
+    }
+  }
+
+  return;
 }
