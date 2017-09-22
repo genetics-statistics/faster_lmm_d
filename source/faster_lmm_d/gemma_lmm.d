@@ -972,6 +972,38 @@ void CalcLambda(const char func_name, void* params, const double l_min,
   return;
 }
 
+// Calculate lambda in the null model.
+void CalcLambda(char func_name, DMatrix eval,
+                DMatrix UtW, DMatrix Uty,
+                double l_min, double l_max, size_t n_region,
+                double lambda, double logl_H0) {
+  if (func_name != 'R' && func_name != 'L' && func_name != 'r' &&
+      func_name != 'l') {
+    writeln("func_name only takes 'R' or 'L': 'R' for
+           log-restricted likelihood, 'L' for log-likelihood.");
+    return;
+  }
+
+  size_t n_cvt = UtW.shape[1], ni_test = UtW.shape[0];
+  size_t n_index = (n_cvt + 2 + 1) * (n_cvt + 2) / 2;
+
+  DMatrix Uab;
+  Uab.elements = [ni_test, n_index];
+
+  DMatrix ab;
+  ab.elements = [1, n_index];
+
+  //gsl_matrix_set_zero(Uab);
+  CalcUab(UtW, Uty, Uab);
+
+  loglikeparam param0;
+   //= loglikeparam(true, ni_test, n_cvt, eval, Uab, ab, 0);
+
+  CalcLambda(func_name, cast(void *)&param0, l_min, l_max, n_region, lambda, logl_H0);
+
+  return;
+}
+
 // ni_test is a LMM parameter
 void CalcRLWald(size_t ni_test, double l, loglikeparam params, double beta,
                      double se, double p_wald) {
