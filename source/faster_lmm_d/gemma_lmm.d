@@ -11,6 +11,7 @@ import std.experimental.logger;
 import faster_lmm_d.dmatrix;
 import faster_lmm_d.optmatrix;
 
+import gsl.cdf;
 import gsl.errno;
 import gsl.math;
 import gsl.min;
@@ -970,3 +971,225 @@ void CalcLambda(const char func_name, void* params, const double l_min,
 
   return;
 }
+
+// ni_test is a LMM parameter
+void CalcRLWald(size_t ni_test, double l, loglikeparam params, double beta,
+                     double se, double p_wald) {
+  size_t n_cvt = params.n_cvt;
+  size_t n_index = (n_cvt + 2 + 1) * (n_cvt + 2) / 2;
+
+  int df = to!int(ni_test) - to!int(n_cvt) - 1;
+
+  DMatrix Pab;
+  Pab.shape = [n_cvt + 2, n_index];
+  DMatrix Hi_eval;
+  Hi_eval.shape = [1, params.eval.elements.length];
+  DMatrix v_temp;
+  v_temp.shape = [1, params.eval.elements.length];
+
+  v_temp.elements = params.eval.elements;
+  v_temp = multiply_dmatrix_num(v_temp, l);
+  if (params.e_mode == 0) {
+    //gsl_vector_set_all(Hi_eval, 1.0);
+  } else {
+    Hi_eval.elements = v_temp.elements.dup;
+  }
+  v_temp = add_dmatrix_num(v_temp, 1.0);
+  Hi_eval = divide_dmatrix(Hi_eval, v_temp);
+
+  CalcPab(n_cvt, params.e_mode, Hi_eval, params.Uab, params.ab, Pab);
+
+  size_t index_yy = GetabIndex(n_cvt + 2, n_cvt + 2, n_cvt);
+  size_t index_xx = GetabIndex(n_cvt + 1, n_cvt + 1, n_cvt);
+  size_t index_xy = GetabIndex(n_cvt + 2, n_cvt + 1, n_cvt);
+  double P_yy = accessor(Pab, n_cvt, index_yy);
+  double P_xx = accessor(Pab, n_cvt, index_xx);
+  double P_xy = accessor(Pab, n_cvt, index_xy);
+  double Px_yy = accessor(Pab, n_cvt + 1, index_yy);
+
+  beta = P_xy / P_xx;
+  double tau = to!double(df) / Px_yy;
+  se = sqrt(1.0 / (tau * P_xx));
+  p_wald = gsl_cdf_fdist_Q((P_yy - Px_yy) * tau, 1.0, df);
+
+  return;
+}
+
+void CalcRLScore(size_t ni_test, double l, loglikeparam params, double beta,
+                      double se, double p_score) {
+  size_t n_cvt = params.n_cvt;
+  size_t n_index = (n_cvt + 2 + 1) * (n_cvt + 2) / 2;
+
+  int df = to!int(ni_test) - to!int(n_cvt) - 1;
+
+  DMatrix Pab;
+  Pab.shape = [n_cvt + 2, n_index];
+  DMatrix Hi_eval;
+  Hi_eval.shape = [1, params.eval.elements.length];
+  DMatrix v_temp;
+  v_temp.shape = [1, params.eval.elements.length];
+
+  v_temp.elements = params.eval.elements;
+  v_temp = multiply_dmatrix_num(v_temp, l);
+
+  if (params.e_mode == 0) {
+    //gsl_vector_set_all(Hi_eval, 1.0);
+  } else {
+    Hi_eval.elements = v_temp.elements.dup;
+  }
+  v_temp = add_dmatrix_num(v_temp, 1.0);
+  Hi_eval = divide_dmatrix(Hi_eval, v_temp);
+
+  CalcPab(n_cvt, params.e_mode, Hi_eval, params.Uab, params.ab, Pab);
+
+  size_t index_yy = GetabIndex(n_cvt + 2, n_cvt + 2, n_cvt);
+  size_t index_xx = GetabIndex(n_cvt + 1, n_cvt + 1, n_cvt);
+  size_t index_xy = GetabIndex(n_cvt + 2, n_cvt + 1, n_cvt);
+  double P_yy = accessor(Pab, n_cvt, index_yy);
+  double P_xx = accessor(Pab, n_cvt, index_xx);
+  double P_xy = accessor(Pab, n_cvt, index_xy);
+  double Px_yy = accessor(Pab, n_cvt + 1, index_yy);
+
+  beta = P_xy / P_xx;
+  double tau = to!double(df) / Px_yy;
+  se = sqrt(1.0 / (tau * P_xx));
+
+  p_score =
+      gsl_cdf_fdist_Q(to!double(ni_test) * P_xy * P_xy / (P_yy * P_xx), 1.0, df);
+
+  return;
+}
+
+void CalcUab(DMatrix UtW, DMatrix Uty, DMatrix Uab) {
+  size_t index_ab;
+  size_t n_cvt = UtW.shape[1];
+
+  DMatrix u_a;
+  u_a.shape = [1, Uty.shape[1]];
+
+  for (size_t a = 1; a <= n_cvt + 2; ++a) {
+    if (a == n_cvt + 1) {
+      continue;
+    }
+
+    if (a == n_cvt + 2) {
+      u_a.elements = Uty.elements.dup;
+    } else {
+      DMatrix UtW_col = get_col(UtW, a - 1);
+      u_a.elements = UtW_col.elements.dup;
+    }
+
+    for (size_t b = a; b >= 1; --b) {
+      if (b == n_cvt + 1) {
+        continue;
+      }
+
+      index_ab = GetabIndex(a, b, n_cvt);
+      DMatrix Uab_col = get_col(Uab, index_ab);
+
+      if (b == n_cvt + 2) {
+        Uab_col.elements = Uty.elements.dup;
+      } else {
+        DMatrix UtW_col = get_col(UtW, b - 1);
+        Uab_col.elements = UtW_col.elements.dup;
+      }
+
+      slow_multiply_dmatrix(Uab_col, u_a);
+    }
+  }
+  return;
+}
+
+void CalcUab(DMatrix UtW, DMatrix Uty, DMatrix Utx, DMatrix Uab) {
+  size_t index_ab;
+  size_t n_cvt = UtW.shape[1];
+
+  for (size_t b = 1; b <= n_cvt + 2; ++b) {
+    index_ab = GetabIndex(n_cvt + 1, b, n_cvt);
+    DMatrix Uab_col = get_col(Uab, index_ab);
+
+    if (b == n_cvt + 2) {
+      Uab_col.elements = Uty.elements;
+    } else if (b == n_cvt + 1) {
+      Uab_col.elements = Utx.elements;
+    } else {
+      DMatrix UtW_col = get_col(UtW, b - 1);
+      Uab_col.elements = UtW_col.elements.dup;
+    }
+
+    slow_multiply_dmatrix(Uab_col, Utx);
+  }
+
+  return;
+}
+
+void Calcab(DMatrix W, DMatrix y, DMatrix ab) {
+  size_t index_ab;
+  size_t n_cvt = W.shape[1];
+
+  double d;
+  DMatrix v_a, v_b;
+  v_a.shape = [1, y.shape[1]];
+  v_b.shape = [1, y.shape[1]];
+
+  for (size_t a = 1; a <= n_cvt + 2; ++a) {
+    if (a == n_cvt + 1) {
+      continue;
+    }
+
+    if (a == n_cvt + 2) {
+      v_a.elements = y.elements.dup;
+    } else {
+      DMatrix W_col = get_col(W, a - 1);
+      v_a.elements = W_col.elements.dup;
+    }
+
+    for (size_t b = a; b >= 1; --b) {
+      if (b == n_cvt + 1) {
+        continue;
+      }
+
+      index_ab = GetabIndex(a, b, n_cvt);
+
+      if (b == n_cvt + 2) {
+        v_b.elements = y.elements.dup;
+      } else {
+        DMatrix W_col = get_col(W, b - 1);
+        v_b.elements = W_col.elements.dup;
+      }
+
+      d = matrix_mult(v_a.T, v_b).elements[0];
+      ab.elements[index_ab] = d;
+    }
+  }
+
+  return;
+}
+
+void Calcab(DMatrix W, DMatrix y, DMatrix x, DMatrix ab) {
+  size_t index_ab;
+  size_t n_cvt = W.shape[1];
+
+  double d;
+  DMatrix v_b;
+  v_b.shape = [1, y.shape[1]];
+
+  for (size_t b = 1; b <= n_cvt + 2; ++b) {
+    index_ab = GetabIndex(n_cvt + 1, b, n_cvt);
+
+    if (b == n_cvt + 2) {
+      v_b.elements = y.elements.dup;
+    } else if (b == n_cvt + 1) {
+      v_b.elements = x.elements.dup;
+    } else {
+      DMatrix W_col = get_col(W, b - 1);
+      v_b.elements = W_col.elements.dup;
+    }
+
+    d = matrix_mult(x.T, v_b).elements[0];
+    ab.elements[index_ab] = d;
+  }
+
+  return;
+}
+
