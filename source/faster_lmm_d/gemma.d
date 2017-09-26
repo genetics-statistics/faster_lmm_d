@@ -178,13 +178,15 @@ void batch_run(Param cPar){
 
     // add breeding value if needed
     if (!cPar.file_kin.empty() && !cPar.file_ebv.empty()) {
-      cout << "Adding Breeding Values ... " << endl;
+      writeln("Adding Breeding Values ... ");
 
-      gsl_matrix *G = gsl_matrix_alloc(cPar.ni_total, cPar.ni_total);
-      gsl_vector *u_hat = gsl_vector_alloc(cPar.ni_test);
+      DMatrix G;
+      G.shape = [cPar.ni_total, cPar.ni_total];
+      DMatrix u_hat;
+      u_hat.shape = [1, cPar.ni_test];
 
       // read kinship matrix and set u_hat
-      vector<int> indicator_all;
+      int[] indicator_all;
       size_t c_bv = 0;
       for (size_t i = 0; i < cPar.indicator_idv.size(); i++) {
         indicator_all.push_back(1);
@@ -219,7 +221,7 @@ void batch_run(Param cPar){
     // convert y to probability if needed
     if (cPar.a_mode == 42) {
       double d;
-      for (size_t i = 0; i < y_prdt->size; i++) {
+      for (size_t i = 0; i < y_prdt.length; i++) {
         d = gsl_vector_get(y_prdt, i);
         d = gsl_cdf_gaussian_P(d, 1.0);
         gsl_vector_set(y_prdt, i, d);
@@ -240,7 +242,7 @@ void batch_run(Param cPar){
     DMatrix Y;
     Y.shape = [cPar.ni_test, cPar.n_ph];
     DMatrix W;
-    W.shape = [Y.shape[0], cPar.n_cvt);
+    W.shape = [Y.shape[0], cPar.n_cvt];
     DMatrix G;
     G.shape = [Y.shape[0], Y.shape[0]];
     DMatrix U;
@@ -387,7 +389,7 @@ void batch_run(Param cPar){
 
     cPRDT.CopyFromParam(cPar);
 
-    cout << "Predicting Missing Phentypes ... " << endl;
+    writeln("Predicting Missing Phentypes ... ");
     cPRDT.MvnormPrdt(Y_hat, H_full, Y_full);
 
     cPRDT.WriteFiles(Y_full);
@@ -398,8 +400,9 @@ void batch_run(Param cPar){
   if (cPar.a_mode == 21 || cPar.a_mode == 22) {
     cout << "Calculating Relatedness Matrix ... " << endl;
 
-    gsl_matrix *G = gsl_matrix_alloc(cPar.ni_total, cPar.ni_total);
-    enforce_msg(G, "allocate G"); // just to be sure
+    DMatrix G;
+    G.shape = [cPar.ni_total, cPar.ni_total];
+    log(G, "allocate G"); // just to be sure
 
     cPar.CalcKin(G);
 
@@ -416,8 +419,6 @@ void batch_run(Param cPar){
     } else {
       cPar.WriteMatrix(G, "sXX");
     }
-
-    gsl_matrix_free(G);
   }
 
   // Compute the LDSC weights (not implemented yet)
@@ -441,8 +442,10 @@ void batch_run(Param cPar){
   if (cPar.a_mode == 25 || cPar.a_mode == 26) {
     cout << "Calculating the S Matrix ... " << endl;
 
-    gsl_matrix *S = gsl_matrix_alloc(cPar.n_vc * 2, cPar.n_vc);
-    gsl_vector *ns = gsl_vector_alloc(cPar.n_vc + 1);
+    DMatrix S;
+    S.shape = [cPar.n_vc * 2, cPar.n_vc];
+    DMatrix ns;
+    ns.shape = [cPar.n_vc + 1];
     gsl_matrix_set_zero(S);
     gsl_vector_set_zero(ns);
 
@@ -451,25 +454,29 @@ void batch_run(Param cPar){
         gsl_matrix_submatrix(S, cPar.n_vc, 0, cPar.n_vc, cPar.n_vc);
     gsl_vector_view ns_vec = gsl_vector_subvector(ns, 0, cPar.n_vc);
 
-    gsl_matrix *K = gsl_matrix_alloc(cPar.ni_test, cPar.n_vc * cPar.ni_test);
-    gsl_matrix *A = gsl_matrix_alloc(cPar.ni_test, cPar.n_vc * cPar.ni_test);
+    DMatrix K;
+    K.shape = [cPar.ni_test, cPar.n_vc * cPar.ni_test];
+    DMatrix A;
+    A.shape = [cPar.ni_test, cPar.n_vc * cPar.ni_test];
     gsl_matrix_set_zero(K);
     gsl_matrix_set_zero(A);
 
-    gsl_vector *y = gsl_vector_alloc(cPar.ni_test);
-    gsl_matrix *W = gsl_matrix_alloc(cPar.ni_test, cPar.n_cvt);
+    DMatrix y;
+    y.shape = [1, cPar.ni_test];
+    DMatrix W;
+    W.shape = [cPar.ni_test, cPar.n_cvt];
 
     cPar.CopyCvtPhen(W, y, 0);
 
-    set<string> setSnps_beta;
-    map<string, double> mapRS2wA, mapRS2wK;
+    //set<string> setSnps_beta;
+    //map<string, double> mapRS2wA, mapRS2wK;
 
     cPar.ObtainWeight(setSnps_beta, mapRS2wK);
 
     cPar.CalcS(mapRS2wA, mapRS2wK, W, A, K, &S_mat.matrix, &Svar_mat.matrix,
                &ns_vec.vector);
     if (cPar.error == true) {
-      cout << "error! fail to calculate the S matrix. " << endl;
+      writeln("error! fail to calculate the S matrix. ");
       return;
     }
 
@@ -484,28 +491,30 @@ void batch_run(Param cPar){
   // Compute the q vector, that is used for variance component estimation using
   // summary statistics
   if (cPar.a_mode == 27 || cPar.a_mode == 28) {
-    gsl_matrix *Vq = gsl_matrix_alloc(cPar.n_vc, cPar.n_vc);
-    gsl_vector *q = gsl_vector_alloc(cPar.n_vc);
-    gsl_vector *s = gsl_vector_alloc(cPar.n_vc + 1);
-    gsl_vector_set_zero(q);
-    gsl_vector_set_zero(s);
+    DMatrix Vq;
+    Vq.shape = [cPar.n_vc, cPar.n_vc];
+    DMatrix q;
+    q.shape = [1, cPar.n_vc];
+    DMatrix s;
+    s.shape = [1, cPar.n_vc + 1];
+    //gsl_vector_set_zero(q);
+    //gsl_vector_set_zero(s);
 
     gsl_vector_view s_vec = gsl_vector_subvector(s, 0, cPar.n_vc);
 
-    vector<size_t> vec_cat, vec_ni;
-    vector<double> vec_weight, vec_z2;
-    map<string, double> mapRS2weight;
+    //vector<size_t> vec_cat, vec_ni;
+    //vector<double> vec_weight, vec_z2;
+    //map<string, double> mapRS2weight;
     mapRS2weight.clear();
 
-    time_start = clock();
     ReadFile_beta(cPar.file_beta, cPar.mapRS2cat, mapRS2weight, vec_cat, vec_ni,
                   vec_weight, vec_z2, cPar.ni_total, cPar.ns_total,
                   cPar.ns_test);
-    cout << "## number of total individuals = " << cPar.ni_total << endl;
-    cout << "## number of total SNPs = " << cPar.ns_total << endl;
-    cout << "## number of analyzed SNPs = " << cPar.ns_test << endl;
-    cout << "## number of variance components = " << cPar.n_vc << endl;
-    cout << "Calculating the q vector ... " << endl;
+    writeln("## number of total individuals = ", cPar.ni_total);
+    writeln("## number of total SNPs = ", cPar.ns_total);
+    writeln("## number of analyzed SNPs = ", cPar.ns_test);
+    writeln("## number of variance components = ", cPar.n_vc);
+    writeln("Calculating the q vector ... ");
     Calcq(cPar.n_block, vec_cat, vec_ni, vec_weight, vec_z2, Vq, q,
           &s_vec.vector);
 
@@ -538,8 +547,10 @@ void batch_run(Param cPar){
   // LM.
   if (cPar.a_mode == 51 || cPar.a_mode == 52 || cPar.a_mode == 53 ||
       cPar.a_mode == 54) { // Fit LM
-    gsl_matrix *Y = gsl_matrix_alloc(cPar.ni_test, cPar.n_ph);
-    gsl_matrix *W = gsl_matrix_alloc(Y.shape[0], cPar.n_cvt);
+    DMatrix Y;
+    Y = [cPar.ni_test, cPar.n_ph];
+    DMatrix W;
+    W = [Y.shape[0], cPar.n_cvt];
 
     // set covariates matrix W and phenotype matrix Y
     // an intercept should be included in W,
@@ -582,25 +593,34 @@ void batch_run(Param cPar){
       // element of mapRS2wA is 1
       // update indicator_snps, so that the numbers are in accordance with
       // mapRS2wK
-      set<string> setSnps_beta;
+
+      //set<string> setSnps_beta;
       ReadFile_snps_header(cPar.file_beta, setSnps_beta);
 
-      map<string, double> mapRS2wA, mapRS2wK;
+      //map<string, double> mapRS2wA, mapRS2wK;
       cPar.ObtainWeight(setSnps_beta, mapRS2wK);
 
       cPar.UpdateSNP(mapRS2wK);
 
       // Setup matrices and vectors.
-      gsl_matrix *S = gsl_matrix_alloc(cPar.n_vc * 2, cPar.n_vc);
-      gsl_matrix *Vq = gsl_matrix_alloc(cPar.n_vc, cPar.n_vc);
-      gsl_vector *q = gsl_vector_alloc(cPar.n_vc);
-      gsl_vector *s = gsl_vector_alloc(cPar.n_vc + 1);
+      DMatrix S;
+      S.shape = [cPar.n_vc * 2, cPar.n_vc];
+      DMatrix Vq;
+      Vq.shape = [cPar.n_vc, cPar.n_vc];
+      DMatrix q;
+      q.shape = [1, cPar.n_vc];
+      DMatrix s;
+      s.shape = [1, cPar.n_vc + 1];
 
-      gsl_matrix *K = gsl_matrix_alloc(cPar.ni_test, cPar.n_vc * cPar.ni_test);
-      gsl_matrix *A = gsl_matrix_alloc(cPar.ni_test, cPar.n_vc * cPar.ni_test);
+      DMatrix K;
+      K.shape = [cPar.ni_test, cPar.n_vc * cPar.ni_test];
+      DMatrix A;
+      A.shape = [cPar.ni_test, cPar.n_vc * cPar.ni_test];
 
-      gsl_vector *y = gsl_vector_alloc(cPar.ni_test);
-      gsl_matrix *W = gsl_matrix_alloc(cPar.ni_test, cPar.n_cvt);
+      DMatrix y;
+      y.shape = [1, cPar.ni_test];
+      DMatrix W;
+      W.shape = [cPar.ni_test, cPar.n_cvt];
 
       gsl_matrix_set_zero(K);
       gsl_matrix_set_zero(A);
@@ -618,19 +638,19 @@ void batch_run(Param cPar){
           gsl_matrix_submatrix(S, cPar.n_vc, 0, cPar.n_vc, cPar.n_vc);
       gsl_vector_view s_vec = gsl_vector_subvector(s, 0, cPar.n_vc);
 
-      vector<size_t> vec_cat, vec_ni;
-      vector<double> vec_weight, vec_z2;
+      size_t[] vec_cat, vec_ni;
+      double[] vec_weight, vec_z2;
 
       // read beta, based on the mapRS2wK
       ReadFile_beta(cPar.file_beta, cPar.mapRS2cat, mapRS2wK, vec_cat, vec_ni,
                     vec_weight, vec_z2, cPar.ni_study, cPar.ns_study,
                     cPar.ns_test);
 
-      cout << "Study Panel: " << endl;
-      cout << "## number of total individuals = " << cPar.ni_study << endl;
-      cout << "## number of total SNPs = " << cPar.ns_study << endl;
-      cout << "## number of analyzed SNPs = " << cPar.ns_test << endl;
-      cout << "## number of variance components = " << cPar.n_vc << endl;
+      writeln("Study Panel: ");
+      writeln("## number of total individuals = ", cPar.ni_study);
+      writeln("## number of total SNPs = ", cPar.ns_study);
+      writeln("## number of analyzed SNPs = ", cPar.ns_test);
+      writeln("## number of variance components = ", cPar.n_vc);
 
       // compute q
       Calcq(cPar.n_block, vec_cat, vec_ni, vec_weight, vec_z2, Vq, q,
@@ -672,7 +692,7 @@ void batch_run(Param cPar){
                    &s_vec.vector);
         cPar.time_G += (clock() - time_start) / (double(CLOCKS_PER_SEC) * 60.0);
         if (cPar.error == true) {
-          cout << "error! fail to calculate the S matrix. " << endl;
+          writeln("error! fail to calculate the S matrix.");
           return;
         }
 
@@ -698,10 +718,9 @@ void batch_run(Param cPar){
         CountFileLines(sfile, cPar.n_vc);
       } else {
         string file_name;
-        igzstream infile(cPar.file_mstudy.c_str(), igzstream::in);
+        //igzstream infile(cPar.file_mstudy.c_str(), igzstream::in);
         if (!infile) {
-          cout << "error! fail to open mstudy file: " << cPar.file_study
-               << endl;
+          writeln("error! fail to open mstudy file:", cPar.file_study);
           return;
         }
 
@@ -754,11 +773,9 @@ void batch_run(Param cPar){
                       cPar.ni_ref);
       }
 
-      cout << "## number of variance components = " << cPar.n_vc << endl;
-      cout << "## number of individuals in the sample = " << cPar.ni_study
-           << endl;
-      cout << "## number of individuals in the reference = " << cPar.ni_ref
-           << endl;
+      writeln("## number of variance components = ", cPar.n_vc);
+      writeln("## number of individuals in the sample = ", cPar.ni_study);
+      writeln("## number of individuals in the reference = ", cPar.ni_ref);
 
       CalcVCss(Vq, &S_mat.matrix, &Svar_mat.matrix, q, s_study, cPar.ni_study,
                cPar.v_pve, cPar.v_se_pve, cPar.pve_total, cPar.se_pve_total,
@@ -776,9 +793,12 @@ void batch_run(Param cPar){
       cPar.WriteVector(s, "size");
 
     } else {
-      gsl_matrix *Y = gsl_matrix_alloc(cPar.ni_test, cPar.n_ph);
-      gsl_matrix *W = gsl_matrix_alloc(Y.shape[0], cPar.n_cvt);
-      gsl_matrix *G = gsl_matrix_alloc(Y.shape[0], Y.shape[0] * cPar.n_vc);
+      DMatrix Y;
+      Y.shape = [cPar.ni_test, cPar.n_ph];
+      DMatrix W;
+      W.shape = [Y.shape[0], cPar.n_cvt];
+      DMatrix G;
+      G.shape = [Y.shape[0], Y.shape[0] * cPar.n_vc];
 
       // set covariates matrix W and phenotype matrix Y
       // an intercept should be included in W,
@@ -802,9 +822,9 @@ void batch_run(Param cPar){
           CenterMatrix(&G_sub.matrix);
           d = 0;
           for (size_t j = 0; j < G.shape[0]; j++) {
-            d += gsl_matrix_get(&G_sub.matrix, j, j);
+            d += accessor(G_sub.matrix, j, j);
           }
-          d /= (double)G.shape[0];
+          d /= to!double(G.shape[0]);
           (cPar.v_traceG).push_back(d);
         }
       } else if (!(cPar.file_kin).empty()) {
@@ -824,7 +844,7 @@ void batch_run(Param cPar){
         for (size_t j = 0; j < G.shape[0]; j++) {
           d += gsl_matrix_get(G, j, j);
         }
-        d /= (double)G.shape[0];
+        d /= to!double(G.shape[0]);
         (cPar.v_traceG).push_back(d);
       }
       // fit multiple variance components
@@ -873,12 +893,15 @@ void batch_run(Param cPar){
     // file; these are saved in mapRS2wA and mapRS2wK
     // normalize the weight in mapRS2wK to have an average of one; each element
     // of mapRS2wA is 1
-    set<string> setSnps_beta;
+
+
+    //set<string> setSnps_beta;
     ReadFile_snps_header(cPar.file_beta, setSnps_beta);
 
     // obtain the weights for wA, which contains the SNP weights for SNPs used
     // in the model
-    map<string, double> mapRS2wK;
+
+    //map<string, double> mapRS2wK;
     cPar.ObtainWeight(setSnps_beta, mapRS2wK);
 
     // set up matrices and vector
@@ -891,11 +914,11 @@ void batch_run(Param cPar){
     gsl_vector *z = gsl_vector_alloc(mapRS2wK.size());
     gsl_vector *s_vec = gsl_vector_alloc(cPar.n_vc);
 
-    vector<size_t> vec_cat, vec_size;
-    vector<double> vec_z;
+    size_t[] vec_cat, vec_size;
+    double[] vec_z;
 
-    map<string, double> mapRS2z, mapRS2wA;
-    map<string, string> mapRS2A1;
+    //map<string, double> mapRS2z, mapRS2wA;
+    //map<string, string> mapRS2A1;
     string file_str;
 
     // update s_vec, the number of snps in each category
@@ -903,21 +926,24 @@ void batch_run(Param cPar){
       vec_size.push_back(0);
     }
 
-    for (map<string, double>::const_iterator it = mapRS2wK.begin();
-         it != mapRS2wK.end(); ++it) {
-      vec_size[cPar.mapRS2cat[it->first]]++;
-    }
+    //TODO
+    //for (map<string, double>::const_iterator it = mapRS2wK.begin();
+    //     it != mapRS2wK.end(); ++it) {
+    //  vec_size[cPar.mapRS2cat[it->first]]++;
+    //}
 
     for (size_t i = 0; i < cPar.n_vc; i++) {
-      gsl_vector_set(s_vec, i, vec_size[i]);
+      //gsl_vector_set(s_vec, i, vec_size[i]);
+      s_vec[i] = vec_size[i];
     }
 
     // update mapRS2wA using v_pve and s_vec
     if (cPar.a_mode == 66) {
-      for (map<string, double>::const_iterator it = mapRS2wK.begin();
-           it != mapRS2wK.end(); ++it) {
-        mapRS2wA[it->first] = 1;
-      }
+      //todo
+      //for (map<string, double>::const_iterator it = mapRS2wK.begin();
+      //     it != mapRS2wK.end(); ++it) {
+      //  mapRS2wA[it->first] = 1;
+      //}
     } else {
       cPar.UpdateWeight(0, mapRS2wK, cPar.ni_test, s_vec, mapRS2wA);
     }
@@ -1002,20 +1028,31 @@ void batch_run(Param cPar){
   if (cPar.a_mode == 1 || cPar.a_mode == 2 || cPar.a_mode == 3 ||
       cPar.a_mode == 4 || cPar.a_mode == 5 ||
       cPar.a_mode == 31) { // Fit LMM or mvLMM or eigen
-    gsl_matrix *Y = gsl_matrix_alloc(cPar.ni_test, cPar.n_ph);
+    DMatrix Y;
+    Y.shape = [cPar.ni_test, cPar.n_ph];
     enforce_msg(Y, "allocate Y"); // just to be sure
-    gsl_matrix *W = gsl_matrix_alloc(Y.shape[0], cPar.n_cvt);
-    gsl_matrix *B = gsl_matrix_alloc(Y.shape[1], W.shape[1]); // B is a d by c
+    DMatrix W;
+    W.shape = [Y.shape[0], cPar.n_cvt];
+    DMatrix B;
+    B.shape = [Y.shape[1], W.shape[1]]; // B is a d by c
                                                           // matrix
-    gsl_matrix *se_B = gsl_matrix_alloc(Y.shape[1], W.shape[1]);
-    gsl_matrix *G = gsl_matrix_alloc(Y.shape[0], Y.shape[0]);
-    gsl_matrix *U = gsl_matrix_alloc(Y.shape[0], Y.shape[0]);
-    gsl_matrix *UtW = gsl_matrix_calloc(Y.shape[0], W.shape[1]);
-    gsl_matrix *UtY = gsl_matrix_calloc(Y.shape[0], Y.shape[1]);
-    gsl_vector *eval = gsl_vector_calloc(Y.shape[0]);
-    gsl_vector *env = gsl_vector_alloc(Y.shape[0]);
-    gsl_vector *weight = gsl_vector_alloc(Y.shape[0]);
-    assert_issue(cPar.issue == 26, UtY->data[0] == 0.0);
+    DMatrix se_B;
+    se_B.shape = [Y.shape[1], W.shape[1]];
+    DMatrix G;
+    G.shape = [Y.shape[0], Y.shape[0]];
+    DMatrix U;
+    U.shape = [Y.shape[0], Y.shape[0]];
+    DMatrix UtW;
+    UtW.shape = [Y.shape[0], W.shape[1]];
+    DMatrix UtY;
+    UtY.shape = [Y.shape[0], Y.shape[1]];
+    DMatrix eval;
+    eval.shape = [1, Y.shape[0]];
+    DMatrix env;
+    env.shape = [1, Y.shape[0]];
+    DMatrix weight;
+    weight.shape = [1, Y.shape[0]];
+    assert_issue(cPar.issue == 26, UtY.data[0] == 0.0);
 
     // set covariates matrix W and phenotype matrix Y
     // an intercept should be included in W,
@@ -1060,8 +1097,7 @@ void batch_run(Param cPar){
       }
 
       // eigen-decomposition and calculate trace_G
-      cout << "Start Eigen-Decomposition..." << endl;
-      time_start = clock();
+      writeln("Start Eigen-Decomposition...");
 
       if (cPar.a_mode == 31) {
         cPar.trace_G = EigenDecomp_Zeroed(G, U, eval, 1);
@@ -1083,29 +1119,27 @@ void batch_run(Param cPar){
         }
       }
 
-      cPar.time_eigen =
-          (clock() - time_start) / (double(CLOCKS_PER_SEC) * 60.0);
     } else {
       ReadFile_eigenU(cPar.file_ku, cPar.error, U);
       if (cPar.error == true) {
-        cout << "error! fail to read the U file. " << endl;
+        writeln("error! fail to read the U file. ");
         return;
       }
 
       ReadFile_eigenD(cPar.file_kd, cPar.error, eval);
       if (cPar.error == true) {
-        cout << "error! fail to read the D file. " << endl;
+        writeln("error! fail to read the D file. ");
         return;
       }
 
       cPar.trace_G = 0.0;
-      for (size_t i = 0; i < eval->size; i++) {
+      for (size_t i = 0; i < eval.elements.length; i++) {
         if (gsl_vector_get(eval, i) < 1e-10) {
           gsl_vector_set(eval, i, 0);
         }
         cPar.trace_G += gsl_vector_get(eval, i);
       }
-      cPar.trace_G /= (double)eval->size;
+      cPar.trace_G /= to!double(eval.elements.length);
     }
 
     if (cPar.a_mode == 31) {
@@ -1116,7 +1150,7 @@ void batch_run(Param cPar){
       CalcUtX(U, W, UtW);
       CalcUtX(U, Y, UtY);
 
-      assert_issue(cPar.issue == 26, ROUND(UtY->data[0]) == -16.6143);
+      assert_issue(cPar.issue == 26, ROUND(UtY.data[0]) == -16.6143);
 
       LMM cLmm;
       cLmm.CopyFromParam(cPar);
@@ -1133,7 +1167,7 @@ void batch_run(Param cPar){
       // calculate UtW and Uty
       CalcUtX(U, W, UtW);
       CalcUtX(U, Y, UtY);
-      assert_issue(cPar.issue == 26, ROUND(UtY->data[0]) == -16.6143);
+      assert_issue(cPar.issue == 26, ROUND(UtY.data[0]) == -16.6143);
 
       // calculate REMLE/MLE estimate and pve for univariate model
       if (cPar.n_ph == 1) { // one phenotype
@@ -1141,21 +1175,21 @@ void batch_run(Param cPar){
         gsl_vector_view se_beta = gsl_matrix_row(se_B, 0);
         gsl_vector_view UtY_col = gsl_matrix_column(UtY, 0);
 
-        assert_issue(cPar.issue == 26, ROUND(UtY->data[0]) == -16.6143);
+        assert_issue(cPar.issue == 26, ROUND(UtY.data[0]) == -16.6143);
 
         CalcLambda('L', eval, UtW, &UtY_col.vector, cPar.l_min, cPar.l_max,
                    cPar.n_region, cPar.l_mle_null, cPar.logl_mle_H0);
-        assert(!std::isnan(UtY->data[0]));
-        assert(!std::isnan(B->data[0]));
-        assert(!std::isnan(se_B->data[0]));
+        //assert(!std::isnan(UtY.data[0]));
+        //assert(!std::isnan(B.data[0]));
+        //assert(!std::isnan(se_B.data[0]));
 
         CalcLmmVgVeBeta(eval, UtW, &UtY_col.vector, cPar.l_mle_null,
                         cPar.vg_mle_null, cPar.ve_mle_null, &beta.vector,
                         &se_beta.vector);
 
-        assert(!std::isnan(UtY->data[0]));
-        assert(!std::isnan(B->data[0]));
-        assert(!std::isnan(se_B->data[0]));
+        //assert(!std::isnan(UtY.data[0]));
+        //assert(!std::isnan(B.data[0]));
+        //assert(!std::isnan(se_B.data[0]));
 
         cPar.beta_mle_null.clear();
         cPar.se_beta_mle_null.clear();
@@ -1163,11 +1197,11 @@ void batch_run(Param cPar){
           cPar.beta_mle_null.push_back(gsl_matrix_get(B, 0, i));
           cPar.se_beta_mle_null.push_back(gsl_matrix_get(se_B, 0, i));
         }
-        assert(!std::isnan(UtY->data[0]));
-        assert(!std::isnan(B->data[0]));
-        assert(!std::isnan(se_B->data[0]));
-        assert(!std::isnan(cPar.beta_mle_null.front()));
-        assert(!std::isnan(cPar.se_beta_mle_null.front()));
+        //assert(!std::isnan(UtY.data[0]));
+        //assert(!std::isnan(B.data[0]));
+        //assert(!std::isnan(se_B.data[0]));
+        //assert(!std::isnan(cPar.beta_mle_null.front()));
+        //assert(!std::isnan(cPar.se_beta_mle_null.front()));
 
         CalcLambda('R', eval, UtW, &UtY_col.vector, cPar.l_min, cPar.l_max,
                    cPar.n_region, cPar.l_remle_null, cPar.logl_remle_H0);
@@ -1188,22 +1222,27 @@ void batch_run(Param cPar){
 
         // calculate and output residuals
         if (cPar.a_mode == 5) {
-          gsl_vector *Utu_hat = gsl_vector_alloc(Y.shape[0]);
-          gsl_vector *Ute_hat = gsl_vector_alloc(Y.shape[0]);
-          gsl_vector *u_hat = gsl_vector_alloc(Y.shape[0]);
-          gsl_vector *e_hat = gsl_vector_alloc(Y.shape[0]);
-          gsl_vector *y_hat = gsl_vector_alloc(Y.shape[0]);
+          DMatrix Utu_hat;
+          Utu_hat.shape = [1, Y.shape[0]];
+          DMatrix Ute_hat;
+          Ute_hat.shape = [1, Y.shape[0]];
+          DMatrix u_hat;
+          u_hat.shape = [1, Y.shape[0]];
+          DMatrix e_hat;
+          e_hat.shape = [1, Y.shape[0]];
+          DMatrix y_hat;
+          y_hat.shape = [1, Y.shape[0]];
 
           // obtain Utu and Ute
           gsl_vector_memcpy(y_hat, &UtY_col.vector);
           gsl_blas_dgemv(CblasNoTrans, -1.0, UtW, &beta.vector, 1.0, y_hat);
 
           double d, u, e;
-          for (size_t i = 0; i < eval->size; i++) {
-            d = gsl_vector_get(eval, i);
+          for (size_t i = 0; i < eval.elements.length; i++) {
+            d = eval.elements[i];
             u = cPar.l_remle_null * d / (cPar.l_remle_null * d + 1.0) *
                 gsl_vector_get(y_hat, i);
-            e = 1.0 / (cPar.l_remle_null * d + 1.0) * gsl_vector_get(y_hat, i);
+            e = 1.0 / (cPar.l_remle_null * d + 1.0) * y_hat.elements[i];
             gsl_vector_set(Utu_hat, i, u);
             gsl_vector_set(Ute_hat, i, e);
           }
@@ -1283,10 +1322,14 @@ void batch_run(Param cPar){
 
   // BSLMM
   if (cPar.a_mode == 11 || cPar.a_mode == 12 || cPar.a_mode == 13) {
-    gsl_vector *y = gsl_vector_alloc(cPar.ni_test);
-    gsl_matrix *W = gsl_matrix_alloc(y->size, cPar.n_cvt);
-    gsl_matrix *G = gsl_matrix_alloc(y->size, y->size);
-    gsl_matrix *UtX = gsl_matrix_alloc(y->size, cPar.ns_test);
+    DMatrix y;
+    y.shape = [1, cPar.ni_test];
+    DMatrix W;
+    W.shape = [y.elements.length, cPar.n_cvt];
+    DMatrix G;
+    G.shape = [y.elements.length, y.elements.length];
+    DMatrix UtX;
+    UtX.shape = [y.elements.length, cPar.ns_test];
 
     // set covariates matrix W and phenotype vector y
     // an intercept should be included in W,
@@ -1307,10 +1350,14 @@ void batch_run(Param cPar){
       cBslmm.CopyToParam(cPar);
       // else, if rho!=1
     } else {
-      gsl_matrix *U = gsl_matrix_alloc(y->size, y->size);
-      gsl_vector *eval = gsl_vector_alloc(y->size);
-      gsl_matrix *UtW = gsl_matrix_alloc(y->size, W.shape[1]);
-      gsl_vector *Uty = gsl_vector_alloc(y->size);
+      DMatrix U;
+      U.shape = [y.elements.length, y.elements.length];
+      DMatrix eval;
+      eval.shape = [1, y.elements.length];
+      DMatrix UtW;
+      UtW.shape = [y.elements.length, W.shape[1]];
+      DMatrix Uty;
+      Uty.shape = [1, y.elements.length];
 
       // read relatedness matrix G
       if (!(cPar.file_kin).empty()) {
@@ -1351,7 +1398,7 @@ void batch_run(Param cPar){
       cPar.PrintSummary();
 
       // Creat and calcualte UtX, use a large memory
-      cout << "Calculating UtX..." << endl;
+      writeln("Calculating UtX...");
       CalcUtX(U, UtX);
 
       // perform BSLMM or BSLMMDAP analysis
@@ -1374,10 +1421,14 @@ void batch_run(Param cPar){
   // BSLMM-DAP
   if (cPar.a_mode == 14 || cPar.a_mode == 15 || cPar.a_mode == 16) {
     if (cPar.a_mode == 14) {
-      gsl_vector *y = gsl_vector_alloc(cPar.ni_test);
-      gsl_matrix *W = gsl_matrix_alloc(y->size, cPar.n_cvt);
-      gsl_matrix *G = gsl_matrix_alloc(y->size, y->size);
-      gsl_matrix *UtX = gsl_matrix_alloc(y->size, cPar.ns_test);
+      DMatrix y;
+      y.shape = [1, cPar.ni_test];
+      DMatrix W;
+      W.shape = [y.elements.length, cPar.n_cvt];
+      DMatrix G;
+      G.shape = [y.elements.length, y.elements.length];
+      DMatrix UtX;
+      UtX.shape = [y.elements.length, cPar.ns_test];
 
       // set covariates matrix W and phenotype vector y
       // an intercept should be included in W,
@@ -1398,10 +1449,14 @@ void batch_run(Param cPar){
         cBslmm.CopyToParam(cPar);
         // else, if rho!=1
       } else {
-        gsl_matrix *U = gsl_matrix_alloc(y->size, y->size);
-        gsl_vector *eval = gsl_vector_alloc(y->size);
-        gsl_matrix *UtW = gsl_matrix_alloc(y->size, W.shape[1]);
-        gsl_vector *Uty = gsl_vector_alloc(y->size);
+        DMatrix U;
+        U.shape = [y.elements.length, y.elements.length];
+        DMatrix eval;
+        eval.shape = [1, y.elements.length];
+        DMatrix UtW;
+        UtW.shape = [y.elements.length, W.shape[1]];
+        DMatrix Uty;
+        Uty.shape = [1, y.elements.length];
 
         // read relatedness matrix G
         if (!(cPar.file_kin).empty()) {
@@ -1411,7 +1466,7 @@ void batch_run(Param cPar){
           ReadFile_kin(cPar.file_kin, cPar.indicator_idv, cPar.mapID2num,
                        cPar.k_mode, cPar.error, G);
           if (cPar.error == true) {
-            cout << "error! fail to read kinship/relatedness file. " << endl;
+            writeln("error! fail to read kinship/relatedness file. ");
             return;
           }
 
@@ -1424,7 +1479,7 @@ void batch_run(Param cPar){
         }
 
         // eigen-decomposition and calculate trace_G
-        cout << "Start Eigen-Decomposition..." << endl;
+        writeln("Start Eigen-Decomposition...");
         time_start = clock();
         cPar.trace_G = EigenDecomp_Zeroed(G, U, eval, 0);
 
@@ -1443,7 +1498,7 @@ void batch_run(Param cPar){
         cPar.PrintSummary();
 
         // Creat and calcualte UtX, use a large memory
-        cout << "Calculating UtX..." << endl;
+        writeln("Calculating UtX...");
         CalcUtX(U, UtX);
 
         // perform analysis; assume X and y are already centered
@@ -1458,9 +1513,9 @@ void batch_run(Param cPar){
 
     } else if (cPar.a_mode == 15) {
       // perform EM algorithm and estimate parameters
-      vector<string> vec_rs;
-      vector<double> vec_sa2, vec_sb2, wab;
-      vector<vector<vector<double>>> BF;
+      string[] vec_rs;
+      double[] vec_sa2, vec_sb2, wab;
+      //vector<vector<vector<double>>> BF;
 
       // read hyp and bf files (functions defined in BSLMMDAP)
       ReadFile_hyb(cPar.file_hyp, vec_sa2, vec_sb2, wab);
@@ -1468,7 +1523,7 @@ void batch_run(Param cPar){
 
       cPar.ns_test = vec_rs.size();
       if (wab.size() != BF[0][0].size()) {
-        cout << "error! hyp and bf files dimension do not match" << endl;
+        writeln("error! hyp and bf files dimension do not match");
       }
 
       // load annotations
@@ -1483,11 +1538,11 @@ void batch_run(Param cPar){
         kd = 0;
       }
 
-      cout << "## number of blocks = " << BF.size() << endl;
-      cout << "## number of analyzed SNPs = " << vec_rs.size() << endl;
-      cout << "## grid size for hyperparameters = " << wab.size() << endl;
-      cout << "## number of continuous annotations = " << kc << endl;
-      cout << "## number of discrete annotations = " << kd << endl;
+      writeln("## number of blocks = ", BF.size());
+      writeln("## number of analyzed SNPs = ", vec_rs.size());
+      writeln("## grid size for hyperparameters = ", wab.size());
+      writeln("## number of continuous annotations = ", kc);
+      writeln("## number of discrete annotations = ", kd);
 
       // DAP_EstimateHyper (const size_t kc, const size_t kd, const
       // vector<string> &vec_rs, const vector<double> &vec_sa2, const
