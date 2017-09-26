@@ -52,6 +52,58 @@ DMatrix read_matrix_from_file(string filename){
   return DMatrix([rows, elements.length/rows], elements);
 }
 
+// Calculate UtX.
+void CalcUtX(const DMatrix U, DMatrix UtX) {
+  DMatrix X;
+  X.shape = [UtX.shape[0], UtX.shape[1]];
+  X.elements =  UtX.elements.dup;
+  //eigenlib_dgemm("T", "N", 1.0, U, X, 0.0, UtX);
+  return;
+}
+
+void CalcUtX(const DMatrix U, const DMatrix X, DMatrix UtX) {
+  //eigenlib_dgemm("T", "N", 1.0, U, X, 0.0, UtX);
+  return;
+}
+
+//void CalcUtX(const DMatrix U, const DMatrix x, DMatrix Utx) {
+//  //gsl_blas_dgemv(CblasTrans, 1.0, U, x, 0.0, Utx);
+//  return;
+//}
+
+// Kronecker product.
+void Kronecker(const DMatrix K, const DMatrix V, DMatrix H) {
+  for (size_t i = 0; i < K.shape[0]; i++) {
+    for (size_t j = 0; j < K.shape[1]; j++) {
+      DMatrix H_sub = get_sub_dmatrix(
+          H, i * V.shape[0], j * V.shape[1], V.shape[0], V.shape[1]);
+      H_sub.elements = V.elements.dup;
+      H_sub = multiply_dmatrix_num(H_sub, accessor(K, i, j));
+    }
+  }
+  return;
+}
+
+// Symmetric K matrix.
+void KroneckerSym(const DMatrix K, const DMatrix V, DMatrix H) {
+  for (size_t i = 0; i < K.shape[0]; i++) {
+    for (size_t j = i; j < K.shape[1]; j++) {
+      DMatrix H_sub = get_sub_dmatrix(
+          H, i * V.shape[0], j * V.shape[1], V.shape[0], V.shape[1]);
+      H_sub.elements = V.elements.dup;
+      H_sub = multiply_dmatrix_num(H_sub, accessor(K, i, j));
+
+      if (i != j) {
+        DMatrix H_sub_sym = get_sub_dmatrix(
+            H, j * V.shape[0], i * V.shape[1], V.shape[0], V.shape[1]);
+        H_sub_sym.elements = H_sub.elements.dup;
+      }
+    }
+  }
+  return;
+}
+
+
 void run_gemma(string option_kinship, string option_pheno, string option_covar, string option_geno){
 
   writeln("reading kinship " , option_kinship);
@@ -216,7 +268,7 @@ void batch_run(Param cPar){
     }
 
     // add mu
-    gsl_vector_add_constant(y_prdt, cPar.pheno_mean);
+    add_dmatrix_num(y_prdt, cPar.pheno_mean);
 
     // convert y to probability if needed
     if (cPar.a_mode == 42) {
@@ -224,7 +276,7 @@ void batch_run(Param cPar){
       for (size_t i = 0; i < y_prdt.elements.length; i++) {
         d = y_prdt.elements[i];
         d = gsl_cdf_gaussian_P(d, 1.0);
-        gsl_vector_set(y_prdt, i, d);
+        y_prdt.elements[i] = d;
       }
     }
 
@@ -232,7 +284,6 @@ void batch_run(Param cPar){
 
     cPRDT.WriteFiles(y_prdt);
 
-    gsl_vector_free(y_prdt);
   }
 
   // Prediction with kinship matrix only; for one or more phenotypes
@@ -372,33 +423,34 @@ void batch_run(Param cPar){
       }
 
       // obtain Y_hat from fixed effects
-      gsl_blas_dgemm(CblasNoTrans, CblasTrans, 1.0, W_full, B, 0.0, Y_hat);
+      //gsl_blas_dgemm(CblasNoTrans, CblasTrans, 1.0, W_full, B, 0.0, Y_hat);
 
       // obtain H
       KroneckerSym(G_full, Vg, H_full);
       for (size_t i = 0; i < G_full.shape[0]; i++) {
-        gsl_matrix_view H_sub = gsl_matrix_submatrix(
+        DMatrix H_sub = get_sub_dmatrix(
             H_full, i * Ve.shape[0], i * Ve.shape[1], Ve.shape[0], Ve.shape[1]);
-        gsl_matrix_add(&H_sub.matrix, Ve);
+        H_sub = add_dmatrix(H_sub, Ve);
       }
 
       // free matrices
     }
 
-    PRDT cPRDT;
+    //TODO
+    //PRDT cPRDT;
 
-    cPRDT.CopyFromParam(cPar);
+    //cPRDT.CopyFromParam(cPar);
 
-    writeln("Predicting Missing Phentypes ... ");
-    cPRDT.MvnormPrdt(Y_hat, H_full, Y_full);
+    //writeln("Predicting Missing Phentypes ... ");
+    //cPRDT.MvnormPrdt(Y_hat, H_full, Y_full);
 
-    cPRDT.WriteFiles(Y_full);
+    //cPRDT.WriteFiles(Y_full);
 
   }
 
   // Generate Kinship matrix (optionally using LOCO)
   if (cPar.a_mode == 21 || cPar.a_mode == 22) {
-    cout << "Calculating Relatedness Matrix ... " << endl;
+    writeln("Calculating Relatedness Matrix ... ");
 
     DMatrix G;
     G.shape = [cPar.ni_total, cPar.ni_total];
@@ -407,7 +459,7 @@ void batch_run(Param cPar){
     cPar.CalcKin(G);
 
     if (cPar.error == true) {
-      cout << "error! fail to calculate relatedness matrix. " << endl;
+      writeln("error! fail to calculate relatedness matrix. ");
       return;
     }
 
@@ -422,25 +474,25 @@ void batch_run(Param cPar){
   }
 
   // Compute the LDSC weights (not implemented yet)
-  if (cPar.a_mode == 72) {
-    cout << "Calculating Weights ... " << endl;
+  //if (cPar.a_mode == 72) {
+  //  writeln("Calculating Weights ... ");
 
-    VARCOV cVarcov;
-    cVarcov.CopyFromParam(cPar);
+  //  VARCOV cVarcov;
+  //  cVarcov.CopyFromParam(cPar);
 
-    if (!cPar.file_bfile.empty()) {
-      cVarcov.AnalyzePlink();
-    } else {
-      cVarcov.AnalyzeBimbam();
-    }
+  //  if (!cPar.file_bfile.empty()) {
+  //    cVarcov.AnalyzePlink();
+  //  } else {
+  //    cVarcov.AnalyzeBimbam();
+  //  }
 
-    cVarcov.CopyToParam(cPar);
-  }
+  //  cVarcov.CopyToParam(cPar);
+  //}
 
   // Compute the S matrix (and its variance), that is used for
   // variance component estimation using summary statistics.
   if (cPar.a_mode == 25 || cPar.a_mode == 26) {
-    cout << "Calculating the S Matrix ... " << endl;
+    writeln("Calculating the S Matrix ... ");
 
     DMatrix S;
     S.shape = [cPar.n_vc * 2, cPar.n_vc];
@@ -449,17 +501,17 @@ void batch_run(Param cPar){
     //gsl_matrix_set_zero(S);
     //gsl_vector_set_zero(ns);
 
-    DMatrix S_mat;// = gsl_matrix_submatrix(S, 0, 0, cPar.n_vc, cPar.n_vc);
+    DMatrix S_mat;// = get_sub_dmatrix(S, 0, 0, cPar.n_vc, cPar.n_vc);
     DMatrix Svar_mat;// =
-        //gsl_matrix_submatrix(S, cPar.n_vc, 0, cPar.n_vc, cPar.n_vc);
+        //get_sub_dmatrix(S, cPar.n_vc, 0, cPar.n_vc, cPar.n_vc);
     DMatrix ns_vec; //= gsl_vector_subvector(ns, 0, cPar.n_vc);
 
     DMatrix K;
     K.shape = [cPar.ni_test, cPar.n_vc * cPar.ni_test];
     DMatrix A;
     A.shape = [cPar.ni_test, cPar.n_vc * cPar.ni_test];
-    gsl_matrix_set_zero(K);
-    gsl_matrix_set_zero(A);
+    //gsl_matrix_set_zero(K);
+    //gsl_matrix_set_zero(A);
 
     DMatrix y;
     y.shape = [1, cPar.ni_test];
@@ -473,14 +525,13 @@ void batch_run(Param cPar){
 
     cPar.ObtainWeight(setSnps_beta, mapRS2wK);
 
-    cPar.CalcS(mapRS2wA, mapRS2wK, W, A, K, &S_mat.matrix, &Svar_mat.matrix,
-               &ns_vec.vector);
+    cPar.CalcS(mapRS2wA, mapRS2wK, W, A, K, S_mat, Svar_mat, ns_vec);
     if (cPar.error == true) {
       writeln("error! fail to calculate the S matrix. ");
       return;
     }
 
-    gsl_vector_set(ns, cPar.n_vc, cPar.ni_test);
+    //gsl_vector_set(ns, cPar.n_vc, cPar.ni_test);
 
     cPar.WriteMatrix(S, "S");
     cPar.WriteVector(ns, "size");
@@ -519,7 +570,7 @@ void batch_run(Param cPar){
           &s_vec.vector);
 
     if (cPar.error == true) {
-      cout << "error! fail to calculate the q vector. " << endl;
+      writeln("error! fail to calculate the q vector.");
       return;
     }
 
@@ -531,18 +582,18 @@ void batch_run(Param cPar){
   }
 
   // Calculate SNP covariance.
-  if (cPar.a_mode == 71) {
-    VARCOV cVarcov;
-    cVarcov.CopyFromParam(cPar);
+  //if (cPar.a_mode == 71) {
+  //  VARCOV cVarcov;
+  //  cVarcov.CopyFromParam(cPar);
 
-    if (!cPar.file_bfile.empty()) {
-      cVarcov.AnalyzePlink();
-    } else {
-      cVarcov.AnalyzeBimbam();
-    }
+  //  if (!cPar.file_bfile.empty()) {
+  //    cVarcov.AnalyzePlink();
+  //  } else {
+  //    cVarcov.AnalyzeBimbam();
+  //  }
 
-    cVarcov.CopyToParam(cPar);
-  }
+  //  cVarcov.CopyToParam(cPar);
+  //}
 
   // LM.
   if (cPar.a_mode == 51 || cPar.a_mode == 52 || cPar.a_mode == 53 ||
@@ -633,9 +684,9 @@ void batch_run(Param cPar){
       cPar.CopyCvtPhen(W, y, 0);
 
       gsl_matrix_view S_mat =
-          gsl_matrix_submatrix(S, 0, 0, cPar.n_vc, cPar.n_vc);
+          get_sub_dmatrix(S, 0, 0, cPar.n_vc, cPar.n_vc);
       gsl_matrix_view Svar_mat =
-          gsl_matrix_submatrix(S, cPar.n_vc, 0, cPar.n_vc, cPar.n_vc);
+          get_sub_dmatrix(S, cPar.n_vc, 0, cPar.n_vc, cPar.n_vc);
       gsl_vector_view s_vec = gsl_vector_subvector(s, 0, cPar.n_vc);
 
       size_t[] vec_cat, vec_ni;
@@ -659,9 +710,8 @@ void batch_run(Param cPar){
       // compute S
       cPar.CalcS(mapRS2wA, mapRS2wK, W, A, K, &S_mat.matrix, &Svar_mat.matrix,
                  &s_vec.vector);
-      cPar.time_G += (clock() - time_start) / (double(CLOCKS_PER_SEC) * 60.0);
       if (cPar.error == true) {
-        cout << "error! fail to calculate the S matrix. " << endl;
+        writeln("error! fail to calculate the S matrix.");
         return;
       }
 
@@ -690,7 +740,6 @@ void batch_run(Param cPar){
         // compute S
         cPar.CalcS(mapRS2wA, mapRS2wK, W, A, K, &S_mat.matrix, &Svar_mat.matrix,
                    &s_vec.vector);
-        cPar.time_G += (clock() - time_start) / (double(CLOCKS_PER_SEC) * 60.0);
         if (cPar.error == true) {
           writeln("error! fail to calculate the S matrix.");
           return;
@@ -748,9 +797,9 @@ void batch_run(Param cPar){
 
       gsl_matrix_set_zero(S);
       gsl_matrix_view S_mat =
-          gsl_matrix_submatrix(S, 0, 0, cPar.n_vc, cPar.n_vc);
+          get_sub_dmatrix(S, 0, 0, cPar.n_vc, cPar.n_vc);
       gsl_matrix_view Svar_mat =
-          gsl_matrix_submatrix(S, cPar.n_vc, 0, cPar.n_vc, cPar.n_vc);
+          get_sub_dmatrix(S, cPar.n_vc, 0, cPar.n_vc, cPar.n_vc);
 
       gsl_matrix_set_zero(Vq);
       // gsl_matrix_set_zero(V);
@@ -809,7 +858,7 @@ void batch_run(Param cPar){
         ReadFile_mk(cPar.file_mk, cPar.indicator_idv, cPar.mapID2num,
                     cPar.k_mode, cPar.error, G);
         if (cPar.error == true) {
-          cout << "error! fail to read kinship/relatedness file. " << endl;
+          writeln("error! fail to read kinship/relatedness file.");
           return;
         }
 
@@ -818,7 +867,7 @@ void batch_run(Param cPar){
         (cPar.v_traceG).clear();
         for (size_t i = 0; i < cPar.n_vc; i++) {
           gsl_matrix_view G_sub =
-              gsl_matrix_submatrix(G, 0, i * G.shape[0], G.shape[0], G.shape[0]);
+              get_sub_dmatrix(G, 0, i * G.shape[0], G.shape[0], G.shape[0]);
           CenterMatrix(&G_sub.matrix);
           d = 0;
           for (size_t j = 0; j < G.shape[0]; j++) {
@@ -831,7 +880,7 @@ void batch_run(Param cPar){
         ReadFile_kin(cPar.file_kin, cPar.indicator_idv, cPar.mapID2num,
                      cPar.k_mode, cPar.error, G);
         if (cPar.error == true) {
-          cout << "error! fail to read kinship/relatedness file. " << endl;
+          writeln("error! fail to read kinship/relatedness file.");
           return;
         }
 
@@ -929,7 +978,7 @@ void batch_run(Param cPar){
     //TODO
     //for (map<string, double>::const_iterator it = mapRS2wK.begin();
     //     it != mapRS2wK.end(); ++it) {
-    //  vec_size[cPar.mapRS2cat[it->first]]++;
+    //  vec_size[cPar.mapRS2cat[it.first]]++;
     //}
 
     for (size_t i = 0; i < cPar.n_vc; i++) {
@@ -957,7 +1006,7 @@ void batch_run(Param cPar){
     cPar.UpdateSNPnZ(mapRS2wA, mapRS2A1, mapRS2z, w, z, vec_cat);
 
     // compute an n by k matrix of X_iWz
-    cout << "Calculating Xz ... " << endl;
+    writeln("Calculating Xz ... ");
 
     gsl_matrix_set_zero(Xz);
     gsl_vector_set_all(w1, 1);
@@ -979,7 +1028,7 @@ void batch_run(Param cPar){
     if (cPar.a_mode == 66) {
       gsl_matrix_memcpy(XWz, Xz);
     } else if (cPar.a_mode == 67) {
-      cout << "Calculating XWz ... " << endl;
+      writeln("Calculating XWz ... ");
 
       gsl_matrix_set_zero(XWz);
 
@@ -999,7 +1048,7 @@ void batch_run(Param cPar){
       }
     }
     // compute an p by k matrix of X_j^TWX_iWz
-    cout << "Calculating XtXWz ... " << endl;
+    writeln("Calculating XtXWz ... ");
     gsl_matrix_set_zero(XtXWz);
 
     if (!cPar.file_bfile.empty()) {
@@ -1066,7 +1115,7 @@ void batch_run(Param cPar){
       ReadFile_kin(cPar.file_kin, cPar.indicator_idv, cPar.mapID2num,
                    cPar.k_mode, cPar.error, G);
       if (cPar.error == true) {
-        cout << "error! fail to read kinship/relatedness file. " << endl;
+        writeln("error! fail to read kinship/relatedness file.");
         return;
       }
 
@@ -1367,7 +1416,7 @@ void batch_run(Param cPar){
         ReadFile_kin(cPar.file_kin, cPar.indicator_idv, cPar.mapID2num,
                      cPar.k_mode, cPar.error, G);
         if (cPar.error == true) {
-          cout << "error! fail to read kinship/relatedness file. " << endl;
+          writeln("error! fail to read kinship/relatedness file. ");
           return;
         }
 
@@ -1379,7 +1428,7 @@ void batch_run(Param cPar){
       }
 
       // eigen-decomposition and calculate trace_G
-      cout << "Start Eigen-Decomposition..." << endl;
+      writeln("Start Eigen-Decomposition...");
 
       cPar.trace_G = EigenDecomp_Zeroed(G, U, eval, 0);
 

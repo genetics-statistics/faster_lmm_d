@@ -293,4 +293,14 @@ struct Param{
   //set<string> setSnps;              // Set of snps for analysis (-snps).
   //set<string> setKSnps;             // Set of snps for K (-ksnps and LOCO)
   //set<string> setGWASnps;           // Set of snps for GWA (-gwasnps and LOCO)
+
+  void ReadFiles(){}
+  void CheckData(){}
+  void WriteMatrix(DMatrix a, string b){}
+  void WriteVar(string a){}
+  void WriteVector(DMatrix a, string b){}
+  void CopyCvtPhen(DMatrix a, DMatrix b, int c){}
+  void ObtainWeight(){}
+  void CalcS(){}
+
 }
