@@ -181,7 +181,7 @@ struct Param{
   size_t n_accept;     // Number of acceptance.
   size_t n_mh;         // # MH steps in each iter.
   double geo_mean;     // Mean of geometric dist.
-  long int randseed;
+  uint randseed;
   double trace_G;
 
   //HYPBSLMM cHyp_initial;  <= Param

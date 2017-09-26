@@ -152,26 +152,26 @@ void run_gemma(string option_kinship, string option_pheno, string option_covar, 
 void batch_run(Param cPar){
 
   // Read Files.
-  cout << "Reading Files ... " << endl;
+  writeln("Reading Files ... ");
   cPar.ReadFiles();
   if (cPar.error == true) {
-    cout << "error! fail to read files. " << endl;
+    writeln("error! fail to read files. ");
     return;
   }
   cPar.CheckData();
   if (cPar.error == true) {
-    cout << "error! fail to check data. " << endl;
+    writeln("error! fail to check data. ");
     return;
   }
 
   // Prediction for bslmm
   if (cPar.a_mode == 41 || cPar.a_mode == 42) {
-    gsl_vector *y_prdt;
+    DMatrix y_prdt;
 
-    y_prdt = gsl_vector_alloc(cPar.ni_total - cPar.ni_test);
+    y_prdt.shape = [1, cPar.ni_total - cPar.ni_test];
 
-    // set to zero
-    gsl_vector_set_zero(y_prdt);
+    // set to zero TODO
+    //gsl_vector_set_zero(y_prdt);
 
     PRDT cPRDT;
     cPRDT.CopyFromParam(cPar);
@@ -189,9 +189,9 @@ void batch_run(Param cPar){
       int[] indicator_all;
       size_t c_bv = 0;
       for (size_t i = 0; i < cPar.indicator_idv.size(); i++) {
-        indicator_all.push_back(1);
+        //indicator_all.push_back(1);
         if (cPar.indicator_bv[i] == 1) {
-          gsl_vector_set(u_hat, c_bv, cPar.vec_bv[i]);
+          //gsl_vector_set(u_hat, c_bv, cPar.vec_bv[i]);
           c_bv++;
         }
       }
@@ -199,7 +199,7 @@ void batch_run(Param cPar){
       ReadFile_kin(cPar.file_kin, indicator_all, cPar.mapID2num, cPar.k_mode,
                    cPar.error, G);
       if (cPar.error == true) {
-        cout << "error! fail to read kinship/relatedness file. " << endl;
+        writeln("error! fail to read kinship/relatedness file.");
         return;
       }
 
@@ -221,8 +221,8 @@ void batch_run(Param cPar){
     // convert y to probability if needed
     if (cPar.a_mode == 42) {
       double d;
-      for (size_t i = 0; i < y_prdt.length; i++) {
-        d = gsl_vector_get(y_prdt, i);
+      for (size_t i = 0; i < y_prdt.elements.length; i++) {
+        d = y_prdt.elements[i];
         d = gsl_cdf_gaussian_P(d, 1.0);
         gsl_vector_set(y_prdt, i, d);
       }
@@ -312,9 +312,9 @@ void batch_run(Param cPar){
       DMatrix UtY_col = get_col(UtY, 0);
 
       // obtain estimates
-      CalcLambda('R', eval, UtW, &UtY_col.vector, cPar.l_min, cPar.l_max,
+      CalcLambda('R', eval, UtW, UtY_col, cPar.l_min, cPar.l_max,
                  cPar.n_region, lambda, logl);
-      CalcLmmVgVeBeta(eval, UtW, &UtY_col.vector, lambda, vg, ve, beta,
+      CalcLmmVgVeBeta(eval, UtW, UtY_col, lambda, vg, ve, beta,
                       se_beta);
 
       writeln("REMLE estimate for vg in the null model = ", vg);
@@ -328,8 +328,8 @@ void batch_run(Param cPar){
 
       // obtain H
       //gsl_matrix_set_identity(H_full);
-      H_full = slow_matrix_multiply(H_full, ve);
-      G_full = slow_matrix_multiply(G_full, vg);
+      H_full = multiply_dmatrix_num(H_full, ve);
+      G_full = multiply_dmatrix_num(G_full, vg);
       H_full = add_dmatrix(H_full, G_full);
 
       // free matrices
@@ -446,13 +446,13 @@ void batch_run(Param cPar){
     S.shape = [cPar.n_vc * 2, cPar.n_vc];
     DMatrix ns;
     ns.shape = [cPar.n_vc + 1];
-    gsl_matrix_set_zero(S);
-    gsl_vector_set_zero(ns);
+    //gsl_matrix_set_zero(S);
+    //gsl_vector_set_zero(ns);
 
-    gsl_matrix_view S_mat = gsl_matrix_submatrix(S, 0, 0, cPar.n_vc, cPar.n_vc);
-    gsl_matrix_view Svar_mat =
-        gsl_matrix_submatrix(S, cPar.n_vc, 0, cPar.n_vc, cPar.n_vc);
-    gsl_vector_view ns_vec = gsl_vector_subvector(ns, 0, cPar.n_vc);
+    DMatrix S_mat;// = gsl_matrix_submatrix(S, 0, 0, cPar.n_vc, cPar.n_vc);
+    DMatrix Svar_mat;// =
+        //gsl_matrix_submatrix(S, cPar.n_vc, 0, cPar.n_vc, cPar.n_vc);
+    DMatrix ns_vec; //= gsl_vector_subvector(ns, 0, cPar.n_vc);
 
     DMatrix K;
     K.shape = [cPar.ni_test, cPar.n_vc * cPar.ni_test];
@@ -1504,7 +1504,6 @@ void batch_run(Param cPar){
         // perform analysis; assume X and y are already centered
         BSLMMDAP cBslmmDap;
         cBslmmDap.CopyFromParam(cPar);
-        time_start = clock();
         cBslmmDap.DAP_CalcBF(U, UtX, Uty, eval, y);
 
         cBslmmDap.CopyToParam(cPar);
@@ -1527,9 +1526,9 @@ void batch_run(Param cPar){
       }
 
       // load annotations
-      gsl_matrix *Ac;
-      gsl_matrix_int *Ad;
-      gsl_vector_int *dlevel;
+      DMatrix Ac;
+      DMatrix Ad;
+      DMatrix dlevel;
       size_t kc, kd;
       if (!cPar.file_cat.empty()) {
         ReadFile_cat(cPar.file_cat, vec_rs, Ac, Ad, dlevel, kc, kd);
