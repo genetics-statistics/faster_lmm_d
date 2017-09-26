@@ -237,39 +237,51 @@ void batch_run(Param cPar){
   if (cPar.a_mode == 43) {
     // first, use individuals with full phenotypes to obtain estimates of Vg and
     // Ve
-    gsl_matrix *Y = gsl_matrix_alloc(cPar.ni_test, cPar.n_ph);
-    gsl_matrix *W = gsl_matrix_alloc(Y->size1, cPar.n_cvt);
-    gsl_matrix *G = gsl_matrix_alloc(Y->size1, Y->size1);
-    gsl_matrix *U = gsl_matrix_alloc(Y->size1, Y->size1);
-    gsl_matrix *UtW = gsl_matrix_alloc(Y->size1, W->size2);
-    gsl_matrix *UtY = gsl_matrix_alloc(Y->size1, Y->size2);
-    gsl_vector *eval = gsl_vector_alloc(Y->size1);
+    DMatrix Y;
+    Y.shape = [cPar.ni_test, cPar.n_ph];
+    DMatrix W;
+    W.shape = [Y.shape[0], cPar.n_cvt);
+    DMatrix G;
+    G.shape = [Y.shape[0], Y.shape[0]];
+    DMatrix U;
+    U.shape = [Y.shape[0], Y.shape[0]];
+    DMatrix UtW;
+    UtW.shape = [Y.shape[0], W.shape[1]];
+    DMatrix UtY;
+    UtY.shape = [Y.shape[0], Y.shape[1]];
+    DMatrix eval;
+    eval.shape = [1, Y.shape[0]];
 
-    gsl_matrix *Y_full = gsl_matrix_alloc(cPar.ni_cvt, cPar.n_ph);
-    gsl_matrix *W_full = gsl_matrix_alloc(Y_full->size1, cPar.n_cvt);
+    DMatrix Y_full;
+    Y_full.shape = [cPar.ni_cvt, cPar.n_ph];
+    DMatrix W_full;
+    W_full.shape = [Y_full.shape[0], cPar.n_cvt];
 
     // set covariates matrix W and phenotype matrix Y
     // an intercept should be included in W,
     cPar.CopyCvtPhen(W, Y, 0);
     cPar.CopyCvtPhen(W_full, Y_full, 1);
 
-    gsl_matrix *Y_hat = gsl_matrix_alloc(Y_full->size1, cPar.n_ph);
-    gsl_matrix *G_full = gsl_matrix_alloc(Y_full->size1, Y_full->size1);
-    gsl_matrix *H_full = gsl_matrix_alloc(Y_full->size1 * Y_hat->size2,
-                                          Y_full->size1 * Y_hat->size2);
+    DMatrix Y_hat;
+    Y_hat.shape = [Y_full.shape[0], cPar.n_ph];
+    DMatrix G_full;
+    G_full.shape = [Y_full.shape[0], Y_full.shape[0]];
+    DMatrix H_full;
+    H_full.shape = [Y_full.shape[0] * Y_hat.shape[1],
+                                          Y_full.shape[0] * Y_hat.shape[1]];
 
     // read relatedness matrix G, and matrix G_full
     ReadFile_kin(cPar.file_kin, cPar.indicator_idv, cPar.mapID2num, cPar.k_mode,
                  cPar.error, G);
     if (cPar.error == true) {
-      cout << "error! fail to read kinship/relatedness file. " << endl;
+      writeln("error! fail to read kinship/relatedness file.");
       return;
     }
     // This is not so elegant. Reads twice to select on idv and then cvt
     ReadFile_kin(cPar.file_kin, cPar.indicator_cvt, cPar.mapID2num, cPar.k_mode,
                  cPar.error, G_full);
     if (cPar.error == true) {
-      cout << "error! fail to read kinship/relatedness file. " << endl;
+      writeln("error! fail to read kinship/relatedness file.");
       return;
     }
 
@@ -279,7 +291,7 @@ void batch_run(Param cPar){
     validate_K(G,cPar.mode_check,cPar.mode_strict);
 
     // eigen-decomposition and calculate trace_G
-    cout << "Start Eigen-Decomposition..." << endl;
+    writeln("Start Eigen-Decomposition...");
     cPar.trace_G = EigenDecomp_Zeroed(G, U, eval, 0);
 
     // calculate UtW and Uty
@@ -289,11 +301,13 @@ void batch_run(Param cPar){
     // calculate variance component and beta estimates
     // and then obtain predicted values
     if (cPar.n_ph == 1) {
-      gsl_vector *beta = gsl_vector_alloc(W->size2);
-      gsl_vector *se_beta = gsl_vector_alloc(W->size2);
+      DMatrix beta;
+      beta.shape = [1, W.shape[1]];
+      DMatrix se_beta;
+      se_beta.shape = [1, W.shape[1]];
 
       double lambda, logl, vg, ve;
-      gsl_vector_view UtY_col = gsl_matrix_column(UtY, 0);
+      DMatrix UtY_col = get_col(UtY, 0);
 
       // obtain estimates
       CalcLambda('R', eval, UtW, &UtY_col.vector, cPar.l_min, cPar.l_max,
@@ -301,53 +315,57 @@ void batch_run(Param cPar){
       CalcLmmVgVeBeta(eval, UtW, &UtY_col.vector, lambda, vg, ve, beta,
                       se_beta);
 
-      cout << "REMLE estimate for vg in the null model = " << vg << endl;
-      cout << "REMLE estimate for ve in the null model = " << ve << endl;
+      writeln("REMLE estimate for vg in the null model = ", vg);
+      writeln("REMLE estimate for ve in the null model = ", ve);
       cPar.vg_remle_null = vg;
       cPar.ve_remle_null = ve;
 
       // obtain Y_hat from fixed effects
-      gsl_vector_view Yhat_col = gsl_matrix_column(Y_hat, 0);
-      gsl_blas_dgemv(CblasNoTrans, 1.0, W_full, beta, 0.0, &Yhat_col.vector);
+      DMatrix Yhat_col = get_col(Y_hat, 0);
+      //gsl_blas_dgemv(CblasNoTrans, 1.0, W_full, beta, 0.0, &Yhat_col.vector);
 
       // obtain H
-      gsl_matrix_set_identity(H_full);
-      gsl_matrix_scale(H_full, ve);
-      gsl_matrix_scale(G_full, vg);
-      gsl_matrix_add(H_full, G_full);
+      //gsl_matrix_set_identity(H_full);
+      H_full = slow_matrix_multiply(H_full, ve);
+      G_full = slow_matrix_multiply(G_full, vg);
+      H_full = add_dmatrix(H_full, G_full);
 
       // free matrices
     } else {
-      gsl_matrix *Vg = gsl_matrix_alloc(cPar.n_ph, cPar.n_ph);
-      gsl_matrix *Ve = gsl_matrix_alloc(cPar.n_ph, cPar.n_ph);
-      gsl_matrix *B = gsl_matrix_alloc(cPar.n_ph, W->size2);
-      gsl_matrix *se_B = gsl_matrix_alloc(cPar.n_ph, W->size2);
+      DMatrix Vg;
+      Vg.shape = [cPar.n_ph, cPar.n_ph];
+      DMatrix Ve;
+      Ve.shape = [cPar.n_ph, cPar.n_ph];
+      DMatrix B;
+      B.shape = [cPar.n_ph, W.shape[1]];
+      DMatrix se_B;
+      se_B.shape = [cPar.n_ph, W.shape[1]];
 
       // obtain estimates
       CalcMvLmmVgVeBeta(eval, UtW, UtY, cPar.em_iter, cPar.nr_iter,
                         cPar.em_prec, cPar.nr_prec, cPar.l_min, cPar.l_max,
                         cPar.n_region, Vg, Ve, B, se_B);
 
-      cout << "REMLE estimate for Vg in the null model: " << endl;
-      for (size_t i = 0; i < Vg->size1; i++) {
+      writeln("REMLE estimate for Vg in the null model: ");
+      for (size_t i = 0; i < Vg.shape[0]; i++) {
         for (size_t j = 0; j <= i; j++) {
-          cout << tab(j) << gsl_matrix_get(Vg, i, j);
+          writeln("\t",accessor(Vg, i, j));
         }
-        cout << endl;
+        writeln();
       }
-      cout << "REMLE estimate for Ve in the null model: " << endl;
-      for (size_t i = 0; i < Ve->size1; i++) {
+      writeln("REMLE estimate for Ve in the null model: ");
+      for (size_t i = 0; i < Ve.shape[0]; i++) {
         for (size_t j = 0; j <= i; j++) {
-          cout << tab(j) << gsl_matrix_get(Ve, i, j);
+          writeln("\t",accessor(Ve, i, j));
         }
-        cout << endl;
+        writeln();
       }
-      cPar.Vg_remle_null.clear();
-      cPar.Ve_remle_null.clear();
-      for (size_t i = 0; i < Vg->size1; i++) {
-        for (size_t j = i; j < Vg->size2; j++) {
-          cPar.Vg_remle_null.push_back(gsl_matrix_get(Vg, i, j));
-          cPar.Ve_remle_null.push_back(gsl_matrix_get(Ve, i, j));
+      //cPar.Vg_remle_null.clear();
+      //cPar.Ve_remle_null.clear();
+      for (size_t i = 0; i < Vg.shape[0]; i++) {
+        for (size_t j = i; j < Vg.shape[1]; j++) {
+          //cPar.Vg_remle_null.push_back(gsl_matrix_get(Vg, i, j));
+          //cPar.Ve_remle_null.push_back(gsl_matrix_get(Ve, i, j));
         }
       }
 
@@ -356,9 +374,9 @@ void batch_run(Param cPar){
 
       // obtain H
       KroneckerSym(G_full, Vg, H_full);
-      for (size_t i = 0; i < G_full->size1; i++) {
+      for (size_t i = 0; i < G_full.shape[0]; i++) {
         gsl_matrix_view H_sub = gsl_matrix_submatrix(
-            H_full, i * Ve->size1, i * Ve->size2, Ve->size1, Ve->size2);
+            H_full, i * Ve.shape[0], i * Ve.shape[1], Ve.shape[0], Ve.shape[1]);
         gsl_matrix_add(&H_sub.matrix, Ve);
       }
 
@@ -521,7 +539,7 @@ void batch_run(Param cPar){
   if (cPar.a_mode == 51 || cPar.a_mode == 52 || cPar.a_mode == 53 ||
       cPar.a_mode == 54) { // Fit LM
     gsl_matrix *Y = gsl_matrix_alloc(cPar.ni_test, cPar.n_ph);
-    gsl_matrix *W = gsl_matrix_alloc(Y->size1, cPar.n_cvt);
+    gsl_matrix *W = gsl_matrix_alloc(Y.shape[0], cPar.n_cvt);
 
     // set covariates matrix W and phenotype matrix Y
     // an intercept should be included in W,
@@ -759,8 +777,8 @@ void batch_run(Param cPar){
 
     } else {
       gsl_matrix *Y = gsl_matrix_alloc(cPar.ni_test, cPar.n_ph);
-      gsl_matrix *W = gsl_matrix_alloc(Y->size1, cPar.n_cvt);
-      gsl_matrix *G = gsl_matrix_alloc(Y->size1, Y->size1 * cPar.n_vc);
+      gsl_matrix *W = gsl_matrix_alloc(Y.shape[0], cPar.n_cvt);
+      gsl_matrix *G = gsl_matrix_alloc(Y.shape[0], Y.shape[0] * cPar.n_vc);
 
       // set covariates matrix W and phenotype matrix Y
       // an intercept should be included in W,
@@ -780,13 +798,13 @@ void batch_run(Param cPar){
         (cPar.v_traceG).clear();
         for (size_t i = 0; i < cPar.n_vc; i++) {
           gsl_matrix_view G_sub =
-              gsl_matrix_submatrix(G, 0, i * G->size1, G->size1, G->size1);
+              gsl_matrix_submatrix(G, 0, i * G.shape[0], G.shape[0], G.shape[0]);
           CenterMatrix(&G_sub.matrix);
           d = 0;
-          for (size_t j = 0; j < G->size1; j++) {
+          for (size_t j = 0; j < G.shape[0]; j++) {
             d += gsl_matrix_get(&G_sub.matrix, j, j);
           }
-          d /= (double)G->size1;
+          d /= (double)G.shape[0];
           (cPar.v_traceG).push_back(d);
         }
       } else if (!(cPar.file_kin).empty()) {
@@ -803,10 +821,10 @@ void batch_run(Param cPar){
 
         (cPar.v_traceG).clear();
         double d = 0;
-        for (size_t j = 0; j < G->size1; j++) {
+        for (size_t j = 0; j < G.shape[0]; j++) {
           d += gsl_matrix_get(G, j, j);
         }
-        d /= (double)G->size1;
+        d /= (double)G.shape[0];
         (cPar.v_traceG).push_back(d);
       }
       // fit multiple variance components
@@ -986,17 +1004,17 @@ void batch_run(Param cPar){
       cPar.a_mode == 31) { // Fit LMM or mvLMM or eigen
     gsl_matrix *Y = gsl_matrix_alloc(cPar.ni_test, cPar.n_ph);
     enforce_msg(Y, "allocate Y"); // just to be sure
-    gsl_matrix *W = gsl_matrix_alloc(Y->size1, cPar.n_cvt);
-    gsl_matrix *B = gsl_matrix_alloc(Y->size2, W->size2); // B is a d by c
+    gsl_matrix *W = gsl_matrix_alloc(Y.shape[0], cPar.n_cvt);
+    gsl_matrix *B = gsl_matrix_alloc(Y.shape[1], W.shape[1]); // B is a d by c
                                                           // matrix
-    gsl_matrix *se_B = gsl_matrix_alloc(Y->size2, W->size2);
-    gsl_matrix *G = gsl_matrix_alloc(Y->size1, Y->size1);
-    gsl_matrix *U = gsl_matrix_alloc(Y->size1, Y->size1);
-    gsl_matrix *UtW = gsl_matrix_calloc(Y->size1, W->size2);
-    gsl_matrix *UtY = gsl_matrix_calloc(Y->size1, Y->size2);
-    gsl_vector *eval = gsl_vector_calloc(Y->size1);
-    gsl_vector *env = gsl_vector_alloc(Y->size1);
-    gsl_vector *weight = gsl_vector_alloc(Y->size1);
+    gsl_matrix *se_B = gsl_matrix_alloc(Y.shape[1], W.shape[1]);
+    gsl_matrix *G = gsl_matrix_alloc(Y.shape[0], Y.shape[0]);
+    gsl_matrix *U = gsl_matrix_alloc(Y.shape[0], Y.shape[0]);
+    gsl_matrix *UtW = gsl_matrix_calloc(Y.shape[0], W.shape[1]);
+    gsl_matrix *UtY = gsl_matrix_calloc(Y.shape[0], Y.shape[1]);
+    gsl_vector *eval = gsl_vector_calloc(Y.shape[0]);
+    gsl_vector *env = gsl_vector_alloc(Y.shape[0]);
+    gsl_vector *weight = gsl_vector_alloc(Y.shape[0]);
     assert_issue(cPar.issue == 26, UtY->data[0] == 0.0);
 
     // set covariates matrix W and phenotype matrix Y
@@ -1023,9 +1041,9 @@ void batch_run(Param cPar){
       if (!cPar.file_weight.empty()) {
         cPar.CopyWeight(weight);
         double d, wi, wj;
-        for (size_t i = 0; i < G->size1; i++) {
+        for (size_t i = 0; i < G.shape[0]; i++) {
           wi = gsl_vector_get(weight, i);
-          for (size_t j = i; j < G->size2; j++) {
+          for (size_t j = i; j < G.shape[1]; j++) {
             wj = gsl_vector_get(weight, j);
             d = gsl_matrix_get(G, i, j);
             if (wi <= 0 || wj <= 0) {
@@ -1053,7 +1071,7 @@ void batch_run(Param cPar){
 
       if (!cPar.file_weight.empty()) {
         double wi;
-        for (size_t i = 0; i < U->size1; i++) {
+        for (size_t i = 0; i < U.shape[0]; i++) {
           wi = gsl_vector_get(weight, i);
           if (wi <= 0) {
             wi = 0;
@@ -1141,7 +1159,7 @@ void batch_run(Param cPar){
 
         cPar.beta_mle_null.clear();
         cPar.se_beta_mle_null.clear();
-        for (size_t i = 0; i < B->size2; i++) {
+        for (size_t i = 0; i < B.shape[1]; i++) {
           cPar.beta_mle_null.push_back(gsl_matrix_get(B, 0, i));
           cPar.se_beta_mle_null.push_back(gsl_matrix_get(se_B, 0, i));
         }
@@ -1159,7 +1177,7 @@ void batch_run(Param cPar){
 
         cPar.beta_remle_null.clear();
         cPar.se_beta_remle_null.clear();
-        for (size_t i = 0; i < B->size2; i++) {
+        for (size_t i = 0; i < B.shape[1]; i++) {
           cPar.beta_remle_null.push_back(gsl_matrix_get(B, 0, i));
           cPar.se_beta_remle_null.push_back(gsl_matrix_get(se_B, 0, i));
         }
@@ -1170,11 +1188,11 @@ void batch_run(Param cPar){
 
         // calculate and output residuals
         if (cPar.a_mode == 5) {
-          gsl_vector *Utu_hat = gsl_vector_alloc(Y->size1);
-          gsl_vector *Ute_hat = gsl_vector_alloc(Y->size1);
-          gsl_vector *u_hat = gsl_vector_alloc(Y->size1);
-          gsl_vector *e_hat = gsl_vector_alloc(Y->size1);
-          gsl_vector *y_hat = gsl_vector_alloc(Y->size1);
+          gsl_vector *Utu_hat = gsl_vector_alloc(Y.shape[0]);
+          gsl_vector *Ute_hat = gsl_vector_alloc(Y.shape[0]);
+          gsl_vector *u_hat = gsl_vector_alloc(Y.shape[0]);
+          gsl_vector *e_hat = gsl_vector_alloc(Y.shape[0]);
+          gsl_vector *y_hat = gsl_vector_alloc(Y.shape[0]);
 
           // obtain Utu and Ute
           gsl_vector_memcpy(y_hat, &UtY_col.vector);
@@ -1291,7 +1309,7 @@ void batch_run(Param cPar){
     } else {
       gsl_matrix *U = gsl_matrix_alloc(y->size, y->size);
       gsl_vector *eval = gsl_vector_alloc(y->size);
-      gsl_matrix *UtW = gsl_matrix_alloc(y->size, W->size2);
+      gsl_matrix *UtW = gsl_matrix_alloc(y->size, W.shape[1]);
       gsl_vector *Uty = gsl_vector_alloc(y->size);
 
       // read relatedness matrix G
@@ -1382,7 +1400,7 @@ void batch_run(Param cPar){
       } else {
         gsl_matrix *U = gsl_matrix_alloc(y->size, y->size);
         gsl_vector *eval = gsl_vector_alloc(y->size);
-        gsl_matrix *UtW = gsl_matrix_alloc(y->size, W->size2);
+        gsl_matrix *UtW = gsl_matrix_alloc(y->size, W.shape[1]);
         gsl_vector *Uty = gsl_vector_alloc(y->size);
 
         // read relatedness matrix G
