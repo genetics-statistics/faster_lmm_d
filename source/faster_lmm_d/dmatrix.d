@@ -195,6 +195,16 @@ DMatrix zeros_dmatrix(const ulong rows, const ulong cols) {
   return DMatrix([rows, cols], elements);
 }
 
+DMatrix set_zeros_dmatrix(DMatrix a) {
+  ulong rows = a.rows;
+  ulong cols = a.cols;
+  double[] elements = new double[rows * cols];
+  for(auto i = 0; i < rows*cols; i++) {
+    elements[i] = 0;
+  }
+  return DMatrix([rows, cols], elements);
+}
+
 DMatrix ones_dmatrix(const ulong rows, const ulong cols) {
   double[] elements = new double[rows * cols];
   for(auto i = 0; i < rows*cols; i++) {

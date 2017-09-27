@@ -239,7 +239,7 @@ void batch_run(Param cPar){
     y_prdt.shape = [1, cPar.ni_total - cPar.ni_test];
 
     // set to zero TODO
-    //gsl_vector_set_zero(y_prdt);
+    y_prdt = set_zeros_dmatrix(y_prdt);
 
     PRDT cPRDT;
     cPRDT.CopyFromParam(cPar);
@@ -512,8 +512,8 @@ void batch_run(Param cPar){
     S.shape = [cPar.n_vc * 2, cPar.n_vc];
     DMatrix ns;
     ns.shape = [cPar.n_vc + 1];
-    //gsl_matrix_set_zero(S);
-    //gsl_vector_set_zero(ns);
+    S = set_zeros_dmatrix(S);
+    ns = set_zeros_dmatrix(ns);
 
     DMatrix S_mat;// = get_sub_dmatrix(S, 0, 0, cPar.n_vc, cPar.n_vc);
     DMatrix Svar_mat;// =
@@ -524,8 +524,8 @@ void batch_run(Param cPar){
     K.shape = [cPar.ni_test, cPar.n_vc * cPar.ni_test];
     DMatrix A;
     A.shape = [cPar.ni_test, cPar.n_vc * cPar.ni_test];
-    //gsl_matrix_set_zero(K);
-    //gsl_matrix_set_zero(A);
+    K = set_zeros_dmatrix(K);
+    A = set_zeros_dmatrix(A);
 
     DMatrix y;
     y.shape = [1, cPar.ni_test];
@@ -562,8 +562,8 @@ void batch_run(Param cPar){
     q.shape = [1, cPar.n_vc];
     DMatrix s;
     s.shape = [1, cPar.n_vc + 1];
-    //gsl_vector_set_zero(q);
-    //gsl_vector_set_zero(s);
+    q = set_zeros_dmatrix(q);
+    s = set_zeros_dmatrix(s);
 
     DMatrix s_vec;// = gsl_vector_subvector(s, 0, cPar.n_vc);
 
@@ -1128,7 +1128,7 @@ void batch_run(Param cPar){
     // an intercept should be included in W,
     cPar.CopyCvtPhen(W, Y, 0);
     if (!cPar.file_gxe.empty()) {
-      cPar.CopyGxe(env);
+      //cPar.CopyGxe(env);
     }
 
     // read relatedness matrix G
@@ -1146,7 +1146,7 @@ void batch_run(Param cPar){
 
       // is residual weights are provided, then
       if (!cPar.file_weight.empty()) {
-        cPar.CopyWeight(weight);
+        //cPar.CopyWeight(weight);
         double d, wi, wj;
         for (size_t i = 0; i < G.shape[0]; i++) {
           wi = weight.elements[i];
@@ -1223,7 +1223,7 @@ void batch_run(Param cPar){
       //assert_issue(cPar.issue == 26, ROUND(UtY.data[0]) == -16.6143);
 
       LMM cLmm;
-      cLmm.CopyFromParam(cPar);
+      //cLmm.CopyFromParam(cPar);
 
       DMatrix Y_col = get_col(Y, 0);
       DMatrix UtY_col = get_col(UtY, 0);
@@ -1261,11 +1261,11 @@ void batch_run(Param cPar){
         //assert(!std::isnan(B.data[0]));
         //assert(!std::isnan(se_B.data[0]));
 
-        cPar.beta_mle_null.clear();
-        cPar.se_beta_mle_null.clear();
+        //cPar.beta_mle_null.clear();
+        //cPar.se_beta_mle_null.clear();
         for (size_t i = 0; i < B.shape[1]; i++) {
-          cPar.beta_mle_null.push_back(accessor(B, 0, i));
-          cPar.se_beta_mle_null.push_back(accessor(se_B, 0, i));
+          //cPar.beta_mle_null.push_back(accessor(B, 0, i));
+          //cPar.se_beta_mle_null.push_back(accessor(se_B, 0, i));
         }
         //assert(!std::isnan(UtY.data[0]));
         //assert(!std::isnan(B.data[0]));
@@ -1349,7 +1349,7 @@ void batch_run(Param cPar){
             //cLmm.Analyzebgen(U, eval, UtW, UtY_col, W, Y_col);
           } else {
             if (cPar.file_gxe.empty()) {
-              cLmm.AnalyzeBimbam(U, eval, UtW, UtY_col, W, Y_col, cPar.setGWASnps);
+              //cLmm.AnalyzeBimbam(U, eval, UtW, UtY_col, W, Y_col, cPar.setGWASnps);
             } else {
               //cLmm.AnalyzeBimbamGXE(U, eval, UtW, UtY_col, W, Y_col, env);
             }
@@ -1403,7 +1403,7 @@ void batch_run(Param cPar){
     cPar.CopyCvtPhen(W, y, 0);
 
     // center y, even for case/control data
-    cPar.pheno_mean = CenterVector(y);
+    //cPar.pheno_mean = CenterVector(y);
 
     // run bvsr if rho==1
     if (cPar.rho_min == 1 && cPar.rho_max == 1) {
