@@ -13,6 +13,7 @@ import std.conv;
 import std.file;
 import std.experimental.logger;
 import std.exception;
+import std.math;
 import std.parallelism;
 import std.range;
 import std.stdio;
@@ -30,6 +31,12 @@ import faster_lmm_d.optmatrix;
 import faster_lmm_d.output;
 import faster_lmm_d.phenotype;
 import faster_lmm_d.helpers : sum;
+
+import gsl.cdf;
+import gsl.errno;
+import gsl.math;
+import gsl.min;
+import gsl.roots;
 
 import test.covar_matrix;
 import test.fit;
@@ -200,6 +207,15 @@ void run_gemma(string option_kinship, string option_pheno, string option_covar, 
 
 }
 
+double EigenDecomp_Zeroed(DMatrix G, DMatrix U, DMatrix eval, int a){
+  return G.elements[0];
+}
+
+void CalcVCss(DMatrix a, DMatrix b, DMatrix c, DMatrix d, DMatrix e,
+             ulong f, DMatrix g, DMatrix h, double i, double j, DMatrix k,
+             DMatrix l, DMatrix m, DMatrix n){
+
+}
 
 void batch_run(Param cPar){
 
@@ -240,16 +256,15 @@ void batch_run(Param cPar){
       // read kinship matrix and set u_hat
       int[] indicator_all;
       size_t c_bv = 0;
-      for (size_t i = 0; i < cPar.indicator_idv.size(); i++) {
+      for (size_t i = 0; i < cPar.indicator_idv.length; i++) {
         //indicator_all.push_back(1);
-        if (cPar.indicator_bv[i] == 1) {
+        if (cPar.indicator_bv.elements[i] == 1) {
           //gsl_vector_set(u_hat, c_bv, cPar.vec_bv[i]);
           c_bv++;
         }
       }
 
-      ReadFile_kin(cPar.file_kin, indicator_all, cPar.mapID2num, cPar.k_mode,
-                   cPar.error, G);
+      ReadFile_kin(cPar.file_kin, indicator_all, cPar.mapID2num, cPar.k_mode, cPar.error, G);
       if (cPar.error == true) {
         writeln("error! fail to read kinship/relatedness file.");
         return;
@@ -324,15 +339,14 @@ void batch_run(Param cPar){
                                           Y_full.shape[0] * Y_hat.shape[1]];
 
     // read relatedness matrix G, and matrix G_full
-    ReadFile_kin(cPar.file_kin, cPar.indicator_idv, cPar.mapID2num, cPar.k_mode,
-                 cPar.error, G);
+    ReadFile_kin(cPar.file_kin, cPar.indicator_idv, cPar.mapID2num, cPar.k_mode, cPar.error, G);
     if (cPar.error == true) {
       writeln("error! fail to read kinship/relatedness file.");
       return;
     }
     // This is not so elegant. Reads twice to select on idv and then cvt
-    ReadFile_kin(cPar.file_kin, cPar.indicator_cvt, cPar.mapID2num, cPar.k_mode,
-                 cPar.error, G_full);
+    ReadFile_kin(cPar.file_kin, cPar.indicator_cvt, cPar.mapID2num, cPar.k_mode, cPar.error, G_full);
+
     if (cPar.error == true) {
       writeln("error! fail to read kinship/relatedness file.");
       return;
@@ -395,9 +409,9 @@ void batch_run(Param cPar){
       se_B.shape = [cPar.n_ph, W.shape[1]];
 
       // obtain estimates
-      CalcMvLmmVgVeBeta(eval, UtW, UtY, cPar.em_iter, cPar.nr_iter,
-                        cPar.em_prec, cPar.nr_prec, cPar.l_min, cPar.l_max,
-                        cPar.n_region, Vg, Ve, B, se_B);
+      //CalcMvLmmVgVeBeta(eval, UtW, UtY, cPar.em_iter, cPar.nr_iter,
+      //                  cPar.em_prec, cPar.nr_prec, cPar.l_min, cPar.l_max,
+      //                  cPar.n_region, Vg, Ve, B, se_B);
 
       writeln("REMLE estimate for Vg in the null model: ");
       for (size_t i = 0; i < Vg.shape[0]; i++) {
@@ -520,7 +534,7 @@ void batch_run(Param cPar){
 
     cPar.CopyCvtPhen(W, y, 0);
 
-    //set<string> setSnps_beta;
+    string[] setSnps_beta;
     mapRS mapRS2wA, mapRS2wK;
 
     cPar.ObtainWeight(setSnps_beta, mapRS2wK);
@@ -566,15 +580,14 @@ void batch_run(Param cPar){
     writeln("## number of analyzed SNPs = ", cPar.ns_test);
     writeln("## number of variance components = ", cPar.n_vc);
     writeln("Calculating the q vector ... ");
-    Calcq(cPar.n_block, vec_cat, vec_ni, vec_weight, vec_z2, Vq, q,
-          &s_vec.vector);
+    Calcq(cPar.n_block, vec_cat, vec_ni, vec_weight, vec_z2, Vq, q, s_vec);
 
     if (cPar.error == true) {
       writeln("error! fail to calculate the q vector.");
       return;
     }
 
-    gsl_vector_set(s, cPar.n_vc, cPar.ni_total);
+    s.elements[cPar.n_vc] = cPar.ni_total;
 
     cPar.WriteMatrix(Vq, "Vq");
     cPar.WriteVector(q, "q");
@@ -703,8 +716,7 @@ void batch_run(Param cPar){
       writeln("## number of variance components = ", cPar.n_vc);
 
       // compute q
-      Calcq(cPar.n_block, vec_cat, vec_ni, vec_weight, vec_z2, Vq, q,
-            &s_vec.vector);
+      Calcq(cPar.n_block, vec_cat, vec_ni, vec_weight, vec_z2, Vq, q, s_vec);
 
       // compute S
       cPar.CalcS(mapRS2wA, mapRS2wK, W, A, K, S_mat, Svar_mat, s_vec);
@@ -757,29 +769,29 @@ void batch_run(Param cPar){
 
     } else if (!cPar.file_study.empty() || !cPar.file_mstudy.empty()) {
       if (!cPar.file_study.empty()) {
-        string sfile = cPar.file_study + ".size.txt";
-        CountFileLines(sfile, cPar.n_vc);
+        string sfile = cPar.file_study ~ ".size.txt";
+        //CountFileLines(sfile, cPar.n_vc);
       } else {
         string file_name;
         //igzstream infile(cPar.file_mstudy.c_str(), igzstream::in);
-        if (!infile) {
-          writeln("error! fail to open mstudy file:", cPar.file_study);
-          return;
-        }
+        //if (!infile) {
+        //  writeln("error! fail to open mstudy file:", cPar.file_study);
+        //  return;
+        //}
 
-        safeGetline(infile, file_name);
+        //safeGetline(infile, file_name);
 
-        infile.clear();
-        infile.close();
+        //infile.clear();
+        //infile.close();
 
-        string sfile = file_name + ".size.txt";
-        CountFileLines(sfile, cPar.n_vc);
+        string sfile = file_name ~ ".size.txt";
+        //CountFileLines(sfile, cPar.n_vc);
       }
 
       cPar.n_vc = cPar.n_vc - 1;
 
       DMatrix S;
-      s.shape = [2 * cPar.n_vc, cPar.n_vc];
+      S.shape = [2 * cPar.n_vc, cPar.n_vc];
       DMatrix Vq;
       Vq.shape = [cPar.n_vc, cPar.n_vc];
       // gsl_matrix *V=gsl_matrix_alloc (cPar.n_vc+1,
@@ -808,33 +820,33 @@ void batch_run(Param cPar){
       //gsl_vector_set_zero(s_study);
       //gsl_vector_set_zero(s_ref);
 
-      if (!cPar.file_study.empty()) {
-        ReadFile_study(cPar.file_study, Vq, q, s_study, cPar.ni_study);
-      } else {
-        ReadFile_mstudy(cPar.file_mstudy, Vq, q, s_study, cPar.ni_study);
-      }
+      //if (!cPar.file_study.empty()) {
+      //  ReadFile_study(cPar.file_study, Vq, q, s_study, cPar.ni_study);
+      //} else {
+      //  ReadFile_mstudy(cPar.file_mstudy, Vq, q, s_study, cPar.ni_study);
+      //}
 
-      if (!cPar.file_ref.empty()) {
-        ReadFile_ref(cPar.file_ref, &S_mat.matrix, &Svar_mat.matrix, s_ref,
-                     cPar.ni_ref);
-      } else {
-        ReadFile_mref(cPar.file_mref, &S_mat.matrix, &Svar_mat.matrix, s_ref,
-                      cPar.ni_ref);
-      }
+      //if (!cPar.file_ref.empty()) {
+      //  ReadFile_ref(cPar.file_ref, &S_mat.matrix, &Svar_mat.matrix, s_ref,
+      //               cPar.ni_ref);
+      //} else {
+      //  ReadFile_mref(cPar.file_mref, &S_mat.matrix, &Svar_mat.matrix, s_ref,
+      //                cPar.ni_ref);
+      //}
 
       writeln("## number of variance components = ", cPar.n_vc);
       writeln("## number of individuals in the sample = ", cPar.ni_study);
       writeln("## number of individuals in the reference = ", cPar.ni_ref);
 
-      CalcVCss(Vq, &S_mat.matrix, &Svar_mat.matrix, q, s_study, cPar.ni_study,
+      CalcVCss(Vq, S_mat, Svar_mat, q, s_study, cPar.ni_study,
                cPar.v_pve, cPar.v_se_pve, cPar.pve_total, cPar.se_pve_total,
                cPar.v_sigma2, cPar.v_se_sigma2, cPar.v_enrich,
                cPar.v_se_enrich);
-      assert(!has_nan(cPar.v_se_pve));
+      //assert(!has_nan(cPar.v_se_pve));
 
-      gsl_vector_view s_sub = gsl_vector_subvector(s, 0, cPar.n_vc);
-      gsl_vector_memcpy(&s_sub.vector, s_ref);
-      gsl_vector_set(s, cPar.n_vc, cPar.ni_ref);
+      DMatrix s_sub;// = gsl_vector_subvector(s, 0, cPar.n_vc);
+      s_sub.elements =  s_ref.elements.dup;
+      s.elements[cPar.n_vc] = cPar.ni_ref;
 
       cPar.WriteMatrix(S, "S");
       cPar.WriteMatrix(Vq, "Vq");
@@ -855,8 +867,8 @@ void batch_run(Param cPar){
 
       // read kinship matrices
       if (!(cPar.file_mk).empty()) {
-        ReadFile_mk(cPar.file_mk, cPar.indicator_idv, cPar.mapID2num,
-                    cPar.k_mode, cPar.error, G);
+        //ReadFile_mk(cPar.file_mk, cPar.indicator_idv, cPar.mapID2num,
+        //            cPar.k_mode, cPar.error, G);
         if (cPar.error == true) {
           writeln("error! fail to read kinship/relatedness file.");
           return;
@@ -864,17 +876,17 @@ void batch_run(Param cPar){
 
         // center matrix G, and obtain v_traceG
         double d = 0;
-        (cPar.v_traceG).clear();
+        //(cPar.v_traceG).clear();
         for (size_t i = 0; i < cPar.n_vc; i++) {
           DMatrix G_sub =
               get_sub_dmatrix(G, 0, i * G.shape[0], G.shape[0], G.shape[0]);
-          CenterMatrix(&G_sub.matrix);
+          CenterMatrix(G_sub);
           d = 0;
           for (size_t j = 0; j < G.shape[0]; j++) {
-            d += accessor(G_sub.matrix, j, j);
+            d += accessor(G_sub, j, j);
           }
           d /= to!double(G.shape[0]);
-          (cPar.v_traceG).push_back(d);
+          //(cPar.v_traceG).push_back(d);
         }
       } else if (!(cPar.file_kin).empty()) {
         ReadFile_kin(cPar.file_kin, cPar.indicator_idv, cPar.mapID2num,
@@ -888,19 +900,19 @@ void batch_run(Param cPar){
         CenterMatrix(G);
         validate_K(G,cPar.mode_check,cPar.mode_strict);
 
-        (cPar.v_traceG).clear();
+        //(cPar.v_traceG).clear();
         double d = 0;
         for (size_t j = 0; j < G.shape[0]; j++) {
           d += accessor(G, j, j);
         }
         d /= to!double(G.shape[0]);
-        (cPar.v_traceG).push_back(d);
+        //(cPar.v_traceG).push_back(d);
       }
       // fit multiple variance components
       if (cPar.n_ph == 1) {
         //      if (cPar.n_vc==1) {
         //      } else {
-        gsl_vector_view Y_col = gsl_matrix_column(Y, 0);
+        DMatrix Y_col = get_col(Y, 0);
         VC cVc;
         cVc.CopyFromParam(cPar);
         if (cPar.a_mode == 61) {
@@ -924,18 +936,21 @@ void batch_run(Param cPar){
   // the genotypes
   if (cPar.a_mode == 66 || cPar.a_mode == 67) {
     // read reference file first
-    gsl_matrix *S = gsl_matrix_alloc(cPar.n_vc, cPar.n_vc);
-    gsl_matrix *Svar = gsl_matrix_alloc(cPar.n_vc, cPar.n_vc);
-    gsl_vector *s_ref = gsl_vector_alloc(cPar.n_vc);
+    DMatrix S;
+    S.shape = [cPar.n_vc, cPar.n_vc];
+    DMatrix Svar;
+    Svar.shape = [cPar.n_vc, cPar.n_vc];
+    DMatrix s_ref;
+    s_ref.shape = [1, cPar.n_vc];
 
-    gsl_matrix_set_zero(S);
-    gsl_matrix_set_zero(Svar);
-    gsl_vector_set_zero(s_ref);
+    //gsl_matrix_set_zero(S);
+    //gsl_matrix_set_zero(Svar);
+    //gsl_vector_set_zero(s_ref);
 
     if (!cPar.file_ref.empty()) {
-      ReadFile_ref(cPar.file_ref, S, Svar, s_ref, cPar.ni_ref);
+      //ReadFile_ref(cPar.file_ref, S, Svar, s_ref, cPar.ni_ref);
     } else {
-      ReadFile_mref(cPar.file_mref, S, Svar, s_ref, cPar.ni_ref);
+      //ReadFile_mref(cPar.file_mref, S, Svar, s_ref, cPar.ni_ref);
     }
 
     // need to obtain a common set of SNPs between beta file and the genotype
@@ -944,7 +959,7 @@ void batch_run(Param cPar){
     // of mapRS2wA is 1
 
 
-    //set<string> setSnps_beta;
+    string[] setSnps_beta;
     ReadFile_snps_header(cPar.file_beta, setSnps_beta);
 
     // obtain the weights for wA, which contains the SNP weights for SNPs used
@@ -954,20 +969,26 @@ void batch_run(Param cPar){
     cPar.ObtainWeight(setSnps_beta, mapRS2wK);
 
     // set up matrices and vector
-    gsl_matrix *Xz = gsl_matrix_alloc(cPar.ni_test, cPar.n_vc);
-    gsl_matrix *XWz = gsl_matrix_alloc(cPar.ni_test, cPar.n_vc);
-    gsl_matrix *XtXWz =
-        gsl_matrix_alloc(mapRS2wK.size(), cPar.n_vc * cPar.n_vc);
-    gsl_vector *w = gsl_vector_alloc(mapRS2wK.size());
-    gsl_vector *w1 = gsl_vector_alloc(mapRS2wK.size());
-    gsl_vector *z = gsl_vector_alloc(mapRS2wK.size());
-    gsl_vector *s_vec = gsl_vector_alloc(cPar.n_vc);
+    DMatrix Xz;
+    Xz.shape = [cPar.ni_test, cPar.n_vc];
+    DMatrix XWz;
+    XWz.shape = [cPar.ni_test, cPar.n_vc];
+    DMatrix XtXWz;
+    //XtXWz.shape = [mapRS2wK.size(), cPar.n_vc * cPar.n_vc];
+    DMatrix w;
+    //w.shape = [1, mapRS2wK.size()];
+    DMatrix w1;
+    //w1.shape = [1, mapRS2wK.size()];
+    DMatrix z;
+    //z.shape = [1, mapRS2wK.size()];
+    DMatrix s_vec;
+    s_vec.shape = [1, cPar.n_vc];
 
     size_t[] vec_cat, vec_size;
     double[] vec_z;
 
-    //map<string, double> mapRS2z, mapRS2wA;
-    //map<string, string> mapRS2A1;
+    mapRS mapRS2z, mapRS2wA;
+    mapRS mapRS2A1;
     string file_str;
 
     // update s_vec, the number of snps in each category
@@ -1003,73 +1024,73 @@ void batch_run(Param cPar){
     // update snp indicator, save weights to w, save z-scores to vec_z, save
     // category label to vec_cat
     // sign of z is determined by matching alleles
-    cPar.UpdateSNPnZ(mapRS2wA, mapRS2A1, mapRS2z, w, z, vec_cat);
+    //cPar.UpdateSNPnZ(mapRS2wA, mapRS2A1, mapRS2z, w, z, vec_cat);
 
     // compute an n by k matrix of X_iWz
     writeln("Calculating Xz ... ");
 
-    gsl_matrix_set_zero(Xz);
-    gsl_vector_set_all(w1, 1);
+    //gsl_matrix_set_zero(Xz);
+    //gsl_vector_set_all(w1, 1);
 
-    if (!cPar.file_bfile.empty()) {
-      file_str = cPar.file_bfile + ".bed";
-      PlinkXwz(file_str, cPar.d_pace, cPar.indicator_idv, cPar.indicator_snp,
-               vec_cat, w1, z, 0, Xz);
-    } else if (!cPar.file_geno.empty()) {
-      BimbamXwz(cPar.file_geno, cPar.d_pace, cPar.indicator_idv,
-                cPar.indicator_snp, vec_cat, w1, z, 0, Xz);
-    } else if (!cPar.file_mbfile.empty()) {
-      MFILEXwz(1, cPar.file_mbfile, cPar.d_pace, cPar.indicator_idv,
-               cPar.mindicator_snp, vec_cat, w1, z, Xz);
-    } else if (!cPar.file_mgeno.empty()) {
-      MFILEXwz(0, cPar.file_mgeno, cPar.d_pace, cPar.indicator_idv,
-               cPar.mindicator_snp, vec_cat, w1, z, Xz);
-    }
-    if (cPar.a_mode == 66) {
-      gsl_matrix_memcpy(XWz, Xz);
-    } else if (cPar.a_mode == 67) {
-      writeln("Calculating XWz ... ");
+    //if (!cPar.file_bfile.empty()) {
+    //  file_str = cPar.file_bfile + ".bed";
+    //  PlinkXwz(file_str, cPar.d_pace, cPar.indicator_idv, cPar.indicator_snp,
+    //           vec_cat, w1, z, 0, Xz);
+    //} else if (!cPar.file_geno.empty()) {
+    //  BimbamXwz(cPar.file_geno, cPar.d_pace, cPar.indicator_idv,
+    //            cPar.indicator_snp, vec_cat, w1, z, 0, Xz);
+    //} else if (!cPar.file_mbfile.empty()) {
+    //  MFILEXwz(1, cPar.file_mbfile, cPar.d_pace, cPar.indicator_idv,
+    //           cPar.mindicator_snp, vec_cat, w1, z, Xz);
+    //} else if (!cPar.file_mgeno.empty()) {
+    //  MFILEXwz(0, cPar.file_mgeno, cPar.d_pace, cPar.indicator_idv,
+    //           cPar.mindicator_snp, vec_cat, w1, z, Xz);
+    //}
+    //if (cPar.a_mode == 66) {
+    //  gsl_matrix_memcpy(XWz, Xz);
+    //} else if (cPar.a_mode == 67) {
+    //  writeln("Calculating XWz ... ");
 
-      gsl_matrix_set_zero(XWz);
+    //  gsl_matrix_set_zero(XWz);
 
-      if (!cPar.file_bfile.empty()) {
-        file_str = cPar.file_bfile + ".bed";
-        PlinkXwz(file_str, cPar.d_pace, cPar.indicator_idv, cPar.indicator_snp,
-                 vec_cat, w, z, 0, XWz);
-      } else if (!cPar.file_geno.empty()) {
-        BimbamXwz(cPar.file_geno, cPar.d_pace, cPar.indicator_idv,
-                  cPar.indicator_snp, vec_cat, w, z, 0, XWz);
-      } else if (!cPar.file_mbfile.empty()) {
-        MFILEXwz(1, cPar.file_mbfile, cPar.d_pace, cPar.indicator_idv,
-                 cPar.mindicator_snp, vec_cat, w, z, XWz);
-      } else if (!cPar.file_mgeno.empty()) {
-        MFILEXwz(0, cPar.file_mgeno, cPar.d_pace, cPar.indicator_idv,
-                 cPar.mindicator_snp, vec_cat, w, z, XWz);
-      }
-    }
+    //  if (!cPar.file_bfile.empty()) {
+    //    file_str = cPar.file_bfile + ".bed";
+    //    PlinkXwz(file_str, cPar.d_pace, cPar.indicator_idv, cPar.indicator_snp,
+    //             vec_cat, w, z, 0, XWz);
+    //  } else if (!cPar.file_geno.empty()) {
+    //    BimbamXwz(cPar.file_geno, cPar.d_pace, cPar.indicator_idv,
+    //              cPar.indicator_snp, vec_cat, w, z, 0, XWz);
+    //  } else if (!cPar.file_mbfile.empty()) {
+    //    MFILEXwz(1, cPar.file_mbfile, cPar.d_pace, cPar.indicator_idv,
+    //             cPar.mindicator_snp, vec_cat, w, z, XWz);
+    //  } else if (!cPar.file_mgeno.empty()) {
+    //    MFILEXwz(0, cPar.file_mgeno, cPar.d_pace, cPar.indicator_idv,
+    //             cPar.mindicator_snp, vec_cat, w, z, XWz);
+    //  }
+    //}
     // compute an p by k matrix of X_j^TWX_iWz
     writeln("Calculating XtXWz ... ");
     gsl_matrix_set_zero(XtXWz);
 
-    if (!cPar.file_bfile.empty()) {
-      file_str = cPar.file_bfile + ".bed";
-      PlinkXtXwz(file_str, cPar.d_pace, cPar.indicator_idv, cPar.indicator_snp,
-                 XWz, 0, XtXWz);
-    } else if (!cPar.file_geno.empty()) {
-      BimbamXtXwz(cPar.file_geno, cPar.d_pace, cPar.indicator_idv,
-                  cPar.indicator_snp, XWz, 0, XtXWz);
-    } else if (!cPar.file_mbfile.empty()) {
-      MFILEXtXwz(1, cPar.file_mbfile, cPar.d_pace, cPar.indicator_idv,
-                 cPar.mindicator_snp, XWz, XtXWz);
-    } else if (!cPar.file_mgeno.empty()) {
-      MFILEXtXwz(0, cPar.file_mgeno, cPar.d_pace, cPar.indicator_idv,
-                 cPar.mindicator_snp, XWz, XtXWz);
-    }
-    // compute confidence intervals
-    CalcCIss(Xz, XWz, XtXWz, S, Svar, w, z, s_vec, vec_cat, cPar.v_pve,
-             cPar.v_se_pve, cPar.pve_total, cPar.se_pve_total, cPar.v_sigma2,
-             cPar.v_se_sigma2, cPar.v_enrich, cPar.v_se_enrich);
-    assert(!has_nan(cPar.v_se_pve));
+    //if (!cPar.file_bfile.empty()) {
+    //  file_str = cPar.file_bfile + ".bed";
+    //  PlinkXtXwz(file_str, cPar.d_pace, cPar.indicator_idv, cPar.indicator_snp,
+    //             XWz, 0, XtXWz);
+    //} else if (!cPar.file_geno.empty()) {
+    //  BimbamXtXwz(cPar.file_geno, cPar.d_pace, cPar.indicator_idv,
+    //              cPar.indicator_snp, XWz, 0, XtXWz);
+    //} else if (!cPar.file_mbfile.empty()) {
+    //  MFILEXtXwz(1, cPar.file_mbfile, cPar.d_pace, cPar.indicator_idv,
+    //             cPar.mindicator_snp, XWz, XtXWz);
+    //} else if (!cPar.file_mgeno.empty()) {
+    //  MFILEXtXwz(0, cPar.file_mgeno, cPar.d_pace, cPar.indicator_idv,
+    //             cPar.mindicator_snp, XWz, XtXWz);
+    //}
+    //// compute confidence intervals
+    //CalcCIss(Xz, XWz, XtXWz, S, Svar, w, z, s_vec, vec_cat, cPar.v_pve,
+    //         cPar.v_se_pve, cPar.pve_total, cPar.se_pve_total, cPar.v_sigma2,
+    //         cPar.v_se_sigma2, cPar.v_enrich, cPar.v_se_enrich);
+    //assert(!has_nan(cPar.v_se_pve));
 
   }
 
@@ -1079,7 +1100,7 @@ void batch_run(Param cPar){
       cPar.a_mode == 31) { // Fit LMM or mvLMM or eigen
     DMatrix Y;
     Y.shape = [cPar.ni_test, cPar.n_ph];
-    enforce_msg(Y, "allocate Y"); // just to be sure
+    //enforce_msg(Y, "allocate Y"); // just to be sure
     DMatrix W;
     W.shape = [Y.shape[0], cPar.n_cvt];
     DMatrix B;
@@ -1101,7 +1122,7 @@ void batch_run(Param cPar){
     env.shape = [1, Y.shape[0]];
     DMatrix weight;
     weight.shape = [1, Y.shape[0]];
-    assert_issue(cPar.issue == 26, UtY.data[0] == 0.0);
+    //assert_issue(cPar.issue == 26, UtY.data[0] == 0.0);
 
     // set covariates matrix W and phenotype matrix Y
     // an intercept should be included in W,
@@ -1112,8 +1133,8 @@ void batch_run(Param cPar){
 
     // read relatedness matrix G
     if (!(cPar.file_kin).empty()) {
-      ReadFile_kin(cPar.file_kin, cPar.indicator_idv, cPar.mapID2num,
-                   cPar.k_mode, cPar.error, G);
+      //ReadFile_kin(cPar.file_kin, cPar.indicator_idv, cPar.mapID2num,
+      //             cPar.k_mode, cPar.error, G);
       if (cPar.error == true) {
         writeln("error! fail to read kinship/relatedness file.");
         return;
@@ -1128,18 +1149,18 @@ void batch_run(Param cPar){
         cPar.CopyWeight(weight);
         double d, wi, wj;
         for (size_t i = 0; i < G.shape[0]; i++) {
-          wi = gsl_vector_get(weight, i);
+          wi = weight.elements[i];
           for (size_t j = i; j < G.shape[1]; j++) {
-            wj = gsl_vector_get(weight, j);
+            wj = weight.elements[j];
             d = accessor(G, i, j);
             if (wi <= 0 || wj <= 0) {
               d = 0;
             } else {
               d /= sqrt(wi * wj);
             }
-            gsl_matrix_set(G, i, j, d);
+            G.elements[i*G.cols + j] = d;
             if (j != i) {
-              gsl_matrix_set(G, j, i, d);
+              G.elements[j*G.cols + i] = d;
             }
           }
         }
@@ -1157,25 +1178,25 @@ void batch_run(Param cPar){
       if (!cPar.file_weight.empty()) {
         double wi;
         for (size_t i = 0; i < U.shape[0]; i++) {
-          wi = gsl_vector_get(weight, i);
+          wi = weight.elements[i];
           if (wi <= 0) {
             wi = 0;
           } else {
             wi = sqrt(wi);
           }
-          gsl_vector_view Urow = gsl_matrix_row(U, i);
-          gsl_vector_scale(&Urow.vector, wi);
+          DMatrix Urow = get_row(U, i);
+          Urow = multiply_dmatrix_num(Urow, wi);
         }
       }
 
     } else {
-      ReadFile_eigenU(cPar.file_ku, cPar.error, U);
+      //ReadFile_eigenU(cPar.file_ku, cPar.error, U);
       if (cPar.error == true) {
         writeln("error! fail to read the U file. ");
         return;
       }
 
-      ReadFile_eigenD(cPar.file_kd, cPar.error, eval);
+      //ReadFile_eigenD(cPar.file_kd, cPar.error, eval);
       if (cPar.error == true) {
         writeln("error! fail to read the D file. ");
         return;
@@ -1204,37 +1225,37 @@ void batch_run(Param cPar){
       LMM cLmm;
       cLmm.CopyFromParam(cPar);
 
-      gsl_vector_view Y_col = gsl_matrix_column(Y, 0);
-      gsl_vector_view UtY_col = gsl_matrix_column(UtY, 0);
+      DMatrix Y_col = get_col(Y, 0);
+      DMatrix UtY_col = get_col(UtY, 0);
 
-      cLmm.AnalyzeGene(U, eval, UtW, &UtY_col.vector, W,
-                       &Y_col.vector); // y is the predictor, not the phenotype
+      //cLmm.AnalyzeGene(U, eval, UtW, UtY_col, W,
+      //                 Y_col); // y is the predictor, not the phenotype
 
-      cLmm.WriteFiles();
-      cLmm.CopyToParam(cPar);
+      //cLmm.WriteFiles();
+      //cLmm.CopyToParam(cPar);
     } else {
       // calculate UtW and Uty
       CalcUtX(U, W, UtW);
       CalcUtX(U, Y, UtY);
-      assert_issue(cPar.issue == 26, ROUND(UtY.data[0]) == -16.6143);
+      //assert_issue(cPar.issue == 26, ROUND(UtY.data[0]) == -16.6143);
 
       // calculate REMLE/MLE estimate and pve for univariate model
       if (cPar.n_ph == 1) { // one phenotype
-        gsl_vector_view beta = gsl_matrix_row(B, 0);
-        gsl_vector_view se_beta = gsl_matrix_row(se_B, 0);
-        gsl_vector_view UtY_col = gsl_matrix_column(UtY, 0);
+        DMatrix beta = get_row(B, 0);
+        DMatrix se_beta = get_row(se_B, 0);
+        DMatrix UtY_col = get_col(UtY, 0);
 
-        assert_issue(cPar.issue == 26, ROUND(UtY.data[0]) == -16.6143);
+        //assert_issue(cPar.issue == 26, ROUND(UtY.data[0]) == -16.6143);
 
-        CalcLambda('L', eval, UtW, &UtY_col.vector, cPar.l_min, cPar.l_max,
+        CalcLambda('L', eval, UtW, UtY_col, cPar.l_min, cPar.l_max,
                    cPar.n_region, cPar.l_mle_null, cPar.logl_mle_H0);
         //assert(!std::isnan(UtY.data[0]));
         //assert(!std::isnan(B.data[0]));
         //assert(!std::isnan(se_B.data[0]));
 
-        CalcLmmVgVeBeta(eval, UtW, &UtY_col.vector, cPar.l_mle_null,
-                        cPar.vg_mle_null, cPar.ve_mle_null, &beta.vector,
-                        &se_beta.vector);
+        CalcLmmVgVeBeta(eval, UtW, UtY_col, cPar.l_mle_null,
+                        cPar.vg_mle_null, cPar.ve_mle_null, beta,
+                        se_beta);
 
         //assert(!std::isnan(UtY.data[0]));
         //assert(!std::isnan(B.data[0]));
@@ -1252,17 +1273,17 @@ void batch_run(Param cPar){
         //assert(!std::isnan(cPar.beta_mle_null.front()));
         //assert(!std::isnan(cPar.se_beta_mle_null.front()));
 
-        CalcLambda('R', eval, UtW, &UtY_col.vector, cPar.l_min, cPar.l_max,
+        CalcLambda('R', eval, UtW, UtY_col, cPar.l_min, cPar.l_max,
                    cPar.n_region, cPar.l_remle_null, cPar.logl_remle_H0);
-        CalcLmmVgVeBeta(eval, UtW, &UtY_col.vector, cPar.l_remle_null,
-                        cPar.vg_remle_null, cPar.ve_remle_null, &beta.vector,
-                        &se_beta.vector);
+        CalcLmmVgVeBeta(eval, UtW, UtY_col, cPar.l_remle_null,
+                        cPar.vg_remle_null, cPar.ve_remle_null, beta,
+                        se_beta);
 
-        cPar.beta_remle_null.clear();
-        cPar.se_beta_remle_null.clear();
+        //cPar.beta_remle_null.clear();
+        //cPar.se_beta_remle_null.clear();
         for (size_t i = 0; i < B.shape[1]; i++) {
-          cPar.beta_remle_null.push_back(accessor(B, 0, i));
-          cPar.se_beta_remle_null.push_back(accessor(se_B, 0, i));
+          //cPar.beta_remle_null.push_back(accessor(B, 0, i));
+          //cPar.se_beta_remle_null.push_back(accessor(se_B, 0, i));
         }
 
         CalcPve(eval, UtW, &UtY_col.vector, cPar.l_remle_null, cPar.trace_G,

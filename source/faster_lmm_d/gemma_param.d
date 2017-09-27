@@ -5,7 +5,7 @@
    Copyright © 2017 Prasun Anand & Pjotr Prins
 */
 
-module faster_lmm_d.gemma_param.d;
+module faster_lmm_d.gemma_param;
 
 import faster_lmm_d.dmatrix;
 
@@ -143,11 +143,11 @@ struct Param{
   double logl_mle_H0, logl_remle_H0;
   double pve_null, pve_se_null, pve_total, se_pve_total;
   double vg_remle_null, ve_remle_null, vg_mle_null, ve_mle_null;
-  //vector<double> Vg_remle_null, Ve_remle_null, Vg_mle_null, Ve_mle_null;
-  //vector<double> VVg_remle_null, VVe_remle_null, VVg_mle_null;
-  //vector<double> VVe_mle_null;
-  //vector<double> beta_remle_null, se_beta_remle_null, beta_mle_null;
-  //vector<double> se_beta_mle_null;
+  //DMatrix Vg_remle_null, Ve_remle_null, Vg_mle_null, Ve_mle_null;
+  //DMatrix VVg_remle_null, VVe_remle_null, VVg_mle_null;
+  //DMatrix VVe_mle_null;
+  //DMatrix beta_remle_null, se_beta_remle_null, beta_mle_null;
+  //DMatrix se_beta_mle_null;
   double p_nr;
   double em_prec, nr_prec;
   size_t em_iter, nr_iter;
@@ -157,16 +157,16 @@ struct Param{
   // For fitting multiple variance components.
   // The first 3 are of size (n_vc), and the next 2 are of size n_vc+1.
   bool noconstrain;
-  //vector<double> v_traceG;
-  //vector<double> v_pve;
-  //vector<double> v_se_pve;
+  DMatrix v_traceG;
+  DMatrix v_pve;
+  DMatrix v_se_pve;
 
-  //vector<double> v_sigma2;
-  //vector<double> v_se_sigma2;
-  //vector<double> v_enrich;
-  //vector<double> v_se_enrich;
-  //vector<double> v_beta;
-  //vector<double> v_se_beta;
+  DMatrix v_sigma2;
+  DMatrix v_se_sigma2;
+  DMatrix v_enrich;
+  DMatrix v_se_enrich;
+  DMatrix v_beta;
+  DMatrix v_se_beta;
 
   // BSLMM/MCMC-related parameters.
   double h_min, h_max, h_scale;          // Priors for h.
@@ -248,7 +248,7 @@ struct Param{
 
   // Indicator for individuals (phenotypes): 0 missing, 1
   // available for analysis
-  DMatrix indicator_idv;
+  int[] indicator_idv;
 
   // Sequence indicator for SNPs: 0 ignored because of (a) maf,
   // (b) miss, (c) non-poly; 1 available for analysis.
@@ -260,7 +260,7 @@ struct Param{
 
   // Indicator for covariates: 0 missing, 1 available for
   // analysis.
-  DMatrix indicator_cvt;
+  int[] indicator_cvt;
 
   // Indicator for gxe: 0 missing, 1 available for analysis.
   DMatrix indicator_gxe;
@@ -302,7 +302,9 @@ struct Param{
   void CopyCvtPhen(DMatrix a, DMatrix b, int c){}
   void ObtainWeight(string[] a, mapRS b){}
   void CalcS(mapRS a, mapRS b, DMatrix c, DMatrix d, DMatrix e, DMatrix f, DMatrix g, DMatrix h){}
+  void CalcKin(DMatrix a){}
   void UpdateSNP(mapRS a){}
+  void UpdateWeight(int, mapRS, ulong, DMatrix, mapRS){}
 
 }
 
@@ -333,8 +335,43 @@ struct LM{
 void ReadFile_snps_header(string a, string[] b){}
 
 void Calcq(mapRS a, mapRS b, DMatrix c, DMatrix d, DMatrix e, DMatrix f, DMatrix g, DMatrix h){}
-void ReadFile_kin(){}
-void ReadFile_beta(){}
+void Calcq(ulong a, ulong[] b, ulong[] c, double[] d, double[] e, DMatrix f, DMatrix g, DMatrix h){}
+void ReadFile_kin(string a, int[] b, mapRS c, int d, bool e, DMatrix f){}
+void ReadFile_beta(string a, mapRS b, mapRS c, ulong[] d, ulong[] e, double[] f, double[] g, ulong h, ulong i, ulong j){}
 void CenterMatrix(DMatrix a){}
 void validate_K(DMatrix a, bool b, bool c){}
 void setSnps_beta(){}
+
+struct PRDT{
+  size_t a_mode;
+  size_t d_pace;
+
+  string file_bfile;
+  string file_geno;
+  string file_out;
+  string path_out;
+
+  DMatrix indicator_pheno;
+  int[] indicator_cvt;
+  int[] indicator_idv;
+  SNPINFO[] snpInfo;
+  mapRS mapRS2est;
+
+  size_t n_ph;
+  size_t np_obs, np_miss;
+  size_t ns_total;
+  size_t ns_test;
+
+  double time_eigen;
+
+  // Main functions.
+  void CopyFromParam(Param cPar);
+  void CopyToParam(Param cPar);
+  //void WriteFiles(DMatrix y_prdt);
+  void WriteFiles(DMatrix Y_full);
+  void AddBV(DMatrix G, const DMatrix u_hat, DMatrix y_prdt);
+  void AnalyzeBimbam(DMatrix y_prdt);
+  void AnalyzePlink(DMatrix y_prdt);
+  void MvnormPrdt(const DMatrix Y_hat, const DMatrix H,
+                  DMatrix Y_full);
+}
