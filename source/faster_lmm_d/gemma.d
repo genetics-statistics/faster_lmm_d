@@ -913,16 +913,16 @@ void batch_run(Param cPar){
         //      if (cPar.n_vc==1) {
         //      } else {
         DMatrix Y_col = get_col(Y, 0);
-        VC cVc;
-        cVc.CopyFromParam(cPar);
-        if (cPar.a_mode == 61) {
-          cVc.CalcVChe(G, W, &Y_col.vector);
-        } else if (cPar.a_mode == 62) {
-          cVc.CalcVCreml(cPar.noconstrain, G, W, &Y_col.vector);
-        } else {
-          cVc.CalcVCacl(G, W, &Y_col.vector);
-        }
-        cVc.CopyToParam(cPar);
+        //VC cVc;
+        //cVc.CopyFromParam(cPar);
+        //if (cPar.a_mode == 61) {
+        //  cVc.CalcVChe(G, W, &Y_col.vector);
+        //} else if (cPar.a_mode == 62) {
+        //  cVc.CalcVCreml(cPar.noconstrain, G, W, &Y_col.vector);
+        //} else {
+        //  cVc.CalcVCacl(G, W, &Y_col.vector);
+        //}
+        //cVc.CopyToParam(cPar);
         // obtain pve from sigma2
         // obtain se_pve from se_sigma2
 
@@ -965,7 +965,7 @@ void batch_run(Param cPar){
     // obtain the weights for wA, which contains the SNP weights for SNPs used
     // in the model
 
-    //map<string, double> mapRS2wK;
+    mapRS mapRS2wK;
     cPar.ObtainWeight(setSnps_beta, mapRS2wK);
 
     // set up matrices and vector
@@ -993,7 +993,7 @@ void batch_run(Param cPar){
 
     // update s_vec, the number of snps in each category
     for (size_t i = 0; i < cPar.n_vc; i++) {
-      vec_size.push_back(0);
+      //vec_size.push_back(0);
     }
 
     //TODO
@@ -1004,7 +1004,7 @@ void batch_run(Param cPar){
 
     for (size_t i = 0; i < cPar.n_vc; i++) {
       //gsl_vector_set(s_vec, i, vec_size[i]);
-      s_vec[i] = vec_size[i];
+      s_vec.elements[i] = vec_size[i];
     }
 
     // update mapRS2wA using v_pve and s_vec
@@ -1019,7 +1019,7 @@ void batch_run(Param cPar){
     }
 
     // read in z-scores based on allele 0, and save that into a vector
-    ReadFile_beta(cPar.file_beta, mapRS2wA, mapRS2A1, mapRS2z);
+    //ReadFile_beta(cPar.file_beta, mapRS2wA, mapRS2A1, mapRS2z);
 
     // update snp indicator, save weights to w, save z-scores to vec_z, save
     // category label to vec_cat
@@ -1070,7 +1070,7 @@ void batch_run(Param cPar){
     //}
     // compute an p by k matrix of X_j^TWX_iWz
     writeln("Calculating XtXWz ... ");
-    gsl_matrix_set_zero(XtXWz);
+    //gsl_matrix_set_zero(XtXWz);
 
     //if (!cPar.file_bfile.empty()) {
     //  file_str = cPar.file_bfile + ".bed";
@@ -1204,10 +1204,10 @@ void batch_run(Param cPar){
 
       cPar.trace_G = 0.0;
       for (size_t i = 0; i < eval.elements.length; i++) {
-        if (gsl_vector_get(eval, i) < 1e-10) {
-          gsl_vector_set(eval, i, 0);
+        if (eval.elements[i] < 1e-10) {
+          eval.elements[i] = 0;
         }
-        cPar.trace_G += gsl_vector_get(eval, i);
+        cPar.trace_G += eval.elements[i];
       }
       cPar.trace_G /= to!double(eval.elements.length);
     }
@@ -1220,7 +1220,7 @@ void batch_run(Param cPar){
       CalcUtX(U, W, UtW);
       CalcUtX(U, Y, UtY);
 
-      assert_issue(cPar.issue == 26, ROUND(UtY.data[0]) == -16.6143);
+      //assert_issue(cPar.issue == 26, ROUND(UtY.data[0]) == -16.6143);
 
       LMM cLmm;
       cLmm.CopyFromParam(cPar);
@@ -1286,9 +1286,9 @@ void batch_run(Param cPar){
           //cPar.se_beta_remle_null.push_back(accessor(se_B, 0, i));
         }
 
-        CalcPve(eval, UtW, &UtY_col.vector, cPar.l_remle_null, cPar.trace_G,
+        CalcPve(eval, UtW, UtY_col, cPar.l_remle_null, cPar.trace_G,
                 cPar.pve_null, cPar.pve_se_null);
-        cPar.PrintSummary();
+        //cPar.PrintSummary();
 
         // calculate and output residuals
         if (cPar.a_mode == 5) {
@@ -1304,22 +1304,22 @@ void batch_run(Param cPar){
           y_hat.shape = [1, Y.shape[0]];
 
           // obtain Utu and Ute
-          gsl_vector_memcpy(y_hat, &UtY_col.vector);
-          gsl_blas_dgemv(CblasNoTrans, -1.0, UtW, &beta.vector, 1.0, y_hat);
+          y_hat.elements = UtY_col.elements.dup;
+          //gsl_blas_dgemv(CblasNoTrans, -1.0, UtW, &beta.vector, 1.0, y_hat);
 
           double d, u, e;
           for (size_t i = 0; i < eval.elements.length; i++) {
             d = eval.elements[i];
             u = cPar.l_remle_null * d / (cPar.l_remle_null * d + 1.0) *
-                gsl_vector_get(y_hat, i);
+                y_hat.elements[i];
             e = 1.0 / (cPar.l_remle_null * d + 1.0) * y_hat.elements[i];
-            gsl_vector_set(Utu_hat, i, u);
-            gsl_vector_set(Ute_hat, i, e);
+            Utu_hat.elements[i] = u;
+            Ute_hat.elements[i] = e;
           }
 
-          // obtain u and e
-          gsl_blas_dgemv(CblasNoTrans, 1.0, U, Utu_hat, 0.0, u_hat);
-          gsl_blas_dgemv(CblasNoTrans, 1.0, U, Ute_hat, 0.0, e_hat);
+          // obtain u and e //TODO
+          //gsl_blas_dgemv(CblasNoTrans, 1.0, U, Utu_hat, 0.0, u_hat);
+          //gsl_blas_dgemv(CblasNoTrans, 1.0, U, Ute_hat, 0.0, e_hat);
 
           // output residuals
           cPar.WriteVector(u_hat, "residU");
@@ -1332,57 +1332,54 @@ void batch_run(Param cPar){
           cPar.a_mode == 4) {
         if (cPar.n_ph == 1) {
           LMM cLmm;
-          cLmm.CopyFromParam(cPar);
+          //cLmm.CopyFromParam(cPar);
 
-          gsl_vector_view Y_col = gsl_matrix_column(Y, 0);
-          gsl_vector_view UtY_col = gsl_matrix_column(UtY, 0);
+          DMatrix Y_col = get_col(Y, 0);
+          DMatrix UtY_col = get_col(UtY, 0);
 
           if (!cPar.file_bfile.empty()) {
             if (cPar.file_gxe.empty()) {
-              cLmm.AnalyzePlink(U, eval, UtW, &UtY_col.vector, W,
-                                &Y_col.vector);
+              //cLmm.AnalyzePlink(U, eval, UtW, UtY_col, W, Y_col);
             } else {
-              cLmm.AnalyzePlinkGXE(U, eval, UtW, &UtY_col.vector, W,
-                                   &Y_col.vector, env);
+              //cLmm.AnalyzePlinkGXE(U, eval, UtW, UtY_col, W, Y_col, env);
             }
           }
           // WJA added
           else if (!cPar.file_oxford.empty()) {
-            cLmm.Analyzebgen(U, eval, UtW, &UtY_col.vector, W, &Y_col.vector);
+            //cLmm.Analyzebgen(U, eval, UtW, UtY_col, W, Y_col);
           } else {
             if (cPar.file_gxe.empty()) {
-              cLmm.AnalyzeBimbam(U, eval, UtW, &UtY_col.vector, W,
-                                 &Y_col.vector, cPar.setGWASnps);
+              cLmm.AnalyzeBimbam(U, eval, UtW, UtY_col, W, Y_col, cPar.setGWASnps);
             } else {
-              cLmm.AnalyzeBimbamGXE(U, eval, UtW, &UtY_col.vector, W,
-                                    &Y_col.vector, env);
+              //cLmm.AnalyzeBimbamGXE(U, eval, UtW, UtY_col, W, Y_col, env);
             }
           }
 
-          cLmm.WriteFiles();
-          cLmm.CopyToParam(cPar);
+          //cLmm.WriteFiles();
+          //cLmm.CopyToParam(cPar);
         } else {
-          MVLMM cMvlmm;
-          cMvlmm.CopyFromParam(cPar);
+          writeln("In MVLMM");
+          //MVLMM cMvlmm;
+          //cMvlmm.CopyFromParam(cPar);
 
-          if (!cPar.file_bfile.empty()) {
-            if (cPar.file_gxe.empty()) {
-              cMvlmm.AnalyzePlink(U, eval, UtW, UtY);
-            } else {
-              cMvlmm.AnalyzePlinkGXE(U, eval, UtW, UtY, env);
-            }
-          } else if (!cPar.file_oxford.empty()) {
-            cMvlmm.Analyzebgen(U, eval, UtW, UtY);
-          } else {
-            if (cPar.file_gxe.empty()) {
-              cMvlmm.AnalyzeBimbam(U, eval, UtW, UtY);
-            } else {
-              cMvlmm.AnalyzeBimbamGXE(U, eval, UtW, UtY, env);
-            }
-          }
+          //if (!cPar.file_bfile.empty()) {
+          //  if (cPar.file_gxe.empty()) {
+          //    cMvlmm.AnalyzePlink(U, eval, UtW, UtY);
+          //  } else {
+          //    cMvlmm.AnalyzePlinkGXE(U, eval, UtW, UtY, env);
+          //  }
+          //} else if (!cPar.file_oxford.empty()) {
+          //  cMvlmm.Analyzebgen(U, eval, UtW, UtY);
+          //} else {
+          //  if (cPar.file_gxe.empty()) {
+          //    cMvlmm.AnalyzeBimbam(U, eval, UtW, UtY);
+          //  } else {
+          //    cMvlmm.AnalyzeBimbamGXE(U, eval, UtW, UtY, env);
+          //  }
+          //}
 
-          cMvlmm.WriteFiles();
-          cMvlmm.CopyToParam(cPar);
+          //cMvlmm.WriteFiles();
+          //cMvlmm.CopyToParam(cPar);
         }
       }
     }
@@ -1411,13 +1408,13 @@ void batch_run(Param cPar){
     // run bvsr if rho==1
     if (cPar.rho_min == 1 && cPar.rho_max == 1) {
       // read genotypes X (not UtX)
-      cPar.ReadGenotypes(UtX, G, false);
+      //cPar.ReadGenotypes(UtX, G, false);
 
       // perform BSLMM analysis
-      BSLMM cBslmm;
-      cBslmm.CopyFromParam(cPar);
-      cBslmm.MCMC(UtX, y);
-      cBslmm.CopyToParam(cPar);
+      //BSLMM cBslmm;
+      //cBslmm.CopyFromParam(cPar);
+      //cBslmm.MCMC(UtX, y);
+      //cBslmm.CopyToParam(cPar);
       // else, if rho!=1
     } else {
       DMatrix U;
@@ -1431,7 +1428,7 @@ void batch_run(Param cPar){
 
       // read relatedness matrix G
       if (!(cPar.file_kin).empty()) {
-        cPar.ReadGenotypes(UtX, G, false);
+        //cPar.ReadGenotypes(UtX, G, false);
 
         // read relatedness matrix G
         ReadFile_kin(cPar.file_kin, cPar.indicator_idv, cPar.mapID2num,
@@ -1445,7 +1442,7 @@ void batch_run(Param cPar){
         CenterMatrix(G);
         validate_K(G,cPar.mode_check,cPar.mode_strict);
       } else {
-        cPar.ReadGenotypes(UtX, G, true);
+        //cPar.ReadGenotypes(UtX, G, true);
       }
 
       // eigen-decomposition and calculate trace_G
@@ -1465,7 +1462,7 @@ void batch_run(Param cPar){
       CalcPve(eval, UtW, Uty, cPar.l_remle_null, cPar.trace_G, cPar.pve_null,
               cPar.pve_se_null);
 
-      cPar.PrintSummary();
+      //cPar.PrintSummary();
 
       // Creat and calcualte UtX, use a large memory
       writeln("Calculating UtX...");
@@ -1473,16 +1470,14 @@ void batch_run(Param cPar){
 
       // perform BSLMM or BSLMMDAP analysis
       if (cPar.a_mode == 11 || cPar.a_mode == 12 || cPar.a_mode == 13) {
-        BSLMM cBslmm;
-        cBslmm.CopyFromParam(cPar);
-        if (cPar.a_mode == 12) { // ridge regression
-          cBslmm.RidgeR(U, UtX, Uty, eval, cPar.l_remle_null);
-        } else { // Run MCMC
-          cBslmm.MCMC(U, UtX, Uty, eval, y);
-        }
-        cPar.time_opt =
-            (clock() - time_start) / (double(CLOCKS_PER_SEC) * 60.0);
-        cBslmm.CopyToParam(cPar);
+        //BSLMM cBslmm;
+        //cBslmm.CopyFromParam(cPar);
+        //if (cPar.a_mode == 12) { // ridge regression
+        //  cBslmm.RidgeR(U, UtX, Uty, eval, cPar.l_remle_null);
+        //} else { // Run MCMC
+        //  cBslmm.MCMC(U, UtX, Uty, eval, y);
+        //}
+        //cBslmm.CopyToParam(cPar);
       } else {
       }
     }
@@ -1505,18 +1500,18 @@ void batch_run(Param cPar){
       cPar.CopyCvtPhen(W, y, 0);
 
       // center y, even for case/control data
-      cPar.pheno_mean = CenterVector(y);
+      //cPar.pheno_mean = CenterVector(y);
 
       // run bvsr if rho==1
       if (cPar.rho_min == 1 && cPar.rho_max == 1) {
         // read genotypes X (not UtX)
-        cPar.ReadGenotypes(UtX, G, false);
+        //cPar.ReadGenotypes(UtX, G, false);
 
         // perform BSLMM analysis
-        BSLMM cBslmm;
-        cBslmm.CopyFromParam(cPar);
-        cBslmm.MCMC(UtX, y);
-        cBslmm.CopyToParam(cPar);
+        //BSLMM cBslmm;
+        //cBslmm.CopyFromParam(cPar);
+        //cBslmm.MCMC(UtX, y);
+        //cBslmm.CopyToParam(cPar);
         // else, if rho!=1
       } else {
         DMatrix U;
@@ -1530,7 +1525,7 @@ void batch_run(Param cPar){
 
         // read relatedness matrix G
         if (!(cPar.file_kin).empty()) {
-          cPar.ReadGenotypes(UtX, G, false);
+          //cPar.ReadGenotypes(UtX, G, false);
 
           // read relatedness matrix G
           ReadFile_kin(cPar.file_kin, cPar.indicator_idv, cPar.mapID2num,
@@ -1545,12 +1540,12 @@ void batch_run(Param cPar){
           validate_K(G,cPar.mode_check,cPar.mode_strict);
 
         } else {
-          cPar.ReadGenotypes(UtX, G, true);
+          //cPar.ReadGenotypes(UtX, G, true);
         }
 
         // eigen-decomposition and calculate trace_G
         writeln("Start Eigen-Decomposition...");
-        time_start = clock();
+
         cPar.trace_G = EigenDecomp_Zeroed(G, U, eval, 0);
 
         // calculate UtW and Uty
@@ -1565,18 +1560,18 @@ void batch_run(Param cPar){
         CalcPve(eval, UtW, Uty, cPar.l_remle_null, cPar.trace_G, cPar.pve_null,
                 cPar.pve_se_null);
 
-        cPar.PrintSummary();
+        //cPar.PrintSummary();
 
         // Creat and calcualte UtX, use a large memory
         writeln("Calculating UtX...");
         CalcUtX(U, UtX);
 
         // perform analysis; assume X and y are already centered
-        BSLMMDAP cBslmmDap;
-        cBslmmDap.CopyFromParam(cPar);
-        cBslmmDap.DAP_CalcBF(U, UtX, Uty, eval, y);
+        //BSLMMDAP cBslmmDap;
+        //cBslmmDap.CopyFromParam(cPar);
+        //cBslmmDap.DAP_CalcBF(U, UtX, Uty, eval, y);
 
-        cBslmmDap.CopyToParam(cPar);
+        //cBslmmDap.CopyToParam(cPar);
 
       }
 
@@ -1584,14 +1579,14 @@ void batch_run(Param cPar){
       // perform EM algorithm and estimate parameters
       string[] vec_rs;
       double[] vec_sa2, vec_sb2, wab;
-      //vector<vector<vector<double>>> BF;
+      DMatrix BF; //its 3 dimensional
 
       // read hyp and bf files (functions defined in BSLMMDAP)
-      ReadFile_hyb(cPar.file_hyp, vec_sa2, vec_sb2, wab);
-      ReadFile_bf(cPar.file_bf, vec_rs, BF);
+      //ReadFile_hyb(cPar.file_hyp, vec_sa2, vec_sb2, wab);
+      //ReadFile_bf(cPar.file_bf, vec_rs, BF);
 
-      cPar.ns_test = vec_rs.size();
-      if (wab.size() != BF[0][0].size()) {
+      cPar.ns_test = vec_rs.length;
+      if (wab.length != BF.elements.length) { //check BF[0][0]
         writeln("error! hyp and bf files dimension do not match");
       }
 
@@ -1601,15 +1596,15 @@ void batch_run(Param cPar){
       DMatrix dlevel;
       size_t kc, kd;
       if (!cPar.file_cat.empty()) {
-        ReadFile_cat(cPar.file_cat, vec_rs, Ac, Ad, dlevel, kc, kd);
+        //ReadFile_cat(cPar.file_cat, vec_rs, Ac, Ad, dlevel, kc, kd);
       } else {
         kc = 0;
         kd = 0;
       }
 
-      writeln("## number of blocks = ", BF.size());
-      writeln("## number of analyzed SNPs = ", vec_rs.size());
-      writeln("## grid size for hyperparameters = ", wab.size());
+      writeln("## number of blocks = ", BF.elements.length);
+      writeln("## number of analyzed SNPs = ", vec_rs.length);
+      writeln("## grid size for hyperparameters = ", wab.length);
       writeln("## number of continuous annotations = ", kc);
       writeln("## number of discrete annotations = ", kd);
 
@@ -1620,11 +1615,11 @@ void batch_run(Param cPar){
       // *Ad, gsl_vector_int *dlevel);
 
       // perform analysis
-      BSLMMDAP cBslmmDap;
-      cBslmmDap.CopyFromParam(cPar);
-      cBslmmDap.DAP_EstimateHyper(kc, kd, vec_rs, vec_sa2, vec_sb2, wab, BF, Ac,
-                                  Ad, dlevel);
-      cBslmmDap.CopyToParam(cPar);
+      //BSLMMDAP cBslmmDap;
+      //cBslmmDap.CopyFromParam(cPar);
+      //cBslmmDap.DAP_EstimateHyper(kc, kd, vec_rs, vec_sa2, vec_sb2, wab, BF, Ac,
+      //                            Ad, dlevel);
+      //cBslmmDap.CopyToParam(cPar);
 
     } else {
       //
