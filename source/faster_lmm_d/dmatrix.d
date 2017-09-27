@@ -346,6 +346,9 @@ DMatrix matrix_join(DMatrix ul, DMatrix ur, DMatrix dl, DMatrix dr){
   return result;
 }
 
+DMatrix get_sub_dmatrix(DMatrix H,  size_t a, size_t b, size_t c, size_t d){
+  return H;
+}
 
 unittest{
   auto d = DMatrix([2,2],[1,2,3,4]);

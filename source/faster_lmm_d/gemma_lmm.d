@@ -1501,3 +1501,82 @@ void AnalyzeBimbam(DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Uty,
   // cout << "Counted SNPs " << c << " sumStat " << sumStat.size() << endl;
   return;
 }
+
+unittest{
+  size_t n_cvt;
+  size_t e_mode;
+  DMatrix Hi_eval = DMatrix([2,2],[1,2,3,4]);
+  DMatrix Uab = DMatrix([2,2],[1,2,3,4]);
+  DMatrix ab = DMatrix([2,2],[1,2,3,4]);
+  DMatrix pab;
+
+  CalcPab(n_cvt , e_mode,  Hi_eval, Uab,  ab, Pab));
+  //assert();
+
+  DMatrix PPab;
+  DMatrix HiHiHi_eval;
+  DMatrix PPab;
+  CalcPPab(n_cvt, e_mode, HiHi_eval,  Uab, ab, Pab, PPab)
+  //assert();
+
+  DMatrix HiHiHi_eval;
+  DMatrix PPPab;
+  CalcPPPab( n_cvt, e_mode, HiHiHi_eval, Uab, ab, Pab, PPab, PPPab);
+  //assert();
+
+  size_t index = GetabIndex(size_t a, size_t b, size_t n_cvt);
+  //assert( index == );
+
+  char func_name = 'R';
+  double l_min = 0;
+  double l_max = 10;
+  size_t n_region = 100;
+  double lambda = 0.7;
+  double logf;
+  loglikeparam params;
+  CalcLambda(func_name, cast(void *)&params, l_min, l_max, n_region, lambda, logf);
+  //assert();
+
+  // Calculate lambda in the null model.
+  DMatrix eval;
+  DMatrix Utw;
+  DMatrix Uty;
+  double  logl_H0;
+  CalcLambda(func_name, eval, UtW, Uty, l_min, l_max, n_region, lambda, logl_H0);
+  //assert();
+
+  size_t ni_test = 1;
+  double l = 6;
+  double beta;
+  double se;
+  double p_wald;
+  CalcRLWald(ni_test, l, params, beta, se, p_wald);
+  //assert();
+
+  double p_score;
+  CalcRLScore(ni_test, l, params, beta, se, p_score);
+  //assert();
+
+  CalcUab(UtW, Uty, Uab);
+  //assert();
+
+  CalcUab(UtW, Uty, Utx, Uab);
+  //assert();
+
+  DMatrix W
+  DMatrix y;
+  Calcab(W, y, ab)
+  //assert();
+
+  DMatrix x;
+  Calcab(W, y, x, ab)
+  //assert();
+
+  double vg, ve;
+  DMatrix beta;
+  DMatrix se_beta;
+  CalcLmmVgVeBeta(eval, UtW, Uty, lambda, vg, ve, beta, se_beta);
+
+  double trace_G, pve, pve_se;
+  CalcPve(eval,  UtW, Uty, lambda, trace_G, pve,  pve_se);
+}
