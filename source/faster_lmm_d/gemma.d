@@ -417,8 +417,8 @@ void batch_run(Param cPar){
       //cPar.Ve_remle_null.clear();
       for (size_t i = 0; i < Vg.shape[0]; i++) {
         for (size_t j = i; j < Vg.shape[1]; j++) {
-          //cPar.Vg_remle_null.push_back(gsl_matrix_get(Vg, i, j));
-          //cPar.Ve_remle_null.push_back(gsl_matrix_get(Ve, i, j));
+          //cPar.Vg_remle_null.push_back(accessor(Vg, i, j));
+          //cPar.Ve_remle_null.push_back(accessor(Ve, i, j));
         }
       }
 
@@ -521,7 +521,7 @@ void batch_run(Param cPar){
     cPar.CopyCvtPhen(W, y, 0);
 
     //set<string> setSnps_beta;
-    //map<string, double> mapRS2wA, mapRS2wK;
+    mapRS mapRS2wA, mapRS2wK;
 
     cPar.ObtainWeight(setSnps_beta, mapRS2wK);
 
@@ -551,11 +551,11 @@ void batch_run(Param cPar){
     //gsl_vector_set_zero(q);
     //gsl_vector_set_zero(s);
 
-    gsl_vector_view s_vec = gsl_vector_subvector(s, 0, cPar.n_vc);
+    DMatrix s_vec;// = gsl_vector_subvector(s, 0, cPar.n_vc);
 
-    //vector<size_t> vec_cat, vec_ni;
-    //vector<double> vec_weight, vec_z2;
-    //map<string, double> mapRS2weight;
+    size_t[] vec_cat, vec_ni;
+    double[] vec_weight, vec_z2;
+    mapRS mapRS2weight;
     mapRS2weight.clear();
 
     ReadFile_beta(cPar.file_beta, cPar.mapRS2cat, mapRS2weight, vec_cat, vec_ni,
@@ -599,9 +599,9 @@ void batch_run(Param cPar){
   if (cPar.a_mode == 51 || cPar.a_mode == 52 || cPar.a_mode == 53 ||
       cPar.a_mode == 54) { // Fit LM
     DMatrix Y;
-    Y = [cPar.ni_test, cPar.n_ph];
+    Y.shape = [cPar.ni_test, cPar.n_ph];
     DMatrix W;
-    W = [Y.shape[0], cPar.n_cvt];
+    W.shape = [Y.shape[0], cPar.n_cvt];
 
     // set covariates matrix W and phenotype matrix Y
     // an intercept should be included in W,
@@ -612,17 +612,16 @@ void batch_run(Param cPar){
       LM cLm;
       cLm.CopyFromParam(cPar);
 
-      gsl_vector_view Y_col = gsl_matrix_column(Y, 0);
+      DMatrix Y_col = get_col(Y, 0);
 
       if (!cPar.file_gene.empty()) {
-        cLm.AnalyzeGene(W,
-                        &Y_col.vector); // y is the predictor, not the phenotype
+        cLm.AnalyzeGene(W, Y_col); // y is the predictor, not the phenotype
       } else if (!cPar.file_bfile.empty()) {
-        cLm.AnalyzePlink(W, &Y_col.vector);
+        cLm.AnalyzePlink(W, Y_col);
       } else if (!cPar.file_oxford.empty()) {
-        cLm.Analyzebgen(W, &Y_col.vector);
+        cLm.Analyzebgen(W, Y_col);
       } else {
-        cLm.AnalyzeBimbam(W, &Y_col.vector);
+        cLm.AnalyzeBimbam(W, Y_col);
       }
 
       cLm.WriteFiles();
@@ -645,10 +644,10 @@ void batch_run(Param cPar){
       // update indicator_snps, so that the numbers are in accordance with
       // mapRS2wK
 
-      //set<string> setSnps_beta;
+      string[] setSnps_beta;
       ReadFile_snps_header(cPar.file_beta, setSnps_beta);
 
-      //map<string, double> mapRS2wA, mapRS2wK;
+      mapRS mapRS2wA, mapRS2wK;
       cPar.ObtainWeight(setSnps_beta, mapRS2wK);
 
       cPar.UpdateSNP(mapRS2wK);
@@ -673,21 +672,21 @@ void batch_run(Param cPar){
       DMatrix W;
       W.shape = [cPar.ni_test, cPar.n_cvt];
 
-      gsl_matrix_set_zero(K);
-      gsl_matrix_set_zero(A);
+      //gsl_matrix_set_zero(K);
+      //gsl_matrix_set_zero(A);
 
-      gsl_matrix_set_zero(S);
-      gsl_matrix_set_zero(Vq);
-      gsl_vector_set_zero(q);
-      gsl_vector_set_zero(s);
+      //gsl_matrix_set_zero(S);
+      //gsl_matrix_set_zero(Vq);
+      //gsl_vector_set_zero(q);
+      //gsl_vector_set_zero(s);
 
       cPar.CopyCvtPhen(W, y, 0);
 
-      gsl_matrix_view S_mat =
+      DMatrix S_mat =
           get_sub_dmatrix(S, 0, 0, cPar.n_vc, cPar.n_vc);
-      gsl_matrix_view Svar_mat =
+      DMatrix Svar_mat =
           get_sub_dmatrix(S, cPar.n_vc, 0, cPar.n_vc, cPar.n_vc);
-      gsl_vector_view s_vec = gsl_vector_subvector(s, 0, cPar.n_vc);
+      DMatrix s_vec;// = gsl_vector_subvector(s, 0, cPar.n_vc);
 
       size_t[] vec_cat, vec_ni;
       double[] vec_weight, vec_z2;
@@ -708,53 +707,48 @@ void batch_run(Param cPar){
             &s_vec.vector);
 
       // compute S
-      cPar.CalcS(mapRS2wA, mapRS2wK, W, A, K, &S_mat.matrix, &Svar_mat.matrix,
-                 &s_vec.vector);
+      cPar.CalcS(mapRS2wA, mapRS2wK, W, A, K, S_mat, Svar_mat, s_vec);
       if (cPar.error == true) {
         writeln("error! fail to calculate the S matrix.");
         return;
       }
 
       // compute vc estimates
-      CalcVCss(Vq, &S_mat.matrix, &Svar_mat.matrix, q, &s_vec.vector,
-               cPar.ni_study, cPar.v_pve, cPar.v_se_pve, cPar.pve_total,
-               cPar.se_pve_total, cPar.v_sigma2, cPar.v_se_sigma2,
-               cPar.v_enrich, cPar.v_se_enrich);
+      CalcVCss(Vq, S_mat, Svar_mat, q, s_vec, cPar.ni_study, cPar.v_pve,
+               cPar.v_se_pve, cPar.pve_total, cPar.se_pve_total, cPar.v_sigma2,
+               cPar.v_se_sigma2, cPar.v_enrich, cPar.v_se_enrich);
 
-      assert(!has_nan(cPar.v_se_pve));
+      //assert(!has_nan(cPar.v_se_pve));
 
       // if LDSC weights, then compute the weights and run the above steps again
       if (cPar.a_mode == 62) {
         // compute the weights and normalize the weights for A
-        cPar.UpdateWeight(1, mapRS2wK, cPar.ni_study, &s_vec.vector, mapRS2wA);
+        cPar.UpdateWeight(1, mapRS2wK, cPar.ni_study, s_vec, mapRS2wA);
 
         // read beta file again, and update weigths vector
         ReadFile_beta(cPar.file_beta, cPar.mapRS2cat, mapRS2wA, vec_cat, vec_ni,
-                      vec_weight, vec_z2, cPar.ni_study, cPar.ns_total,
-                      cPar.ns_test);
+                      vec_weight, vec_z2, cPar.ni_study, cPar.ns_total, cPar.ns_test);
 
         // compute q
-        Calcq(cPar.n_block, vec_cat, vec_ni, vec_weight, vec_z2, Vq, q,
-              &s_vec.vector);
+        Calcq(cPar.n_block, vec_cat, vec_ni, vec_weight, vec_z2, Vq, q, s_vec);
 
         // compute S
-        cPar.CalcS(mapRS2wA, mapRS2wK, W, A, K, &S_mat.matrix, &Svar_mat.matrix,
-                   &s_vec.vector);
+        cPar.CalcS(mapRS2wA, mapRS2wK, W, A, K, S_mat, Svar_mat, s_vec);
+
         if (cPar.error == true) {
           writeln("error! fail to calculate the S matrix.");
           return;
         }
 
         // compute vc estimates
-        CalcVCss(Vq, &S_mat.matrix, &Svar_mat.matrix, q, &s_vec.vector,
-                 cPar.ni_study, cPar.v_pve, cPar.v_se_pve, cPar.pve_total,
-                 cPar.se_pve_total, cPar.v_sigma2, cPar.v_se_sigma2,
-                 cPar.v_enrich, cPar.v_se_enrich);
-        assert(!has_nan(cPar.v_se_pve));
+        CalcVCss(Vq, S_mat, Svar_mat, q, s_vec, cPar.ni_study, cPar.v_pve,
+                 cPar.v_se_pve, cPar.pve_total, cPar.se_pve_total, cPar.v_sigma2,
+                 cPar.v_se_sigma2, cPar.v_enrich, cPar.v_se_enrich);
+        //assert(!has_nan(cPar.v_se_pve));
       }
 
 
-      gsl_vector_set(s, cPar.n_vc, cPar.ni_test);
+    s.elements[cPar.n_vc] = cPar.ni_test;
 
       cPar.WriteMatrix(S, "S");
       cPar.WriteMatrix(Vq, "Vq");
@@ -784,29 +778,35 @@ void batch_run(Param cPar){
 
       cPar.n_vc = cPar.n_vc - 1;
 
-      gsl_matrix *S = gsl_matrix_alloc(2 * cPar.n_vc, cPar.n_vc);
-      gsl_matrix *Vq = gsl_matrix_alloc(cPar.n_vc, cPar.n_vc);
+      DMatrix S;
+      s.shape = [2 * cPar.n_vc, cPar.n_vc];
+      DMatrix Vq;
+      Vq.shape = [cPar.n_vc, cPar.n_vc];
       // gsl_matrix *V=gsl_matrix_alloc (cPar.n_vc+1,
       // (cPar.n_vc*(cPar.n_vc+1))/2*(cPar.n_vc+1) );
       // gsl_matrix *Vslope=gsl_matrix_alloc (n_lines+1,
       // (n_lines*(n_lines+1))/2*(n_lines+1) );
-      gsl_vector *q = gsl_vector_alloc(cPar.n_vc);
-      gsl_vector *s_study = gsl_vector_alloc(cPar.n_vc);
-      gsl_vector *s_ref = gsl_vector_alloc(cPar.n_vc);
-      gsl_vector *s = gsl_vector_alloc(cPar.n_vc + 1);
+      DMatrix q;
+      q.shape = [1, cPar.n_vc];
+      DMatrix s_study;
+      s_study.shape = [1, cPar.n_vc];
+      DMatrix s_ref;
+      s_ref.shape = [1, cPar.n_vc];
+      DMatrix s;
+      s.shape = [1, cPar.n_vc + 1];
 
-      gsl_matrix_set_zero(S);
-      gsl_matrix_view S_mat =
+      //gsl_matrix_set_zero(S);
+      DMatrix S_mat =
           get_sub_dmatrix(S, 0, 0, cPar.n_vc, cPar.n_vc);
-      gsl_matrix_view Svar_mat =
+      DMatrix Svar_mat =
           get_sub_dmatrix(S, cPar.n_vc, 0, cPar.n_vc, cPar.n_vc);
 
-      gsl_matrix_set_zero(Vq);
+      //gsl_matrix_set_zero(Vq);
       // gsl_matrix_set_zero(V);
       // gsl_matrix_set_zero(Vslope);
-      gsl_vector_set_zero(q);
-      gsl_vector_set_zero(s_study);
-      gsl_vector_set_zero(s_ref);
+      //gsl_vector_set_zero(q);
+      //gsl_vector_set_zero(s_study);
+      //gsl_vector_set_zero(s_ref);
 
       if (!cPar.file_study.empty()) {
         ReadFile_study(cPar.file_study, Vq, q, s_study, cPar.ni_study);
@@ -866,7 +866,7 @@ void batch_run(Param cPar){
         double d = 0;
         (cPar.v_traceG).clear();
         for (size_t i = 0; i < cPar.n_vc; i++) {
-          gsl_matrix_view G_sub =
+          DMatrix G_sub =
               get_sub_dmatrix(G, 0, i * G.shape[0], G.shape[0], G.shape[0]);
           CenterMatrix(&G_sub.matrix);
           d = 0;
@@ -891,7 +891,7 @@ void batch_run(Param cPar){
         (cPar.v_traceG).clear();
         double d = 0;
         for (size_t j = 0; j < G.shape[0]; j++) {
-          d += gsl_matrix_get(G, j, j);
+          d += accessor(G, j, j);
         }
         d /= to!double(G.shape[0]);
         (cPar.v_traceG).push_back(d);
@@ -1131,7 +1131,7 @@ void batch_run(Param cPar){
           wi = gsl_vector_get(weight, i);
           for (size_t j = i; j < G.shape[1]; j++) {
             wj = gsl_vector_get(weight, j);
-            d = gsl_matrix_get(G, i, j);
+            d = accessor(G, i, j);
             if (wi <= 0 || wj <= 0) {
               d = 0;
             } else {
@@ -1243,8 +1243,8 @@ void batch_run(Param cPar){
         cPar.beta_mle_null.clear();
         cPar.se_beta_mle_null.clear();
         for (size_t i = 0; i < B.shape[1]; i++) {
-          cPar.beta_mle_null.push_back(gsl_matrix_get(B, 0, i));
-          cPar.se_beta_mle_null.push_back(gsl_matrix_get(se_B, 0, i));
+          cPar.beta_mle_null.push_back(accessor(B, 0, i));
+          cPar.se_beta_mle_null.push_back(accessor(se_B, 0, i));
         }
         //assert(!std::isnan(UtY.data[0]));
         //assert(!std::isnan(B.data[0]));
@@ -1261,8 +1261,8 @@ void batch_run(Param cPar){
         cPar.beta_remle_null.clear();
         cPar.se_beta_remle_null.clear();
         for (size_t i = 0; i < B.shape[1]; i++) {
-          cPar.beta_remle_null.push_back(gsl_matrix_get(B, 0, i));
-          cPar.se_beta_remle_null.push_back(gsl_matrix_get(se_B, 0, i));
+          cPar.beta_remle_null.push_back(accessor(B, 0, i));
+          cPar.se_beta_remle_null.push_back(accessor(se_B, 0, i));
         }
 
         CalcPve(eval, UtW, &UtY_col.vector, cPar.l_remle_null, cPar.trace_G,

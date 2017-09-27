@@ -278,15 +278,15 @@ struct Param{
   DMatrix vec_bv;   // Breeding values.
   DMatrix est_column;
 
-  //map<string, int> mapID2num;             // Map small ID to number, 0 to n-1.
-  //map<string, string> mapRS2chr;          // Map rs# to chromosome location.
-  //map<string, long int> mapRS2bp;         // Map rs# to base position.
-  //map<string, double> mapRS2cM;           // Map rs# to cM.
-  //map<string, double> mapRS2est;          // Map rs# to parameters.
-  //map<string, size_t> mapRS2cat;          // Map rs# to category number.
-  //map<string, DMatrix> mapRS2catc; // Map rs# to cont. cat's.
-  //map<string, double> mapRS2wsnp;         // Map rs# to SNP weights.
-  //map<string, DMatrix> mapRS2wcat; // Map rs# to SNP cat weights.
+  mapRS mapID2num;             // Map small ID to number, 0 to n-1.
+  mapRS mapRS2chr;          // Map rs# to chromosome location.
+  mapRS mapRS2bp;         // Map rs# to base position.
+  mapRS mapRS2cM;           // Map rs# to cM.
+  mapRS mapRS2est;          // Map rs# to parameters.
+  mapRS mapRS2cat;          // Map rs# to category number.
+  mapRS mapRS2catc; // Map rs# to cont. cat's.
+  mapRS mapRS2wsnp;         // Map rs# to SNP weights.
+  mapRS mapRS2wcat; // Map rs# to SNP cat weights.
 
   //vector<SNPINFO> snpInfo;          // Record SNP information.
   //vector<vector<SNPINFO>> msnpInfo; // Record SNP information.
@@ -300,7 +300,41 @@ struct Param{
   void WriteVar(string a){}
   void WriteVector(DMatrix a, string b){}
   void CopyCvtPhen(DMatrix a, DMatrix b, int c){}
-  void ObtainWeight(){}
-  void CalcS(){}
+  void ObtainWeight(string[] a, mapRS b){}
+  void CalcS(mapRS a, mapRS b, DMatrix c, DMatrix d, DMatrix e, DMatrix f, DMatrix g, DMatrix h){}
+  void UpdateSNP(mapRS a){}
 
 }
+
+struct mapRS{
+  void clear(){}
+}
+
+struct LM{
+  void CopyFromParam(Param cpar){}
+  void AnalyzeGene(DMatrix a, DMatrix b){}
+  void AnalyzePlink(DMatrix a, DMatrix b){}
+  void Analyzebgen(DMatrix a, DMatrix b){}
+  void AnalyzeBimbam(DMatrix a, DMatrix b){}
+
+  //void ReadFiles(){}
+  //void CheckData(){}
+  //void WriteMatrix(DMatrix a, string b){}
+  //void WriteVar(string a){}
+  //void WriteVector(DMatrix a, string b){}
+  //void CopyCvtPhen(DMatrix a, DMatrix b, int c){}
+  //void ObtainWeight(){}
+  //void CalcS(){}
+
+  void WriteFiles(){}
+  void CopyToParam(Param cpar){}
+}
+
+void ReadFile_snps_header(string a, string[] b){}
+
+void Calcq(mapRS a, mapRS b, DMatrix c, DMatrix d, DMatrix e, DMatrix f, DMatrix g, DMatrix h){}
+void ReadFile_kin(){}
+void ReadFile_beta(){}
+void CenterMatrix(DMatrix a){}
+void validate_K(DMatrix a, bool b, bool c){}
+void setSnps_beta(){}
