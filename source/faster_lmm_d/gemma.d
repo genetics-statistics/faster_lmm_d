@@ -1079,11 +1079,11 @@ void fit_model(Param cPar, DMatrix eval, DMatrix  UtW, DMatrix UtY, DMatrix Y, D
 
       //cPar.beta_mle_null.clear();
       //cPar.se_beta_mle_null.clear();
-      DMatrix B;
-      for (size_t i = 0; i < B.shape[1]; i++) {
+      //DMatrix B;
+      //for (size_t i = 0; i < B.shape[1]; i++) {
         //cPar.beta_mle_null.push_back(accessor(B, 0, i));
         //cPar.se_beta_mle_null.push_back(accessor(se_B, 0, i));
-      }
+      //}
       //assert(!std::isnan(UtY.data[0]));
       //assert(!std::isnan(B.data[0]));
       //assert(!std::isnan(se_B.data[0]));
@@ -1098,10 +1098,10 @@ void fit_model(Param cPar, DMatrix eval, DMatrix  UtW, DMatrix UtY, DMatrix Y, D
 
       //cPar.beta_remle_null.clear();
       //cPar.se_beta_remle_null.clear();
-      for (size_t i = 0; i < B.shape[1]; i++) {
-        //cPar.beta_remle_null.push_back(accessor(B, 0, i));
-        //cPar.se_beta_remle_null.push_back(accessor(se_B, 0, i));
-      }
+      //for (size_t i = 0; i < B.shape[1]; i++) {
+      //  //cPar.beta_remle_null.push_back(accessor(B, 0, i));
+      //  //cPar.se_beta_remle_null.push_back(accessor(se_B, 0, i));
+      //}
 
       CalcPve(eval, UtW, UtY_col, cPar.l_remle_null, cPar.trace_G,
               cPar.pve_null, cPar.pve_se_null);

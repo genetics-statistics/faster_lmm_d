@@ -30,7 +30,7 @@ void CalcPab(const size_t n_cvt, const size_t e_mode, const DMatrix Hi_eval,
   size_t index_ab, index_aw, index_bw, index_ww;
   double p_ab;
   double ps_ab, ps_aw, ps_bw, ps_ww;
-  Pab = set_ones_dmatrix(Pab);
+  Pab = set_zeros_dmatrix(Pab);
   for (size_t p = 0; p <= n_cvt + 1; ++p) {
     for (size_t a = p + 1; a <= n_cvt + 2; ++a) {
       for (size_t b = a; b <= n_cvt + 2; ++b) {
@@ -66,12 +66,13 @@ void CalcPab(const size_t n_cvt, const size_t e_mode, const DMatrix Hi_eval,
 
 void CalcPPab(const size_t n_cvt, const size_t e_mode,
               const DMatrix HiHi_eval, const DMatrix Uab,
-              const DMatrix ab, const DMatrix Pab, DMatrix PPab) {
+              const DMatrix ab, const DMatrix Pab, ref DMatrix PPab) {
   writeln("in CalcPPab");
   size_t index_ab, index_aw, index_bw, index_ww;
   double p2_ab;
   double ps2_ab, ps_aw, ps_bw, ps_ww, ps2_aw, ps2_bw, ps2_ww;
 
+  PPab = set_zeros_dmatrix(PPab);
   for (size_t p = 0; p <= n_cvt + 1; ++p) {
     for (size_t a = p + 1; a <= n_cvt + 2; ++a) {
       for (size_t b = a; b <= n_cvt + 2; ++b) {
@@ -111,13 +112,13 @@ void CalcPPab(const size_t n_cvt, const size_t e_mode,
 void CalcPPPab(const size_t n_cvt, const size_t e_mode,
                const DMatrix HiHiHi_eval, const DMatrix Uab,
                const DMatrix ab, const DMatrix Pab,
-               const DMatrix PPab, DMatrix PPPab) {
+               const DMatrix PPab, ref DMatrix PPPab) {
   writeln("in CalcPPPab");
   size_t index_ab, index_aw, index_bw, index_ww;
   double p3_ab;
   double ps3_ab, ps_aw, ps_bw, ps_ww, ps2_aw, ps2_bw, ps2_ww, ps3_aw, ps3_bw,
       ps3_ww;
-
+  PPPab = set_zeros_dmatrix(PPPab);
   for (size_t p = 0; p <= n_cvt + 1; ++p) {
     for (size_t a = p + 1; a <= n_cvt + 2; ++a) {
       for (size_t b = a; b <= n_cvt + 2; ++b) {
@@ -135,7 +136,6 @@ void CalcPPPab(const size_t n_cvt, const size_t e_mode,
           index_aw = GetabIndex(a, p, n_cvt);
           index_bw = GetabIndex(b, p, n_cvt);
           index_ww = GetabIndex(p, p, n_cvt);
-
           ps3_ab = accessor(PPPab, p - 1, index_ab);
           ps_aw = accessor(Pab, p - 1, index_aw);
           ps_bw = accessor(Pab, p - 1, index_bw);
@@ -159,6 +159,7 @@ void CalcPPPab(const size_t n_cvt, const size_t e_mode,
       }
     }
   }
+  writeln("out of PPPab");
   return;
 }
 
@@ -481,6 +482,7 @@ extern(C) double LogL_dev1(double l, void* params) {
 }
 
 extern(C) double LogRL_dev2(double l, void* params) {
+  writeln("In LogRL_dev2");
   auto ptr = cast(loglikeparam *)params;
   loglikeparam p = *ptr;
 
@@ -508,20 +510,19 @@ extern(C) double LogRL_dev2(double l, void* params) {
   PPab.shape = [n_cvt + 2, n_index];
 
   DMatrix PPPab;
-  PPab.shape = [n_cvt + 2, n_index];
+  PPPab.shape = [n_cvt + 2, n_index];
 
   DMatrix Hi_eval;
   Hi_eval.shape = [1, p.eval.elements.length];
   DMatrix HiHi_eval;
   HiHi_eval.shape = [1, p.eval.elements.length];
   DMatrix HiHiHi_eval;
-  HiHi_eval.shape = [1, p.eval.elements.length];
+  HiHiHi_eval.shape = [1, p.eval.elements.length];
   DMatrix v_temp;
   v_temp.shape = [1, p.eval.elements.length];
   v_temp.elements = p.eval.elements;
 
   v_temp = multiply_dmatrix_num(v_temp, l);
-
 
   if (p.e_mode == 0) {
     Hi_eval = set_ones_dmatrix(Hi_eval);
@@ -530,13 +531,15 @@ extern(C) double LogRL_dev2(double l, void* params) {
   }
   v_temp = add_dmatrix_num(v_temp, 1.0);
   Hi_eval = divide_dmatrix(Hi_eval, v_temp);
-
+  writeln(534);
   HiHi_eval.elements = Hi_eval.elements.dup;
+  writeln(536);
   HiHi_eval = slow_multiply_dmatrix(HiHi_eval, Hi_eval);
+  writeln(538);
   HiHiHi_eval.elements = HiHi_eval.elements.dup;
   HiHiHi_eval = slow_multiply_dmatrix(HiHiHi_eval, Hi_eval);
-
-  //gsl_vector_set_all(v_temp, 1.0);
+  writeln(541);
+  v_temp = set_ones_dmatrix(v_temp);
   trace_Hi = matrix_mult(Hi_eval, v_temp).elements[0];
   trace_HiHi = matrix_mult(HiHi_eval, v_temp).elements[0];
 
@@ -544,7 +547,6 @@ extern(C) double LogRL_dev2(double l, void* params) {
     trace_Hi = to!double(ni_test) - trace_Hi;
     trace_HiHi = 2 * trace_Hi + trace_HiHi - to!double(ni_test);
   }
-
   CalcPab(n_cvt, p.e_mode, Hi_eval, p.Uab, p.ab, Pab);
   CalcPPab(n_cvt, p.e_mode, HiHi_eval, p.Uab, p.ab, Pab, PPab);
   CalcPPPab(n_cvt, p.e_mode, HiHiHi_eval, p.Uab, p.ab, Pab, PPab, PPPab);
@@ -573,10 +575,14 @@ extern(C) double LogRL_dev2(double l, void* params) {
   dev2 = 0.5 * trace_PKPK -
          0.5 * df * (2.0 * yPKPKPy * P_yy - yPKPy * yPKPy) / (P_yy * P_yy);
 
+  writeln("Out of LogRL_dev2");
+
   return dev2;
 }
 
 extern(C) double LogL_dev2(double l, void* params) {
+  writeln("In LogL_dev2");
+
   auto ptr = cast(loglikeparam *)params;
   loglikeparam p = *ptr;
 
@@ -628,7 +634,7 @@ extern(C) double LogL_dev2(double l, void* params) {
   HiHiHi_eval.elements = HiHi_eval.elements.dup;
   HiHiHi_eval = matrix_mult(HiHiHi_eval, Hi_eval);
 
-  //gsl_vector_set_all(v_temp, 1.0);
+  v_temp = set_ones_dmatrix(v_temp);
   trace_Hi = matrix_mult(Hi_eval, v_temp).elements[0];
   trace_HiHi = matrix_mult(HiHi_eval, v_temp).elements[0];
 
@@ -655,10 +661,14 @@ extern(C) double LogL_dev2(double l, void* params) {
          0.5 * to!double(ni_test) * (2.0 * yPKPKPy * P_yy - yPKPy * yPKPy) /
              (P_yy * P_yy);
 
+  writeln("Out of LogL_dev2");
+
   return dev2;
 }
 
 extern(C) void LogL_dev12(double l, void *params, double *dev1, double *dev2) {
+
+  writeln("In LogL_dev12");
 
   auto ptr = cast(loglikeparam *)params;
   loglikeparam p = *ptr;
@@ -712,7 +722,7 @@ extern(C) void LogL_dev12(double l, void *params, double *dev1, double *dev2) {
   HiHiHi_eval.elements = HiHi_eval.elements.dup;
   HiHiHi_eval = slow_multiply_dmatrix(HiHiHi_eval, Hi_eval);
 
-  //gsl_vector_set_all(v_temp, 1.0);
+  v_temp = set_ones_dmatrix(v_temp);
   trace_Hi = matrix_mult(Hi_eval, v_temp).elements[0];
   trace_HiHi = matrix_mult(HiHi_eval, v_temp).elements[0];
 
@@ -741,11 +751,15 @@ extern(C) void LogL_dev12(double l, void *params, double *dev1, double *dev2) {
   *dev2 = 0.5 * trace_HiKHiK -
           0.5 * to!double(ni_test) * (2.0 * yPKPKPy * P_yy - yPKPy * yPKPy) /
               (P_yy * P_yy);
+  writeln("Out of LogL_dev12");
 
   return;
 }
 
 extern(C) void LogRL_dev12(double l, void* params, double* dev1, double* dev2) {
+
+  writeln("In LogRL_dev12");
+
   auto ptr = cast(loglikeparam *)params;
   loglikeparam p = *ptr;
 
@@ -838,6 +852,7 @@ extern(C) void LogRL_dev12(double l, void* params, double* dev1, double* dev2) {
   *dev1 = -0.5 * trace_PK + 0.5 * df * yPKPy / P_yy;
   *dev2 = 0.5 * trace_PKPK -
           0.5 * df * (2.0 * yPKPKPy * P_yy - yPKPy * yPKPy) / (P_yy * P_yy);
+  writeln("Out of LogRL_dev12");
 
   return;
 }
@@ -1285,10 +1300,10 @@ void CalcLmmVgVeBeta(DMatrix eval, DMatrix UtW,
   Pab.shape = [n_cvt + 2, n_index];
 
   DMatrix Hi_eval;
-  Hi_eval.shape =[1, eval.shape[1]];
+  Hi_eval.shape =[1, eval.shape[0]];
 
   DMatrix v_temp;
-  v_temp.shape =[1, eval.shape[1]];
+  v_temp.shape =[1, eval.shape[0]];
 
   DMatrix HiW;
   HiW.shape = [eval.shape[1], UtW.shape[1]];
@@ -1302,12 +1317,12 @@ void CalcLmmVgVeBeta(DMatrix eval, DMatrix UtW,
   DMatrix Vbeta;
   Vbeta.shape = [UtW.shape[1], UtW.shape[1]];
 
-  //gsl_matrix_set_zero(Uab);
+  Uab = set_zeros_dmatrix(Uab);
   CalcUab(UtW, Uty, Uab);
 
-  v_temp.elements = eval.elements;
+  v_temp.elements = eval.elements.dup;
   v_temp = multiply_dmatrix_num(v_temp, lambda);
-  //gsl_vector_set_all(Hi_eval, 1.0);
+  Hi_eval = set_ones_dmatrix(Hi_eval);
   v_temp = add_dmatrix_num(v_temp, 1.0);
   Hi_eval = divide_dmatrix(Hi_eval, v_temp);
 
@@ -1363,18 +1378,17 @@ void CalcPve(DMatrix eval, DMatrix UtW,
   DMatrix ab;
   ab.shape = [1, n_index];
 
-  //gsl_matrix_set_zero(Uab);
+  Uab = set_zeros_dmatrix(Uab);
   CalcUab(UtW, Uty, Uab);
 
-  loglikeparam param0;
-  //loglikeparam(true, ni_test, n_cvt, eval, Uab, ab, 0);
+  loglikeparam param0 = loglikeparam(true, ni_test, n_cvt, eval, Uab, ab, 0);
   //write constructor
 
   double se = sqrt(-1.0 / LogRL_dev2(lambda, &param0));
 
   pve = trace_G * lambda / (trace_G * lambda + 1.0);
   pve_se = trace_G / ((trace_G * lambda + 1.0) * (trace_G * lambda + 1.0)) * se;
-  writeln("in CalcPve");
+  writeln("out of CalcPve");
 
   return;
 }
