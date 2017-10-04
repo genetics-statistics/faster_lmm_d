@@ -217,9 +217,37 @@ void CalcVCss(DMatrix a, DMatrix b, DMatrix c, DMatrix d, DMatrix e,
 
 }
 
-void batch_run(Param cPar){
+void batch_run(string option_kinship, string option_pheno, string option_covar, string option_geno){
 
   // Read Files.
+
+  writeln("reading pheno " , option_pheno);
+  DMatrix Y = read_matrix_from_file(option_pheno);
+  writeln(Y.shape);
+  //writeln(Y); also y
+
+  writeln("reading covar " , option_covar);
+  DMatrix covar_matrix = read_matrix_from_file(option_covar);
+  writeln(covar_matrix.shape);
+  //writeln(covar_matrix); also w
+
+  writeln("reading kinship " , option_kinship);
+  DMatrix G = read_matrix_from_file(option_kinship);
+  writeln(G.shape);
+  writeln(G.elements.length);
+
+  //calculate U and eval
+  auto kvakve = kvakve(G);
+  DMatrix U = DMatrix([Y.shape[0], Y.shape[0]], kvakve.kve.elements[0..(Y.shape[0]*Y.shape[0])]);
+  DMatrix eval = kvakve.kva;
+  writeln("this is fishy. gidx ?");
+  writeln(U.shape);
+
+
+  DMatrix UtW = matrix_mult(U.T, covar_matrix);  //check if transpose is necessary
+  DMatrix Uty = matrix_mult(U.T, Y);  //check if transpose is necessary
+
+  Param cPar;
   writeln("Reading Files ... ");
   cPar.ReadFiles();
   if (cPar.error == true) {
@@ -293,10 +321,10 @@ void batch_run(Param cPar){
   }
 
   // LMM or mvLMM or Eigen-Decomposition
-  if (cPar.a_mode == 1 || cPar.a_mode == 2 || cPar.a_mode == 3 || cPar.a_mode == 4 || cPar.a_mode == 5 || cPar.a_mode == 31) {
+  //if (cPar.a_mode == 1 || cPar.a_mode == 2 || cPar.a_mode == 3 || cPar.a_mode == 4 || cPar.a_mode == 5 || cPar.a_mode == 31) {
     // Fit LMM or mvLMM or eigen
-    fit_model(cPar);
-  }
+    fit_model(cPar, eval, UtW, Uty, Y, covar_matrix);
+  //}
 
   // BSLMM
   if (cPar.a_mode == 11 || cPar.a_mode == 12 || cPar.a_mode == 13) {
@@ -323,7 +351,7 @@ void bslmm_predictor(Param cPar){
   y_prdt = set_zeros_dmatrix(y_prdt);
 
   PRDT cPRDT;
-  cPRDT.CopyFromParam(cPar);
+  //cPRDT.CopyFromParam(cPar);
 
   // add breeding value if needed
   if (!cPar.file_kin.empty() && !cPar.file_ebv.empty()) {
@@ -352,15 +380,15 @@ void bslmm_predictor(Param cPar){
     }
 
     // read u
-    cPRDT.AddBV(G, u_hat, y_prdt);
+    //cPRDT.AddBV(G, u_hat, y_prdt);
 
   }
 
   // add beta
   if (!cPar.file_bfile.empty()) {
-    cPRDT.AnalyzePlink(y_prdt);
+    //cPRDT.AnalyzePlink(y_prdt);
   } else {
-    cPRDT.AnalyzeBimbam(y_prdt);
+    //cPRDT.AnalyzeBimbam(y_prdt);
   }
 
   // add mu
@@ -376,9 +404,9 @@ void bslmm_predictor(Param cPar){
     }
   }
 
-  cPRDT.CopyToParam(cPar);
+  //cPRDT.CopyToParam(cPar);
 
-  cPRDT.WriteFiles(y_prdt);
+  //cPRDT.WriteFiles(y_prdt);
 }
 
 
@@ -997,128 +1025,15 @@ void calc_SNP_covariance(Param cPar){
   //cVarcov.CopyToParam(cPar);
 }
 
-void fit_model(Param cPar){
-  DMatrix Y;
-  Y.shape = [cPar.ni_test, cPar.n_ph];
-  //enforce_msg(Y, "allocate Y"); // just to be sure
-  DMatrix W;
-  W.shape = [Y.shape[0], cPar.n_cvt];
-  DMatrix B;
-  B.shape = [Y.shape[1], W.shape[1]]; // B is a d by c
-                                                        // matrix
-  DMatrix se_B;
-  se_B.shape = [Y.shape[1], W.shape[1]];
-  DMatrix G;
-  G.shape = [Y.shape[0], Y.shape[0]];
-  DMatrix U;
-  U.shape = [Y.shape[0], Y.shape[0]];
-  DMatrix UtW;
-  UtW.shape = [Y.shape[0], W.shape[1]];
-  DMatrix UtY;
-  UtY.shape = [Y.shape[0], Y.shape[1]];
-  DMatrix eval;
-  eval.shape = [1, Y.shape[0]];
-  DMatrix env;
-  env.shape = [1, Y.shape[0]];
-  DMatrix weight;
-  weight.shape = [1, Y.shape[0]];
-  //assert_issue(cPar.issue == 26, UtY.data[0] == 0.0);
+void fit_model(Param cPar, DMatrix eval, DMatrix  UtW, DMatrix UtY, DMatrix Y, DMatrix W, size_t n_ph = 1){
+  writeln("In LMM fit_model");
 
-  // set covariates matrix W and phenotype matrix Y
-  // an intercept should be included in W,
-  cPar.CopyCvtPhen(W, Y, 0);
-  if (!cPar.file_gxe.empty()) {
-    //cPar.CopyGxe(env);
-  }
 
-  // read relatedness matrix G
-  if (!(cPar.file_kin).empty()) {
-    //ReadFile_kin(cPar.file_kin, cPar.indicator_idv, cPar.mapID2num,
-    //             cPar.k_mode, cPar.error, G);
-    if (cPar.error == true) {
-      writeln("error! fail to read kinship/relatedness file.");
-      return;
-    }
-
-    // center matrix G
-    CenterMatrix(G);
-    validate_K(G,cPar.mode_check,cPar.mode_strict);
-
-    // is residual weights are provided, then
-    if (!cPar.file_weight.empty()) {
-      //cPar.CopyWeight(weight);
-      double d, wi, wj;
-      for (size_t i = 0; i < G.shape[0]; i++) {
-        wi = weight.elements[i];
-        for (size_t j = i; j < G.shape[1]; j++) {
-          wj = weight.elements[j];
-          d = accessor(G, i, j);
-          if (wi <= 0 || wj <= 0) {
-            d = 0;
-          } else {
-            d /= sqrt(wi * wj);
-          }
-          G.elements[i*G.cols + j] = d;
-          if (j != i) {
-            G.elements[j*G.cols + i] = d;
-          }
-        }
-      }
-    }
-
-    // eigen-decomposition and calculate trace_G
-    writeln("Start Eigen-Decomposition...");
-
-    if (cPar.a_mode == 31) {
-      cPar.trace_G = EigenDecomp_Zeroed(G, U, eval, 1);
-    } else {
-      cPar.trace_G = EigenDecomp_Zeroed(G, U, eval, 0);
-    }
-
-    if (!cPar.file_weight.empty()) {
-      double wi;
-      for (size_t i = 0; i < U.shape[0]; i++) {
-        wi = weight.elements[i];
-        if (wi <= 0) {
-          wi = 0;
-        } else {
-          wi = sqrt(wi);
-        }
-        DMatrix Urow = get_row(U, i);
-        Urow = multiply_dmatrix_num(Urow, wi);
-      }
-    }
-
-  } else {
-    //ReadFile_eigenU(cPar.file_ku, cPar.error, U);
-    if (cPar.error == true) {
-      writeln("error! fail to read the U file. ");
-      return;
-    }
-
-    //ReadFile_eigenD(cPar.file_kd, cPar.error, eval);
-    if (cPar.error == true) {
-      writeln("error! fail to read the D file. ");
-      return;
-    }
-
-    cPar.trace_G = 0.0;
-    for (size_t i = 0; i < eval.elements.length; i++) {
-      if (eval.elements[i] < 1e-10) {
-        eval.elements[i] = 0;
-      }
-      cPar.trace_G += eval.elements[i];
-    }
-    cPar.trace_G /= to!double(eval.elements.length);
-  }
-
-  if (cPar.a_mode == 31) {
-    cPar.WriteMatrix(U, "eigenU");
-    cPar.WriteVector(eval, "eigenD");
-  } else if (!cPar.file_gene.empty()) {
-    // calculate UtW and Uty
-    CalcUtX(U, W, UtW);
-    CalcUtX(U, Y, UtY);
+  if (2 == 5) { // cPar.a_mode == 31
+    //cPar.WriteMatrix(U, "eigenU");
+    //cPar.WriteVector(eval, "eigenD");
+  } else if (2 == 5) { //!cPar.file_gene.empty()
+    // calculate UtW and Ut
 
     //assert_issue(cPar.issue == 26, ROUND(UtY.data[0]) == -16.6143);
 
@@ -1135,14 +1050,15 @@ void fit_model(Param cPar){
     //cLmm.CopyToParam(cPar);
   } else {
     // calculate UtW and Uty
-    CalcUtX(U, W, UtW);
-    CalcUtX(U, Y, UtY);
     //assert_issue(cPar.issue == 26, ROUND(UtY.data[0]) == -16.6143);
 
     // calculate REMLE/MLE estimate and pve for univariate model
-    if (cPar.n_ph == 1) { // one phenotype
-      DMatrix beta = get_row(B, 0);
-      DMatrix se_beta = get_row(se_B, 0);
+    if (n_ph == 1) { // one phenotype
+      writeln ("Calculating REMLE/MLE");
+      //DMatrix beta = get_row(B, 0);
+      //DMatrix se_beta = get_row(se_B, 0);
+      DMatrix beta = DMatrix([1,1] , [0]);
+      DMatrix se_beta = DMatrix([1,1] , [0]);
       DMatrix UtY_col = get_col(UtY, 0);
 
       //assert_issue(cPar.issue == 26, ROUND(UtY.data[0]) == -16.6143);
@@ -1163,6 +1079,7 @@ void fit_model(Param cPar){
 
       //cPar.beta_mle_null.clear();
       //cPar.se_beta_mle_null.clear();
+      DMatrix B;
       for (size_t i = 0; i < B.shape[1]; i++) {
         //cPar.beta_mle_null.push_back(accessor(B, 0, i));
         //cPar.se_beta_mle_null.push_back(accessor(se_B, 0, i));

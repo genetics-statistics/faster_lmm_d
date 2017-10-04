@@ -26,6 +26,7 @@ import faster_lmm_d.optmatrix;
 import faster_lmm_d.output;
 import faster_lmm_d.rqtlreader;
 import faster_lmm_d.tsvreader;
+import faster_lmm_d.gemma_lmm;
 
 import test.covar_matrix;
 import test.geno_matrix;
@@ -64,6 +65,18 @@ void printUsage() {
 void main(string[] args)
 {
   //ProfilerStart();
+
+  //size_t n_cvt;
+  //size_t e_mode;
+  //DMatrix Hi_eval = DMatrix([2,2],[1,2,3,4]);
+  //DMatrix Uab = DMatrix([2,2],[1,2,3,4]);
+  //DMatrix ab = DMatrix([2,2],[1,2,3,4]);
+  //DMatrix Pab;
+
+  //CalcPab(n_cvt , e_mode,  Hi_eval, Uab,  ab, Pab);
+  //writeln(Pab);
+
+  //exit(0);
 
   string cmd, option_control, option_kinship, option_pheno, option_geno, option_covar, useBLAS, noBLAS, noCUDA, option_logging;
   bool option_help = false;
@@ -136,7 +149,8 @@ void main(string[] args)
 
   if(option_kinship != ""){
     writeln("Running via GEMMA");
-    run_gemma(option_kinship, option_pheno, option_covar, option_geno);
+    //run_gemma(option_kinship, option_pheno, option_covar, option_geno);
+    batch_run(option_kinship, option_pheno, option_covar, option_geno);
   }else{
 
   // ---- Control
