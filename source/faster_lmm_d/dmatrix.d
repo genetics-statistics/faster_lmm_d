@@ -213,6 +213,16 @@ DMatrix ones_dmatrix(const ulong rows, const ulong cols) {
   return DMatrix([rows, cols], elements);
 }
 
+DMatrix set_ones_dmatrix(DMatrix a) {
+  ulong rows = a.rows;
+  ulong cols = a.cols;
+  double[] elements = new double[rows * cols];
+  for(auto i = 0; i < rows*cols; i++) {
+    elements[i] = 1;
+  }
+  return DMatrix([rows, cols], elements);
+}
+
 DMatrix horizontally_stack(const DMatrix a, const DMatrix b) {
   auto n = a.rows();
   m_items a_cols = a.cols();
