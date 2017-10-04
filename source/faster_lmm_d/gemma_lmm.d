@@ -25,7 +25,7 @@ import gsl.min;
 import gsl.roots;
 
 void CalcPab(const size_t n_cvt, const size_t e_mode, const DMatrix Hi_eval,
-             const DMatrix Uab, const DMatrix ab, DMatrix Pab) {
+             const DMatrix Uab, const DMatrix ab, ref DMatrix Pab) {
   size_t index_ab, index_aw, index_bw, index_ww;
   double p_ab;
   double ps_ab, ps_aw, ps_bw, ps_ww;
@@ -823,6 +823,7 @@ alias Tuple!(double,"l",double,"h") Lambda_tup;
 void CalcLambda(const char func_name, void* params, const double l_min,
                 const double l_max, const size_t n_region, double lambda,
                 double logf) {
+  writeln("in CalcLambda");
   if (func_name != 'R' && func_name != 'L' && func_name != 'r' &&
       func_name != 'l') {
     writeln("func_name only takes 'R' or 'L': 'R' for
@@ -984,6 +985,7 @@ void CalcLambda(char func_name, DMatrix eval,
                 DMatrix UtW, DMatrix Uty,
                 double l_min, double l_max, size_t n_region,
                 double lambda, double logl_H0) {
+  writeln("in CalcLambda for null model");
   if (func_name != 'R' && func_name != 'L' && func_name != 'r' &&
       func_name != 'l') {
     writeln("func_name only takes 'R' or 'L': 'R' for
@@ -1503,29 +1505,35 @@ void AnalyzeBimbam(DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Uty,
 }
 
 unittest{
-  size_t n_cvt;
-  size_t e_mode;
+  size_t n_cvt = 2;
+  size_t e_mode = 0;
   DMatrix Hi_eval = DMatrix([2,2],[1,2,3,4]);
   DMatrix Uab = DMatrix([2,2],[1,2,3,4]);
   DMatrix ab = DMatrix([2,2],[1,2,3,4]);
-  DMatrix pab;
+  DMatrix Pab;
 
-  CalcPab(n_cvt , e_mode,  Hi_eval, Uab,  ab, Pab));
-  //assert();
+
+  size_t index = GetabIndex(4, 9, n_cvt);
+  assert(index == 0);
+
+  index = GetabIndex(4, 9, 16);
+  assert(index == 56);
+
+  //CalcPab(n_cvt , e_mode,  Hi_eval, Uab,  ab, Pab);
+  //writeln(Pab);
+  //assert(Pab == 0);
 
   DMatrix PPab;
-  DMatrix HiHiHi_eval;
-  DMatrix PPab;
-  CalcPPab(n_cvt, e_mode, HiHi_eval,  Uab, ab, Pab, PPab)
-  //assert();
+  DMatrix HiHi_eval;
+  //CalcPPab(n_cvt, e_mode, HiHi_eval,  Uab, ab, Pab, PPab);
+  ////assert();
 
   DMatrix HiHiHi_eval;
   DMatrix PPPab;
-  CalcPPPab( n_cvt, e_mode, HiHiHi_eval, Uab, ab, Pab, PPab, PPPab);
-  //assert();
+  //CalcPPPab( n_cvt, e_mode, HiHiHi_eval, Uab, ab, Pab, PPab, PPPab);
+  ////assert();
 
-  size_t index = GetabIndex(size_t a, size_t b, size_t n_cvt);
-  //assert( index == );
+
 
   char func_name = 'R';
   double l_min = 0;
@@ -1534,15 +1542,15 @@ unittest{
   double lambda = 0.7;
   double logf;
   loglikeparam params;
-  CalcLambda(func_name, cast(void *)&params, l_min, l_max, n_region, lambda, logf);
+  //CalcLambda(func_name, cast(void *)&params, l_min, l_max, n_region, lambda, logf);
   //assert();
 
   // Calculate lambda in the null model.
   DMatrix eval;
-  DMatrix Utw;
+  DMatrix UtW;
   DMatrix Uty;
   double  logl_H0;
-  CalcLambda(func_name, eval, UtW, Uty, l_min, l_max, n_region, lambda, logl_H0);
+  //CalcLambda(func_name, eval, UtW, Uty, l_min, l_max, n_region, lambda, logl_H0);
   //assert();
 
   size_t ni_test = 1;
@@ -1550,33 +1558,32 @@ unittest{
   double beta;
   double se;
   double p_wald;
-  CalcRLWald(ni_test, l, params, beta, se, p_wald);
+  //CalcRLWald(ni_test, l, params, beta, se, p_wald);
   //assert();
 
   double p_score;
-  CalcRLScore(ni_test, l, params, beta, se, p_score);
+  //CalcRLScore(ni_test, l, params, beta, se, p_score);
   //assert();
 
-  CalcUab(UtW, Uty, Uab);
+  //CalcUab(UtW, Uty, Uab);
   //assert();
 
-  CalcUab(UtW, Uty, Utx, Uab);
+  //CalcUab(UtW, Uty, Utx, Uab);
   //assert();
 
-  DMatrix W
+  DMatrix W;
   DMatrix y;
-  Calcab(W, y, ab)
+  //Calcab(W, y, ab);
   //assert();
 
   DMatrix x;
-  Calcab(W, y, x, ab)
+  //Calcab(W, y, x, ab);
   //assert();
 
   double vg, ve;
-  DMatrix beta;
   DMatrix se_beta;
-  CalcLmmVgVeBeta(eval, UtW, Uty, lambda, vg, ve, beta, se_beta);
+  //CalcLmmVgVeBeta(eval, UtW, Uty, lambda, vg, ve, beta, se_beta);
 
   double trace_G, pve, pve_se;
-  CalcPve(eval,  UtW, Uty, lambda, trace_G, pve,  pve_se);
+  //CalcPve(eval,  UtW, Uty, lambda, trace_G, pve,  pve_se);
 }

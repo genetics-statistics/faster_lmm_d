@@ -67,8 +67,7 @@ ifeq ($(ARRAYFIRE),1)
   LIBS        += -L=-lafcuda
 endif
 
-debug: DFLAGS += -O0 -g -d-debug $(RPATH) -link-debuglib $(BACKEND_FLAG)
-
+debug: DFLAGS += -O0 -g -d-debug $(RPATH) -link-debuglib $(BACKEND_FLAG) -unittest
 release: DFLAGS += -O -release $(RPATH)
 
 profile: DFLAGS += -fprofile-instr-generate=fast_lmm_d-profiler.out
