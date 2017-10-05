@@ -41,7 +41,6 @@ void CalcPab(const size_t n_cvt, const size_t e_mode, const DMatrix Hi_eval,
           if (e_mode != 0) {
             p_ab = ab.elements[index_ab] - p_ab;
           }
-          writeln(index_ab);
           Pab.elements[index_ab] = p_ab;
         } else {
           index_aw = GetabIndex(a, p, n_cvt);
@@ -860,9 +859,9 @@ extern(C) void LogRL_dev12(double l, void* params, double* dev1, double* dev2) {
 alias Tuple!(double,"l",double,"h") Lambda_tup;
 
 void CalcLambda(const char func_name, void* params, const double l_min,
-                const double l_max, const size_t n_region, double lambda,
-                double logf) {
-  writeln("in CalcLambda");
+                const double l_max, const size_t n_region, ref double lambda,
+                ref double logf) {
+  writeln("in CalcLambda for NOT-NULL");
   if (func_name != 'R' && func_name != 'L' && func_name != 'r' &&
       func_name != 'l') {
     writeln("func_name only takes 'R' or 'L': 'R' for
@@ -875,11 +874,17 @@ void CalcLambda(const char func_name, void* params, const double l_min,
   // Evaluate first-order derivates in different intervals.
   double lambda_l, lambda_h;
   double lambda_interval = mlog(l_max / l_min) / to!double(n_region);
+  writeln(">>>>>>>>>>>>n_region = ", n_region);
+  writeln("l_min = ", l_min);
+  writeln("l_max = ", l_max);
+  writeln("lambda_interval = ", lambda_interval);
   double dev1_l, dev1_h, logf_l, logf_h;
-
   for (size_t i = 0; i < n_region; ++i) {
     lambda_l = l_min * exp(lambda_interval * i);
     lambda_h = l_min * exp(lambda_interval * (i + 1.0));
+
+    writeln("lambda_l = ", lambda_l);
+    writeln("lambda_h = ", lambda_h);
 
     if (func_name == 'R' || func_name == 'r') {
       dev1_l = LogRL_dev1(lambda_l, params);
@@ -896,6 +901,7 @@ void CalcLambda(const char func_name, void* params, const double l_min,
 
   // If derivates do not change signs in any interval.
   if (lambda_lh.length == 0) {
+    writeln("lambda_lh has length = 0");
     if (func_name == 'R' || func_name == 'r') {
       logf_l = LogRL_f(l_min, params);
       logf_h = LogRL_f(l_max, params);
@@ -912,7 +918,7 @@ void CalcLambda(const char func_name, void* params, const double l_min,
       logf = logf_h;
     }
   } else {
-
+    writeln("lambda_lh has length non-zero", lambda);
     // If derivates change signs.
     int status;
     int iter = 0, max_iter = 100;
@@ -996,6 +1002,10 @@ void CalcLambda(const char func_name, void* params, const double l_min,
       } else {
       }
     }
+    writeln("==============lambda====================");
+    writeln(lambda);
+    writeln("==============lambda====================");
+
     gsl_root_fsolver_free(s_f);
     gsl_root_fdfsolver_free(s_fdf);
 
@@ -1023,8 +1033,8 @@ void CalcLambda(const char func_name, void* params, const double l_min,
 // Calculate lambda in the null model.
 void CalcLambda(char func_name, DMatrix eval,
                 DMatrix UtW, DMatrix Uty,
-                double l_min, double l_max, size_t n_region,
-                double lambda, double logl_H0) {
+                ref double l_min, ref double l_max, size_t n_region,
+                ref  double lambda, ref double logl_H0) {
   writeln("in CalcLambda for null model");
   if (func_name != 'R' && func_name != 'L' && func_name != 'r' &&
       func_name != 'l') {
@@ -1045,8 +1055,16 @@ void CalcLambda(char func_name, DMatrix eval,
 
   loglikeparam param0 = loglikeparam(true, ni_test, n_cvt, eval, Uab, ab, 0);
   writeln(1010);
+
+  writeln("==============lambda 1052====================");
+  writeln(lambda);
+  writeln("==============lambda====================");
+
   CalcLambda(func_name, cast(void *)&param0, l_min, l_max, n_region, lambda, logl_H0);
 
+  writeln("==============lambda 1058====================");
+  writeln(lambda);
+  writeln("==============lambda====================");
   return;
 }
 
@@ -1283,8 +1301,8 @@ void Calcab(DMatrix W, DMatrix y, DMatrix x, DMatrix ab) {
 // Obtain beta and se(beta) for coefficients.
 // ab is not used when e_mode==0.
 void CalcLmmVgVeBeta(DMatrix eval, DMatrix UtW,
-                     DMatrix Uty, double lambda, double vg,
-                     double ve, DMatrix beta, DMatrix se_beta) {
+                     DMatrix Uty, ref double lambda, ref double vg,
+                     ref double ve, ref DMatrix beta, ref DMatrix se_beta) {
 
   writeln("in CalcLmmVgVeBeta");
   size_t n_cvt = UtW.shape[1], ni_test = UtW.shape[0];
@@ -1366,8 +1384,8 @@ void CalcLmmVgVeBeta(DMatrix eval, DMatrix UtW,
 
 // Obtain REMLE estimate for PVE using lambda_remle.
 void CalcPve(DMatrix eval, DMatrix UtW,
-             DMatrix Uty, double lambda, double trace_G,
-             double pve, double pve_se) {
+             DMatrix Uty, ref double lambda, ref double trace_G,
+             ref double pve, ref double pve_se) {
   writeln("in CalcPve");
 
   size_t n_cvt = UtW.shape[1], ni_test = UtW.shape[0];

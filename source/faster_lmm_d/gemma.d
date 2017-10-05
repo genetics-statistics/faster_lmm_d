@@ -1062,12 +1062,17 @@ void fit_model(Param cPar, DMatrix eval, DMatrix  UtW, DMatrix UtY, DMatrix Y, D
       DMatrix UtY_col = get_col(UtY, 0);
 
       //assert_issue(cPar.issue == 26, ROUND(UtY.data[0]) == -16.6143);
+      cPar.l_min = 0.000010;
+      cPar.l_max = 100000;
+      cPar.n_region = 10;
 
       CalcLambda('L', eval, UtW, UtY_col, cPar.l_min, cPar.l_max,
                  cPar.n_region, cPar.l_mle_null, cPar.logl_mle_H0);
       //assert(!std::isnan(UtY.data[0]));
       //assert(!std::isnan(B.data[0]));
       //assert(!std::isnan(se_B.data[0]));
+      writeln("==============cPar.l_mle_null=======================");
+      writeln(cPar.l_mle_null);
 
       CalcLmmVgVeBeta(eval, UtW, UtY_col, cPar.l_mle_null,
                       cPar.vg_mle_null, cPar.ve_mle_null, beta,
