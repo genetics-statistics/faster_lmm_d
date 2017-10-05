@@ -24,6 +24,131 @@ import gsl.math;
 import gsl.min;
 import gsl.roots;
 
+// Eigenvalue decomposition, matrix A is destroyed. Returns eigenvalues in
+// 'eval'. Also returns matrix 'evec' (U).
+void lapack_eigen_symmv(DMatrix A, DMatrix eval, DMatrix evec,
+                        const size_t flag_largematrix) {
+  if (flag_largematrix == 1) {
+    int N = to!int(A.shape[0]), LDA = to!int(A.shape[0]), INFO, LWORK = -1;
+    char JOBZ = 'V', UPLO = 'L';
+
+    if (N != A.shape[1] || N != eval.elements.length) {
+      writeln("Matrix needs to be symmetric and same dimension in lapack_eigen_symmv.");
+      return;
+    }
+
+    LWORK = 3 * N;
+    //double[LWORK] WORK;
+    double[] WORK;
+    INFO = LAPACKE_dsyev(101, JOBZ, UPLO, N, A.elements.ptr, LDA, eval.elements.ptr);
+      //WORK, &LWORK, &INFO);
+    if (INFO != 0) {
+      writeln("Eigen decomposition unsuccessful in lapack_eigen_symmv.");
+      return;
+    }
+
+    DMatrix A_sub = get_sub_dmatrix(A, 0, 0, N, N);
+    evec.elements = A_sub.elements.dup;
+    evec = evec.T;
+  } else {
+    int N = to!int(A.shape[0]), LDA = to!int(A.shape[0]), LDZ = to!int(A.shape[0]), INFO;
+    int LWORK = -1, LIWORK = -1;
+    char JOBZ = 'V', UPLO = 'L', RANGE = 'A';
+    double ABSTOL = 1.0E-7;
+
+    // VL, VU, IL, IU are not referenced; M equals N if RANGE='A'.
+    double VL = 0.0, VU = 0.0;
+    int IL = 0, IU = 0, M;
+
+    if (N != A.shape[1] || N != eval.elements.length) {
+      writeln("Matrix needs to be symmetric and same dimension in lapack_eigen_symmv.");
+      return;
+    }
+
+    //int[2 * N] ISUPPZ;
+    int[] ISUPPZ;
+
+    double[1] WORK_temp;
+    int[1] IWORK_temp;
+
+    INFO = LAPACKE_dsyevr(101, JOBZ, RANGE, UPLO, N, A.elements.ptr, LDA, VL, VU, IL, IU,
+            ABSTOL, &M, eval.elements.ptr, evec.elements.ptr, LDZ, ISUPPZ.ptr);
+    //, WORK_temp,        &LWORK, IWORK_temp, &LIWORK, &INFO);
+    if (INFO != 0) {
+      writeln("Work space estimate unsuccessful in lapack_eigen_symmv.");
+      return;
+    }
+    LWORK = to!int(WORK_temp[0]);
+    LIWORK = to!int(IWORK_temp[0]);
+
+    double[] WORK;
+     //= new double[LWORK];
+    int[] IWORK;
+    //= new int[LIWORK];
+
+    INFO = LAPACKE_dsyevr(101, JOBZ, RANGE, UPLO, N, A.elements.ptr, LDA, VL, VU, IL, IU,
+            ABSTOL, &M, eval.elements.ptr, evec.elements.ptr, LDZ, ISUPPZ.ptr);
+    //, WORK, &LWORK, IWORK, &LIWORK, &INFO);
+    if (INFO != 0) {
+      writeln("Eigen decomposition unsuccessful in lapack_eigen_symmv.");
+      return;
+    }
+
+    evec = evec.T;
+
+  }
+
+  return;
+}
+
+// Does NOT set eigenvalues to be positive. G gets destroyed. Returns
+// eigen trace and values in U and eval (eigenvalues).
+double EigenDecomp(ref DMatrix G, ref DMatrix U, ref DMatrix eval,
+                   const size_t flag_largematrix) {
+  lapack_eigen_symmv(G, eval, U, flag_largematrix);
+
+  // Calculate track_G=mean(diag(G)).
+  double d = 0.0;
+  for (size_t i = 0; i < eval.elements.length; ++i)
+    d += eval.elements[i];
+
+  d /= to!double(eval.elements.length);
+
+  return d;
+}
+
+// Same as EigenDecomp but zeroes eigenvalues close to zero. When
+// negative eigenvalues remain a warning is issued.
+double EigenDecomp_Zeroed(ref DMatrix G, ref DMatrix U, ref DMatrix eval,
+                          const size_t flag_largematrix) {
+  EigenDecomp(G,U,eval,flag_largematrix);
+  auto d = 0.0;
+  int count_zero_eigenvalues = 0;
+  int count_negative_eigenvalues = 0;
+  for (size_t i = 0; i < eval.elements.length; i++) {
+    if (abs(eval.elements[i]) < EIGEN_MINVALUE)
+      eval.elements[i]  =  0.0;
+    // checks
+    if (eval.elements[i] == 0.0)
+      count_zero_eigenvalues += 1;
+    if (eval.elements[i] < 0.0) // count smaller than -EIGEN_MINVALUE
+      count_negative_eigenvalues += 1;
+    d += eval.elements[i];
+  }
+  d /= to!double(eval.elements.length);
+  if (count_zero_eigenvalues > 1) {
+    string msg = "Matrix G has ";
+    msg ~= to!string(count_zero_eigenvalues);
+    msg ~= " eigenvalues close to zero";
+    writeln(msg);
+  }
+  if (count_negative_eigenvalues > 0) {
+    writeln("Matrix G has more than one negative eigenvalues!");
+  }
+
+  return d;
+}
+
 void CalcPab(const size_t n_cvt, const size_t e_mode, const DMatrix Hi_eval,
              const DMatrix Uab, const DMatrix ab, ref DMatrix Pab) {
   writeln("in CalcPab");
@@ -58,6 +183,7 @@ void CalcPab(const size_t n_cvt, const size_t e_mode, const DMatrix Hi_eval,
       }
     }
   }
+  writeln(Pab);
   writeln("out of CalcPab");
   return;
 }
@@ -458,8 +584,9 @@ extern(C) double LogL_dev1(double l, void* params) {
   HiHi_eval.elements = Hi_eval.elements.dup;
   HiHi_eval = slow_multiply_dmatrix(HiHi_eval, Hi_eval);
 
-  //gsl_vector_set_all(v_temp, 1.0);
-  trace_Hi = matrix_mult(Hi_eval, v_temp).elements[0];
+  v_temp = set_ones_dmatrix(v_temp);
+  trace_Hi = matrix_mult(Hi_eval, v_temp.T).elements[0];
+  writeln("trace_Hi  = >", trace_Hi);
 
   if (p.e_mode != 0) {
     trace_Hi = to!double(ni_test) - trace_Hi;
@@ -475,6 +602,10 @@ extern(C) double LogL_dev1(double l, void* params) {
   double P_yy = accessor(Pab, nc_total, index_yy);
   double PP_yy = accessor(PPab, nc_total, index_yy);
   double yPKPy = (P_yy - PP_yy) / l;
+  writeln("P_yy -> ", P_yy);
+  writeln("PP_yy -> ", PP_yy);
+  writeln("yPKPy -> ", yPKPy);
+
   dev1 = -0.5 * trace_HiK + 0.5 * to!double(ni_test) * yPKPy / P_yy;
 
   return dev1;
@@ -894,10 +1025,17 @@ void CalcLambda(const char func_name, void* params, const double l_min,
       dev1_h = LogL_dev1(lambda_h, params);
     }
 
+    writeln("dev1_l = ", dev1_l);
+    writeln("dev1_h = ", dev1_h);
+
     if (dev1_l * dev1_h <= 0) {
       lambda_lh ~= Lambda_tup(lambda_l, lambda_h);
     }
   }
+  writeln("subject : lambda_lh");
+  writeln(lambda_lh.length);
+  writeln(lambda_lh);
+  writeln("------------------------------");
 
   // If derivates do not change signs in any interval.
   if (lambda_lh.length == 0) {

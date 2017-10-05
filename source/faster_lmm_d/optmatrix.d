@@ -23,6 +23,10 @@ extern (C) {
   void dgetrf_ (int* m, int* n, double* a, int* lda, int* ipiv, int* info);
   void dgetri_ (int* n, double* a, int* lda, const(int)* ipiv, double* work, int* lwork, int* info);
   int LAPACKE_dgetrf (int matrix_layout, int m, int n, double* a, int lda, int* ipiv);
+  double EIGEN_MINVALUE = 1e-10;
+//INFO = LAPACKE_dsyev_(101, JOBZ, UPLO, N, A.elements.ptr, LDA, eval.elements.ptr);
+  int LAPACKE_dsyev (int matrix_layout, char jobz, char uplo, int n,
+                      double* a, int lda, double* z);
   int LAPACKE_dsyevr (int matrix_layout, char jobz, char range, char uplo, int n,
                       double* a, int lda, double vl, double vu, int il, int iu, double abstol,
                       int* m, double* w, double* z, int ldz, int* isuppz);
