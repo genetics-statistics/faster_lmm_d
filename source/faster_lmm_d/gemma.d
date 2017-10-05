@@ -207,9 +207,6 @@ void run_gemma(string option_kinship, string option_pheno, string option_covar, 
 
 }
 
-double EigenDecomp_Zeroed(DMatrix G, DMatrix U, DMatrix eval, int a){
-  return G.elements[0];
-}
 
 void CalcVCss(DMatrix a, DMatrix b, DMatrix c, DMatrix d, DMatrix e,
              ulong f, DMatrix g, DMatrix h, double i, double j, DMatrix k,
@@ -237,11 +234,25 @@ void batch_run(string option_kinship, string option_pheno, string option_covar, 
   writeln(G.elements.length);
 
   //calculate U and eval
-  auto kvakve = kvakve(G);
-  DMatrix U = DMatrix([Y.shape[0], Y.shape[0]], kvakve.kve.elements[0..(Y.shape[0]*Y.shape[0])]);
-  DMatrix eval = kvakve.kva;
+  //auto kvakve = kvakve(G);
+  //DMatrix U = DMatrix([Y.shape[0], Y.shape[0]], kvakve.kve.elements[0..(Y.shape[0]*Y.shape[0])]);
+  //DMatrix eval = kvakve.kva;
+  // Center the matrix G.
+  CenterMatrix(G);
+  writeln("After centerMatrix");
+  writeln(G.shape);
+  writeln(G.elements.length);
+
+  DMatrix U, eval;
+  eval.shape = [1, Y.elements.length];
+  U.shape = [Y.elements.length, Y.elements.length];
+
+
+  EigenDecomp_Zeroed(G, U, eval, 0);
   writeln("this is fishy. gidx ?");
   writeln(U.shape);
+
+  writeln(U);
 
 
   DMatrix UtW = matrix_mult(U.T, covar_matrix);  //check if transpose is necessary

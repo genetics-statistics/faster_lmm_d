@@ -338,7 +338,6 @@ void Calcq(mapRS a, mapRS b, DMatrix c, DMatrix d, DMatrix e, DMatrix f, DMatrix
 void Calcq(ulong a, ulong[] b, ulong[] c, double[] d, double[] e, DMatrix f, DMatrix g, DMatrix h){}
 void ReadFile_kin(string a, int[] b, mapRS c, int d, bool e, DMatrix f){}
 void ReadFile_beta(string a, mapRS b, mapRS c, ulong[] d, ulong[] e, double[] f, double[] g, ulong h, ulong i, ulong j){}
-void CenterMatrix(DMatrix a){}
 void validate_K(DMatrix a, bool b, bool c){}
 void setSnps_beta(){}
 

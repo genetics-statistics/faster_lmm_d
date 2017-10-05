@@ -24,9 +24,37 @@ import gsl.math;
 import gsl.min;
 import gsl.roots;
 
+void CenterMatrix(ref DMatrix G) {
+  //DMatrix Gw = gsl_vector_alloc(G->size1);
+  writeln("CenterMatrix");
+  DMatrix w = ones_dmatrix(1, G.shape[0]);
+
+  DMatrix Gw = matrix_mult(G, w);
+  double alpha = -1.0 / to!double(G.shape[0]);
+  DMatrix G1 =  multiply_dmatrix_num(matrix_mult(Gw, w.T), alpha);
+  DMatrix G2 =  multiply_dmatrix_num(matrix_mult(w, Gw.T), alpha);
+  G = add_dmatrix(add_dmatrix(G1, G2), G);
+
+  double alpha_2 = -1.0 / (to!double(G.shape[0]* to!double(G.shape[0])));
+  double d = matrix_mult(w, Gw.T).elements[0];
+  alpha = d / (to!double(G.shape[0]) * to!double(G.shape[0]));
+  G1 =  multiply_dmatrix_num(matrix_mult(w, w.T), alpha);
+  G = add_dmatrix(G1, G);
+
+  for (size_t i = 0; i < G.shape[0]; ++i) {
+    for (size_t j = 0; j < i; ++j) {
+      d = accessor(G, j, i);
+      G.elements[G.cols * i + j] = d;
+    }
+  }
+  writeln(sqrt(to!double(G.elements.length)));
+
+  return;
+}
+
 // Eigenvalue decomposition, matrix A is destroyed. Returns eigenvalues in
 // 'eval'. Also returns matrix 'evec' (U).
-void lapack_eigen_symmv(DMatrix A, DMatrix eval, DMatrix evec,
+void lapack_eigen_symmv(ref DMatrix A, ref DMatrix eval, ref DMatrix evec,
                         const size_t flag_largematrix) {
   if (flag_largematrix == 1) {
     int N = to!int(A.shape[0]), LDA = to!int(A.shape[0]), INFO, LWORK = -1;
