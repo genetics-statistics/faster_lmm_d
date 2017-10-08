@@ -17,6 +17,7 @@ import std.experimental.logger;
 
 import faster_lmm_d.dmatrix;
 import faster_lmm_d.optmatrix;
+import faster_lmm_d.gemma_param;
 
 import gsl.cdf;
 import gsl.errno;
@@ -1770,10 +1771,7 @@ unittest{
 
 
 
-  char func_name = 'R';
-  double l_min = 0;
-  double l_max = 10;
-  size_t n_region = 100;
+
   double lambda = 0.7;
   double logf;
   loglikeparam params;
@@ -1781,14 +1779,42 @@ unittest{
   //assert();
 
   // Calculate lambda in the null model.
-  DMatrix eval;
-  DMatrix UtW;
-  DMatrix Uty;
+
+  DMatrix G = DMatrix([5, 5],[ 212,   7, 11, 12, 30,
+                              11,  101, 34,  1, -7,
+                              151,-101, 96,  1, 73,
+                              87,  102, 64, 19, 67,
+                              -21,  10, 334, 22, -2
+                             ]);
+  DMatrix W = ones_dmatrix(5,5);
+  DMatrix y = DMatrix([5,1], [3, 14 ,-5, 18, 6]);
+  auto kvakve = eigh(G);
+  DMatrix U = kvakve.kva;
+  DMatrix eval = kvakve.kve;
+  DMatrix UtW = matrix_mult(U.T, W);
+  DMatrix Uty = matrix_mult(U.T, y);
   double  logl_H0;
+
+  Param cPar;
+
+  char func_name = 'R';
+  double l_min = 0.00001;
+  double l_max = 10;
+  size_t n_region = 10;
+
+  ab = zeros_dmatrix(1,5);
+
+
+  n_cvt = UtW.shape[1];
+  size_t ni_test = UtW.shape[0];
+  size_t n_index = (n_cvt + 2 + 1) * (n_cvt + 2) / 2;
+
+  Uab = zeros_dmatrix(ni_test, n_index);
+
+  loglikeparam param0 = loglikeparam(true, ni_test, n_cvt, eval, Uab, ab, 0);
   //CalcLambda(func_name, eval, UtW, Uty, l_min, l_max, n_region, lambda, logl_H0);
   //assert();
 
-  size_t ni_test = 1;
   double l = 6;
   double beta;
   double se;
@@ -1806,8 +1832,6 @@ unittest{
   //CalcUab(UtW, Uty, Utx, Uab);
   //assert();
 
-  DMatrix W;
-  DMatrix y;
   //Calcab(W, y, ab);
   //assert();
 
