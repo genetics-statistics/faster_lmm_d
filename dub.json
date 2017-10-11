@@ -11,7 +11,7 @@
     "gperftools_d": "~>0.1.0",
     "cuda_d": "~>0.1.0",
     "lapack": "~>0.0.2",
-    "resusage": "~>0.2.4"
+    "resusage": "~>0.2.7"
   },
   "description": "Experiment lmm",
   "copyright": "Copyright © 2016, 2017, Prasun Anand and Pjotr Prins",
