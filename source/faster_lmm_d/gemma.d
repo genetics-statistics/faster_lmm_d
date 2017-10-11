@@ -224,7 +224,8 @@ void batch_run(string option_kinship, string option_pheno, string option_covar, 
   //writeln(Y); also y
 
   writeln("reading covar " , option_covar);
-  DMatrix covar_matrix = read_matrix_from_file(option_covar);
+  //DMatrix covar_matrix = read_matrix_from_file(option_covar);
+  DMatrix covar_matrix = ones_dmatrix(Y.shape[0], Y.shape[1]);
   writeln(covar_matrix.shape);
   //writeln(covar_matrix); also w
 
@@ -238,8 +239,6 @@ void batch_run(string option_kinship, string option_pheno, string option_covar, 
   //DMatrix U = DMatrix([Y.shape[0], Y.shape[0]], kvakve.kve.elements[0..(Y.shape[0]*Y.shape[0])]);
   //DMatrix eval = kvakve.kva;
   // Center the matrix G.
-  CenterMatrix(G);
-  writeln("After centerMatrix");
   writeln(G.shape);
   writeln(G.elements.length);
 
@@ -247,12 +246,13 @@ void batch_run(string option_kinship, string option_pheno, string option_covar, 
   eval.shape = [1, Y.elements.length];
   U.shape = [Y.elements.length, Y.elements.length];
 
-
-  EigenDecomp_Zeroed(G, U, eval, 0);
-  writeln("this is fishy. gidx ?");
+  //double trace_G = EigenDecomp_Zeroed(G, U, eval, 0);
+  auto k = kvakve(G);
+  eval = k.kva;
+  U = k.kve;
   writeln(U.shape);
 
-  writeln(U);
+  //writeln(U);
 
 
   DMatrix UtW = matrix_mult(U.T, covar_matrix);  //check if transpose is necessary
@@ -273,7 +273,7 @@ void batch_run(string option_kinship, string option_pheno, string option_covar, 
 
   // Prediction for bslmm
   if (cPar.a_mode == 41 || cPar.a_mode == 42) {
-    bslmm_predictor(cPar);
+    //bslmm_predictor(cPar);
   }
 
   // Prediction with kinship matrix only; for one or more phenotypes
@@ -351,74 +351,6 @@ void batch_run(string option_kinship, string option_pheno, string option_covar, 
 }
 
 
-// bslmm
-
-void bslmm_predictor(Param cPar){
-  DMatrix y_prdt;
-
-  y_prdt.shape = [1, cPar.ni_total - cPar.ni_test];
-
-  // set to zero TODO
-  y_prdt = set_zeros_dmatrix(y_prdt);
-
-  PRDT cPRDT;
-  //cPRDT.CopyFromParam(cPar);
-
-  // add breeding value if needed
-  if (!cPar.file_kin.empty() && !cPar.file_ebv.empty()) {
-    writeln("Adding Breeding Values ... ");
-
-    DMatrix G;
-    G.shape = [cPar.ni_total, cPar.ni_total];
-    DMatrix u_hat;
-    u_hat.shape = [1, cPar.ni_test];
-
-    // read kinship matrix and set u_hat
-    int[] indicator_all;
-    size_t c_bv = 0;
-    for (size_t i = 0; i < cPar.indicator_idv.length; i++) {
-      //indicator_all.push_back(1);
-      if (cPar.indicator_bv.elements[i] == 1) {
-        //gsl_vector_set(u_hat, c_bv, cPar.vec_bv[i]);
-        c_bv++;
-      }
-    }
-
-    ReadFile_kin(cPar.file_kin, indicator_all, cPar.mapID2num, cPar.k_mode, cPar.error, G);
-    if (cPar.error == true) {
-      writeln("error! fail to read kinship/relatedness file.");
-      return;
-    }
-
-    // read u
-    //cPRDT.AddBV(G, u_hat, y_prdt);
-
-  }
-
-  // add beta
-  if (!cPar.file_bfile.empty()) {
-    //cPRDT.AnalyzePlink(y_prdt);
-  } else {
-    //cPRDT.AnalyzeBimbam(y_prdt);
-  }
-
-  // add mu
-  add_dmatrix_num(y_prdt, cPar.pheno_mean);
-
-  // convert y to probability if needed
-  if (cPar.a_mode == 42) {
-    double d;
-    for (size_t i = 0; i < y_prdt.elements.length; i++) {
-      d = y_prdt.elements[i];
-      d = gsl_cdf_gaussian_P(d, 1.0);
-      y_prdt.elements[i] = d;
-    }
-  }
-
-  //cPRDT.CopyToParam(cPar);
-
-  //cPRDT.WriteFiles(y_prdt);
-}
 
 
 //change file_name
