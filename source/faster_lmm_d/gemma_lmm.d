@@ -284,6 +284,8 @@ void CalcPPPab(const size_t n_cvt, const size_t e_mode,
   double ps3_ab, ps_aw, ps_bw, ps_ww, ps2_aw, ps2_bw, ps2_ww, ps3_aw, ps3_bw,
       ps3_ww;
   PPPab = set_zeros_dmatrix(PPPab);
+  writeln(PPPab.shape);
+  writeln(HiHiHi_eval.shape);
   for (size_t p = 0; p <= n_cvt + 1; ++p) {
     for (size_t a = p + 1; a <= n_cvt + 2; ++a) {
       for (size_t b = a; b <= n_cvt + 2; ++b) {
@@ -390,18 +392,19 @@ double LogL_f(double l, void* params) {
   DMatrix Pab;
   Pab.shape = [n_cvt + 2, n_index];
   DMatrix Hi_eval;
+  
   Hi_eval.shape = [1, p.eval.elements.length];
   DMatrix v_temp;
   v_temp.shape = [1, p.eval.elements.length];
 
-  v_temp.elements = p.eval.elements;
+  v_temp.elements = p.eval.elements.dup;
 
   v_temp = multiply_dmatrix_num(v_temp, l);
 
   if (p.e_mode == 0) {
     Hi_eval = set_ones_dmatrix(Hi_eval);
   } else {
-    Hi_eval.elements = v_temp.elements;
+    Hi_eval.elements = v_temp.elements.dup;
   }
 
   v_temp = add_dmatrix_num(v_temp, 1.0);
@@ -777,14 +780,14 @@ extern(C) double LogL_dev2(double l, void* params) {
   PPab.shape = [n_cvt + 2, n_index];
 
   DMatrix PPPab;
-  PPab.shape = [n_cvt + 2, n_index];
+  PPPab.shape = [n_cvt + 2, n_index];
 
   DMatrix Hi_eval;
   Hi_eval.shape = [1, p.eval.elements.length];
   DMatrix HiHi_eval;
   HiHi_eval.shape = [1, p.eval.elements.length];
   DMatrix HiHiHi_eval;
-  HiHi_eval.shape = [1, p.eval.elements.length];
+  HiHiHi_eval.shape = [1, p.eval.elements.length];
   DMatrix v_temp;
   v_temp.shape = [1, p.eval.elements.length];
   v_temp.elements = p.eval.elements;
@@ -864,14 +867,14 @@ extern(C) void LogL_dev12(double l, void *params, double *dev1, double *dev2) {
   PPab.shape = [n_cvt + 2, n_index];
 
   DMatrix PPPab;
-  PPab.shape = [n_cvt + 2, n_index];
+  PPPab.shape = [n_cvt + 2, n_index];
 
   DMatrix Hi_eval;
   Hi_eval.shape = [1, p.eval.elements.length];
   DMatrix HiHi_eval;
   HiHi_eval.shape = [1, p.eval.elements.length];
   DMatrix HiHiHi_eval;
-  HiHi_eval.shape = [1, p.eval.elements.length];
+  HiHiHi_eval.shape = [1, p.eval.elements.length];
   DMatrix v_temp;
   v_temp.shape = [1, p.eval.elements.length];
   v_temp.elements = p.eval.elements;
@@ -1132,6 +1135,10 @@ void CalcLambda(const char func_name, void* params, const double l_min,
     s_fdf = gsl_root_fdfsolver_alloc(T_fdf);
 
     for (int i = 0; i < lambda_lh.length; ++i) {
+      writeln("==============i====================");
+      writeln(i);
+      writeln("==============i====================");
+
       lambda_l = lambda_lh[i].l;
       lambda_h = lambda_lh[i].h;
       gsl_root_fsolver_set(s_f, &F, lambda_l, lambda_h);
@@ -1166,9 +1173,10 @@ void CalcLambda(const char func_name, void* params, const double l_min,
         l = l_max;
       }
       if (func_name == 'R' || func_name == 'r') {
-        logf_l = LogRL_f(l, &params);
+        logf_l = LogRL_f(l, params);
       } else {
-        logf_l = LogL_f(l, &params);
+        writeln("here LogL_f is invoked!");
+        logf_l = LogL_f(l, params);
       }
 
       if (i == 0) {
@@ -1188,11 +1196,11 @@ void CalcLambda(const char func_name, void* params, const double l_min,
     gsl_root_fdfsolver_free(s_fdf);
 
     if (func_name == 'R' || func_name == 'r') {
-      logf_l = LogRL_f(l_min, &params);
-      logf_h = LogRL_f(l_max, &params);
+      logf_l = LogRL_f(l_min, params);
+      logf_h = LogRL_f(l_max, params);
     } else {
-      logf_l = LogL_f(l_min, &params);
-      logf_h = LogL_f(l_max, &params);
+      logf_l = LogL_f(l_min, params);
+      logf_h = LogL_f(l_max, params);
     }
 
     if (logf_l > logf) {
