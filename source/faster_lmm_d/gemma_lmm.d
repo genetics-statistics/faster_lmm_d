@@ -184,17 +184,23 @@ void CalcPab(const size_t n_cvt, const size_t e_mode, const DMatrix Hi_eval,
   size_t index_ab, index_aw, index_bw, index_ww;
   double p_ab;
   double ps_ab, ps_aw, ps_bw, ps_ww;
-  Pab = set_zeros_dmatrix(Pab);
+  Pab = set_ones_dmatrix(Pab);
   for (size_t p = 0; p <= n_cvt + 1; ++p) {
     for (size_t a = p + 1; a <= n_cvt + 2; ++a) {
       for (size_t b = a; b <= n_cvt + 2; ++b) {
         index_ab = GetabIndex(a, b, n_cvt);
         if (p == 0) {
           DMatrix Uab_col = get_col(Uab, index_ab);
+          writeln(matrix_mult(Hi_eval, Uab_col).shape);
           p_ab = matrix_mult(Hi_eval, Uab_col).elements[0];  // check its shape is [1,1] else take transpose of Hi_eval
+          writeln("index ->", index_ab);
+          writeln("p_ab ->", p_ab);  
+
           if (e_mode != 0) {
             p_ab = ab.elements[index_ab] - p_ab;
+            writeln("p_ab ->", p_ab);  
           }
+
           Pab.elements[index_ab] = p_ab;
         } else {
           index_aw = GetabIndex(a, p, n_cvt);
@@ -205,6 +211,11 @@ void CalcPab(const size_t n_cvt, const size_t e_mode, const DMatrix Hi_eval,
           ps_aw = accessor(Pab, p - 1, index_aw);
           ps_bw = accessor(Pab, p - 1, index_bw);
           ps_ww = accessor(Pab, p - 1, index_ww);
+
+          writeln("ps_ab->",ps_ab);
+          writeln("ps_aw->",ps_aw);
+          writeln("ps_bw->",ps_bw);
+          writeln("ps_ww->",ps_ww);
 
           p_ab = ps_ab - ps_aw * ps_bw / ps_ww;
           Pab.elements[p * Pab.cols + index_ab] = p_ab;
@@ -1219,6 +1230,14 @@ void CalcLambda(char func_name, DMatrix eval,
   ab.shape = [1, n_index];
   writeln(1004);
   CalcUab(UtW, Uty, Uab);
+  ab.elements = [6.901535246e-295,
+  6.901535246e-295,
+  4.67120702e-295,
+  4.67120702e-295,
+  4.671149335e-295,
+  1.630416631e-307];
+  writeln(ab);
+
 
   loglikeparam param0 = loglikeparam(true, ni_test, n_cvt, eval, Uab, ab, 0);
   writeln(1010);
@@ -1323,7 +1342,7 @@ void CalcRLScore(size_t ni_test, double l, loglikeparam params, double beta,
   return;
 }
 
-void CalcUab(DMatrix UtW, DMatrix Uty, DMatrix Uab) {
+void CalcUab(DMatrix UtW, DMatrix Uty, ref DMatrix Uab) {
   writeln("in CalcUab");
   size_t index_ab;
   size_t n_cvt = UtW.shape[1];
@@ -1342,9 +1361,8 @@ void CalcUab(DMatrix UtW, DMatrix Uty, DMatrix Uab) {
       DMatrix UtW_col = get_col(UtW, a - 1);
       u_a.elements = UtW_col.elements.dup;
     }
-
-    writeln("huh!");
     for (size_t b = a; b >= 1; --b) {
+
       if (b == n_cvt + 1) {
         continue;
       }
@@ -1358,13 +1376,14 @@ void CalcUab(DMatrix UtW, DMatrix Uty, DMatrix Uab) {
         DMatrix UtW_col = get_col(UtW, b - 1);
         Uab_col.elements = UtW_col.elements.dup;
       }
-      writeln(Uab_col.shape);
-      writeln(Uab_col.elements.length);
+      //writeln(Uab_col.shape);
+      //writeln(Uab_col.elements.length);
 
-      writeln(u_a.shape);
-      writeln(u_a.elements.length);
+      //writeln(u_a.shape);
+      //writeln(u_a.elements.length);
 
-      slow_multiply_dmatrix(Uab_col, u_a);
+      Uab_col = slow_multiply_dmatrix(Uab_col, u_a);
+      Uab = set_col(Uab, index_ab, Uab_col);
     }
   }
   writeln("out of CalcUab");
