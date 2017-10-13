@@ -203,6 +203,7 @@ void CalcPab(const size_t n_cvt, const size_t e_mode, const DMatrix Hi_eval,
 
           Pab.elements[index_ab] = p_ab;
         } else {
+          writeln(Pab);
           index_aw = GetabIndex(a, p, n_cvt);
           index_bw = GetabIndex(b, p, n_cvt);
           index_ww = GetabIndex(p, p, n_cvt);
@@ -232,7 +233,6 @@ void CalcPab(const size_t n_cvt, const size_t e_mode, const DMatrix Hi_eval,
 void CalcPPab(const size_t n_cvt, const size_t e_mode,
               const DMatrix HiHi_eval, const DMatrix Uab,
               const DMatrix ab, const DMatrix Pab, ref DMatrix PPab) {
-  writeln("in CalcPPab");
   size_t index_ab, index_aw, index_bw, index_ww;
   double p2_ab;
   double ps2_ab, ps_aw, ps_bw, ps_ww, ps2_aw, ps2_bw, ps2_ww;
@@ -270,7 +270,6 @@ void CalcPPab(const size_t n_cvt, const size_t e_mode,
       }
     }
   }
-  writeln("out of PPab");
   return;
 }
 
@@ -841,7 +840,8 @@ extern(C) double LogL_dev2(double l, void* params) {
 
 extern(C) void LogL_dev12(double l, void *params, double *dev1, double *dev2) {
 
-  writeln("In LogL_dev12");
+  writeln("In LogL_dev12, l =" , l);
+  writeln(l);
 
   auto ptr = cast(loglikeparam *)params;
   loglikeparam p = *ptr;
@@ -877,7 +877,8 @@ extern(C) void LogL_dev12(double l, void *params, double *dev1, double *dev2) {
   HiHiHi_eval.shape = [1, p.eval.elements.length];
   DMatrix v_temp;
   v_temp.shape = [1, p.eval.elements.length];
-  v_temp.elements = p.eval.elements;
+  v_temp.elements = p.eval.elements.dup;
+  writeln(Hi_eval);
 
   v_temp = multiply_dmatrix_num(v_temp, l);
 
@@ -891,9 +892,9 @@ extern(C) void LogL_dev12(double l, void *params, double *dev1, double *dev2) {
   Hi_eval = divide_dmatrix(Hi_eval, v_temp);
 
   HiHi_eval.elements = Hi_eval.elements.dup;
-  HiHi_eval = slow_multiply_dmatrix(HiHi_eval, Hi_eval);
+  HiHi_eval = matrix_mult(HiHi_eval, Hi_eval);
   HiHiHi_eval.elements = HiHi_eval.elements.dup;
-  HiHiHi_eval = slow_multiply_dmatrix(HiHiHi_eval, Hi_eval);
+  HiHiHi_eval = matrix_mult(HiHiHi_eval, Hi_eval);
 
   v_temp = set_ones_dmatrix(v_temp);
   trace_Hi = matrix_mult(Hi_eval, v_temp).elements[0];
@@ -983,11 +984,11 @@ extern(C) void LogRL_dev12(double l, void* params, double* dev1, double* dev2) {
   Hi_eval = divide_dmatrix(Hi_eval, v_temp);
 
   HiHi_eval.elements = Hi_eval.elements.dup;
-  HiHi_eval = slow_multiply_dmatrix(HiHi_eval, Hi_eval);
+  HiHi_eval = matrix_mult(HiHi_eval, Hi_eval);
   HiHiHi_eval.elements = HiHi_eval.elements.dup;
-  HiHiHi_eval = slow_multiply_dmatrix(HiHiHi_eval, Hi_eval);
+  HiHiHi_eval = matrix_mult(HiHiHi_eval, Hi_eval);
 
-  //gsl_vector_set_all(v_temp, 1.0);
+  v_temp = set_ones_dmatrix(v_temp);
   trace_Hi = matrix_mult(Hi_eval, v_temp).elements[0];
   trace_HiHi = matrix_mult(HiHi_eval, v_temp).elements[0];
 
@@ -1048,17 +1049,14 @@ void CalcLambda(const char func_name, void* params, const double l_min,
   // Evaluate first-order derivates in different intervals.
   double lambda_l, lambda_h;
   double lambda_interval = mlog(l_max / l_min) / to!double(n_region);
-  writeln(">>>>>>>>>>>>n_region = ", n_region);
-  writeln("l_min = ", l_min);
-  writeln("l_max = ", l_max);
-  writeln("lambda_interval = ", lambda_interval);
+  //writeln(">>>>>>>>>>>>n_region = ", n_region);
+  //writeln("l_min = ", l_min);
+  //writeln("l_max = ", l_max);
+  //writeln("lambda_interval = ", lambda_interval);
   double dev1_l, dev1_h, logf_l, logf_h;
   for (size_t i = 0; i < n_region; ++i) {
     lambda_l = l_min * exp(lambda_interval * i);
     lambda_h = l_min * exp(lambda_interval * (i + 1.0));
-
-    writeln("lambda_l = ", lambda_l);
-    writeln("lambda_h = ", lambda_h);
 
     if (func_name == 'R' || func_name == 'r') {
       dev1_l = LogRL_dev1(lambda_l, params);
@@ -1068,17 +1066,13 @@ void CalcLambda(const char func_name, void* params, const double l_min,
       dev1_h = LogL_dev1(lambda_h, params);
     }
 
-    writeln("dev1_l = ", dev1_l);
-    writeln("dev1_h = ", dev1_h);
-
     if (dev1_l * dev1_h <= 0) {
+      writeln("dev1_l = ", dev1_l);
+      writeln("dev1_h = ", dev1_h);
+      writeln("lambda_lh size up");
       lambda_lh ~= Lambda_tup(lambda_l, lambda_h);
     }
   }
-  writeln("subject : lambda_lh");
-  writeln(lambda_lh.length);
-  writeln(lambda_lh);
-  writeln("------------------------------");
 
   // If derivates do not change signs in any interval.
   if (lambda_lh.length == 0) {
@@ -1134,10 +1128,7 @@ void CalcLambda(const char func_name, void* params, const double l_min,
     T_fdf = cast(gsl_root_fdfsolver_type*)gsl_root_fdfsolver_newton;
     s_fdf = gsl_root_fdfsolver_alloc(T_fdf);
 
-    for (int i = 0; i < lambda_lh.length; ++i) {
-      writeln("==============i====================");
-      writeln(i);
-      writeln("==============i====================");
+    for (int i = 0; i < 1; ++i) {
 
       lambda_l = lambda_lh[i].l;
       lambda_h = lambda_lh[i].h;
@@ -1147,6 +1138,7 @@ void CalcLambda(const char func_name, void* params, const double l_min,
         iter++;
         status = gsl_root_fsolver_iterate(s_f);
         l = gsl_root_fsolver_root(s_f);
+        writeln("value of l = ", l);
         lambda_l = gsl_root_fsolver_x_lower(s_f);
         lambda_h = gsl_root_fsolver_x_upper(s_f);
         status = gsl_root_test_interval(lambda_l, lambda_h, 0, 1e-1);
@@ -1160,6 +1152,7 @@ void CalcLambda(const char func_name, void* params, const double l_min,
         iter++;
         status = gsl_root_fdfsolver_iterate(s_fdf);
         l_temp = l;
+        writeln("value of l = ", l);
         l = gsl_root_fdfsolver_root(s_fdf);
         status = gsl_root_test_delta(l, l_temp, 0, 1e-5);
       } while (status == GSL_CONTINUE && iter < max_iter && l > l_min &&
@@ -1188,9 +1181,6 @@ void CalcLambda(const char func_name, void* params, const double l_min,
       } else {
       }
     }
-    writeln("==============lambda====================");
-    writeln(lambda);
-    writeln("==============lambda====================");
 
     gsl_root_fsolver_free(s_f);
     gsl_root_fdfsolver_free(s_fdf);
