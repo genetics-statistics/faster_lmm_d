@@ -255,9 +255,8 @@ void batch_run(string option_kinship, string option_pheno, string option_covar, 
   //writeln(U);
 
 
-  DMatrix UtW = matrix_mult(U.T, covar_matrix);  //check if transpose is necessary
-  DMatrix Uty = matrix_mult(U.T, Y);  //check if transpose is necessary
-
+  DMatrix UtW = matrix_mult(U.T, covar_matrix); 
+  DMatrix Uty = matrix_mult(U.T, Y); 
   Param cPar;
   writeln("Reading Files ... ");
   cPar.ReadFiles();

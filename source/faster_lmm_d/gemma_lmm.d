@@ -208,6 +208,11 @@ void CalcPab(const size_t n_cvt, const size_t e_mode, const DMatrix Hi_eval,
           index_bw = GetabIndex(b, p, n_cvt);
           index_ww = GetabIndex(p, p, n_cvt);
 
+          writeln("index_ab->",index_ab);
+          writeln("index_aw->",index_aw);
+          writeln("index_bw->",index_bw);
+          writeln("index_ww->",index_ww);
+
           ps_ab = accessor(Pab, p - 1, index_ab);
           ps_aw = accessor(Pab, p - 1, index_aw);
           ps_bw = accessor(Pab, p - 1, index_bw);
@@ -644,6 +649,9 @@ extern(C) double LogL_dev1(double l, void* params) {
   double P_yy = accessor(Pab, nc_total, index_yy);
   double PP_yy = accessor(PPab, nc_total, index_yy);
   double yPKPy = (P_yy - PP_yy) / l;
+  writeln("nc_total-> ",  nc_total);
+  writeln("index_yy -> ", index_yy);
+  writeln("l -> ", l);
   writeln("P_yy -> ", P_yy);
   writeln("PP_yy -> ", PP_yy);
   writeln("yPKPy -> ", yPKPy);
@@ -1235,7 +1243,7 @@ void CalcLambda(char func_name, DMatrix eval,
   4.671149335e-295,
   1.630416631e-307];
   writeln(ab);
-
+  Calcab(UtW, Uty, ab);
 
   loglikeparam param0 = loglikeparam(true, ni_test, n_cvt, eval, Uab, ab, 0);
   writeln(1010);
@@ -1411,7 +1419,7 @@ void CalcUab(DMatrix UtW, DMatrix Uty, DMatrix Utx, DMatrix Uab) {
   return;
 }
 
-void Calcab(DMatrix W, DMatrix y, DMatrix ab) {
+void Calcab(DMatrix W, DMatrix y, ref DMatrix ab) {
   size_t index_ab;
   size_t n_cvt = W.shape[1];
 
