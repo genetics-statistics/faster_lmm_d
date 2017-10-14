@@ -179,49 +179,33 @@ double EigenDecomp_Zeroed(ref DMatrix G, ref DMatrix U, ref DMatrix eval,
 }
 
 void CalcPab(const size_t n_cvt, const size_t e_mode, const DMatrix Hi_eval,
-             const DMatrix Uab, const DMatrix ab, ref DMatrix Pab) {
-  writeln("in CalcPab");
+              const DMatrix Uab, const DMatrix ab, ref DMatrix Pab) {
   size_t index_ab, index_aw, index_bw, index_ww;
   double p_ab;
   double ps_ab, ps_aw, ps_bw, ps_ww;
-  Pab = set_ones_dmatrix(Pab);
+  Pab = set_zeros_dmatrix(Pab);
   for (size_t p = 0; p <= n_cvt + 1; ++p) {
     for (size_t a = p + 1; a <= n_cvt + 2; ++a) {
       for (size_t b = a; b <= n_cvt + 2; ++b) {
         index_ab = GetabIndex(a, b, n_cvt);
         if (p == 0) {
           DMatrix Uab_col = get_col(Uab, index_ab);
-          writeln(matrix_mult(Hi_eval, Uab_col).shape);
-          p_ab = matrix_mult(Hi_eval, Uab_col).elements[0];  // check its shape is [1,1] else take transpose of Hi_eval
-          writeln("index ->", index_ab);
-          writeln("p_ab ->", p_ab);  
+          p_ab = matrix_mult(Hi_eval, Uab_col).elements[0]; 
 
           if (e_mode != 0) {
             p_ab = ab.elements[index_ab] - p_ab;
-            writeln("p_ab ->", p_ab);  
           }
 
           Pab.elements[index_ab] = p_ab;
         } else {
-          writeln(Pab);
           index_aw = GetabIndex(a, p, n_cvt);
           index_bw = GetabIndex(b, p, n_cvt);
           index_ww = GetabIndex(p, p, n_cvt);
-
-          writeln("index_ab->",index_ab);
-          writeln("index_aw->",index_aw);
-          writeln("index_bw->",index_bw);
-          writeln("index_ww->",index_ww);
 
           ps_ab = accessor(Pab, p - 1, index_ab);
           ps_aw = accessor(Pab, p - 1, index_aw);
           ps_bw = accessor(Pab, p - 1, index_bw);
           ps_ww = accessor(Pab, p - 1, index_ww);
-
-          writeln("ps_ab->",ps_ab);
-          writeln("ps_aw->",ps_aw);
-          writeln("ps_bw->",ps_bw);
-          writeln("ps_ww->",ps_ww);
 
           p_ab = ps_ab - ps_aw * ps_bw / ps_ww;
           Pab.elements[p * Pab.cols + index_ab] = p_ab;
@@ -229,10 +213,9 @@ void CalcPab(const size_t n_cvt, const size_t e_mode, const DMatrix Hi_eval,
       }
     }
   }
-  writeln(Pab);
-  writeln("out of CalcPab");
   return;
 }
+
 
 
 void CalcPPab(const size_t n_cvt, const size_t e_mode,
@@ -552,7 +535,7 @@ extern(C) double LogRL_dev1(double l, void* params) {
   HiHi_eval = slow_multiply_dmatrix(HiHi_eval, Hi_eval);
 
   v_temp = set_ones_dmatrix(v_temp);
-  trace_Hi = matrix_mult(Hi_eval, v_temp).elements[0];
+  trace_Hi = matrix_mult(Hi_eval, v_temp.T).elements[0];
 
   if (p.e_mode != 0) {
     trace_Hi = to!double(ni_test) - trace_Hi;
@@ -626,7 +609,7 @@ extern(C) double LogL_dev1(double l, void* params) {
     Hi_eval.elements = v_temp.elements.dup;
   }
   v_temp = add_dmatrix_num(v_temp, 1.0);
-  HiHi_eval = divide_dmatrix(Hi_eval, v_temp);
+  Hi_eval = divide_dmatrix(Hi_eval, v_temp);
 
   HiHi_eval.elements = Hi_eval.elements.dup;
   HiHi_eval = slow_multiply_dmatrix(HiHi_eval, Hi_eval);
@@ -711,22 +694,25 @@ extern(C) double LogRL_dev2(double l, void* params) {
   }
   v_temp = add_dmatrix_num(v_temp, 1.0);
   Hi_eval = divide_dmatrix(Hi_eval, v_temp);
+
   writeln(534);
   HiHi_eval.elements = Hi_eval.elements.dup;
   writeln(536);
   HiHi_eval = slow_multiply_dmatrix(HiHi_eval, Hi_eval);
   writeln(538);
+
   HiHiHi_eval.elements = HiHi_eval.elements.dup;
   HiHiHi_eval = slow_multiply_dmatrix(HiHiHi_eval, Hi_eval);
   writeln(541);
   v_temp = set_ones_dmatrix(v_temp);
-  trace_Hi = matrix_mult(Hi_eval, v_temp).elements[0];
-  trace_HiHi = matrix_mult(HiHi_eval, v_temp).elements[0];
+  trace_Hi = matrix_mult(Hi_eval, v_temp.T).elements[0];
+  trace_HiHi = matrix_mult(HiHi_eval, v_temp.T).elements[0];
 
   if (p.e_mode != 0) {
     trace_Hi = to!double(ni_test) - trace_Hi;
     trace_HiHi = 2 * trace_Hi + trace_HiHi - to!double(ni_test);
   }
+
   CalcPab(n_cvt, p.e_mode, Hi_eval, p.Uab, p.ab, Pab);
   CalcPPab(n_cvt, p.e_mode, HiHi_eval, p.Uab, p.ab, Pab, PPab);
   CalcPPPab(n_cvt, p.e_mode, HiHiHi_eval, p.Uab, p.ab, Pab, PPab, PPPab);
@@ -779,7 +765,6 @@ extern(C) double LogL_dev2(double l, void* params) {
 
   double dev2 = 0.0, trace_Hi = 0.0, trace_HiHi = 0.0;
   size_t index_yy;
-
   DMatrix Pab;
   Pab.shape = [n_cvt + 2, n_index];
 
@@ -810,14 +795,15 @@ extern(C) double LogL_dev2(double l, void* params) {
   Hi_eval = divide_dmatrix(Hi_eval, v_temp);
 
   HiHi_eval.elements = Hi_eval.elements.dup;
-  HiHi_eval = matrix_mult(HiHi_eval, Hi_eval); // gsl_vector_mul();
+  HiHi_eval = slow_multiply_dmatrix(HiHi_eval, Hi_eval); // gsl_vector_mul();
   HiHiHi_eval.elements = HiHi_eval.elements.dup;
-  HiHiHi_eval = matrix_mult(HiHiHi_eval, Hi_eval);
+  HiHiHi_eval = slow_multiply_dmatrix(HiHiHi_eval, Hi_eval);
 
   v_temp = set_ones_dmatrix(v_temp);
-  trace_Hi = matrix_mult(Hi_eval, v_temp).elements[0];
-  trace_HiHi = matrix_mult(HiHi_eval, v_temp).elements[0];
 
+  trace_Hi = matrix_mult(Hi_eval, v_temp.T).elements[0];
+
+  trace_HiHi = matrix_mult(HiHi_eval, v_temp.T).elements[0];
   if (p.e_mode != 0) {
     trace_Hi = to!double(ni_test) - trace_Hi;
     trace_HiHi = 2 * trace_Hi + trace_HiHi - to!double(ni_test);
@@ -833,7 +819,6 @@ extern(C) double LogL_dev2(double l, void* params) {
   double P_yy = accessor(Pab, nc_total, index_yy);
   double PP_yy = accessor(PPab, nc_total, index_yy);
   double PPP_yy = accessor(PPPab, nc_total, index_yy);
-
   double yPKPy = (P_yy - PP_yy) / l;
   double yPKPKPy = (P_yy + PPP_yy - 2.0 * PP_yy) / (l * l);
 
@@ -900,13 +885,13 @@ extern(C) void LogL_dev12(double l, void *params, double *dev1, double *dev2) {
   Hi_eval = divide_dmatrix(Hi_eval, v_temp);
 
   HiHi_eval.elements = Hi_eval.elements.dup;
-  HiHi_eval = matrix_mult(HiHi_eval, Hi_eval);
+  HiHi_eval = slow_multiply_dmatrix(HiHi_eval, Hi_eval);
   HiHiHi_eval.elements = HiHi_eval.elements.dup;
-  HiHiHi_eval = matrix_mult(HiHiHi_eval, Hi_eval);
+  HiHiHi_eval = slow_multiply_dmatrix(HiHiHi_eval, Hi_eval);
 
   v_temp = set_ones_dmatrix(v_temp);
-  trace_Hi = matrix_mult(Hi_eval, v_temp).elements[0];
-  trace_HiHi = matrix_mult(HiHi_eval, v_temp).elements[0];
+  trace_Hi = matrix_mult(Hi_eval, v_temp.T).elements[0];
+  trace_HiHi = matrix_mult(HiHi_eval, v_temp.T).elements[0];
 
   if (p.e_mode != 0) {
     trace_Hi = to!double(ni_test) - trace_Hi;
@@ -992,13 +977,13 @@ extern(C) void LogRL_dev12(double l, void* params, double* dev1, double* dev2) {
   Hi_eval = divide_dmatrix(Hi_eval, v_temp);
 
   HiHi_eval.elements = Hi_eval.elements.dup;
-  HiHi_eval = matrix_mult(HiHi_eval, Hi_eval);
+  HiHi_eval = slow_multiply_dmatrix(HiHi_eval, Hi_eval);
   HiHiHi_eval.elements = HiHi_eval.elements.dup;
-  HiHiHi_eval = matrix_mult(HiHiHi_eval, Hi_eval);
+  HiHiHi_eval = slow_multiply_dmatrix(HiHiHi_eval, Hi_eval);
 
   v_temp = set_ones_dmatrix(v_temp);
-  trace_Hi = matrix_mult(Hi_eval, v_temp).elements[0];
-  trace_HiHi = matrix_mult(HiHi_eval, v_temp).elements[0];
+  trace_Hi = matrix_mult(Hi_eval, v_temp.T).elements[0];
+  trace_HiHi = matrix_mult(HiHi_eval, v_temp.T).elements[0];
 
   if (p.e_mode != 0) {
     trace_Hi = to!double(ni_test) - trace_Hi;
