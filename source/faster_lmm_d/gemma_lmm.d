@@ -1558,7 +1558,7 @@ void CalcLmmVgVeBeta(DMatrix eval, DMatrix UtW,
   writeln(WHiy);
   //exit(0);
 
-  Vbeta = inverse(WHiy); 
+  Vbeta = inverse(WHiy);
 
   //int sig;
   //gsl_permutation pmt = gsl_permutation_alloc(UtW.shape[1]);
@@ -1637,10 +1637,11 @@ struct GWAS_SNPs{
 
 void AnalyzeBimbam(DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Uty,
                         DMatrix W, DMatrix y, GWAS_SNPs gwasnps,
-                        size_t n_cvt, size_t LMM_BATCH_SIZE) {
+                        size_t n_cvt, size_t LMM_BATCH_SIZE = 100) {
 
 
   // LOCO support
+  writeln("In AnalyzeBimbam");
   bool process_gwasnps = gwasnps.size;
   if (process_gwasnps){
     writeln("AnalyzeBimbam w. LOCO");
@@ -1671,7 +1672,7 @@ void AnalyzeBimbam(DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Uty,
 
   //enforce_msg(Xlarge && UtXlarge, "Xlarge memory check"); // just to be sure
   //gsl_matrix_set_zero(Xlarge);
-  //gsl_matrix_set_zero(Uab);
+  Uab = set_zeros_dmatrix(Uab);
   CalcUab(UtW, Uty, Uab);
 
   // start reading genotypes and analyze

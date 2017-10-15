@@ -335,7 +335,7 @@ void batch_run(string option_kinship, string option_pheno, string option_covar, 
   // LMM or mvLMM or Eigen-Decomposition
   //if (cPar.a_mode == 1 || cPar.a_mode == 2 || cPar.a_mode == 3 || cPar.a_mode == 4 || cPar.a_mode == 5 || cPar.a_mode == 31) {
     // Fit LMM or mvLMM or eigen
-    fit_model(cPar, eval, UtW, Uty, Y, covar_matrix);
+    fit_model(cPar, U, eval, UtW, Uty, Y, covar_matrix);
   //}
 
   // BSLMM
@@ -550,7 +550,7 @@ void fit_linear_model(Param cPar){
   // release all matrices and vectors
 }
 
-void fit_model(Param cPar, DMatrix eval, DMatrix  UtW, DMatrix UtY, DMatrix Y, DMatrix W, size_t n_ph = 1){
+void fit_model(Param cPar, DMatrix U, DMatrix eval, DMatrix  UtW, DMatrix UtY, DMatrix Y, DMatrix W, size_t n_ph = 1){
   writeln("In LMM fit_model");
 
 
@@ -674,6 +674,13 @@ void fit_model(Param cPar, DMatrix eval, DMatrix  UtW, DMatrix UtY, DMatrix Y, D
       }
     }
 
+    DMatrix Y_col = get_col(Y, 0);
+    DMatrix UtY_col = get_col(UtY, 0);
+
+    GWAS_SNPs setGWASnps;
+
+    AnalyzeBimbam(U, eval, UtW, UtY_col, W, Y_col, setGWASnps, 10);
+
     // Fit LMM or mvLMM (w. LOCO)
     if (cPar.a_mode == 1 || cPar.a_mode == 2 || cPar.a_mode == 3 ||
         cPar.a_mode == 4) {
@@ -681,8 +688,8 @@ void fit_model(Param cPar, DMatrix eval, DMatrix  UtW, DMatrix UtY, DMatrix Y, D
         LMM cLmm;
         //cLmm.CopyFromParam(cPar);
 
-        DMatrix Y_col = get_col(Y, 0);
-        DMatrix UtY_col = get_col(UtY, 0);
+         Y_col = get_col(Y, 0);
+         UtY_col = get_col(UtY, 0);
 
         if (!cPar.file_bfile.empty()) {
           if (cPar.file_gxe.empty()) {
@@ -696,7 +703,7 @@ void fit_model(Param cPar, DMatrix eval, DMatrix  UtW, DMatrix UtY, DMatrix Y, D
           //cLmm.Analyzebgen(U, eval, UtW, UtY_col, W, Y_col);
         } else {
           if (cPar.file_gxe.empty()) {
-            //cLmm.AnalyzeBimbam(U, eval, UtW, UtY_col, W, Y_col, cPar.setGWASnps);
+            AnalyzeBimbam(U, eval, UtW, UtY_col, W, Y_col, setGWASnps, 10);
           } else {
             //cLmm.AnalyzeBimbamGXE(U, eval, UtW, UtY_col, W, Y_col, env);
           }
