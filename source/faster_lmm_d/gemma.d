@@ -257,7 +257,7 @@ void batch_run(string option_kinship, string option_pheno, string option_covar, 
   //writeln(U);
 
 
-  DMatrix UtW = matrix_mult(U.T, covar_matrix); 
+  DMatrix UtW = matrix_mult(U.T, covar_matrix);
   DMatrix Uty = matrix_mult(U.T, Y); 
   Param cPar;
   writeln("Reading Files ... ");

@@ -7,9 +7,12 @@
 
 module faster_lmm_d.gemma_lmm;
 
+import core.stdc.stdlib : exit;
+
 import std.conv;
 import std.exception;
 import std.math;
+import std.algorithm: min, max, reduce;
 alias mlog = std.math.log;
 import std.stdio;
 import std.typecons;
@@ -18,6 +21,7 @@ import std.experimental.logger;
 import faster_lmm_d.dmatrix;
 import faster_lmm_d.optmatrix;
 import faster_lmm_d.gemma_param;
+import gsl.permutation;
 
 import gsl.cdf;
 import gsl.errno;
@@ -954,14 +958,14 @@ extern(C) void LogRL_dev12(double l, void* params, double* dev1, double* dev2) {
   PPab.shape = [n_cvt + 2, n_index];
 
   DMatrix PPPab;
-  PPab.shape = [n_cvt + 2, n_index];
+  PPPab.shape = [n_cvt + 2, n_index];
 
   DMatrix Hi_eval;
   Hi_eval.shape = [1, p.eval.elements.length];
   DMatrix HiHi_eval;
   HiHi_eval.shape = [1, p.eval.elements.length];
   DMatrix HiHiHi_eval;
-  HiHi_eval.shape = [1, p.eval.elements.length];
+  HiHiHi_eval.shape = [1, p.eval.elements.length];
   DMatrix v_temp;
   v_temp.shape = [1, p.eval.elements.length];
   v_temp.elements = p.eval.elements;
@@ -975,6 +979,7 @@ extern(C) void LogRL_dev12(double l, void* params, double* dev1, double* dev2) {
   }
   v_temp = add_dmatrix_num(v_temp, 1.0);
   Hi_eval = divide_dmatrix(Hi_eval, v_temp);
+
 
   HiHi_eval.elements = Hi_eval.elements.dup;
   HiHi_eval = slow_multiply_dmatrix(HiHi_eval, Hi_eval);
@@ -996,6 +1001,7 @@ extern(C) void LogRL_dev12(double l, void* params, double* dev1, double* dev2) {
 
   // Calculate tracePK and trace PKPK.
   double trace_P = trace_Hi, trace_PP = trace_HiHi;
+
   double ps_ww, ps2_ww, ps3_ww;
   for (size_t i = 0; i < nc_total; ++i) {
     index_ww = GetabIndex(i + 1, i + 1, n_cvt);
@@ -1530,13 +1536,47 @@ void CalcLmmVgVeBeta(DMatrix eval, DMatrix UtW,
   WHiW = matrix_mult(HiW, UtW);
   WHiy = matrix_mult(HiW, Uty);
 
-  int sig;
-  //gsl_permutation *pmt = gsl_permutation_alloc(UtW.shape[1]);
+  beta.elements = WHiy.elements.dup;
+
+  auto m = to!int(WHiW.cols);
+  assert(m>=1);
+  auto n = to!int(WHiW.rows);
+  int nrhs = n;
+  //auto arr2 = arr.dup; // to store the result
+  auto ipiv = new int[min(m,n)+1];
+  writeln(WHiy);
+
+  //int i_cols = to!int(cols);
+  int lda = n;
+  int ldb = m;
+  //(LAPACKE_dgetrf(101,m,n,arr2.ptr,lda,ipiv.ptr)==0);
+  //writeln("yoy================+++++++++++++++++++++++++++++++++++++++o");
+  enforce(LAPACKE_dgesv( 101, n, n, WHiW.elements.ptr, lda, ipiv.ptr,
+                      beta.elements.ptr,  ldb ) == 0);
+
+  writeln(WHiW);
+  writeln(WHiy);
+  //exit(0);
+
+  Vbeta = inverse(WHiy); 
+
+  //int sig;
+  //gsl_permutation pmt = gsl_permutation_alloc(UtW.shape[1]);
+  
   //LUDecomp(WHiW, pmt, &sig);
   //LUSolve(WHiW, pmt, WHiy, beta);
   //LUInvert(WHiW, pmt, Vbeta);
 
   // Calculate vg and ve.
+  ab.elements = [6.901535246e-295,
+  6.901535246e-295,
+  4.67120702e-295,
+  4.67120702e-295,
+  4.671149335e-295,
+  1.630416631e-307];
+  Calcab(UtW, Uty, ab);
+  writeln(ab);
+  //exit(0);
   CalcPab(n_cvt, 0, Hi_eval, Uab, ab, Pab);
 
   size_t index_yy = GetabIndex(n_cvt + 2, n_cvt + 2, n_cvt);
@@ -1555,6 +1595,8 @@ void CalcLmmVgVeBeta(DMatrix eval, DMatrix UtW,
 
   //gsl_permutation_free(pmt);
   writeln("out of CalcLmmVgVeBeta");
+
+  writeln(Vbeta);
 
   return;
 }

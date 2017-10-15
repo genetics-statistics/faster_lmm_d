@@ -31,6 +31,8 @@ extern (C) {
                       double* a, int lda, double vl, double vu, int il, int iu, double abstol,
                       int* m, double* w, double* z, int ldz, int* isuppz);
   int LAPACKE_dgetri (int matrix_layout, int n, double* a, int lda, const(int)* ipiv);
+  int LAPACKE_dgesv( int matrix_layout, int n, int nrhs, double* a, int lda, int* ipiv,
+                      double* b, int ldb );
 }
 
 version(CUDA) {
