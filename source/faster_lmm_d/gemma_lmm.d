@@ -1639,10 +1639,12 @@ void AnalyzeBimbam (DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Uty,
                         DMatrix W, DMatrix y, GWAS_SNPs gwasnps,
                         size_t n_cvt, size_t LMM_BATCH_SIZE = 100) {
   //igzstream infile (file_geno.c_str(), igzstream::in);
-  if (!infile) {
-    cout<<"error reading genotype file:"<<file_geno<<endl;
-    return;
-  }
+  //if (!infile) {
+  //  //cout<<"error reading genotype file:"<<file_geno<<endl;
+  //  return;
+  //}
+
+  SUMSTAT[] sumStat;
 
   string line;
   char[] ch_ptr;
@@ -1653,6 +1655,18 @@ void AnalyzeBimbam (DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Uty,
   int n_miss, c_phen;
   double geno, x_mean;
 
+  size_t ni_test = 10;
+  size_t ni_total = 100;
+  size_t n_region = 0;
+  int a_mode = 1;
+  double l_min = 0;
+  double l_mle_null = 0;
+  double l_max = 100000;
+  double logl_mle_H0 = 0;
+
+  double[] indicator_snp;
+  double[] indicator_idv;
+
   // Calculate basic quantities.
   size_t n_index=(n_cvt+2+1)*(n_cvt+2)/2;
 
@@ -1661,9 +1675,9 @@ void AnalyzeBimbam (DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Uty,
   DMatrix x_miss;
   x_miss.shape = [1, U.shape[0]];
   DMatrix Utx;
-  Utx.shape = [1, U.size2];
+  Utx.shape = [1, U.shape[1]];
   DMatrix Uab;
-  Uab.shape = [U.size2, n_index];
+  Uab.shape = [U.shape[1], n_index];
   DMatrix ab;
   ab.shape = [1, n_index];
 
@@ -1685,10 +1699,7 @@ void AnalyzeBimbam (DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Uty,
     t_last++;
   }
   for (size_t t=0; t<indicator_snp.length; ++t) {
-    !safeGetline(infile, line).eof();
-    if (t%d_pace==0 || t==(ns_total-1)) {
-      ProgressBar ("Reading SNPs  ", t, ns_total-1);
-    }
+    //!safeGetline(infile, line).eof();
     if (indicator_snp[t]==0) {continue;}
 
     //ch_ptr=strtok ((char *)line.c_str(), " , \t");
@@ -1698,15 +1709,15 @@ void AnalyzeBimbam (DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Uty,
     x_mean=0.0; c_phen=0; n_miss=0;
     x_miss = set_zeros_dmatrix(x_miss);
     for (size_t i=0; i<ni_total; ++i) {
-      ch_ptr=strtok (NULL, " , \t");
+      //ch_ptr=strtok (NULL, " , \t");
       if (indicator_idv[i]==0) {continue;}
 
-      if (strcmp(ch_ptr, "NA")==0) {
+      if (ch_ptr == "NA") {
         x_miss.elements[c_phen] = 0.0;
         n_miss++;
       }
       else {
-        geno=atof(ch_ptr);
+        geno=to!double(ch_ptr);
 
         x.elements[c_phen] = geno;
         x_miss.elements[c_phen] = 1.0;
@@ -1723,25 +1734,20 @@ void AnalyzeBimbam (DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Uty,
       }
     }
 
-    DMatrix Xlarge_col=gsl_matrix_column (Xlarge, c%msize); // view
-    gsl_vector_memcpy (&Xlarge_col.vector, x);
+    DMatrix Xlarge_col = get_col(Xlarge, c%msize); // view
+    Xlarge_col.elements = x.elements.dup;
     c++;
 
     if (c%msize==0 || c==t_last) {
       size_t l=0;
       if (c%msize==0) {l=msize;} else {l=c%msize;}
 
-      gsl_matrix_view Xlarge_sub=
-        gsl_matrix_submatrix(Xlarge, 0, 0, Xlarge.shape[0], l);
-      gsl_matrix_view UtXlarge_sub=
-        gsl_matrix_submatrix(UtXlarge, 0, 0, UtXlarge.shape[0], l);
+      DMatrix Xlarge_sub = get_sub_dmatrix(Xlarge, 0, 0, Xlarge.shape[0], l);
+      DMatrix UtXlarge_sub = get_sub_dmatrix(UtXlarge, 0, 0, UtXlarge.shape[0], l);
 
-      time_start=clock();
-      eigenlib_dgemm ("T", "N", 1.0, U, &Xlarge_sub.matrix,
-          0.0, &UtXlarge_sub.matrix);
-      time_UtX+=(clock()-time_start)/(double(CLOCKS_PER_SEC)*60.0);
+      UtXlarge_sub = matrix_mult(U.T, Xlarge_sub);
 
-      gsl_matrix_set_zero (Xlarge);
+      Xlarge = set_zeros_dmatrix(Xlarge);
 
       for (size_t i=0; i<l; i++) {
         DMatrix UtXlarge_col= get_col(UtXlarge, i);           //view
@@ -1749,38 +1755,30 @@ void AnalyzeBimbam (DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Uty,
 
         CalcUab(UtW, Uty, Utx, Uab);
 
-        time_start=clock();
         loglikeparam param1 = loglikeparam(false, ni_test, n_cvt, eval, Uab, ab, 0);
 
         // 3 is before 1.
         if (a_mode==3 || a_mode==4) {
-          CalcRLScore (l_mle_null, param1, beta, se, p_score);
+          CalcRLScore (ni_test, l_mle_null, param1, beta, se, p_score);
         }
 
         if (a_mode==1 || a_mode==4) {
-          CalcLambda ('R', param1, l_min, l_max, n_region,
-          lambda_remle, logl_H1);
-          CalcRLWald (lambda_remle, param1, beta, se, p_wald);
+          CalcLambda ('R', cast(void *)&param1, l_min, l_max, n_region, lambda_remle, logl_H1);
+          CalcRLWald (ni_test, lambda_remle, param1, beta, se, p_wald);
         }
 
         if (a_mode==2 || a_mode==4) {
-          CalcLambda ('L', param1, l_min, l_max, n_region,
-          lambda_mle, logl_H1);
+          CalcLambda ('L', cast(void *)&param1, l_min, l_max, n_region, lambda_mle, logl_H1);
           p_lrt=gsl_cdf_chisq_Q (2.0*(logl_H1-logl_mle_H0), 1);
         }
 
         // Store summary data.
-        SUMSTAT SNPs={beta, se, lambda_remle, lambda_mle,
-          p_wald, p_lrt, p_score};
+        SUMSTAT SNPs = SUMSTAT(beta, se, lambda_remle, lambda_mle, p_wald, p_lrt, p_score);
 
-        sumStat.push_back(SNPs);
+        sumStat ~= SNPs;
       }
     }
   }
-  cout<<endl;
-
-  infile.close();
-  infile.clear();
 
   return;
 }
