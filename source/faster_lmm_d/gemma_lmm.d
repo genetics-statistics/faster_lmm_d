@@ -1269,7 +1269,7 @@ void CalcRLWald(size_t ni_test, double l, loglikeparam params, double beta,
   v_temp.elements = params.eval.elements;
   v_temp = multiply_dmatrix_num(v_temp, l);
   if (params.e_mode == 0) {
-    //gsl_vector_set_all(Hi_eval, 1.0);
+    Hi_eval = set_ones_dmatrix(Hi_eval);
   } else {
     Hi_eval.elements = v_temp.elements.dup;
   }
@@ -1671,7 +1671,7 @@ void AnalyzeBimbam(DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Uty,
   UtXlarge.shape = [inds, msize];
 
   //enforce_msg(Xlarge && UtXlarge, "Xlarge memory check"); // just to be sure
-  //gsl_matrix_set_zero(Xlarge);
+  Xlarge = set_zeros_dmatrix(Xlarge);
   Uab = set_zeros_dmatrix(Uab);
   CalcUab(UtW, Uty, Uab);
 
@@ -1682,114 +1682,108 @@ void AnalyzeBimbam(DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Uty,
   //enforce_msg(infile, "error reading genotype file");
 
   //auto batch_compute = [&](size_t l) { // using a C++ closure
-  //  // Compute SNPs in batch, note the computations are independent per SNP
-  //  gsl_matrix_view Xlarge_sub = gsl_matrix_submatrix(Xlarge, 0, 0, inds, l);
-  //  gsl_matrix_view UtXlarge_sub =
-  //      gsl_matrix_submatrix(UtXlarge, 0, 0, inds, l);
+    // Compute SNPs in batch, note the computations are independent per SNP
+    DMatrix Xlarge_sub = get_sub_dmatrix(Xlarge, 0, 0, inds, l);
+    DMatrix UtXlarge_sub = get_sub_dmatrix(UtXlarge, 0, 0, inds, l);
 
-  //  time_start = clock();
-  //  eigenlib_dgemm("T", "N", 1.0, U, &Xlarge_sub.matrix, 0.0,
-  //                 &UtXlarge_sub.matrix);
-  //  time_UtX += (clock() - time_start) / (double(CLOCKS_PER_SEC) * 60.0);
+    eigenlib_dgemm("T", "N", 1.0, U, &Xlarge_sub.matrix, 0.0,
+                   &UtXlarge_sub.matrix);
 
-  //  gsl_matrix_set_zero(Xlarge);
-  //  for (size_t i = 0; i < l; i++) {
-  //    // for every batch...
-  //    gsl_vector_view UtXlarge_col = gsl_matrix_column(UtXlarge, i);
-  //    gsl_vector_memcpy(Utx, &UtXlarge_col.vector);
+    Xlarge = set_zeros_dmatrix(Xlarge);
+    for (size_t i = 0; i < l; i++) {
+      // for every batch...
+      DMatrix UtXlarge_col = get_col(UtXlarge, i);
+      Utx.elements =  UtXlarge_col.elements.dup;
 
-  //    CalcUab(UtW, Uty, Utx, Uab);
+      CalcUab(UtW, Uty, Utx, Uab);
 
-  //    time_start = clock();
-  //    FUNC_PARAM param1 = {false, ni_test, n_cvt, eval, Uab, ab, 0};
+      loglikeparam param1 = loglikeparam(false, ni_test, n_cvt, eval, Uab, ab, 0);
 
-  //    double lambda_mle = 0, lambda_remle = 0, beta = 0, se = 0, p_wald = 0;
-  //    double p_lrt = 0, p_score = 0;
-  //    double logl_H1 = 0.0;
+      double lambda_mle = 0, lambda_remle = 0, beta = 0, se = 0, p_wald = 0;
+      double p_lrt = 0, p_score = 0;
+      double logl_H1 = 0.0;
 
-  //    // 3 is before 1.
-  //    if (a_mode == 3 || a_mode == 4) {
-  //      CalcRLScore(l_mle_null, param1, beta, se, p_score);
-  //    }
+      // 3 is before 1.
+      if (a_mode == 3 || a_mode == 4) {
+        CalcRLScore(l_mle_null, param1, beta, se, p_score);
+      }
 
-  //    if (a_mode == 1 || a_mode == 4) {
-  //      // for univariate a_mode is 1
-  //      CalcLambda('R', param1, l_min, l_max, n_region, lambda_remle, logl_H1);
-  //      CalcRLWald(lambda_remle, param1, beta, se, p_wald);
-  //    }
+      if (a_mode == 1 || a_mode == 4) {
+        // for univariate a_mode is 1
+        CalcLambda('R', param1, l_min, l_max, n_region, lambda_remle, logl_H1);
+        CalcRLWald(lambda_remle, param1, beta, se, p_wald);
+      }
 
-  //    if (a_mode == 2 || a_mode == 4) {
-  //      CalcLambda('L', param1, l_min, l_max, n_region, lambda_mle, logl_H1);
-  //      p_lrt = gsl_cdf_chisq_Q(2.0 * (logl_H1 - logl_mle_H0), 1);
-  //    }
+      if (a_mode == 2 || a_mode == 4) {
+        CalcLambda('L', param1, l_min, l_max, n_region, lambda_mle, logl_H1);
+        p_lrt = gsl_cdf_chisq_Q(2.0 * (logl_H1 - logl_mle_H0), 1);
+      }
 
-  //    time_opt += (clock() - time_start) / (double(CLOCKS_PER_SEC) * 60.0);
-
-  //    // Store summary data.
-  //    SUMSTAT SNPs = {beta,   se,    lambda_remle, lambda_mle,
-  //                    p_wald, p_lrt, p_score};
-  //    sumStat.push_back(SNPs);
-  //  }
+      // Store summary data.
+      SUMSTAT SNPs = {beta,   se,    lambda_remle, lambda_mle,
+                      p_wald, p_lrt, p_score};
+      sumStat.push_back(SNPs);
+    }
   //};
 
-  //for (size_t t = 0; t < indicator_snp.size(); ++t) {
-  //  // for every SNP
-  //  string line;
-  //  safeGetline(infile, line);
-  //  if (t % d_pace == 0 || t == (ns_total - 1)) {
-  //    ProgressBar("Reading SNPs  ", t, ns_total - 1);
-  //  }
-  //  if (indicator_snp[t] == 0)
-  //    continue;
+  for (size_t t = 0; t < indicator_snp.size(); ++t) {
+    // for every SNP
+    string line;
+    safeGetline(infile, line);
+    if (t % d_pace == 0 || t == (ns_total - 1)) {
+      ProgressBar("Reading SNPs  ", t, ns_total - 1);
+    }
+    if (indicator_snp[t] == 0)
+      continue;
 
-  //  char *ch_ptr = strtok((char *)line.c_str(), " , \t");
-  //  auto snp = string(ch_ptr);
-  //  // check whether SNP is included in gwasnps (used by LOCO)
-  //  if (process_gwasnps && gwasnps.count(snp) == 0)
-  //    continue;
-  //  ch_ptr = strtok(NULL, " , \t");
-  //  ch_ptr = strtok(NULL, " , \t");
+    //char *ch_ptr = strtok((char *)line.c_str(), " , \t");
+    auto snp = to!string(ch_ptr);
+    // check whether SNP is included in gwasnps (used by LOCO)
+    if (process_gwasnps && gwasnps.count(snp) == 0)
+      continue;
+    ch_ptr = strtok(NULL, " , \t");
+    ch_ptr = strtok(NULL, " , \t");
 
-  //  double x_mean = 0.0;
-  //  int c_phen = 0;
-  //  int n_miss = 0;
-  //  gsl_vector_set_zero(x_miss);
-  //  for (size_t i = 0; i < ni_total; ++i) {
-  //    // get the genotypes per individual and compute stats per SNP
-  //    ch_ptr = strtok(NULL, " , \t");
-  //    if (indicator_idv[i] == 0)
-  //      continue;
+    double x_mean = 0.0;
+    int c_phen = 0;
+    int n_miss = 0;
+    x_miss = set_zeros_dmatrix(x_miss);
+    for (size_t i = 0; i < ni_total; ++i) {
+      // get the genotypes per individual and compute stats per SNP
+      ch_ptr = strtok(NULL, " , \t");
+      if (indicator_idv[i] == 0)
+        continue;
 
-  //    if (strcmp(ch_ptr, "NA") == 0) {
-  //      gsl_vector_set(x_miss, c_phen, 0.0);
-  //      n_miss++;
-  //    } else {
-  //      double geno = atof(ch_ptr);
+      if (strcmp(ch_ptr, "NA") == 0) {
+        x_miss.elements[c_phen] = 0.0;
+        n_miss++;
+      } else {
+        double geno = atof(ch_ptr);
 
-  //      gsl_vector_set(x, c_phen, geno);
-  //      gsl_vector_set(x_miss, c_phen, 1.0);
-  //      x_mean += geno;
-  //    }
-  //    c_phen++;
-  //  }
+        x.elements[c_phen] =  geno;
+        x_miss.elements[c_phen] = 1.0;
+        x_mean += geno;
+      }
+      c_phen++;
+    }
 
-  //  x_mean /= (double)(ni_test - n_miss);
+    x_mean /= to!double(ni_test - n_miss);
 
-  //  for (size_t i = 0; i < ni_test; ++i) {
-  //    if (gsl_vector_get(x_miss, i) == 0) {
-  //      gsl_vector_set(x, i, x_mean);
-  //    }
-  //  }
-  //  // copy genotype values for SNP into Xlarge cache
-  //  gsl_vector_view Xlarge_col = gsl_matrix_column(Xlarge, c % msize);
-  //  gsl_vector_memcpy(&Xlarge_col.vector, x);
-  //  c++; // count SNPs going in
+    for (size_t i = 0; i < ni_test; ++i) {
+      if (x_miss.elements[i] == 0) {
+        x_miss.elements[i] = x_mean;
+      }
+    }
+    // copy genotype values for SNP into Xlarge cache
+    DMatrix Xlarge_col = get_col(Xlarge, c % msize);
+    //gsl_vector_memcpy(&Xlarge_col.vector, x);
+    c++; // count SNPs going in
 
-  //  if (c == msize)
-  //    batch_compute(msize);
-  //}
-  //batch_compute(c % msize);
-  // cout << "Counted SNPs " << c << " sumStat " << sumStat.size() << endl;
+    if (c == msize)
+      batch_compute(msize);
+  }
+  batch_compute(c % msize);
+  //cout << "Counted SNPs " << c << " sumStat " << sumStat.size() << endl;
   return;
 }
 
