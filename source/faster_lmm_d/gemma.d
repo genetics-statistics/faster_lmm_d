@@ -598,10 +598,17 @@ void fit_model(Param cPar, DMatrix U, DMatrix eval, DMatrix  UtW, DMatrix UtY, D
       //assert(!std::isnan(se_B.data[0]));
       writeln("==============cPar.l_mle_null=======================");
       writeln(cPar.l_mle_null);
+      writeln(cPar.logl_mle_H0);
 
       CalcLmmVgVeBeta(eval, UtW, UtY_col, cPar.l_mle_null,
                       cPar.vg_mle_null, cPar.ve_mle_null, beta,
                       se_beta);
+
+      writeln("================CalcLmmVgVeBeta==========================");
+      writeln("vg_mle_null => ",cPar.vg_mle_null);
+      writeln("ve_mle_null => ",cPar.ve_mle_null);
+      writeln("beta => ", beta);
+      writeln("se_beta => ", se_beta);
 
       //assert(!std::isnan(UtY.data[0]));
       //assert(!std::isnan(B.data[0]));
@@ -622,9 +629,20 @@ void fit_model(Param cPar, DMatrix U, DMatrix eval, DMatrix  UtW, DMatrix UtY, D
 
       CalcLambda('R', eval, UtW, UtY_col, cPar.l_min, cPar.l_max,
                  cPar.n_region, cPar.l_remle_null, cPar.logl_remle_H0);
+
+      writeln("==============cPar.l_remle_null=======================");
+      writeln(cPar.l_remle_null);
+      writeln(cPar.logl_remle_H0);
+
       CalcLmmVgVeBeta(eval, UtW, UtY_col, cPar.l_remle_null,
                       cPar.vg_remle_null, cPar.ve_remle_null, beta,
                       se_beta);
+
+      writeln("================CalcLmmVgVeBeta==========================");
+      writeln("vg_mle_null => ",cPar.vg_remle_null);
+      writeln("ve_mle_null => ",cPar.ve_remle_null);
+      writeln("beta => ", beta);
+      writeln("se_beta => ", se_beta);
 
       //cPar.beta_remle_null.clear();
       //cPar.se_beta_remle_null.clear();

@@ -14,6 +14,7 @@ import std.exception;
 import std.math;
 import std.algorithm: min, max, reduce;
 alias mlog = std.math.log;
+import std.process;
 import std.stdio;
 import std.typecons;
 import std.experimental.logger;
@@ -269,14 +270,11 @@ void CalcPPPab(const size_t n_cvt, const size_t e_mode,
                const DMatrix HiHiHi_eval, const DMatrix Uab,
                const DMatrix ab, const DMatrix Pab,
                const DMatrix PPab, ref DMatrix PPPab) {
-  writeln("in CalcPPPab");
   size_t index_ab, index_aw, index_bw, index_ww;
   double p3_ab;
-  double ps3_ab, ps_aw, ps_bw, ps_ww, ps2_aw, ps2_bw, ps2_ww, ps3_aw, ps3_bw,
-      ps3_ww;
+  double ps3_ab, ps_aw, ps_bw, ps_ww, ps2_aw, ps2_bw, ps2_ww, ps3_aw, ps3_bw, ps3_ww;
   PPPab = set_zeros_dmatrix(PPPab);
-  writeln(PPPab.shape);
-  writeln(HiHiHi_eval.shape);
+
   for (size_t p = 0; p <= n_cvt + 1; ++p) {
     for (size_t a = p + 1; a <= n_cvt + 2; ++a) {
       for (size_t b = a; b <= n_cvt + 2; ++b) {
@@ -317,7 +315,6 @@ void CalcPPPab(const size_t n_cvt, const size_t e_mode,
       }
     }
   }
-  writeln("out of PPPab");
   return;
 }
 
@@ -360,7 +357,7 @@ struct loglikeparam{
 
 
 double LogL_f(double l, void* params) {
-  writeln("in LogL_f");
+
   auto ptr = cast(loglikeparam *)params;
   loglikeparam p = *ptr;
 
@@ -414,12 +411,11 @@ double LogL_f(double l, void* params) {
   double P_yy = accessor(Pab, nc_total, index_yy);
   f = c - 0.5 * logdet_h - 0.5 * to!double(ni_test) * mlog(P_yy);
 
-  writeln("out of logL_f");
   return f;
 }
 
 double LogRL_f(double l, void* params) {
-  writeln("in LogRL_f");
+
   auto ptr = cast(loglikeparam *)params;
   loglikeparam p = *ptr;
 
@@ -484,12 +480,11 @@ double LogRL_f(double l, void* params) {
   double c = 0.5 * df * (mlog(df) - mlog(2 * M_PI) - 1.0);
   f = c - 0.5 * logdet_h - 0.5 * logdet_hiw - 0.5 * df * mlog(P_yy);
 
-  writeln("out of LogRL_f");
   return f;
 }
 
 extern(C) double LogRL_dev1(double l, void* params) {
-  writeln("in LogRL_dev1");
+
   auto ptr = cast(loglikeparam *)params;
   loglikeparam p = *ptr;
 
@@ -567,12 +562,10 @@ extern(C) double LogRL_dev1(double l, void* params) {
 
   dev1 = -0.5 * trace_PK + 0.5 * df * yPKPy / P_yy;
 
-  writeln("out of LogRL_dev1");
   return dev1;
 }
 
 extern(C) double LogL_dev1(double l, void* params) {
-  writeln("in LogL_dev1");
   auto ptr = cast(loglikeparam *)params;
   loglikeparam p = *ptr;
 
@@ -620,7 +613,6 @@ extern(C) double LogL_dev1(double l, void* params) {
 
   v_temp = set_ones_dmatrix(v_temp);
   trace_Hi = matrix_mult(Hi_eval, v_temp.T).elements[0];
-  writeln("trace_Hi  = >", trace_Hi);
 
   if (p.e_mode != 0) {
     trace_Hi = to!double(ni_test) - trace_Hi;
@@ -636,12 +628,6 @@ extern(C) double LogL_dev1(double l, void* params) {
   double P_yy = accessor(Pab, nc_total, index_yy);
   double PP_yy = accessor(PPab, nc_total, index_yy);
   double yPKPy = (P_yy - PP_yy) / l;
-  writeln("nc_total-> ",  nc_total);
-  writeln("index_yy -> ", index_yy);
-  writeln("l -> ", l);
-  writeln("P_yy -> ", P_yy);
-  writeln("PP_yy -> ", PP_yy);
-  writeln("yPKPy -> ", yPKPy);
 
   dev1 = -0.5 * trace_HiK + 0.5 * to!double(ni_test) * yPKPy / P_yy;
 
@@ -649,7 +635,7 @@ extern(C) double LogL_dev1(double l, void* params) {
 }
 
 extern(C) double LogRL_dev2(double l, void* params) {
-  writeln("In LogRL_dev2");
+
   auto ptr = cast(loglikeparam *)params;
   loglikeparam p = *ptr;
 
@@ -699,15 +685,12 @@ extern(C) double LogRL_dev2(double l, void* params) {
   v_temp = add_dmatrix_num(v_temp, 1.0);
   Hi_eval = divide_dmatrix(Hi_eval, v_temp);
 
-  writeln(534);
   HiHi_eval.elements = Hi_eval.elements.dup;
-  writeln(536);
   HiHi_eval = slow_multiply_dmatrix(HiHi_eval, Hi_eval);
-  writeln(538);
 
   HiHiHi_eval.elements = HiHi_eval.elements.dup;
   HiHiHi_eval = slow_multiply_dmatrix(HiHiHi_eval, Hi_eval);
-  writeln(541);
+
   v_temp = set_ones_dmatrix(v_temp);
   trace_Hi = matrix_mult(Hi_eval, v_temp.T).elements[0];
   trace_HiHi = matrix_mult(HiHi_eval, v_temp.T).elements[0];
@@ -745,13 +728,10 @@ extern(C) double LogRL_dev2(double l, void* params) {
   dev2 = 0.5 * trace_PKPK -
          0.5 * df * (2.0 * yPKPKPy * P_yy - yPKPy * yPKPy) / (P_yy * P_yy);
 
-  writeln("Out of LogRL_dev2");
-
   return dev2;
 }
 
 extern(C) double LogL_dev2(double l, void* params) {
-  writeln("In LogL_dev2");
 
   auto ptr = cast(loglikeparam *)params;
   loglikeparam p = *ptr;
@@ -830,15 +810,13 @@ extern(C) double LogL_dev2(double l, void* params) {
          0.5 * to!double(ni_test) * (2.0 * yPKPKPy * P_yy - yPKPy * yPKPy) /
              (P_yy * P_yy);
 
-  writeln("Out of LogL_dev2");
-
   return dev2;
 }
 
 extern(C) void LogL_dev12(double l, void *params, double *dev1, double *dev2) {
 
-  writeln("In LogL_dev12, l =" , l);
-  writeln(l);
+  //writeln("In LogL_dev12, l =" , l);
+  //writeln(l);
 
   auto ptr = cast(loglikeparam *)params;
   loglikeparam p = *ptr;
@@ -875,7 +853,6 @@ extern(C) void LogL_dev12(double l, void *params, double *dev1, double *dev2) {
   DMatrix v_temp;
   v_temp.shape = [1, p.eval.elements.length];
   v_temp.elements = p.eval.elements.dup;
-  writeln(Hi_eval);
 
   v_temp = multiply_dmatrix_num(v_temp, l);
 
@@ -922,14 +899,11 @@ extern(C) void LogL_dev12(double l, void *params, double *dev1, double *dev2) {
   *dev2 = 0.5 * trace_HiKHiK -
           0.5 * to!double(ni_test) * (2.0 * yPKPKPy * P_yy - yPKPy * yPKPy) /
               (P_yy * P_yy);
-  writeln("Out of LogL_dev12");
 
   return;
 }
 
 extern(C) void LogRL_dev12(double l, void* params, double* dev1, double* dev2) {
-
-  writeln("In LogRL_dev12");
 
   auto ptr = cast(loglikeparam *)params;
   loglikeparam p = *ptr;
@@ -1025,7 +999,6 @@ extern(C) void LogRL_dev12(double l, void* params, double* dev1, double* dev2) {
   *dev1 = -0.5 * trace_PK + 0.5 * df * yPKPy / P_yy;
   *dev2 = 0.5 * trace_PKPK -
           0.5 * df * (2.0 * yPKPKPy * P_yy - yPKPy * yPKPy) / (P_yy * P_yy);
-  writeln("Out of LogRL_dev12");
 
   return;
 }
@@ -1068,14 +1041,12 @@ void CalcLambda(const char func_name, void* params, const double l_min,
     if (dev1_l * dev1_h <= 0) {
       writeln("dev1_l = ", dev1_l);
       writeln("dev1_h = ", dev1_h);
-      writeln("lambda_lh size up");
       lambda_lh ~= Lambda_tup(lambda_l, lambda_h);
     }
   }
 
   // If derivates do not change signs in any interval.
   if (lambda_lh.length == 0) {
-    writeln("lambda_lh has length = 0");
     if (func_name == 'R' || func_name == 'r') {
       logf_l = LogRL_f(l_min, params);
       logf_h = LogRL_f(l_max, params);
@@ -1092,7 +1063,6 @@ void CalcLambda(const char func_name, void* params, const double l_min,
       logf = logf_h;
     }
   } else {
-    writeln("lambda_lh has length non-zero", lambda);
     // If derivates change signs.
     int status;
     int iter = 0, max_iter = 100;
@@ -1137,7 +1107,6 @@ void CalcLambda(const char func_name, void* params, const double l_min,
         iter++;
         status = gsl_root_fsolver_iterate(s_f);
         l = gsl_root_fsolver_root(s_f);
-        writeln("value of l = ", l);
         lambda_l = gsl_root_fsolver_x_lower(s_f);
         lambda_h = gsl_root_fsolver_x_upper(s_f);
         status = gsl_root_test_interval(lambda_l, lambda_h, 0, 1e-1);
@@ -1151,7 +1120,6 @@ void CalcLambda(const char func_name, void* params, const double l_min,
         iter++;
         status = gsl_root_fdfsolver_iterate(s_fdf);
         l_temp = l;
-        writeln("value of l = ", l);
         l = gsl_root_fdfsolver_root(s_fdf);
         status = gsl_root_test_delta(l, l_temp, 0, 1e-5);
       } while (status == GSL_CONTINUE && iter < max_iter && l > l_min &&
@@ -1222,10 +1190,10 @@ void CalcLambda(char func_name, DMatrix eval,
   size_t n_index = (n_cvt + 2 + 1) * (n_cvt + 2) / 2;
 
   DMatrix Uab = zeros_dmatrix(ni_test, n_index);
-  writeln(1001);
+
   DMatrix ab;
   ab.shape = [1, n_index];
-  writeln(1004);
+
   CalcUab(UtW, Uty, Uab);
   ab.elements = [6.901535246e-295,
   6.901535246e-295,
@@ -1233,21 +1201,13 @@ void CalcLambda(char func_name, DMatrix eval,
   4.67120702e-295,
   4.671149335e-295,
   1.630416631e-307];
-  writeln(ab);
+
   Calcab(UtW, Uty, ab);
 
   loglikeparam param0 = loglikeparam(true, ni_test, n_cvt, eval, Uab, ab, 0);
-  writeln(1010);
-
-  writeln("==============lambda 1052====================");
-  writeln(lambda);
-  writeln("==============lambda====================");
 
   CalcLambda(func_name, cast(void *)&param0, l_min, l_max, n_region, lambda, logl_H0);
 
-  writeln("==============lambda 1058====================");
-  writeln(lambda);
-  writeln("==============lambda====================");
   return;
 }
 
@@ -1340,7 +1300,6 @@ void CalcRLScore(size_t ni_test, double l, loglikeparam params, double beta,
 }
 
 void CalcUab(DMatrix UtW, DMatrix Uty, ref DMatrix Uab) {
-  writeln("in CalcUab");
   size_t index_ab;
   size_t n_cvt = UtW.shape[1];
 
@@ -1373,17 +1332,11 @@ void CalcUab(DMatrix UtW, DMatrix Uty, ref DMatrix Uab) {
         DMatrix UtW_col = get_col(UtW, b - 1);
         Uab_col.elements = UtW_col.elements.dup;
       }
-      //writeln(Uab_col.shape);
-      //writeln(Uab_col.elements.length);
-
-      //writeln(u_a.shape);
-      //writeln(u_a.elements.length);
 
       Uab_col = slow_multiply_dmatrix(Uab_col, u_a);
       Uab = set_col(Uab, index_ab, Uab_col);
     }
   }
-  writeln("out of CalcUab");
   return;
 }
 
@@ -1643,6 +1596,10 @@ void AnalyzeBimbam (DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Uty,
   //  //cout<<"error reading genotype file:"<<file_geno<<endl;
   //  return;
   //}
+
+  string filename = "/home/prasun/dev/faster_lmm_d/data/gemma/mouse_hs1940.geno.txt.gz";
+  auto pipe = pipeShell("gunzip -c " ~ filename);
+  File input = pipe.stdout;
 
   SUMSTAT[] sumStat;
 
