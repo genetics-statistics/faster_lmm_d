@@ -18,6 +18,7 @@ import std.process;
 import std.stdio;
 import std.typecons;
 import std.experimental.logger;
+import std.string;
 
 import faster_lmm_d.dmatrix;
 import faster_lmm_d.optmatrix;
@@ -1588,7 +1589,7 @@ struct GWAS_SNPs{
   bool size;
 }
 
-void AnalyzeBimbam (DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Uty,
+void AnalyzeBimbam (Param cPar, DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Uty,
                         DMatrix W, DMatrix y, GWAS_SNPs gwasnps,
                         size_t n_cvt, size_t LMM_BATCH_SIZE = 100) {
   //igzstream infile (file_geno.c_str(), igzstream::in);
@@ -1603,23 +1604,20 @@ void AnalyzeBimbam (DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Uty,
 
   SUMSTAT[] sumStat;
 
-  string line;
-  char[] ch_ptr;
-
   double lambda_mle=0, lambda_remle=0, beta=0, se=0, p_wald=0;
   double p_lrt=0, p_score=0;
   double logl_H1=0.0;
   int n_miss, c_phen;
   double geno, x_mean;
 
-  size_t ni_test = 10;
-  size_t ni_total = 100;
-  size_t n_region = 0;
+  size_t ni_test = cPar.ni_test;
+  size_t ni_total = cPar.ni_total;
+  size_t n_region = cPar.n_region;
   int a_mode = 1;
-  double l_min = 0;
-  double l_mle_null = 0;
-  double l_max = 100000;
-  double logl_mle_H0 = 0;
+  double l_min = cPar.l_min;
+  double l_mle_null = cPar.l_mle_null;
+  double l_max = cPar.l_max;
+  double logl_mle_H0 = cPar.logl_mle_H0;
 
   double[] indicator_snp;
   double[] indicator_idv;
@@ -1629,6 +1627,7 @@ void AnalyzeBimbam (DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Uty,
 
   DMatrix x;
   x.shape = [1, U.shape[0]];
+  x = set_zeros_dmatrix(x);
   DMatrix x_miss;
   x_miss.shape = [1, U.shape[0]];
   DMatrix Utx;
@@ -1655,19 +1654,20 @@ void AnalyzeBimbam (DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Uty,
     if (indicator_snp[t]==0) {continue;}
     t_last++;
   }
-  for (size_t t=0; t<indicator_snp.length; ++t) {
-    //!safeGetline(infile, line).eof();
-    if (indicator_snp[t]==0) {continue;}
+  //for (size_t t=0; t<indicator_snp.length; ++t) {
+  //  !safeGetline(infile, line).eof();
+  int t = 0;
+  foreach (line ; input.byLine) {
+   
+    //if (indicator_snp[t]==0) {continue;}
 
-    //ch_ptr=strtok ((char *)line.c_str(), " , \t");
-    //ch_ptr=strtok (NULL, " , \t");
-    //ch_ptr=strtok (NULL, " , \t");
+    auto chr = to!string(line).split(",")[3..$];
 
     x_mean=0.0; c_phen=0; n_miss=0;
     x_miss = set_zeros_dmatrix(x_miss);
     for (size_t i=0; i<ni_total; ++i) {
-      //ch_ptr=strtok (NULL, " , \t");
-      if (indicator_idv[i]==0) {continue;}
+      auto ch_ptr = to!string(chr[i].strip());
+      //if (indicator_idv[i]==0) {continue;}
 
       if (ch_ptr == "NA") {
         x_miss.elements[c_phen] = 0.0;
@@ -1695,7 +1695,7 @@ void AnalyzeBimbam (DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Uty,
     Xlarge_col.elements = x.elements.dup;
     c++;
 
-    if (c%msize==0 || c==t_last) {
+    if (c % msize==0 || c==t_last) {
       size_t l=0;
       if (c%msize==0) {l=msize;} else {l=c%msize;}
 
@@ -1707,7 +1707,10 @@ void AnalyzeBimbam (DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Uty,
       Xlarge = set_zeros_dmatrix(Xlarge);
 
       for (size_t i=0; i<l; i++) {
+
+        writeln("1711");
         DMatrix UtXlarge_col= get_col(UtXlarge, i);           //view
+        writeln("1713");
         Utx.elements = UtXlarge_col.elements.dup;
 
         CalcUab(UtW, Uty, Utx, Uab);
@@ -1735,6 +1738,7 @@ void AnalyzeBimbam (DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Uty,
         sumStat ~= SNPs;
       }
     }
+    t++;
   }
 
   return;

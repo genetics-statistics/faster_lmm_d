@@ -697,7 +697,7 @@ void fit_model(Param cPar, DMatrix U, DMatrix eval, DMatrix  UtW, DMatrix UtY, D
 
     GWAS_SNPs setGWASnps;
 
-    AnalyzeBimbam(U, eval, UtW, UtY_col, W, Y_col, setGWASnps, 10);
+    AnalyzeBimbam(cPar, U, eval, UtW, UtY_col, W, Y_col, setGWASnps, 10);
 
     // Fit LMM or mvLMM (w. LOCO)
     if (cPar.a_mode == 1 || cPar.a_mode == 2 || cPar.a_mode == 3 ||
@@ -721,7 +721,7 @@ void fit_model(Param cPar, DMatrix U, DMatrix eval, DMatrix  UtW, DMatrix UtY, D
           //cLmm.Analyzebgen(U, eval, UtW, UtY_col, W, Y_col);
         } else {
           if (cPar.file_gxe.empty()) {
-            AnalyzeBimbam(U, eval, UtW, UtY_col, W, Y_col, setGWASnps, 10);
+            AnalyzeBimbam(cPar, U, eval, UtW, UtY_col, W, Y_col, setGWASnps, 10);
           } else {
             //cLmm.AnalyzeBimbamGXE(U, eval, UtW, UtY_col, W, Y_col, env);
           }
