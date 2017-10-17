@@ -417,6 +417,8 @@ double LogL_f(double l, void* params) {
 
 double LogRL_f(double l, void* params) {
 
+  writeln("SUPP" , l);
+
   auto ptr = cast(loglikeparam *)params;
   loglikeparam p = *ptr;
 
@@ -445,13 +447,13 @@ double LogRL_f(double l, void* params) {
   Hi_eval.shape = [1, p.eval.elements.length];
   DMatrix v_temp;
   v_temp.shape = [1, p.eval.elements.length];
-  v_temp.elements = p.eval.elements;
+  v_temp.elements = p.eval.elements.dup;
 
   v_temp = multiply_dmatrix_num(v_temp, l);
   if (p.e_mode == 0) {
     Hi_eval = set_ones_dmatrix(Hi_eval);
   } else {
-    Hi_eval.elements = v_temp.elements;
+    Hi_eval.elements = v_temp.elements.dup;
   }
   v_temp = add_dmatrix_num(v_temp, 1.0);
   Hi_eval = divide_dmatrix(Hi_eval, v_temp);
@@ -475,12 +477,14 @@ double LogRL_f(double l, void* params) {
     d = accessor(Iab, i, index_ww);
     logdet_hiw -= mlog(d);
   }
+  writeln(484);
   index_ww = GetabIndex(n_cvt + 2, n_cvt + 2, n_cvt);
   double P_yy = accessor(Pab, nc_total, index_ww);
+  writeln(P_yy);
 
   double c = 0.5 * df * (mlog(df) - mlog(2 * M_PI) - 1.0);
   f = c - 0.5 * logdet_h - 0.5 * logdet_hiw - 0.5 * df * mlog(P_yy);
-
+  writeln("LOL");
   return f;
 }
 
@@ -1025,8 +1029,8 @@ void CalcLambda(const char func_name, void* params, const double l_min,
   //writeln(">>>>>>>>>>>>n_region = ", n_region);
   //writeln("l_min = ", l_min);
   //writeln("l_max = ", l_max);
-  //writeln("lambda_interval = ", lambda_interval);
   double dev1_l, dev1_h, logf_l, logf_h;
+  writeln("lambda_interval = ", lambda_interval);
   for (size_t i = 0; i < n_region; ++i) {
     lambda_l = l_min * exp(lambda_interval * i);
     lambda_h = l_min * exp(lambda_interval * (i + 1.0));
@@ -1498,7 +1502,6 @@ void CalcLmmVgVeBeta(DMatrix eval, DMatrix UtW,
   int nrhs = n;
   //auto arr2 = arr.dup; // to store the result
   auto ipiv = new int[min(m,n)+1];
-  writeln(WHiy);
 
   //int i_cols = to!int(cols);
   int lda = n;
@@ -1507,9 +1510,6 @@ void CalcLmmVgVeBeta(DMatrix eval, DMatrix UtW,
   //writeln("yoy================+++++++++++++++++++++++++++++++++++++++o");
   enforce(LAPACKE_dgesv( 101, n, n, WHiW.elements.ptr, lda, ipiv.ptr,
                       beta.elements.ptr,  ldb ) == 0);
-
-  writeln(WHiW);
-  writeln(WHiy);
   //exit(0);
 
   Vbeta = inverse(WHiy);
@@ -1529,8 +1529,6 @@ void CalcLmmVgVeBeta(DMatrix eval, DMatrix UtW,
   4.671149335e-295,
   1.630416631e-307];
   Calcab(UtW, Uty, ab);
-  writeln(ab);
-  //exit(0);
   CalcPab(n_cvt, 0, Hi_eval, Uab, ab, Pab);
 
   size_t index_yy = GetabIndex(n_cvt + 2, n_cvt + 2, n_cvt);
@@ -1550,7 +1548,6 @@ void CalcLmmVgVeBeta(DMatrix eval, DMatrix UtW,
   //gsl_permutation_free(pmt);
   writeln("out of CalcLmmVgVeBeta");
 
-  writeln(Vbeta);
 
   return;
 }
@@ -1606,11 +1603,11 @@ void AnalyzeBimbam (Param cPar, DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Ut
 
   double lambda_mle=0, lambda_remle=0, beta=0, se=0, p_wald=0;
   double p_lrt=0, p_score=0;
-  double logl_H1=0.0;
   int n_miss, c_phen;
   double geno, x_mean;
 
-  size_t ni_test = cPar.ni_test;
+  double logl_H1=0.0;
+  size_t ni_test = UtW.shape[0];
   size_t ni_total = cPar.ni_total;
   size_t n_region = cPar.n_region;
   int a_mode = 1;
@@ -1638,12 +1635,13 @@ void AnalyzeBimbam (Param cPar, DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Ut
   ab.shape = [1, n_index];
 
   // Create a large matrix.
-  size_t msize=10000;
+  size_t msize=1000;
   DMatrix Xlarge;
   Xlarge.shape = [U.shape[0], msize];
   DMatrix UtXlarge;
   UtXlarge.shape = [U.shape[0], msize];
   Xlarge = set_zeros_dmatrix(Xlarge);
+  UtXlarge = set_zeros_dmatrix(UtXlarge);
 
   Uab = set_zeros_dmatrix(Uab);
   CalcUab (UtW, Uty, Uab);
@@ -1701,6 +1699,7 @@ void AnalyzeBimbam (Param cPar, DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Ut
 
       DMatrix Xlarge_sub = get_sub_dmatrix(Xlarge, 0, 0, Xlarge.shape[0], l);
       DMatrix UtXlarge_sub = get_sub_dmatrix(UtXlarge, 0, 0, UtXlarge.shape[0], l);
+      writeln("l = ", l);
 
       UtXlarge_sub = matrix_mult(U.T, Xlarge_sub);
 
@@ -1708,22 +1707,32 @@ void AnalyzeBimbam (Param cPar, DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Ut
 
       for (size_t i=0; i<l; i++) {
 
-        writeln("1711");
         DMatrix UtXlarge_col= get_col(UtXlarge, i);           //view
-        writeln("1713");
         Utx.elements = UtXlarge_col.elements.dup;
 
         CalcUab(UtW, Uty, Utx, Uab);
+
+        ab = set_zeros_dmatrix(ab);
 
         loglikeparam param1 = loglikeparam(false, ni_test, n_cvt, eval, Uab, ab, 0);
 
         // 3 is before 1.
         if (a_mode==3 || a_mode==4) {
+
           CalcRLScore (ni_test, l_mle_null, param1, beta, se, p_score);
         }
 
         if (a_mode==1 || a_mode==4) {
+          writeln("ni_test", ni_test);
+          writeln("n_cvt", n_cvt);
+          writeln("calculating CalcRLWald");
+          writeln("l_min -> ", l_min);
+          writeln("l_max -> ", l_max);
+          writeln("n_region -> ", n_region);
+          writeln("lambda_remle -> ", lambda_remle);
+          writeln("logl_H1 -> ", logl_H1);
           CalcLambda ('R', cast(void *)&param1, l_min, l_max, n_region, lambda_remle, logl_H1);
+          writeln(logl_H1);
           CalcRLWald (ni_test, lambda_remle, param1, beta, se, p_wald);
         }
 
