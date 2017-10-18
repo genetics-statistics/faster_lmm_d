@@ -31,6 +31,24 @@ import gsl.math;
 import gsl.min;
 import gsl.roots;
 
+
+DMatrix read_matrix_from_file2(string filename){
+  string input = to!string(std.file.read(filename));
+
+  string[] lines = input.split("\n");
+  size_t cols;
+  size_t rows = lines.length - 1;
+  double[] elements;
+  foreach(linex; lines[0..$-1]){
+    auto line = linex.strip();
+    string[] items = line.split("\t");
+    foreach(item; items){
+      elements ~= to!double(item) ;
+    }
+  }
+  return DMatrix([rows, elements.length/rows], elements);
+}
+
 void CenterMatrix(ref DMatrix G) {
   //DMatrix Gw = gsl_vector_alloc(G.shape[0]);
   writeln("CenterMatrix");
@@ -484,12 +502,12 @@ double LogRL_f(double l, void* params) {
 
   double c = 0.5 * df * (mlog(df) - mlog(2 * M_PI) - 1.0);
   f = c - 0.5 * logdet_h - 0.5 * logdet_hiw - 0.5 * df * mlog(P_yy);
-  writeln("LOL");
   return f;
 }
 
 extern(C) double LogRL_dev1(double l, void* params) {
 
+  writeln("In LogRL_dev1");
   auto ptr = cast(loglikeparam *)params;
   loglikeparam p = *ptr;
 
@@ -503,8 +521,10 @@ extern(C) double LogRL_dev1(double l, void* params) {
     nc_total = n_cvt;
     df = to!double(ni_test) - to!double(n_cvt);
   } else {
-    nc_total = n_cvt + 1;
-    df = to!double(ni_test) - to!double(n_cvt) - 1.0;
+    nc_total =  n_cvt + 1;
+    df =  to!double(ni_test) - to!double(n_cvt) - 1.0;
+    //writeln("nc_total --> ", nc_total);
+    //writeln("df --> ", df);
   }
 
   double dev1 = 0.0, trace_Hi = 0.0;
@@ -522,7 +542,7 @@ extern(C) double LogRL_dev1(double l, void* params) {
   HiHi_eval.shape = [1, p.eval.elements.length];
   DMatrix v_temp;
   v_temp.shape = [1, p.eval.elements.length];
-  v_temp.elements = p.eval.elements;
+  v_temp.elements = p.eval.elements.dup;
 
   v_temp = multiply_dmatrix_num(v_temp, l);
   if (p.e_mode == 0) {
@@ -534,7 +554,8 @@ extern(C) double LogRL_dev1(double l, void* params) {
   v_temp = add_dmatrix_num(v_temp, 1.0);
   Hi_eval = divide_dmatrix(Hi_eval, v_temp);
 
-
+  nan_counter(p.Uab);
+  nan_counter(p.ab);
   HiHi_eval.elements =  Hi_eval.elements.dup;
   HiHi_eval = slow_multiply_dmatrix(HiHi_eval, Hi_eval);
 
@@ -568,6 +589,7 @@ extern(C) double LogRL_dev1(double l, void* params) {
   dev1 = -0.5 * trace_PK + 0.5 * df * yPKPy / P_yy;
 
   return dev1;
+
 }
 
 extern(C) double LogL_dev1(double l, void* params) {
@@ -1044,6 +1066,7 @@ void CalcLambda(const char func_name, void* params, const double l_min,
     }
 
     if (dev1_l * dev1_h <= 0) {
+      writeln("lambda_lh size up");
       writeln("dev1_l = ", dev1_l);
       writeln("dev1_h = ", dev1_h);
       lambda_lh ~= Lambda_tup(lambda_l, lambda_h);
@@ -1345,7 +1368,7 @@ void CalcUab(DMatrix UtW, DMatrix Uty, ref DMatrix Uab) {
   return;
 }
 
-void CalcUab(DMatrix UtW, DMatrix Uty, DMatrix Utx, DMatrix Uab) {
+void CalcUab(DMatrix UtW, DMatrix Uty, DMatrix Utx, ref DMatrix Uab) {
   size_t index_ab;
   size_t n_cvt = UtW.shape[1];
 
@@ -1363,6 +1386,7 @@ void CalcUab(DMatrix UtW, DMatrix Uty, DMatrix Utx, DMatrix Uab) {
     }
 
     slow_multiply_dmatrix(Uab_col, Utx);
+    Uab = set_col(Uab, index_ab, Uab_col);
   }
 
   return;
@@ -1595,9 +1619,19 @@ void AnalyzeBimbam (Param cPar, DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Ut
   //  return;
   //}
 
+  writeln("indicator_idv");
+  DMatrix indicator_idv = read_matrix_from_file2("/home/prasun/dev/faster_lmm_d/data/gemma/indicator_idv.txt");
+  writeln("indicator_snp");
+  DMatrix indicator_snp = read_matrix_from_file2("/home/prasun/dev/faster_lmm_d/data/gemma/indicator_snp.txt");
+
+  writeln(indicator_idv.shape);
+  writeln(indicator_snp.shape);
+
   string filename = "/home/prasun/dev/faster_lmm_d/data/gemma/mouse_hs1940.geno.txt.gz";
   auto pipe = pipeShell("gunzip -c " ~ filename);
   File input = pipe.stdout;
+
+  n_cvt = 1;
 
   SUMSTAT[] sumStat;
 
@@ -1608,7 +1642,7 @@ void AnalyzeBimbam (Param cPar, DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Ut
 
   double logl_H1=0.0;
   size_t ni_test = UtW.shape[0];
-  size_t ni_total = cPar.ni_total;
+  size_t ni_total = 1940;
   size_t n_region = cPar.n_region;
   int a_mode = 1;
   double l_min = cPar.l_min;
@@ -1616,8 +1650,19 @@ void AnalyzeBimbam (Param cPar, DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Ut
   double l_max = cPar.l_max;
   double logl_mle_H0 = cPar.logl_mle_H0;
 
-  double[] indicator_snp;
-  double[] indicator_idv;
+
+  writeln("ni_test =======> ", ni_test);
+  writeln("ni_total =======> ", ni_total);
+  writeln("n_region =======> ", n_region);
+  writeln("l_mle_null =======> ", l_mle_null);
+  writeln("l_remle_null =======> ", cPar.l_remle_null);
+  writeln("l_max =======> ", l_max);
+  writeln("l_min =======> ", l_min);
+  writeln("logl_mle_H0 =======> ", logl_mle_H0);
+  //writeln("lambda_mle =======> ", lambda_mle);
+  //writeln("lambda_remle =======> ", lambda_remle);
+
+
 
   // Calculate basic quantities.
   size_t n_index=(n_cvt+2+1)*(n_cvt+2)/2;
@@ -1629,13 +1674,14 @@ void AnalyzeBimbam (Param cPar, DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Ut
   x_miss.shape = [1, U.shape[0]];
   DMatrix Utx;
   Utx.shape = [1, U.shape[1]];
+  Utx = set_zeros_dmatrix(Utx);
   DMatrix Uab;
   Uab.shape = [U.shape[1], n_index];
   DMatrix ab;
   ab.shape = [1, n_index];
 
   // Create a large matrix.
-  size_t msize=1000;
+  size_t msize=10000;
   DMatrix Xlarge;
   Xlarge.shape = [U.shape[0], msize];
   DMatrix UtXlarge;
@@ -1648,8 +1694,8 @@ void AnalyzeBimbam (Param cPar, DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Ut
 
   //start reading genotypes and analyze
   size_t c=0, t_last=0;
-  for (size_t t=0; t<indicator_snp.length; ++t) {
-    if (indicator_snp[t]==0) {continue;}
+  for (size_t t=0; t<indicator_snp.elements.length; ++t) {
+    if (indicator_snp.elements[t]==0) {continue;}
     t_last++;
   }
   //for (size_t t=0; t<indicator_snp.length; ++t) {
@@ -1665,7 +1711,7 @@ void AnalyzeBimbam (Param cPar, DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Ut
     x_miss = set_zeros_dmatrix(x_miss);
     for (size_t i=0; i<ni_total; ++i) {
       auto ch_ptr = to!string(chr[i].strip());
-      //if (indicator_idv[i]==0) {continue;}
+      if (indicator_idv.elements[i]==0) {continue;}
 
       if (ch_ptr == "NA") {
         x_miss.elements[c_phen] = 0.0;
@@ -1730,15 +1776,16 @@ void AnalyzeBimbam (Param cPar, DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Ut
           writeln("l_max -> ", l_max);
           writeln("n_region -> ", n_region);
           writeln("lambda_remle -> ", lambda_remle);
-          writeln("logl_H1 -> ", logl_H1);
           CalcLambda ('R', cast(void *)&param1, l_min, l_max, n_region, lambda_remle, logl_H1);
-          writeln(logl_H1);
+          writeln("logl_H1 -> ", logl_H1);
+          writeln("lambda_remle -> ", lambda_remle);
+          
           CalcRLWald (ni_test, lambda_remle, param1, beta, se, p_wald);
         }
 
         if (a_mode==2 || a_mode==4) {
           CalcLambda ('L', cast(void *)&param1, l_min, l_max, n_region, lambda_mle, logl_H1);
-          p_lrt=gsl_cdf_chisq_Q (2.0*(logl_H1-logl_mle_H0), 1);
+          p_lrt=gsl_cdf_chisq_Q (2.0*(logl_H1 - logl_mle_H0), 1);
         }
 
         // Store summary data.
