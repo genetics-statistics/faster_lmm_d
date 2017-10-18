@@ -335,7 +335,7 @@ void batch_run(string option_kinship, string option_pheno, string option_covar, 
   // LMM or mvLMM or Eigen-Decomposition
   //if (cPar.a_mode == 1 || cPar.a_mode == 2 || cPar.a_mode == 3 || cPar.a_mode == 4 || cPar.a_mode == 5 || cPar.a_mode == 31) {
     // Fit LMM or mvLMM or eigen
-    fit_model(cPar, U, eval, UtW, Uty, Y, covar_matrix,);
+    fit_model(cPar, U, eval, UtW, Uty, Y, covar_matrix);
   //}
 
   // BSLMM
@@ -699,7 +699,7 @@ void fit_model(Param cPar, DMatrix U, DMatrix eval, DMatrix  UtW, DMatrix UtY, D
 
 
    
-    AnalyzeBimbam(cPar, U, eval, UtW, UtY_col, W, Y_col, setGWASnps, 10);
+    AnalyzeBimbam(cPar, U, eval, UtW, UtY_col, W, Y_col, setGWASnps, 1);
 
     // Fit LMM or mvLMM (w. LOCO)
     if (cPar.a_mode == 1 || cPar.a_mode == 2 || cPar.a_mode == 3 ||
@@ -723,7 +723,7 @@ void fit_model(Param cPar, DMatrix U, DMatrix eval, DMatrix  UtW, DMatrix UtY, D
           //cLmm.Analyzebgen(U, eval, UtW, UtY_col, W, Y_col);
         } else {
           if (cPar.file_gxe.empty()) {
-            AnalyzeBimbam(cPar, U, eval, UtW, UtY_col, W, Y_col, setGWASnps, 10);
+            AnalyzeBimbam(cPar, U, eval, UtW, UtY_col, W, Y_col, setGWASnps, 1);
           } else {
             //cLmm.AnalyzeBimbamGXE(U, eval, UtW, UtY_col, W, Y_col, env);
           }
