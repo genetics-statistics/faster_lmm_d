@@ -39,14 +39,16 @@ DUB_INCLUDE = \
 -I~/.dub/packages/cblas-1.0.0/cblas/source/ \
 -I~/.dub/packages/dyaml-0.5.3/dyaml/source/ \
 -I~/.dub/packages/tinyendian-0.1.2/tinyendian/source/ \
--I~/.dub/packages/resusage-0.2.7/resusage/source/
+-I~/.dub/packages/resusage-0.2.7/resusage/source/ \
+-I~/.dub/packages/progress-4.0.3/progress/source/
 
 DUB_LIBS = \
 $(HOME)/.dub/packages/dstats-1.0.3/dstats/libdstats.a \
 $(HOME)/.dub/packages/dyaml-0.5.3/dyaml/libdyaml.a \
 $(HOME)/.dub/packages/gsl-0.1.8/gsl/libgsl.a \
 $(HOME)/.dub/packages/tinyendian-0.1.2/tinyendian/libtinyendian.a \
-$(HOME)/.dub/packages/resusage-0.2.7/resusage/lib/libresusage.a
+$(HOME)/.dub/packages/resusage-0.2.7/resusage/lib/libresusage.a \
+$(HOME)/.dub/packages/progress-4.0.3/progress/libprogress.a
 
 DFLAGS = -wi -I./source $(DUB_INCLUDE)
 RPATH  =

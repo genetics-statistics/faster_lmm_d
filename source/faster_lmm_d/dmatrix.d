@@ -366,8 +366,16 @@ DMatrix matrix_join(DMatrix ul, DMatrix ur, DMatrix dl, DMatrix dr){
   return result;
 }
 
-DMatrix get_sub_dmatrix(DMatrix H,  size_t a, size_t b, size_t c, size_t d){
-  return H;
+DMatrix get_sub_dmatrix(DMatrix H,  size_t a, size_t b, size_t n1, size_t n2){
+  //size_t start = a *H.rows + b;
+  double[] elements = [];
+  for(size_t i = 0; i < n1; i++){
+    elements ~= H.elements[(i*H.rows)..(i*H.rows + n2)];
+  }
+  writeln(elements.length);
+  writeln(n1*n2);
+  assert(elements.length == n1*n2);
+  return DMatrix([n1, n2], elements);
 }
 
 unittest{

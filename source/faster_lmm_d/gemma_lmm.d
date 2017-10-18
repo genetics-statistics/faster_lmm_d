@@ -31,6 +31,7 @@ import gsl.math;
 import gsl.min;
 import gsl.roots;
 
+import progress.bar;
 
 DMatrix read_matrix_from_file2(string filename){
   string input = to!string(std.file.read(filename));
@@ -512,7 +513,7 @@ extern(C) double LogRL_dev1(double l, void* params) {
 
   double df;
   size_t nc_total;
-  p.calc_null = true;   //  check 
+  //p.calc_null = true;   //  check 
   if (p.calc_null == true) {
     nc_total = n_cvt;
     df = to!double(ni_test) - to!double(n_cvt);
@@ -1057,10 +1058,10 @@ void CalcLambda(const char func_name, void* params, const double l_min,
       dev1_h = LogL_dev1(lambda_h, params);
     }
 
+     writeln("dev1_l = ", dev1_l);
+    writeln("dev1_h = ", dev1_h);
     if (dev1_l * dev1_h <= 0) {
-      //writeln("lambda_lh size up");
-      //writeln("dev1_l = ", dev1_l);
-      //writeln("dev1_h = ", dev1_h);
+      writeln("lambda_lh size up");
       lambda_lh ~= Lambda_tup(lambda_l, lambda_h);
     }
   }
@@ -1319,7 +1320,7 @@ void CalcRLScore(size_t ni_test, double l, loglikeparam params, double beta,
   return;
 }
 
-void CalcUab(DMatrix UtW, DMatrix Uty, ref DMatrix Uab) {
+void ==CalcUab(DMatrix UtW, DMatrix Uty, ref DMatrix Uab) {
   size_t index_ab;
   size_t n_cvt = UtW.shape[1];
 
@@ -1377,7 +1378,7 @@ void CalcUab(DMatrix UtW, DMatrix Uty, DMatrix Utx, ref DMatrix Uab) {
       Uab_col.elements = UtW_col.elements.dup;
     }
 
-    slow_multiply_dmatrix(Uab_col, Utx);
+    Uab_col = slow_multiply_dmatrix(Uab_col, Utx);
     Uab = set_col(Uab, index_ab, Uab_col);
   }
 
@@ -1640,7 +1641,7 @@ void AnalyzeBimbam (Param cPar, DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Ut
   writeln("n_index =======> ", n_index);
 
   DMatrix x;
-  x.shape = [1, U.shape[0]];
+  x.shape = [U.shape[0],1];
   x = set_zeros_dmatrix(x);
   DMatrix x_miss;
   x_miss.shape = [1, U.shape[0]];
@@ -1670,12 +1671,21 @@ void AnalyzeBimbam (Param cPar, DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Ut
     if (indicator_snp.elements[t]==0) {continue;}
     t_last++;
   }
+  //writeln(indicator_snp);
 
   int t = 0;
+
+  //Bar b = new Bar();
+  //b.message = {return "Processing";};
+  //b.max = indicator_snp.elements.length;
+
   foreach (line ; input.byLine) {
    
-    //if (indicator_snp[t]==0) {continue;}
-
+    if (indicator_snp.elements[t]==0) {
+      t++;
+      continue;
+    }
+//
     auto chr = to!string(line).split(",")[3..$];
 
     x_mean=0.0; c_phen=0; n_miss=0;
@@ -1706,8 +1716,8 @@ void AnalyzeBimbam (Param cPar, DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Ut
       }
     }
 
-    DMatrix Xlarge_col = get_col(Xlarge, c%msize); // view
-    Xlarge_col.elements = x.elements.dup;
+    Xlarge = set_col(Xlarge, c%msize, x);
+
     c++;
 
     if (c % msize==0 || c==t_last) {
@@ -1718,11 +1728,10 @@ void AnalyzeBimbam (Param cPar, DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Ut
       DMatrix UtXlarge_sub = get_sub_dmatrix(UtXlarge, 0, 0, UtXlarge.shape[0], l);
 
       UtXlarge_sub = matrix_mult(U.T, Xlarge_sub);
+      assert(UtXlarge_sub.shape == [U.shape[0], msize]);
 
       Xlarge = set_zeros_dmatrix(Xlarge);
-
       for (size_t i=0; i<l; i++) {
-        writeln(i);
 
         DMatrix UtXlarge_col= get_col(UtXlarge, i);           //view
         Utx.elements = UtXlarge_col.elements.dup;
@@ -1752,10 +1761,14 @@ void AnalyzeBimbam (Param cPar, DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Ut
         SUMSTAT SNPs = SUMSTAT(beta, se, lambda_remle, lambda_mle, p_wald, p_lrt, p_score);
 
         sumStat ~= SNPs;
+        writeln(i);
+
       }
     }
     t++;
+    //b.next();
   }
+  //b.finish();
   writeln(sumStat);
   return;
 }
