@@ -216,7 +216,7 @@ void CalcVCss(DMatrix a, DMatrix b, DMatrix c, DMatrix d, DMatrix e,
 
 }
 
-void batch_run(string option_kinship, string option_pheno, string option_covar, string option_geno){
+void batch_run(string option_kinship, string option_pheno, string option_covar, string option_geno, string indicator_idv, string indicator_snp){
 
   // Read Files.
 
@@ -260,6 +260,10 @@ void batch_run(string option_kinship, string option_pheno, string option_covar, 
   DMatrix UtW = matrix_mult(U.T, covar_matrix);
   DMatrix Uty = matrix_mult(U.T, Y); 
   Param cPar;
+  cPar.a_mode = 1;
+  cPar.indicator_idv_file = indicator_idv;
+  cPar.indicator_snp_file = indicator_snp;
+  cPar.file_geno = option_geno;
   writeln("Reading Files ... ");
   cPar.ReadFiles();
   if (cPar.error == true) {
@@ -392,7 +396,7 @@ void kinship_mode_43(Param cPar){
                                         Y_full.shape[0] * Y_hat.shape[1]];
 
   // read relatedness matrix G, and matrix G_full
-  ReadFile_kin(cPar.file_kin, cPar.indicator_idv, cPar.mapID2num, cPar.k_mode, cPar.error, G);
+  //ReadFile_kin(cPar.file_kin, cPar.indicator_idv, cPar.mapID2num, cPar.k_mode, cPar.error, G);
   if (cPar.error == true) {
     writeln("error! fail to read kinship/relatedness file.");
     return;
@@ -804,8 +808,8 @@ void fit_bslmm(Param cPar){
       //cPar.ReadGenotypes(UtX, G, false);
 
       // read relatedness matrix G
-      ReadFile_kin(cPar.file_kin, cPar.indicator_idv, cPar.mapID2num,
-                   cPar.k_mode, cPar.error, G);
+      //ReadFile_kin(cPar.file_kin, cPar.indicator_idv, cPar.mapID2num,
+      //             cPar.k_mode, cPar.error, G);
       if (cPar.error == true) {
         writeln("error! fail to read kinship/relatedness file. ");
         return;

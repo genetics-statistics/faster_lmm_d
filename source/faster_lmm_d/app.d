@@ -78,7 +78,7 @@ void main(string[] args)
 
   //exit(0);
 
-  string cmd, option_control, option_kinship, option_pheno, option_geno, option_covar, useBLAS, noBLAS, noCUDA, option_logging;
+  string cmd, option_control, option_kinship, option_pheno, option_geno, option_covar, useBLAS, noBLAS, noCUDA, option_logging, option_indicator_idv, option_indicator_snp;
   bool option_help = false;
   bool option_test_kinship = false;
   ulong option_pheno_column = 0;
@@ -93,6 +93,8 @@ void main(string[] args)
     "control", &option_control,
     "kinship", &option_kinship,
     "pheno", &option_pheno,
+    "indicator_idv", &option_indicator_idv,
+    "indicator_snp", &option_indicator_snp,
     "pheno-column", &option_pheno_column,
     "geno", &option_geno,
     "covar", &option_covar,
@@ -150,7 +152,7 @@ void main(string[] args)
   if(option_kinship != ""){
     writeln("Running via GEMMA");
     //run_gemma(option_kinship, option_pheno, option_covar, option_geno);
-    batch_run(option_kinship, option_pheno, option_covar, option_geno);
+    batch_run(option_kinship, option_pheno, option_covar, option_geno, option_indicator_idv, option_indicator_snp);
   }else{
 
   // ---- Control

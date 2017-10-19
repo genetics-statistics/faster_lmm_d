@@ -11,6 +11,7 @@ import core.stdc.stdlib : exit;
 
 import std.conv;
 import std.exception;
+import std.file;
 import std.math;
 import std.algorithm: min, max, reduce;
 alias mlog = std.math.log;
@@ -1611,14 +1612,14 @@ void AnalyzeBimbam (Param cPar, DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Ut
                         size_t n_cvt, size_t LMM_BATCH_SIZE = 100) {
 
   writeln("indicator_idv");
-  DMatrix indicator_idv = read_matrix_from_file2("/home/prasun/dev/faster_lmm_d/data/gemma/indicator_idv.txt");
+  DMatrix indicator_idv = read_matrix_from_file2(cPar.indicator_idv_file);
   writeln("indicator_snp");
-  DMatrix indicator_snp = read_matrix_from_file2("/home/prasun/dev/faster_lmm_d/data/gemma/indicator_snp.txt");
+  DMatrix indicator_snp = read_matrix_from_file2(cPar.indicator_snp_file);
 
   writeln(indicator_idv.shape);
   writeln(indicator_snp.shape);
 
-  string filename = "/home/prasun/dev/faster_lmm_d/data/gemma/mouse_hs1940.geno.txt.gz";
+  string filename = cPar.file_geno;
   auto pipe = pipeShell("gunzip -c " ~ filename);
   File input = pipe.stdout;
 
@@ -1695,9 +1696,7 @@ void AnalyzeBimbam (Param cPar, DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Ut
   CalcUab (UtW, Uty, Uab);
 
   writeln(Uab);
-  DMatrix abc = DMatrix(Uab.shape.dup, Uab.elements.dup);
 
-  //exit(0);
   foreach (line ; input.byLine) {
    
     if (indicator_snp.elements[t]==0) {
@@ -1747,9 +1746,7 @@ void AnalyzeBimbam (Param cPar, DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Ut
       //DMatrix UtXlarge_sub = get_sub_dmatrix(UtXlarge, 0, 0, UtXlarge.shape[0], l);
 
       DMatrix UtXlarge_sub = matrix_mult(U.T, Xlarge_sub);
-
       set_sub_dmatrix(UtXlarge, 0, 0, UtXlarge.shape[0], l, UtXlarge_sub);
-      assert(UtXlarge_sub.shape == [U.shape[0], msize]);
 
       Xlarge = set_zeros_dmatrix(Xlarge);
       for (size_t i=0; i<l; i++) {
@@ -1794,7 +1791,6 @@ void AnalyzeBimbam (Param cPar, DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Ut
 
         sumStat ~= SNPs;
         writeln(i);
-
       }
     }
     t++;

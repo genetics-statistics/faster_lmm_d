@@ -258,11 +258,11 @@ struct Param{
 
   // Indicator for individuals (phenotypes): 0 missing, 1
   // available for analysis
-  int[] indicator_idv;
+  string indicator_idv_file;
 
   // Sequence indicator for SNPs: 0 ignored because of (a) maf,
   // (b) miss, (c) non-poly; 1 available for analysis.
-  DMatrix indicator_snp;
+  string indicator_snp_file;
 
   // Sequence indicator for SNPs: 0 ignored because of (a) maf,
   // (b) miss, (c) non-poly; 1 available for analysis.
