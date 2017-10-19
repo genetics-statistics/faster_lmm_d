@@ -32,7 +32,7 @@ import gsl.math;
 import gsl.min;
 import gsl.roots;
 
-import progress.bar;
+//import progress.bar;
 
 DMatrix read_matrix_from_file2(string filename){
   string input = to!string(std.file.read(filename));
