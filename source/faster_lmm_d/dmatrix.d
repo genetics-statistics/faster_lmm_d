@@ -294,6 +294,15 @@ DMatrix set_col(const DMatrix input, const ulong col_no, const DMatrix arr) {
   return DMatrix(input.shape, result);
 }
 
+void set_col2(ref DMatrix input, const ulong col_no, const DMatrix arr) {
+  assert(arr.cols == 1);
+  assert(arr.rows == input.rows);
+  //auto result = input.elements.dup;
+  foreach(row; 0..input.rows) {
+    input.elements[row*input.cols + col_no] = arr.elements[row];
+  }
+}
+
 DMatrix set_row(const DMatrix input, const ulong row_no, const DMatrix arr) {
   assert(arr.cols == 1);
   assert(arr.rows == input.cols);
@@ -376,6 +385,16 @@ DMatrix get_sub_dmatrix(DMatrix H,  size_t a, size_t b, size_t n1, size_t n2){
   writeln(n1*n2);
   assert(elements.length == n1*n2);
   return DMatrix([n1, n2], elements);
+}
+
+void set_sub_dmatrix(ref DMatrix H,  size_t a, size_t b, size_t n1, size_t n2, DMatrix H_Sub){
+  //size_t start = a *H.rows + b;
+  double[] elements = [];
+  for(size_t i = 0; i < n1; i++){
+    for(size_t j = 0; j < n2; j++){
+      H.elements[(i*H.rows) + j] = H_Sub.elements[i*H_Sub.rows + j];
+    }
+  }
 }
 
 unittest{

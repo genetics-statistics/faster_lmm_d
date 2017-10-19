@@ -563,6 +563,7 @@ extern(C) double LogRL_dev1(double l, void* params) {
   }
 
   CalcPab(n_cvt, p.e_mode, Hi_eval, p.Uab, p.ab, Pab);
+  //writeln(Pab);
   CalcPPab(n_cvt, p.e_mode, HiHi_eval, p.Uab, p.ab, Pab, PPab);
 
   // Calculate tracePK and trace PKPK.
@@ -575,12 +576,20 @@ extern(C) double LogRL_dev1(double l, void* params) {
     trace_P -= ps2_ww / ps_ww;
   }
   double trace_PK = (df - trace_P) / l;
+  writeln("trace_PK => ", trace_PK );
 
   // Calculate yPKPy, yPKPKPy.
   index_ww = GetabIndex(n_cvt + 2, n_cvt + 2, n_cvt);
   double P_yy = accessor(Pab, nc_total, index_ww);
   double PP_yy = accessor(PPab, nc_total, index_ww);
   double yPKPy = (P_yy - PP_yy) / l;
+  //writeln("nc_total => ", nc_total);
+  //writeln("index_ww => ", index_ww);
+  //writeln("PP_yy => ", PP_yy );
+  //writeln("yPKPy => ", yPKPy);
+  //writeln("P_yy => ", P_yy);
+  //writeln("PP_yy => ", PP_yy );
+  //writeln("yPKPy => ", yPKPy);
 
   dev1 = -0.5 * trace_PK + 0.5 * df * yPKPy / P_yy;
 
@@ -1263,9 +1272,13 @@ void CalcRLWald(size_t ni_test, double l, loglikeparam params, ref double beta,
   size_t index_xx = GetabIndex(n_cvt + 1, n_cvt + 1, n_cvt);
   size_t index_xy = GetabIndex(n_cvt + 2, n_cvt + 1, n_cvt);
   double P_yy = accessor(Pab, n_cvt, index_yy);
+  writeln("P_yy => ", P_yy);
   double P_xx = accessor(Pab, n_cvt, index_xx);
+  writeln("P_xx => ", P_xx);
   double P_xy = accessor(Pab, n_cvt, index_xy);
+  writeln("P_xy => ", P_xy);
   double Px_yy = accessor(Pab, n_cvt + 1, index_yy);
+  writeln("Px_yy => ", Px_yy);
 
   beta = P_xy / P_xx;
   double tau = to!double(df) / Px_yy;
@@ -1320,7 +1333,7 @@ void CalcRLScore(size_t ni_test, double l, loglikeparam params, double beta,
   return;
 }
 
-void ==CalcUab(DMatrix UtW, DMatrix Uty, ref DMatrix Uab) {
+void CalcUab(DMatrix UtW, DMatrix Uty, ref DMatrix Uab) {
   size_t index_ab;
   size_t n_cvt = UtW.shape[1];
 
@@ -1648,8 +1661,6 @@ void AnalyzeBimbam (Param cPar, DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Ut
   DMatrix Utx;
   Utx.shape = [1, U.shape[1]];
   Utx = set_zeros_dmatrix(Utx);
-  DMatrix Uab;
-  Uab.shape = [U.shape[1], n_index];
   DMatrix ab;
   ab.shape = [1, n_index];
 
@@ -1662,8 +1673,6 @@ void AnalyzeBimbam (Param cPar, DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Ut
   Xlarge = set_zeros_dmatrix(Xlarge);
   UtXlarge = set_zeros_dmatrix(UtXlarge);
 
-  Uab = set_zeros_dmatrix(Uab);
-  CalcUab (UtW, Uty, Uab);
 
   //start reading genotypes and analyze
   size_t c=0, t_last=0;
@@ -1678,7 +1687,17 @@ void AnalyzeBimbam (Param cPar, DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Ut
   //Bar b = new Bar();
   //b.message = {return "Processing";};
   //b.max = indicator_snp.elements.length;
+  
+  DMatrix Uab;
+  Uab.shape = [U.shape[1], n_index];
 
+  Uab = set_zeros_dmatrix(Uab);
+  CalcUab (UtW, Uty, Uab);
+
+  writeln(Uab);
+  DMatrix abc = DMatrix(Uab.shape.dup, Uab.elements.dup);
+
+  //exit(0);
   foreach (line ; input.byLine) {
    
     if (indicator_snp.elements[t]==0) {
@@ -1716,7 +1735,7 @@ void AnalyzeBimbam (Param cPar, DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Ut
       }
     }
 
-    Xlarge = set_col(Xlarge, c%msize, x);
+    set_col2(Xlarge, c%msize, x);
 
     c++;
 
@@ -1725,9 +1744,11 @@ void AnalyzeBimbam (Param cPar, DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Ut
       if (c%msize==0) {l=msize;} else {l=c%msize;}
 
       DMatrix Xlarge_sub = get_sub_dmatrix(Xlarge, 0, 0, Xlarge.shape[0], l);
-      DMatrix UtXlarge_sub = get_sub_dmatrix(UtXlarge, 0, 0, UtXlarge.shape[0], l);
+      //DMatrix UtXlarge_sub = get_sub_dmatrix(UtXlarge, 0, 0, UtXlarge.shape[0], l);
 
-      UtXlarge_sub = matrix_mult(U.T, Xlarge_sub);
+      DMatrix UtXlarge_sub = matrix_mult(U.T, Xlarge_sub);
+
+      set_sub_dmatrix(UtXlarge, 0, 0, UtXlarge.shape[0], l, UtXlarge_sub);
       assert(UtXlarge_sub.shape == [U.shape[0], msize]);
 
       Xlarge = set_zeros_dmatrix(Xlarge);
@@ -1737,6 +1758,14 @@ void AnalyzeBimbam (Param cPar, DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Ut
         Utx.elements = UtXlarge_col.elements.dup;
 
         CalcUab(UtW, Uty, Utx, Uab);
+
+
+        //writeln(Uab);
+        //writeln(Utx);
+
+        //exit(0);
+
+        writeln(Uab.shape);
 
         ab = set_zeros_dmatrix(ab);
 
@@ -1750,7 +1779,10 @@ void AnalyzeBimbam (Param cPar, DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Ut
 
         if (a_mode==1 || a_mode==4) {
           CalcLambda ('R', cast(void *)&param1, l_min, l_max, n_region, lambda_remle, logl_H1);
+          writeln("logl_H1  => ", logl_H1);
+          writeln("lambda_remle => ", lambda_remle);
           CalcRLWald (ni_test, lambda_remle, param1, beta, se, p_wald);
+          writeln("p_wald => ", p_wald);
         }
 
         if (a_mode==2 || a_mode==4) {
