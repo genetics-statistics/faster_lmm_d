@@ -55,13 +55,13 @@ void bslmm_predictor(Param cPar){
     // read kinship matrix and set u_hat
     int[] indicator_all;
     size_t c_bv = 0;
-    for (size_t i = 0; i < cPar.indicator_idv.length; i++) {
+    //for (size_t i = 0; i < cPar.indicator_idv.length; i++) {
       //indicator_all.push_back(1);
-      if (cPar.indicator_bv.elements[i] == 1) {
-        //gsl_vector_set(u_hat, c_bv, cPar.vec_bv[i]);
-        c_bv++;
-      }
-    }
+      //if (cPar.indicator_bv.elements[i] == 1) {
+      //  //gsl_vector_set(u_hat, c_bv, cPar.vec_bv[i]);
+      //  c_bv++;
+      //}
+    //}
 
     ReadFile_kin(cPar.file_kin, indicator_all, cPar.mapID2num, cPar.k_mode, cPar.error, G);
       writeln("error! fail to read kinship/relatedness file.");
@@ -143,8 +143,8 @@ void fit_bslmm_DAP(Param cPar){
         //cPar.ReadGenotypes(UtX, G, false);
 
         // read relatedness matrix G
-        ReadFile_kin(cPar.file_kin, cPar.indicator_idv, cPar.mapID2num,
-                     cPar.k_mode, cPar.error, G);
+        //ReadFile_kin(cPar.file_kin, cPar.indicator_idv, cPar.mapID2num,
+        //             cPar.k_mode, cPar.error, G);
         if (cPar.error == true) {
           writeln("error! fail to read kinship/relatedness file. ");
           return;

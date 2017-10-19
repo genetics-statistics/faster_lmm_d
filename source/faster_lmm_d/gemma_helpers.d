@@ -399,8 +399,8 @@ void vc_estimation(Param cPar){
         //(cPar.v_traceG).push_back(d);
       }
     } else if (!(cPar.file_kin).empty()) {
-      ReadFile_kin(cPar.file_kin, cPar.indicator_idv, cPar.mapID2num,
-                   cPar.k_mode, cPar.error, G);
+      //ReadFile_kin(cPar.file_kin, cPar.indicator_idv, cPar.mapID2num,
+      //             cPar.k_mode, cPar.error, G);
       if (cPar.error == true) {
         writeln("error! fail to read kinship/relatedness file.");
         return;
