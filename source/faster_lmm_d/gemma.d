@@ -22,7 +22,6 @@ import std.process;
 import std.string;
 
 import faster_lmm_d.dmatrix;
-import faster_lmm_d.bslmm;
 import faster_lmm_d.gemma_helpers;
 import faster_lmm_d.gemma_lmm;
 import faster_lmm_d.gemma_param;
@@ -252,10 +251,6 @@ void batch_run(string option_kinship, string option_pheno, string option_covar, 
   auto k = kvakve(G);
   eval = k.kva;
   U = k.kve;
-  writeln(U.shape);
-
-  //writeln(U);
-
 
   DMatrix UtW = matrix_mult(U.T, covar_matrix);
   DMatrix Uty = matrix_mult(U.T, Y); 
@@ -276,81 +271,7 @@ void batch_run(string option_kinship, string option_pheno, string option_covar, 
     return;
   }
 
-  // Prediction for bslmm
-  if (cPar.a_mode == 41 || cPar.a_mode == 42) {
-    //bslmm_predictor(cPar);
-  }
-
-  // Prediction with kinship matrix only; for one or more phenotypes
-  if (cPar.a_mode == 43) {
-    kinship_mode_43(cPar);
-  }
-
-  // Generate Kinship matrix (optionally using LOCO)
-  if (cPar.a_mode == 21 || cPar.a_mode == 22) {
-    kinship_with_loco(cPar);
-  }
-
-  // Compute the LDSC weights (not implemented yet)
-  if (cPar.a_mode == 72) {
-    calc_weights(cPar);
-  }
-
-  // Compute the S matrix (and its variance), that is used for
-  // variance component estimation using summary statistics.
-  if (cPar.a_mode == 25 || cPar.a_mode == 26) {
-    calc_S(cPar);
-
-  }
-
-  // Compute the q vector, that is used for variance component estimation using
-  // summary statistics
-  if (cPar.a_mode == 27 || cPar.a_mode == 28) {
-    calc_Vq(cPar);
-  }
-
-  // Calculate SNP covariance.
-  if (cPar.a_mode == 71) {
-    calc_SNP_covariance(cPar);
-  }
-
-  // LM.
-  if (cPar.a_mode == 51 || cPar.a_mode == 52 || cPar.a_mode == 53 || cPar.a_mode == 54) {
-    // Fit LM
-    fit_linear_model(cPar);
-  }
-
-  // VC estimation with one or multiple kinship matrices
-  // REML approach only
-  // if file_kin or file_ku/kd is provided, then a_mode is changed to 5 already,
-  // in param.cpp
-  // for one phenotype only;
-  if (cPar.a_mode == 61 || cPar.a_mode == 62 || cPar.a_mode == 63) {
-    vc_estimation(cPar);
-  }
-
-  // compute confidence intervals with additional summary statistics
-  // we do not check the sign of z-scores here, but they have to be matched with
-  // the genotypes
-  if (cPar.a_mode == 66 || cPar.a_mode == 67) {
-    calc_cofidence_interval(cPar);
-  }
-
-  // LMM or mvLMM or Eigen-Decomposition
-  //if (cPar.a_mode == 1 || cPar.a_mode == 2 || cPar.a_mode == 3 || cPar.a_mode == 4 || cPar.a_mode == 5 || cPar.a_mode == 31) {
-    // Fit LMM or mvLMM or eigen
-    fit_model(cPar, U, eval, UtW, Uty, Y, covar_matrix);
-  //}
-
-  // BSLMM
-  if (cPar.a_mode == 11 || cPar.a_mode == 12 || cPar.a_mode == 13) {
-    fit_bslmm(cPar);
-  }
-
-  // BSLMM-DAP
-  if (cPar.a_mode == 14 || cPar.a_mode == 15 || cPar.a_mode == 16) {
-    fit_bslmm_DAP(cPar);
-  }
+  fit_model(cPar, U, eval, UtW, Uty, Y, covar_matrix);
 
   return;
 }
@@ -764,99 +685,3 @@ void fit_model(Param cPar, DMatrix U, DMatrix eval, DMatrix  UtW, DMatrix UtY, D
 
   // release all matrices and vectors
 }
-
-void fit_bslmm(Param cPar){
-  DMatrix y;
-  y.shape = [1, cPar.ni_test];
-  DMatrix W;
-  W.shape = [y.elements.length, cPar.n_cvt];
-  DMatrix G;
-  G.shape = [y.elements.length, y.elements.length];
-  DMatrix UtX;
-  UtX.shape = [y.elements.length, cPar.ns_test];
-
-  // set covariates matrix W and phenotype vector y
-  // an intercept should be included in W,
-  cPar.CopyCvtPhen(W, y, 0);
-
-  // center y, even for case/control data
-  //cPar.pheno_mean = CenterVector(y);
-
-  // run bvsr if rho==1
-  if (cPar.rho_min == 1 && cPar.rho_max == 1) {
-    // read genotypes X (not UtX)
-    //cPar.ReadGenotypes(UtX, G, false);
-
-    // perform BSLMM analysis
-    //BSLMM cBslmm;
-    //cBslmm.CopyFromParam(cPar);
-    //cBslmm.MCMC(UtX, y);
-    //cBslmm.CopyToParam(cPar);
-    // else, if rho!=1
-  } else {
-    DMatrix U;
-    U.shape = [y.elements.length, y.elements.length];
-    DMatrix eval;
-    eval.shape = [1, y.elements.length];
-    DMatrix UtW;
-    UtW.shape = [y.elements.length, W.shape[1]];
-    DMatrix Uty;
-    Uty.shape = [1, y.elements.length];
-
-    // read relatedness matrix G
-    if (!(cPar.file_kin).empty()) {
-      //cPar.ReadGenotypes(UtX, G, false);
-
-      // read relatedness matrix G
-      //ReadFile_kin(cPar.file_kin, cPar.indicator_idv, cPar.mapID2num,
-      //             cPar.k_mode, cPar.error, G);
-      if (cPar.error == true) {
-        writeln("error! fail to read kinship/relatedness file. ");
-        return;
-      }
-
-      // center matrix G
-      CenterMatrix(G);
-      validate_K(G,cPar.mode_check,cPar.mode_strict);
-    } else {
-      //cPar.ReadGenotypes(UtX, G, true);
-    }
-
-    // eigen-decomposition and calculate trace_G
-    writeln("Start Eigen-Decomposition...");
-
-    cPar.trace_G = EigenDecomp_Zeroed(G, U, eval, 0);
-
-    // calculate UtW and Uty
-    CalcUtX(U, W, UtW);
-    CalcUtX(U, y, Uty);
-
-    // calculate REMLE/MLE estimate and pve
-    CalcLambda('L', eval, UtW, Uty, cPar.l_min, cPar.l_max, cPar.n_region,
-               cPar.l_mle_null, cPar.logl_mle_H0);
-    CalcLambda('R', eval, UtW, Uty, cPar.l_min, cPar.l_max, cPar.n_region,
-               cPar.l_remle_null, cPar.logl_remle_H0);
-    CalcPve(eval, UtW, Uty, cPar.l_remle_null, cPar.trace_G, cPar.pve_null,
-            cPar.pve_se_null);
-
-    //cPar.PrintSummary();
-
-    // Creat and calcualte UtX, use a large memory
-    writeln("Calculating UtX...");
-    CalcUtX(U, UtX);
-
-    // perform BSLMM or BSLMMDAP analysis
-    if (cPar.a_mode == 11 || cPar.a_mode == 12 || cPar.a_mode == 13) {
-      //BSLMM cBslmm;
-      //cBslmm.CopyFromParam(cPar);
-      //if (cPar.a_mode == 12) { // ridge regression
-      //  cBslmm.RidgeR(U, UtX, Uty, eval, cPar.l_remle_null);
-      //} else { // Run MCMC
-      //  cBslmm.MCMC(U, UtX, Uty, eval, y);
-      //}
-      //cBslmm.CopyToParam(cPar);
-    } else {
-    }
-  }
-}
-

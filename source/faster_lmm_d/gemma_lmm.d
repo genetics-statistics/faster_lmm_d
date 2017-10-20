@@ -52,7 +52,6 @@ DMatrix read_matrix_from_file2(string filename){
 }
 
 void CenterMatrix(ref DMatrix G) {
-  //DMatrix Gw = gsl_vector_alloc(G.shape[0]);
   writeln("CenterMatrix");
   DMatrix w = ones_dmatrix(1, G.shape[0]);
 
@@ -497,7 +496,6 @@ double LogRL_f(double l, void* params) {
   }
   index_ww = GetabIndex(n_cvt + 2, n_cvt + 2, n_cvt);
   double P_yy = accessor(Pab, nc_total, index_ww);
-  //writeln(P_yy);
 
   double c = 0.5 * df * (mlog(df) - mlog(2 * M_PI) - 1.0);
   f = c - 0.5 * logdet_h - 0.5 * logdet_hiw - 0.5 * df * mlog(P_yy);
@@ -514,7 +512,7 @@ extern(C) double LogRL_dev1(double l, void* params) {
 
   double df;
   size_t nc_total;
-  //p.calc_null = true;   //  check 
+
   if (p.calc_null == true) {
     nc_total = n_cvt;
     df = to!double(ni_test) - to!double(n_cvt);
@@ -564,7 +562,6 @@ extern(C) double LogRL_dev1(double l, void* params) {
   }
 
   CalcPab(n_cvt, p.e_mode, Hi_eval, p.Uab, p.ab, Pab);
-  //writeln(Pab);
   CalcPPab(n_cvt, p.e_mode, HiHi_eval, p.Uab, p.ab, Pab, PPab);
 
   // Calculate tracePK and trace PKPK.
@@ -577,20 +574,12 @@ extern(C) double LogRL_dev1(double l, void* params) {
     trace_P -= ps2_ww / ps_ww;
   }
   double trace_PK = (df - trace_P) / l;
-  writeln("trace_PK => ", trace_PK );
 
   // Calculate yPKPy, yPKPKPy.
   index_ww = GetabIndex(n_cvt + 2, n_cvt + 2, n_cvt);
   double P_yy = accessor(Pab, nc_total, index_ww);
   double PP_yy = accessor(PPab, nc_total, index_ww);
   double yPKPy = (P_yy - PP_yy) / l;
-  //writeln("nc_total => ", nc_total);
-  //writeln("index_ww => ", index_ww);
-  //writeln("PP_yy => ", PP_yy );
-  //writeln("yPKPy => ", yPKPy);
-  //writeln("P_yy => ", P_yy);
-  //writeln("PP_yy => ", PP_yy );
-  //writeln("yPKPy => ", yPKPy);
 
   dev1 = -0.5 * trace_PK + 0.5 * df * yPKPy / P_yy;
 
@@ -848,8 +837,6 @@ extern(C) double LogL_dev2(double l, void* params) {
 
 extern(C) void LogL_dev12(double l, void *params, double *dev1, double *dev2) {
 
-  //writeln("In LogL_dev12, l =" , l);
-  //writeln(l);
 
   auto ptr = cast(loglikeparam *)params;
   loglikeparam p = *ptr;
@@ -1166,7 +1153,6 @@ void CalcLambda(const char func_name, void* params, const double l_min,
       if (func_name == 'R' || func_name == 'r') {
         logf_l = LogRL_f(l, params);
       } else {
-        //writeln("here LogL_f is invoked!");
         logf_l = LogL_f(l, params);
       }
 
@@ -1242,7 +1228,6 @@ void CalcLambda(char func_name, DMatrix eval,
   return;
 }
 
-// ni_test is a LMM parameter
 void CalcRLWald(size_t ni_test, double l, loglikeparam params, ref double beta,
                      ref double se, ref double p_wald) {
   size_t n_cvt = params.n_cvt;
@@ -1272,14 +1257,11 @@ void CalcRLWald(size_t ni_test, double l, loglikeparam params, ref double beta,
   size_t index_yy = GetabIndex(n_cvt + 2, n_cvt + 2, n_cvt);
   size_t index_xx = GetabIndex(n_cvt + 1, n_cvt + 1, n_cvt);
   size_t index_xy = GetabIndex(n_cvt + 2, n_cvt + 1, n_cvt);
+
   double P_yy = accessor(Pab, n_cvt, index_yy);
-  writeln("P_yy => ", P_yy);
   double P_xx = accessor(Pab, n_cvt, index_xx);
-  writeln("P_xx => ", P_xx);
   double P_xy = accessor(Pab, n_cvt, index_xy);
-  writeln("P_xy => ", P_xy);
   double Px_yy = accessor(Pab, n_cvt + 1, index_yy);
-  writeln("Px_yy => ", Px_yy);
 
   beta = P_xy / P_xx;
   double tau = to!double(df) / Px_yy;
@@ -1539,7 +1521,6 @@ void CalcLmmVgVeBeta(DMatrix eval, DMatrix UtW,
 
   enforce(LAPACKE_dgesv( 101, n, n, WHiW.elements.ptr, lda, ipiv.ptr,
                       beta.elements.ptr,  ldb ) == 0);
-  //exit(0);
 
   Vbeta = inverse(WHiy);
 
@@ -1558,17 +1539,13 @@ void CalcLmmVgVeBeta(DMatrix eval, DMatrix UtW,
   ve = P_yy / to!double(ni_test - n_cvt);
   vg = ve * lambda;
 
-  // With ve, calculate se(beta).
   Vbeta = multiply_dmatrix_num(Vbeta, ve);
 
-  // Obtain se_beta.
   for (size_t i = 0; i < Vbeta.shape[1]; i++) {
     se_beta.elements[i] = sqrt(accessor(Vbeta, i, i));
   }
 
-  //gsl_permutation_free(pmt);
   writeln("out of CalcLmmVgVeBeta");
-
 
   return;
 }
@@ -1681,13 +1658,8 @@ void AnalyzeBimbam (Param cPar, DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Ut
     if (indicator_snp.elements[t]==0) {continue;}
     t_last++;
   }
-  //writeln(indicator_snp);
 
   int t = 0;
-
-  //Bar b = new Bar();
-  //b.message = {return "Processing";};
-  //b.max = indicator_snp.elements.length;
   
   DMatrix Uab;
   Uab.shape = [U.shape[1], n_index];
@@ -1695,15 +1667,13 @@ void AnalyzeBimbam (Param cPar, DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Ut
   Uab = set_zeros_dmatrix(Uab);
   CalcUab (UtW, Uty, Uab);
 
-  writeln(Uab);
-
   foreach (line ; input.byLine) {
    
     if (indicator_snp.elements[t]==0) {
       t++;
       continue;
     }
-//
+
     auto chr = to!string(line).split(",")[3..$];
 
     x_mean=0.0; c_phen=0; n_miss=0;
@@ -1756,12 +1726,6 @@ void AnalyzeBimbam (Param cPar, DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Ut
 
         CalcUab(UtW, Uty, Utx, Uab);
 
-
-        //writeln(Uab);
-        //writeln(Utx);
-
-        //exit(0);
-
         writeln(Uab.shape);
 
         ab = set_zeros_dmatrix(ab);
@@ -1776,10 +1740,7 @@ void AnalyzeBimbam (Param cPar, DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Ut
 
         if (a_mode==1 || a_mode==4) {
           CalcLambda ('R', cast(void *)&param1, l_min, l_max, n_region, lambda_remle, logl_H1);
-          writeln("logl_H1  => ", logl_H1);
-          writeln("lambda_remle => ", lambda_remle);
           CalcRLWald (ni_test, lambda_remle, param1, beta, se, p_wald);
-          writeln("p_wald => ", p_wald);
         }
 
         if (a_mode==2 || a_mode==4) {
@@ -1790,13 +1751,11 @@ void AnalyzeBimbam (Param cPar, DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Ut
         SUMSTAT SNPs = SUMSTAT(beta, se, lambda_remle, lambda_mle, p_wald, p_lrt, p_score);
 
         sumStat ~= SNPs;
-        writeln(i);
       }
     }
     t++;
-    //b.next();
   }
-  //b.finish();
+
   writeln(sumStat);
   return;
 }
