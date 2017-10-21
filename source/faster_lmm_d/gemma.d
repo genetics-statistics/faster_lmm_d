@@ -39,7 +39,7 @@ import gsl.math;
 import gsl.min;
 import gsl.roots;
 
-import test.covar_matrix;
+import faster_lmm_d.helpers : modDiff, sum;
 import test.fit;
 import test.geno_matrix;
 import test.kinship;
@@ -499,8 +499,6 @@ void fit_model(Param cPar, DMatrix U, DMatrix eval, DMatrix  UtW, DMatrix UtY, D
     //cLmm.WriteFiles();
     //cLmm.CopyToParam(cPar);
   } else {
-    // calculate UtW and Uty
-    //assert_issue(cPar.issue == 26, ROUND(UtY.data[0]) == -16.6143);
 
     // calculate REMLE/MLE estimate and pve for univariate model
     if (n_ph == 1) { // one phenotype
@@ -518,9 +516,7 @@ void fit_model(Param cPar, DMatrix U, DMatrix eval, DMatrix  UtW, DMatrix UtY, D
 
       CalcLambda('L', eval, UtW, UtY_col, cPar.l_min, cPar.l_max,
                  cPar.n_region, cPar.l_mle_null, cPar.logl_mle_H0);
-      //assert(!std::isnan(UtY.data[0]));
-      //assert(!std::isnan(B.data[0]));
-      //assert(!std::isnan(se_B.data[0]));
+
       writeln("==============cPar.l_mle_null=======================");
       writeln(cPar.l_mle_null);
       writeln(cPar.logl_mle_H0);
@@ -535,10 +531,6 @@ void fit_model(Param cPar, DMatrix U, DMatrix eval, DMatrix  UtW, DMatrix UtY, D
       writeln("beta => ", beta);
       writeln("se_beta => ", se_beta);
 
-      //assert(!std::isnan(UtY.data[0]));
-      //assert(!std::isnan(B.data[0]));
-      //assert(!std::isnan(se_B.data[0]));
-
       //cPar.beta_mle_null.clear();
       //cPar.se_beta_mle_null.clear();
       //DMatrix B;
@@ -546,14 +538,12 @@ void fit_model(Param cPar, DMatrix U, DMatrix eval, DMatrix  UtW, DMatrix UtY, D
         //cPar.beta_mle_null.push_back(accessor(B, 0, i));
         //cPar.se_beta_mle_null.push_back(accessor(se_B, 0, i));
       //}
-      //assert(!std::isnan(UtY.data[0]));
-      //assert(!std::isnan(B.data[0]));
-      //assert(!std::isnan(se_B.data[0]));
-      //assert(!std::isnan(cPar.beta_mle_null.front()));
-      //assert(!std::isnan(cPar.se_beta_mle_null.front()));
 
       CalcLambda('R', eval, UtW, UtY_col, cPar.l_min, cPar.l_max,
                  cPar.n_region, cPar.l_remle_null, cPar.logl_remle_H0);
+
+
+     
 
       writeln("==============cPar.l_remle_null=======================");
       writeln(cPar.l_remle_null);
@@ -579,6 +569,7 @@ void fit_model(Param cPar, DMatrix U, DMatrix eval, DMatrix  UtW, DMatrix UtY, D
       CalcPve(eval, UtW, UtY_col, cPar.l_remle_null, cPar.trace_G,
               cPar.pve_null, cPar.pve_se_null);
       //cPar.PrintSummary();
+      check_lambda("", cPar);
 
       // calculate and output residuals
       if (cPar.a_mode == 5) {
@@ -653,35 +644,19 @@ void fit_model(Param cPar, DMatrix U, DMatrix eval, DMatrix  UtW, DMatrix UtY, D
             //cLmm.AnalyzeBimbamGXE(U, eval, UtW, UtY_col, W, Y_col, env);
           }
         }
-
-        //cLmm.WriteFiles();
-        //cLmm.CopyToParam(cPar);
-      } else {
-        writeln("In MVLMM");
-        //MVLMM cMvlmm;
-        //cMvlmm.CopyFromParam(cPar);
-
-        //if (!cPar.file_bfile.empty()) {
-        //  if (cPar.file_gxe.empty()) {
-        //    cMvlmm.AnalyzePlink(U, eval, UtW, UtY);
-        //  } else {
-        //    cMvlmm.AnalyzePlinkGXE(U, eval, UtW, UtY, env);
-        //  }
-        //} else if (!cPar.file_oxford.empty()) {
-        //  cMvlmm.Analyzebgen(U, eval, UtW, UtY);
-        //} else {
-        //  if (cPar.file_gxe.empty()) {
-        //    cMvlmm.AnalyzeBimbam(U, eval, UtW, UtY);
-        //  } else {
-        //    cMvlmm.AnalyzeBimbamGXE(U, eval, UtW, UtY, env);
-        //  }
-        //}
-
-        //cMvlmm.WriteFiles();
-        //cMvlmm.CopyToParam(cPar);
       }
     }
   }
+}
 
-  // release all matrices and vectors
+void check_lambda(string test_name, Param cPar){
+  if (test_name == ""){
+    enforce(modDiff(cPar.l_mle_null, 4.34046) < 0.001);
+    enforce(modDiff(cPar.l_remle_null, 4.32887) < 0.001);
+    enforce(modDiff(cPar.logl_mle_H0, -1584.7216) < 0.001);
+    enforce(modDiff(cPar.logl_remle_H0, -1584.3408) < 0.001);
+    //enforce(modDiff(cPar.beta, 0) < 0.001);
+    //enforce(modDiff(cPar.se_beta, 0) < 0.001);
+    //enforce(modDiff(cPar.pve_se_null, 0) < 0.001);
+  }
 }
