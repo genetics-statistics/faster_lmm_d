@@ -54,7 +54,7 @@ DMatrix read_matrix_from_file(string filename){
   foreach(line; lines[0..$-1]){
     string[] items = line.split("\t");
     foreach(item; items){
-      elements ~= to!double(item) ;
+      elements ~= (item == "NA" ? 0 : to!double(item)) ;
     }
   }
   return DMatrix([rows, elements.length/rows], elements);
