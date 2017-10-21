@@ -233,15 +233,6 @@ void batch_run(string option_kinship, string option_pheno, string option_covar, 
   writeln("reading kinship " , option_kinship);
   DMatrix G = read_matrix_from_file(option_kinship);
   writeln(G.shape);
-  writeln(G.elements.length);
-
-  //calculate U and eval
-  //auto kvakve = kvakve(G);
-  //DMatrix U = DMatrix([Y.shape[0], Y.shape[0]], kvakve.kve.elements[0..(Y.shape[0]*Y.shape[0])]);
-  //DMatrix eval = kvakve.kva;
-  // Center the matrix G.
-  writeln(G.shape);
-  writeln(G.elements.length);
 
   DMatrix U, eval;
   eval.shape = [1, Y.elements.length];
@@ -303,8 +294,6 @@ void kinship_mode_43(Param cPar){
   DMatrix W_full;
   W_full.shape = [Y_full.shape[0], cPar.n_cvt];
 
-  // set covariates matrix W and phenotype matrix Y
-  // an intercept should be included in W,
   cPar.CopyCvtPhen(W, Y, 0);
   cPar.CopyCvtPhen(W_full, Y_full, 1);
 
@@ -316,8 +305,6 @@ void kinship_mode_43(Param cPar){
   H_full.shape = [Y_full.shape[0] * Y_hat.shape[1],
                                         Y_full.shape[0] * Y_hat.shape[1]];
 
-  // read relatedness matrix G, and matrix G_full
-  //ReadFile_kin(cPar.file_kin, cPar.indicator_idv, cPar.mapID2num, cPar.k_mode, cPar.error, G);
   if (cPar.error == true) {
     writeln("error! fail to read kinship/relatedness file.");
     return;
@@ -385,11 +372,6 @@ void kinship_mode_43(Param cPar){
     B.shape = [cPar.n_ph, W.shape[1]];
     DMatrix se_B;
     se_B.shape = [cPar.n_ph, W.shape[1]];
-
-    // obtain estimates
-    //CalcMvLmmVgVeBeta(eval, UtW, UtY, cPar.em_iter, cPar.nr_iter,
-    //                  cPar.em_prec, cPar.nr_prec, cPar.l_min, cPar.l_max,
-    //                  cPar.n_region, Vg, Ve, B, se_B);
 
     writeln("REMLE estimate for Vg in the null model: ");
     for (size_t i = 0; i < Vg.shape[0]; i++) {
