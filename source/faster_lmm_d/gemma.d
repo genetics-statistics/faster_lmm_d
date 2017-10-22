@@ -215,7 +215,9 @@ void CalcVCss(DMatrix a, DMatrix b, DMatrix c, DMatrix d, DMatrix e,
 
 }
 
-void batch_run(string option_kinship, string option_pheno, string option_covar, string option_geno, string indicator_idv, string indicator_snp){
+void batch_run(string option_kinship, string option_pheno, string option_covar, 
+              string option_geno, string indicator_idv, string indicator_snp, 
+              string test_name){
 
   // Read Files.
 
@@ -262,7 +264,7 @@ void batch_run(string option_kinship, string option_pheno, string option_covar, 
     return;
   }
 
-  fit_model(cPar, U, eval, UtW, Uty, Y, covar_matrix);
+  fit_model(cPar, U, eval, UtW, Uty, Y, covar_matrix, test_name);
 
   return;
 }
@@ -457,7 +459,7 @@ void fit_linear_model(Param cPar){
   // release all matrices and vectors
 }
 
-void fit_model(Param cPar, DMatrix U, DMatrix eval, DMatrix  UtW, DMatrix UtY, DMatrix Y, DMatrix W, size_t n_ph = 1){
+void fit_model(Param cPar, DMatrix U, DMatrix eval, DMatrix  UtW, DMatrix UtY, DMatrix Y, DMatrix W, string test_name, size_t n_ph = 1){
   writeln("In LMM fit_model");
 
 
@@ -551,7 +553,7 @@ void fit_model(Param cPar, DMatrix U, DMatrix eval, DMatrix  UtW, DMatrix UtY, D
       CalcPve(eval, UtW, UtY_col, cPar.l_remle_null, cPar.trace_G,
               cPar.pve_null, cPar.pve_se_null);
       //cPar.PrintSummary();
-      check_lambda("", cPar);
+      check_lambda(test_name, cPar);
 
       // calculate and output residuals
       if (cPar.a_mode == 5) {
@@ -632,11 +634,19 @@ void fit_model(Param cPar, DMatrix U, DMatrix eval, DMatrix  UtW, DMatrix UtY, D
 }
 
 void check_lambda(string test_name, Param cPar){
-  if (test_name == ""){
+  if (test_name == "mouse_hs1940"){
     enforce(modDiff(cPar.l_mle_null, 4.34046) < 0.001);
     enforce(modDiff(cPar.l_remle_null, 4.32887) < 0.001);
     enforce(modDiff(cPar.logl_mle_H0, -1584.7216) < 0.001);
     enforce(modDiff(cPar.logl_remle_H0, -1584.3408) < 0.001);
+    //enforce(modDiff(cPar.beta, 0) < 0.001);
+    //enforce(modDiff(cPar.se_beta, 0) < 0.001);
+    //enforce(modDiff(cPar.pve_se_null, 0) < 0.001);
+  }else if(test_name == "BXD"){
+    enforce(modDiff(cPar.l_mle_null, 1.07705) < 0.001);
+    enforce(modDiff(cPar.l_remle_null, 1.03727) < 0.001);
+    enforce(modDiff(cPar.logl_mle_H0, -571.815) < 0.001);
+    enforce(modDiff(cPar.logl_remle_H0, -569.519) < 0.001);
     //enforce(modDiff(cPar.beta, 0) < 0.001);
     //enforce(modDiff(cPar.se_beta, 0) < 0.001);
     //enforce(modDiff(cPar.pve_se_null, 0) < 0.001);
