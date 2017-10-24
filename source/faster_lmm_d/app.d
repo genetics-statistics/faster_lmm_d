@@ -66,22 +66,11 @@ void main(string[] args)
 {
   //ProfilerStart();
 
-  //size_t n_cvt;
-  //size_t e_mode;
-  //DMatrix Hi_eval = DMatrix([2,2],[1,2,3,4]);
-  //DMatrix Uab = DMatrix([2,2],[1,2,3,4]);
-  //DMatrix ab = DMatrix([2,2],[1,2,3,4]);
-  //DMatrix Pab;
-
-  //CalcPab(n_cvt , e_mode,  Hi_eval, Uab,  ab, Pab);
-  //writeln(Pab);
-
-  //exit(0);
-
   string cmd, option_control, option_kinship, option_pheno, option_geno, option_covar, useBLAS, noBLAS, noCUDA, option_logging, 
-        option_indicator_idv, option_indicator_snp, option_test_name;
+        option_indicator_idv, option_indicator_snp, option_test_name, option_bfile;
   bool option_help = false;
   bool option_test_kinship = false;
+  double option_maf = 0;
   ulong option_pheno_column = 0;
   ulong option_ni_test = 1;
   ulong option_ni_ph = 1;
@@ -97,6 +86,8 @@ void main(string[] args)
     "indicator_idv", &option_indicator_idv,
     "indicator_snp", &option_indicator_snp,
     "pheno-column", &option_pheno_column,
+    "bfile", &option_bfile,
+    "maf", &option_maf,
     "geno", &option_geno,
     "covar", &option_covar,
     "blas", &useBLAS,

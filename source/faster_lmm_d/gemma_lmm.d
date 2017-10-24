@@ -1054,11 +1054,7 @@ void CalcLambda(const char func_name, void* params, const double l_min,
       dev1_l = LogL_dev1(lambda_l, params);
       dev1_h = LogL_dev1(lambda_h, params);
     }
-
-     writeln("dev1_l = ", dev1_l);
-    writeln("dev1_h = ", dev1_h);
     if (dev1_l * dev1_h <= 0) {
-      writeln("lambda_lh size up");
       lambda_lh ~= Lambda_tup(lambda_l, lambda_h);
     }
   }
@@ -1351,7 +1347,7 @@ void CalcUab(DMatrix UtW, DMatrix Uty, ref DMatrix Uab) {
       }
 
       Uab_col = slow_multiply_dmatrix(Uab_col, u_a);
-      Uab = set_col(Uab, index_ab, Uab_col);
+      set_col2(Uab, index_ab, Uab_col);
     }
   }
   return;
@@ -1375,7 +1371,7 @@ void CalcUab(DMatrix UtW, DMatrix Uty, DMatrix Utx, ref DMatrix Uab) {
     }
 
     Uab_col = slow_multiply_dmatrix(Uab_col, Utx);
-    Uab = set_col(Uab, index_ab, Uab_col);
+    set_col2(Uab, index_ab, Uab_col);
   }
 
   return;
@@ -1636,9 +1632,9 @@ void AnalyzeBimbam (Param cPar, DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Ut
   x = set_zeros_dmatrix(x);
   DMatrix x_miss;
   x_miss.shape = [1, U.shape[0]];
-  DMatrix Utx;
-  Utx.shape = [1, U.shape[1]];
-  Utx = set_zeros_dmatrix(Utx);
+  //DMatrix Utx;
+  //Utx.shape = [1, U.shape[1]];
+  //Utx = set_zeros_dmatrix(Utx);
   DMatrix ab;
   ab.shape = [1, n_index];
 
@@ -1721,8 +1717,8 @@ void AnalyzeBimbam (Param cPar, DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Ut
       Xlarge = set_zeros_dmatrix(Xlarge);
       for (size_t i=0; i<l; i++) {
 
-        DMatrix UtXlarge_col= get_col(UtXlarge, i);           //view
-        Utx.elements = UtXlarge_col.elements.dup;
+        DMatrix Utx = get_col(UtXlarge, i);           //view
+        //Utx.elements = UtXlarge_col.elements.dup;
 
         CalcUab(UtW, Uty, Utx, Uab);
 

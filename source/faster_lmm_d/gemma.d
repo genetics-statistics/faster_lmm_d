@@ -634,6 +634,7 @@ void fit_model(Param cPar, DMatrix U, DMatrix eval, DMatrix  UtW, DMatrix UtY, D
 }
 
 void check_lambda(string test_name, Param cPar){
+  writeln("Test name ->", test_name);
   if (test_name == "mouse_hs1940"){
     enforce(modDiff(cPar.l_mle_null, 4.34046) < 0.001);
     enforce(modDiff(cPar.l_remle_null, 4.32887) < 0.001);
@@ -642,6 +643,7 @@ void check_lambda(string test_name, Param cPar){
     //enforce(modDiff(cPar.beta, 0) < 0.001);
     //enforce(modDiff(cPar.se_beta, 0) < 0.001);
     //enforce(modDiff(cPar.pve_se_null, 0) < 0.001);
+    writeln("===================Tests pass=====================");
   }else if(test_name == "BXD"){
     enforce(modDiff(cPar.l_mle_null, 1.07705) < 0.001);
     enforce(modDiff(cPar.l_remle_null, 1.03727) < 0.001);
