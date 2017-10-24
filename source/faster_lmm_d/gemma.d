@@ -240,6 +240,7 @@ void batch_run(string option_kinship, string option_pheno, string option_covar,
   eval.shape = [1, Y.elements.length];
   U.shape = [Y.elements.length, Y.elements.length];
 
+
   //double trace_G = EigenDecomp_Zeroed(G, U, eval, 0);
   auto k = kvakve(G);
   eval = k.kva;
@@ -248,6 +249,7 @@ void batch_run(string option_kinship, string option_pheno, string option_covar,
   DMatrix UtW = matrix_mult(U.T, covar_matrix);
   DMatrix Uty = matrix_mult(U.T, Y); 
   Param cPar;
+  cPar.trace_G = sum(eval.elements)/eval.elements.length;
   cPar.a_mode = 1;
   cPar.indicator_idv_file = indicator_idv;
   cPar.indicator_snp_file = indicator_snp;
@@ -509,12 +511,6 @@ void fit_model(Param cPar, DMatrix U, DMatrix eval, DMatrix  UtW, DMatrix UtY, D
                       cPar.vg_mle_null, cPar.ve_mle_null, beta,
                       se_beta);
 
-      writeln("================CalcLmmVgVeBeta==========================");
-      writeln("vg_mle_null => ",cPar.vg_mle_null);
-      writeln("ve_mle_null => ",cPar.ve_mle_null);
-      writeln("beta => ", beta);
-      writeln("se_beta => ", se_beta);
-
       //cPar.beta_mle_null.clear();
       //cPar.se_beta_mle_null.clear();
       //DMatrix B;
@@ -526,22 +522,12 @@ void fit_model(Param cPar, DMatrix U, DMatrix eval, DMatrix  UtW, DMatrix UtY, D
       CalcLambda('R', eval, UtW, UtY_col, cPar.l_min, cPar.l_max,
                  cPar.n_region, cPar.l_remle_null, cPar.logl_remle_H0);
 
-
-     
-
-      writeln("==============cPar.l_remle_null=======================");
       writeln(cPar.l_remle_null);
       writeln(cPar.logl_remle_H0);
 
       CalcLmmVgVeBeta(eval, UtW, UtY_col, cPar.l_remle_null,
                       cPar.vg_remle_null, cPar.ve_remle_null, beta,
                       se_beta);
-
-      writeln("================CalcLmmVgVeBeta==========================");
-      writeln("vg_mle_null => ",cPar.vg_remle_null);
-      writeln("ve_mle_null => ",cPar.ve_remle_null);
-      writeln("beta => ", beta);
-      writeln("se_beta => ", se_beta);
 
       //cPar.beta_remle_null.clear();
       //cPar.se_beta_remle_null.clear();
@@ -552,6 +538,7 @@ void fit_model(Param cPar, DMatrix U, DMatrix eval, DMatrix  UtW, DMatrix UtY, D
 
       CalcPve(eval, UtW, UtY_col, cPar.l_remle_null, cPar.trace_G,
               cPar.pve_null, cPar.pve_se_null);
+
       //cPar.PrintSummary();
       check_lambda(test_name, cPar);
 
@@ -640,6 +627,17 @@ void check_lambda(string test_name, Param cPar){
     enforce(modDiff(cPar.l_remle_null, 4.32887) < 0.001);
     enforce(modDiff(cPar.logl_mle_H0, -1584.7216) < 0.001);
     enforce(modDiff(cPar.logl_remle_H0, -1584.3408) < 0.001);
+
+    enforce(modDiff(cPar.vg_mle_null, 1.4794) < 0.001);
+    enforce(modDiff(cPar.ve_mle_null, 0.34084) < 0.001);
+
+    enforce(modDiff(cPar.vg_remle_null, 1.47657) < 0.001);
+    enforce(modDiff(cPar.ve_remle_null, 0.341097) < 0.001);
+
+    enforce(modDiff(cPar.trace_G, 0.359504) < 0.001);
+    enforce(modDiff(cPar.pve_null, 0.608801) < 0.001);
+    enforce(modDiff(cPar.pve_se_null, 0.032774) < 0.001);    
+
     //enforce(modDiff(cPar.beta, 0) < 0.001);
     //enforce(modDiff(cPar.se_beta, 0) < 0.001);
     //enforce(modDiff(cPar.pve_se_null, 0) < 0.001);

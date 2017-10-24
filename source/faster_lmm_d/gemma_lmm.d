@@ -1518,7 +1518,7 @@ void CalcLmmVgVeBeta(DMatrix eval, DMatrix UtW,
   enforce(LAPACKE_dgesv( 101, n, n, WHiW.elements.ptr, lda, ipiv.ptr,
                       beta.elements.ptr,  ldb ) == 0);
 
-  Vbeta = inverse(WHiy);
+  Vbeta = inverse(WHiW);
 
   ab.elements = [6.901535246e-295,
   6.901535246e-295,
@@ -1548,7 +1548,7 @@ void CalcLmmVgVeBeta(DMatrix eval, DMatrix UtW,
 
 // Obtain REMLE estimate for PVE using lambda_remle.
 void CalcPve(DMatrix eval, DMatrix UtW,
-             DMatrix Uty, ref double lambda, ref double trace_G,
+             DMatrix Uty, double lambda, double trace_G,
              ref double pve, ref double pve_se) {
   writeln("in CalcPve");
 
