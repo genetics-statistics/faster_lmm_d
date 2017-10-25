@@ -647,8 +647,16 @@ void check_lambda(string test_name, Param cPar){
     enforce(modDiff(cPar.l_remle_null, 1.03727) < 0.001);
     enforce(modDiff(cPar.logl_mle_H0, -571.815) < 0.001);
     enforce(modDiff(cPar.logl_remle_H0, -569.519) < 0.001);
-    //enforce(modDiff(cPar.beta, 0) < 0.001);
-    //enforce(modDiff(cPar.se_beta, 0) < 0.001);
-    //enforce(modDiff(cPar.pve_se_null, 0) < 0.001);
-  }
+    
+    enforce(modDiff(cPar.vg_mle_null, 16.9179) < 0.001);
+    enforce(modDiff(cPar.ve_mle_null, 15.7076) < 0.001);
+
+    enforce(modDiff(cPar.vg_remle_null, 16.3864) < 0.001);
+    enforce(modDiff(cPar.ve_remle_null, 15.7976) < 0.001);
+
+    enforce(modDiff(cPar.trace_G, 0.226114) < 0.001);
+    enforce(modDiff(cPar.pve_null, 0.189983) < 0.001);
+    enforce(modDiff(cPar.pve_se_null, 0.109182) < 0.001); 
+    writeln("===================BXD Tests pass=====================");   
+  }    
 }
