@@ -22,7 +22,6 @@ import std.process;
 import std.string;
 
 import faster_lmm_d.dmatrix;
-import faster_lmm_d.gemma_helpers;
 import faster_lmm_d.gemma_lmm;
 import faster_lmm_d.gemma_param;
 import faster_lmm_d.kinship;
