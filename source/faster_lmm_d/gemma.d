@@ -68,7 +68,6 @@ DMatrix read_matrix_from_file2(string filename){
   size_t rows = lines.length - 1;
   double[] elements;
   foreach(line; lines[0..$-1]){
-    writeln(line);
     string[] items = line.strip().split("\t");
     foreach(item; items){
       elements ~= (item == "NA" ? 0 : to!double(item)) ;
@@ -244,10 +243,9 @@ void batch_run(string option_kinship, string option_pheno, string option_covar,
   //writeln(Y); also y
 
   writeln("reading covar " , option_covar);
-  DMatrix covar_matrix = read_matrix_from_file2(option_covar);
+  DMatrix covar_matrix = (option_covar != "" ? read_matrix_from_file(option_covar) : ones_dmatrix(Y.shape[0], Y.shape[1]));
   //DMatrix covar_matrix = ones_dmatrix(Y.shape[0], Y.shape[1]);
   writeln(covar_matrix.shape);
-  //writeln(covar_matrix); also w
 
   writeln("reading kinship " , option_kinship);
   DMatrix G = read_matrix_from_file(option_kinship);
