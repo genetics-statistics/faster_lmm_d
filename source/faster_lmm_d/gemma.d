@@ -76,25 +76,6 @@ DMatrix read_matrix_from_file2(string filename){
   return DMatrix([rows, elements.length/rows], elements);
 }
 
-// Calculate UtX.
-void CalcUtX(const DMatrix U, DMatrix UtX) {
-  DMatrix X;
-  X.shape = [UtX.shape[0], UtX.shape[1]];
-  X.elements =  UtX.elements.dup;
-  //eigenlib_dgemm("T", "N", 1.0, U, X, 0.0, UtX);
-  return;
-}
-
-void CalcUtX(const DMatrix U, const DMatrix X, DMatrix UtX) {
-  //eigenlib_dgemm("T", "N", 1.0, U, X, 0.0, UtX);
-  return;
-}
-
-//void CalcUtX(const DMatrix U, const DMatrix x, DMatrix Utx) {
-//  //gsl_blas_dgemv(CblasTrans, 1.0, U, x, 0.0, Utx);
-//  return;
-//}
-
 // Kronecker product.
 void Kronecker(const DMatrix K, const DMatrix V, DMatrix H) {
   for (size_t i = 0; i < K.shape[0]; i++) {
@@ -255,8 +236,6 @@ void batch_run(string option_kinship, string option_pheno, string option_covar,
   eval.shape = [1, Y.elements.length];
   U.shape = [Y.elements.length, Y.elements.length];
 
-
-  //double trace_G = EigenDecomp_Zeroed(G, U, eval, 0);
   auto k = kvakve(G);
   eval = k.kva;
   U = k.kve;
@@ -286,353 +265,88 @@ void batch_run(string option_kinship, string option_pheno, string option_covar,
   return;
 }
 
-
-
-
-//change file_name
-void kinship_mode_43(Param cPar){
-  // first, use individuals with full phenotypes to obtain estimates of Vg and
-  // Ve
-  DMatrix Y;
-  Y.shape = [cPar.ni_test, cPar.n_ph];
-  DMatrix W;
-  W.shape = [Y.shape[0], cPar.n_cvt];
-  DMatrix G;
-  G.shape = [Y.shape[0], Y.shape[0]];
-  DMatrix U;
-  U.shape = [Y.shape[0], Y.shape[0]];
-  DMatrix UtW;
-  UtW.shape = [Y.shape[0], W.shape[1]];
-  DMatrix UtY;
-  UtY.shape = [Y.shape[0], Y.shape[1]];
-  DMatrix eval;
-  eval.shape = [1, Y.shape[0]];
-
-  DMatrix Y_full;
-  Y_full.shape = [cPar.ni_cvt, cPar.n_ph];
-  DMatrix W_full;
-  W_full.shape = [Y_full.shape[0], cPar.n_cvt];
-
-  cPar.CopyCvtPhen(W, Y, 0);
-  cPar.CopyCvtPhen(W_full, Y_full, 1);
-
-  DMatrix Y_hat;
-  Y_hat.shape = [Y_full.shape[0], cPar.n_ph];
-  DMatrix G_full;
-  G_full.shape = [Y_full.shape[0], Y_full.shape[0]];
-  DMatrix H_full;
-  H_full.shape = [Y_full.shape[0] * Y_hat.shape[1],
-                                        Y_full.shape[0] * Y_hat.shape[1]];
-
-  if (cPar.error == true) {
-    writeln("error! fail to read kinship/relatedness file.");
-    return;
-  }
-  // This is not so elegant. Reads twice to select on idv and then cvt
-  ReadFile_kin(cPar.file_kin, cPar.indicator_cvt, cPar.mapID2num, cPar.k_mode, cPar.error, G_full);
-
-  if (cPar.error == true) {
-    writeln("error! fail to read kinship/relatedness file.");
-    return;
-  }
-
-  // center matrix G
-  CenterMatrix(G);
-  CenterMatrix(G_full);
-  validate_K(G,cPar.mode_check,cPar.mode_strict);
-
-  // eigen-decomposition and calculate trace_G
-  writeln("Start Eigen-Decomposition...");
-  cPar.trace_G = EigenDecomp_Zeroed(G, U, eval, 0);
-
-  // calculate UtW and Uty
-  CalcUtX(U, W, UtW);
-  CalcUtX(U, Y, UtY);
-
-  // calculate variance component and beta estimates
-  // and then obtain predicted values
-  if (cPar.n_ph == 1) {
-    DMatrix beta;
-    beta.shape = [1, W.shape[1]];
-    DMatrix se_beta;
-    se_beta.shape = [1, W.shape[1]];
-
-    double lambda, logl, vg, ve;
-    DMatrix UtY_col = get_col(UtY, 0);
-
-    // obtain estimates
-    CalcLambda('R', eval, UtW, UtY_col, cPar.l_min, cPar.l_max,
-               cPar.n_region, lambda, logl);
-    CalcLmmVgVeBeta(eval, UtW, UtY_col, lambda, vg, ve, beta,
-                    se_beta);
-
-    writeln("REMLE estimate for vg in the null model = ", vg);
-    writeln("REMLE estimate for ve in the null model = ", ve);
-    cPar.vg_remle_null = vg;
-    cPar.ve_remle_null = ve;
-
-    // obtain Y_hat from fixed effects
-    DMatrix Yhat_col = get_col(Y_hat, 0);
-    //gsl_blas_dgemv(CblasNoTrans, 1.0, W_full, beta, 0.0, &Yhat_col.vector);
-
-    // obtain H
-    //gsl_matrix_set_identity(H_full);
-    H_full = multiply_dmatrix_num(H_full, ve);
-    G_full = multiply_dmatrix_num(G_full, vg);
-    H_full = add_dmatrix(H_full, G_full);
-
-    // free matrices
-  } else {
-    DMatrix Vg;
-    Vg.shape = [cPar.n_ph, cPar.n_ph];
-    DMatrix Ve;
-    Ve.shape = [cPar.n_ph, cPar.n_ph];
-    DMatrix B;
-    B.shape = [cPar.n_ph, W.shape[1]];
-    DMatrix se_B;
-    se_B.shape = [cPar.n_ph, W.shape[1]];
-
-    writeln("REMLE estimate for Vg in the null model: ");
-    for (size_t i = 0; i < Vg.shape[0]; i++) {
-      for (size_t j = 0; j <= i; j++) {
-        writeln("\t",accessor(Vg, i, j));
-      }
-      writeln();
-    }
-    writeln("REMLE estimate for Ve in the null model: ");
-    for (size_t i = 0; i < Ve.shape[0]; i++) {
-      for (size_t j = 0; j <= i; j++) {
-        writeln("\t",accessor(Ve, i, j));
-      }
-      writeln();
-    }
-    //cPar.Vg_remle_null.clear();
-    //cPar.Ve_remle_null.clear();
-    for (size_t i = 0; i < Vg.shape[0]; i++) {
-      for (size_t j = i; j < Vg.shape[1]; j++) {
-        //cPar.Vg_remle_null.push_back(accessor(Vg, i, j));
-        //cPar.Ve_remle_null.push_back(accessor(Ve, i, j));
-      }
-    }
-
-    // obtain Y_hat from fixed effects
-    //gsl_blas_dgemm(CblasNoTrans, CblasTrans, 1.0, W_full, B, 0.0, Y_hat);
-
-    // obtain H
-    KroneckerSym(G_full, Vg, H_full);
-    for (size_t i = 0; i < G_full.shape[0]; i++) {
-      DMatrix H_sub = get_sub_dmatrix(
-          H_full, i * Ve.shape[0], i * Ve.shape[1], Ve.shape[0], Ve.shape[1]);
-      H_sub = add_dmatrix(H_sub, Ve);
-    }
-
-    // free matrices
-  }
-
-  //TODO
-  //PRDT cPRDT;
-
-  //cPRDT.CopyFromParam(cPar);
-
-  //writeln("Predicting Missing Phentypes ... ");
-  //cPRDT.MvnormPrdt(Y_hat, H_full, Y_full);
-
-  //cPRDT.WriteFiles(Y_full);
-}
-
-
-
-
-void fit_linear_model(Param cPar){
-  DMatrix Y;
-  Y.shape = [cPar.ni_test, cPar.n_ph];
-  DMatrix W;
-  W.shape = [Y.shape[0], cPar.n_cvt];
-
-  // set covariates matrix W and phenotype matrix Y
-  // an intercept should be included in W,
-  cPar.CopyCvtPhen(W, Y, 0);
-
-  // Fit LM or mvLM
-  if (cPar.n_ph == 1) {
-    LM cLm;
-    cLm.CopyFromParam(cPar);
-
-    DMatrix Y_col = get_col(Y, 0);
-
-    if (!cPar.file_gene.empty()) {
-      cLm.AnalyzeGene(W, Y_col); // y is the predictor, not the phenotype
-    } else if (!cPar.file_bfile.empty()) {
-      cLm.AnalyzePlink(W, Y_col);
-    } else if (!cPar.file_oxford.empty()) {
-      cLm.Analyzebgen(W, Y_col);
-    } else {
-      cLm.AnalyzeBimbam(W, Y_col);
-    }
-
-    cLm.WriteFiles();
-    cLm.CopyToParam(cPar);
-  }
-  // release all matrices and vectors
-}
-
 void fit_model(Param cPar, DMatrix U, DMatrix eval, DMatrix  UtW, DMatrix UtY, DMatrix Y, DMatrix W, string test_name, size_t n_ph = 1){
   writeln("In LMM fit_model");
 
+  if (n_ph == 1) { // one phenotype
+    writeln ("Calculating REMLE/MLE");
 
-  if (2 == 5) { // cPar.a_mode == 31
-    //cPar.WriteMatrix(U, "eigenU");
-    //cPar.WriteVector(eval, "eigenD");
-  } else if (2 == 5) { //!cPar.file_gene.empty()
-    // calculate UtW and Ut
-
-    //assert_issue(cPar.issue == 26, ROUND(UtY.data[0]) == -16.6143);
-
-    LMM cLmm;
-    //cLmm.CopyFromParam(cPar);
-
-    DMatrix Y_col = get_col(Y, 0);
+    DMatrix beta = DMatrix([1,1] , [0]);
+    DMatrix se_beta = DMatrix([1,1] , [0]);
     DMatrix UtY_col = get_col(UtY, 0);
 
-    //cLmm.AnalyzeGene(U, eval, UtW, UtY_col, W,
-    //                 Y_col); // y is the predictor, not the phenotype
+    cPar.l_min = 0.000010;
+    cPar.l_max = 100000;
+    cPar.n_region = 10;
 
-    //cLmm.WriteFiles();
-    //cLmm.CopyToParam(cPar);
-  } else {
+    CalcLambda('L', eval, UtW, UtY_col, cPar.l_min, cPar.l_max,
+               cPar.n_region, cPar.l_mle_null, cPar.logl_mle_H0);
 
-    // calculate REMLE/MLE estimate and pve for univariate model
-    if (n_ph == 1) { // one phenotype
-      writeln ("Calculating REMLE/MLE");
-      //DMatrix beta = get_row(B, 0);
-      //DMatrix se_beta = get_row(se_B, 0);
-      DMatrix beta = DMatrix([1,1] , [0]);
-      DMatrix se_beta = DMatrix([1,1] , [0]);
-      DMatrix UtY_col = get_col(UtY, 0);
+    writeln("==============cPar.l_mle_null=======================");
+    writeln(cPar.l_mle_null);
+    writeln(cPar.logl_mle_H0);
 
-      //assert_issue(cPar.issue == 26, ROUND(UtY.data[0]) == -16.6143);
-      cPar.l_min = 0.000010;
-      cPar.l_max = 100000;
-      cPar.n_region = 10;
+    CalcLmmVgVeBeta(eval, UtW, UtY_col, cPar.l_mle_null,
+                    cPar.vg_mle_null, cPar.ve_mle_null, beta,
+                    se_beta);
 
-      CalcLambda('L', eval, UtW, UtY_col, cPar.l_min, cPar.l_max,
-                 cPar.n_region, cPar.l_mle_null, cPar.logl_mle_H0);
 
-      writeln("==============cPar.l_mle_null=======================");
-      writeln(cPar.l_mle_null);
-      writeln(cPar.logl_mle_H0);
+    CalcLambda('R', eval, UtW, UtY_col, cPar.l_min, cPar.l_max,
+               cPar.n_region, cPar.l_remle_null, cPar.logl_remle_H0);
 
-      CalcLmmVgVeBeta(eval, UtW, UtY_col, cPar.l_mle_null,
-                      cPar.vg_mle_null, cPar.ve_mle_null, beta,
-                      se_beta);
+    writeln(cPar.l_remle_null);
+    writeln(cPar.logl_remle_H0);
 
-      //cPar.beta_mle_null.clear();
-      //cPar.se_beta_mle_null.clear();
-      //DMatrix B;
-      //for (size_t i = 0; i < B.shape[1]; i++) {
-        //cPar.beta_mle_null.push_back(accessor(B, 0, i));
-        //cPar.se_beta_mle_null.push_back(accessor(se_B, 0, i));
-      //}
+    CalcLmmVgVeBeta(eval, UtW, UtY_col, cPar.l_remle_null,
+                    cPar.vg_remle_null, cPar.ve_remle_null, beta,
+                    se_beta);
 
-      CalcLambda('R', eval, UtW, UtY_col, cPar.l_min, cPar.l_max,
-                 cPar.n_region, cPar.l_remle_null, cPar.logl_remle_H0);
+    CalcPve(eval, UtW, UtY_col, cPar.l_remle_null, cPar.trace_G,
+            cPar.pve_null, cPar.pve_se_null);
 
-      writeln(cPar.l_remle_null);
-      writeln(cPar.logl_remle_H0);
+    check_lambda(test_name, cPar);
 
-      CalcLmmVgVeBeta(eval, UtW, UtY_col, cPar.l_remle_null,
-                      cPar.vg_remle_null, cPar.ve_remle_null, beta,
-                      se_beta);
+    // calculate and output residuals
+    if (cPar.a_mode == 5) {
+      DMatrix Utu_hat;
+      Utu_hat.shape = [1, Y.shape[0]];
+      DMatrix Ute_hat;
+      Ute_hat.shape = [1, Y.shape[0]];
+      DMatrix u_hat;
+      u_hat.shape = [1, Y.shape[0]];
+      DMatrix e_hat;
+      e_hat.shape = [1, Y.shape[0]];
+      DMatrix y_hat;
+      y_hat.shape = [1, Y.shape[0]];
 
-      //cPar.beta_remle_null.clear();
-      //cPar.se_beta_remle_null.clear();
-      //for (size_t i = 0; i < B.shape[1]; i++) {
-      //  //cPar.beta_remle_null.push_back(accessor(B, 0, i));
-      //  //cPar.se_beta_remle_null.push_back(accessor(se_B, 0, i));
-      //}
+      // obtain Utu and Ute
+      y_hat.elements = UtY_col.elements.dup;
+      //gsl_blas_dgemv(CblasNoTrans, -1.0, UtW, &beta.vector, 1.0, y_hat);
 
-      CalcPve(eval, UtW, UtY_col, cPar.l_remle_null, cPar.trace_G,
-              cPar.pve_null, cPar.pve_se_null);
-
-      //cPar.PrintSummary();
-      check_lambda(test_name, cPar);
-
-      // calculate and output residuals
-      if (cPar.a_mode == 5) {
-        DMatrix Utu_hat;
-        Utu_hat.shape = [1, Y.shape[0]];
-        DMatrix Ute_hat;
-        Ute_hat.shape = [1, Y.shape[0]];
-        DMatrix u_hat;
-        u_hat.shape = [1, Y.shape[0]];
-        DMatrix e_hat;
-        e_hat.shape = [1, Y.shape[0]];
-        DMatrix y_hat;
-        y_hat.shape = [1, Y.shape[0]];
-
-        // obtain Utu and Ute
-        y_hat.elements = UtY_col.elements.dup;
-        //gsl_blas_dgemv(CblasNoTrans, -1.0, UtW, &beta.vector, 1.0, y_hat);
-
-        double d, u, e;
-        for (size_t i = 0; i < eval.elements.length; i++) {
-          d = eval.elements[i];
-          u = cPar.l_remle_null * d / (cPar.l_remle_null * d + 1.0) *
-              y_hat.elements[i];
-          e = 1.0 / (cPar.l_remle_null * d + 1.0) * y_hat.elements[i];
-          Utu_hat.elements[i] = u;
-          Ute_hat.elements[i] = e;
-        }
-
-        // obtain u and e //TODO
-        //gsl_blas_dgemv(CblasNoTrans, 1.0, U, Utu_hat, 0.0, u_hat);
-        //gsl_blas_dgemv(CblasNoTrans, 1.0, U, Ute_hat, 0.0, e_hat);
-
-        // output residuals
-        cPar.WriteVector(u_hat, "residU");
-        cPar.WriteVector(e_hat, "residE");
+      double d, u, e;
+      for (size_t i = 0; i < eval.elements.length; i++) {
+        d = eval.elements[i];
+        u = cPar.l_remle_null * d / (cPar.l_remle_null * d + 1.0) *
+            y_hat.elements[i];
+        e = 1.0 / (cPar.l_remle_null * d + 1.0) * y_hat.elements[i];
+        Utu_hat.elements[i] = u;
+        Ute_hat.elements[i] = e;
       }
-    }
 
-    DMatrix Y_col = get_col(Y, 0);
-    DMatrix UtY_col = get_col(UtY, 0);
-
-    GWAS_SNPs setGWASnps;
-
-
-   
-    AnalyzeBimbam(cPar, U, eval, UtW, UtY_col, W, Y_col, setGWASnps, 1);
-
-    // Fit LMM or mvLMM (w. LOCO)
-    if (cPar.a_mode == 1 || cPar.a_mode == 2 || cPar.a_mode == 3 ||
-        cPar.a_mode == 4) {
-      if (cPar.n_ph == 1) {
-        LMM cLmm;
-        //cLmm.CopyFromParam(cPar);
-
-         Y_col = get_col(Y, 0);
-         UtY_col = get_col(UtY, 0);
-
-        if (!cPar.file_bfile.empty()) {
-          if (cPar.file_gxe.empty()) {
-            //cLmm.AnalyzePlink(U, eval, UtW, UtY_col, W, Y_col);
-          } else {
-            //cLmm.AnalyzePlinkGXE(U, eval, UtW, UtY_col, W, Y_col, env);
-          }
-        }
-        // WJA added
-        else if (!cPar.file_oxford.empty()) {
-          //cLmm.Analyzebgen(U, eval, UtW, UtY_col, W, Y_col);
-        } else {
-          if (cPar.file_gxe.empty()) {
-            AnalyzeBimbam(cPar, U, eval, UtW, UtY_col, W, Y_col, setGWASnps, 1);
-          } else {
-            //cLmm.AnalyzeBimbamGXE(U, eval, UtW, UtY_col, W, Y_col, env);
-          }
-        }
-      }
+      // output residuals
+      cPar.WriteVector(u_hat, "residU");
+      cPar.WriteVector(e_hat, "residE");
     }
   }
+
+  DMatrix Y_col = get_col(Y, 0);
+  DMatrix UtY_col = get_col(UtY, 0);
+
+  GWAS_SNPs setGWASnps;
+
+
+ 
+  AnalyzeBimbam(cPar, U, eval, UtW, UtY_col, W, Y_col, setGWASnps, 1);
 }
 
 void check_lambda(string test_name, Param cPar){
