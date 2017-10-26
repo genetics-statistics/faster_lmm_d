@@ -60,6 +60,23 @@ DMatrix read_matrix_from_file(string filename){
   return DMatrix([rows, elements.length/rows], elements);
 }
 
+DMatrix read_matrix_from_file2(string filename){
+  string input = to!string(std.file.read(filename));
+
+  string[] lines = input.split("\n");
+  size_t cols;
+  size_t rows = lines.length - 1;
+  double[] elements;
+  foreach(line; lines[0..$-1]){
+    writeln(line);
+    string[] items = line.strip().split("\t");
+    foreach(item; items){
+      elements ~= (item == "NA" ? 0 : to!double(item)) ;
+    }
+  }
+  return DMatrix([rows, elements.length/rows], elements);
+}
+
 // Calculate UtX.
 void CalcUtX(const DMatrix U, DMatrix UtX) {
   DMatrix X;
@@ -227,8 +244,8 @@ void batch_run(string option_kinship, string option_pheno, string option_covar,
   //writeln(Y); also y
 
   writeln("reading covar " , option_covar);
-  //DMatrix covar_matrix = read_matrix_from_file(option_covar);
-  DMatrix covar_matrix = ones_dmatrix(Y.shape[0], Y.shape[1]);
+  DMatrix covar_matrix = read_matrix_from_file2(option_covar);
+  //DMatrix covar_matrix = ones_dmatrix(Y.shape[0], Y.shape[1]);
   writeln(covar_matrix.shape);
   //writeln(covar_matrix); also w
 
