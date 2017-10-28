@@ -203,12 +203,11 @@ double EigenDecomp_Zeroed(ref DMatrix G, ref DMatrix U, ref DMatrix eval,
   return d;
 }
 
-void CalcPab(const size_t n_cvt, const size_t e_mode, const DMatrix Hi_eval,
-              const DMatrix Uab, const DMatrix ab, ref DMatrix Pab) {
+DMatrix CalcPab(const size_t n_cvt, const size_t e_mode, const DMatrix Hi_eval,
+              const DMatrix Uab, const DMatrix ab, const size_t[] shape) {
   size_t index_ab, index_aw, index_bw, index_ww;
-  double p_ab;
-  double ps_ab, ps_aw, ps_bw, ps_ww;
-  Pab = set_zeros_dmatrix(Pab);
+  double p_ab, ps_ab, ps_aw, ps_bw, ps_ww;
+  DMatrix Pab = zeros_dmatrix(shape[0], shape[1]);
   for (size_t p = 0; p <= n_cvt + 1; ++p) {
     for (size_t a = p + 1; a <= n_cvt + 2; ++a) {
       for (size_t b = a; b <= n_cvt + 2; ++b) {
@@ -238,7 +237,7 @@ void CalcPab(const size_t n_cvt, const size_t e_mode, const DMatrix Hi_eval,
       }
     }
   }
-  return;
+  return Pab;
 }
 
 
@@ -247,8 +246,7 @@ void CalcPPab(const size_t n_cvt, const size_t e_mode,
               const DMatrix HiHi_eval, const DMatrix Uab,
               const DMatrix ab, const DMatrix Pab, ref DMatrix PPab) {
   size_t index_ab, index_aw, index_bw, index_ww;
-  double p2_ab;
-  double ps2_ab, ps_aw, ps_bw, ps_ww, ps2_aw, ps2_bw, ps2_ww;
+  double p2_ab,  ps2_ab, ps_aw, ps_bw, ps_ww, ps2_aw, ps2_bw, ps2_ww;
 
   PPab = set_zeros_dmatrix(PPab);
   for (size_t p = 0; p <= n_cvt + 1; ++p) {
@@ -397,8 +395,6 @@ double LogL_f(double l, void* params) {
   double d;
   size_t index_yy;
 
-  DMatrix Pab;
-  Pab.shape = [n_cvt + 2, n_index];
   DMatrix Hi_eval;
   
   Hi_eval.shape = [1, p.eval.elements.length];
@@ -423,7 +419,7 @@ double LogL_f(double l, void* params) {
     logdet_h += mlog(fabs(d));
   }
 
-  CalcPab(n_cvt, p.e_mode, Hi_eval, p.Uab, p.ab, Pab);
+  DMatrix Pab = CalcPab(n_cvt, p.e_mode, Hi_eval, p.Uab, p.ab, [n_cvt + 2, n_index]);
 
   double c = 0.5 * to!double(ni_test) * (mlog(to!double(ni_test)) - mlog(2 * M_PI) - 1.0);
 
@@ -456,10 +452,6 @@ double LogRL_f(double l, void* params) {
   double f = 0.0, logdet_h = 0.0, logdet_hiw = 0.0, d;
   size_t index_ww;
 
-  DMatrix Pab;
-  Pab.shape = [n_cvt + 2, n_index];
-  DMatrix Iab;
-  Iab.shape = [n_cvt + 2, n_index];
   DMatrix Hi_eval;
   Hi_eval.shape = [1, p.eval.elements.length];
   DMatrix v_temp;
@@ -480,10 +472,10 @@ double LogRL_f(double l, void* params) {
     logdet_h += mlog(fabs(d));
   }
 
-  CalcPab(n_cvt, p.e_mode, Hi_eval, p.Uab, p.ab, Pab);
+  DMatrix Pab = CalcPab(n_cvt, p.e_mode, Hi_eval, p.Uab, p.ab, [n_cvt + 2, n_index]);
 
   v_temp = set_ones_dmatrix(v_temp);
-  CalcPab(n_cvt, p.e_mode, v_temp, p.Uab, p.ab, Iab);
+  DMatrix Iab = CalcPab(n_cvt, p.e_mode, v_temp, p.Uab, p.ab, [n_cvt + 2, n_index]);
 
   // Calculate |WHiW|-|WW|.
   logdet_hiw = 0.0;
@@ -525,9 +517,6 @@ extern(C) double LogRL_dev1(double l, void* params) {
   double dev1 = 0.0, trace_Hi = 0.0;
   size_t index_ww;
 
-  DMatrix Pab;
-  Pab.shape = [n_cvt + 2, n_index];
-
   DMatrix PPab;
   PPab.shape = [n_cvt + 2, n_index];
 
@@ -561,7 +550,7 @@ extern(C) double LogRL_dev1(double l, void* params) {
     trace_Hi = to!double(ni_test) - trace_Hi;
   }
 
-  CalcPab(n_cvt, p.e_mode, Hi_eval, p.Uab, p.ab, Pab);
+  DMatrix Pab = CalcPab(n_cvt, p.e_mode, Hi_eval, p.Uab, p.ab, [n_cvt + 2, n_index]);
   CalcPPab(n_cvt, p.e_mode, HiHi_eval, p.Uab, p.ab, Pab, PPab);
 
   // Calculate tracePK and trace PKPK.
@@ -606,9 +595,6 @@ extern(C) double LogL_dev1(double l, void* params) {
   double dev1 = 0.0, trace_Hi = 0.0;
   size_t index_yy;
 
-  DMatrix Pab;
-  Pab.shape = [n_cvt + 2, n_index];
-
   DMatrix PPab;
   PPab.shape = [n_cvt + 2, n_index];
 
@@ -640,7 +626,7 @@ extern(C) double LogL_dev1(double l, void* params) {
     trace_Hi = to!double(ni_test) - trace_Hi;
   }
 
-  CalcPab(n_cvt, p.e_mode, Hi_eval, p.Uab, p.ab, Pab);
+  DMatrix Pab = CalcPab(n_cvt, p.e_mode, Hi_eval, p.Uab, p.ab, [n_cvt + 2, n_index]);
   CalcPPab(n_cvt, p.e_mode, HiHi_eval, p.Uab, p.ab, Pab, PPab);
 
   double trace_HiK = (to!double(ni_test) - trace_Hi) / l;
@@ -677,9 +663,6 @@ extern(C) double LogRL_dev2(double l, void* params) {
 
   double dev2 = 0.0, trace_Hi = 0.0, trace_HiHi = 0.0;
   size_t index_ww;
-
-  DMatrix Pab;
-  Pab.shape = [n_cvt + 2, n_index];
 
   DMatrix PPab;
   PPab.shape = [n_cvt + 2, n_index];
@@ -722,7 +705,7 @@ extern(C) double LogRL_dev2(double l, void* params) {
     trace_HiHi = 2 * trace_Hi + trace_HiHi - to!double(ni_test);
   }
 
-  CalcPab(n_cvt, p.e_mode, Hi_eval, p.Uab, p.ab, Pab);
+  DMatrix Pab = CalcPab(n_cvt, p.e_mode, Hi_eval, p.Uab, p.ab, [n_cvt + 2, n_index]);
   CalcPPab(n_cvt, p.e_mode, HiHi_eval, p.Uab, p.ab, Pab, PPab);
   CalcPPPab(n_cvt, p.e_mode, HiHiHi_eval, p.Uab, p.ab, Pab, PPab, PPPab);
 
@@ -771,8 +754,6 @@ extern(C) double LogL_dev2(double l, void* params) {
 
   double dev2 = 0.0, trace_Hi = 0.0, trace_HiHi = 0.0;
   size_t index_yy;
-  DMatrix Pab;
-  Pab.shape = [n_cvt + 2, n_index];
 
   DMatrix PPab;
   PPab.shape = [n_cvt + 2, n_index];
@@ -815,7 +796,8 @@ extern(C) double LogL_dev2(double l, void* params) {
     trace_HiHi = 2 * trace_Hi + trace_HiHi - to!double(ni_test);
   }
 
-  CalcPab(n_cvt, p.e_mode, Hi_eval, p.Uab, p.ab, Pab);
+  DMatrix Pab = CalcPab(n_cvt, p.e_mode, Hi_eval, p.Uab, p.ab, [n_cvt + 2, n_index]);
+
   CalcPPab(n_cvt, p.e_mode, HiHi_eval, p.Uab, p.ab, Pab, PPab);
   CalcPPPab(n_cvt, p.e_mode, HiHiHi_eval, p.Uab, p.ab, Pab, PPab, PPPab);
 
@@ -854,9 +836,6 @@ extern(C) void LogL_dev12(double l, void *params, double *dev1, double *dev2) {
 
   double trace_Hi = 0.0, trace_HiHi = 0.0;
   size_t index_yy;
-
-  DMatrix Pab;
-  Pab.shape = [n_cvt + 2, n_index];
 
   DMatrix PPab;
   PPab.shape = [n_cvt + 2, n_index];
@@ -899,7 +878,7 @@ extern(C) void LogL_dev12(double l, void *params, double *dev1, double *dev2) {
     trace_HiHi = 2 * trace_Hi + trace_HiHi - to!double(ni_test);
   }
 
-  CalcPab(n_cvt, p.e_mode, Hi_eval, p.Uab, p.ab, Pab);
+  DMatrix Pab = CalcPab(n_cvt, p.e_mode, Hi_eval, p.Uab, p.ab, [n_cvt + 2, n_index]);
   CalcPPab(n_cvt, p.e_mode, HiHi_eval, p.Uab, p.ab, Pab, PPab);
   CalcPPPab(n_cvt, p.e_mode, HiHiHi_eval, p.Uab, p.ab, Pab, PPab, PPPab);
 
@@ -945,9 +924,6 @@ extern(C) void LogRL_dev12(double l, void* params, double* dev1, double* dev2) {
   double trace_Hi = 0.0, trace_HiHi = 0.0;
   size_t index_ww;
 
-  DMatrix Pab;
-  Pab.shape = [n_cvt + 2, n_index];
-
   DMatrix PPab;
   PPab.shape = [n_cvt + 2, n_index];
 
@@ -989,7 +965,7 @@ extern(C) void LogRL_dev12(double l, void* params, double* dev1, double* dev2) {
     trace_HiHi = 2 * trace_Hi + trace_HiHi - to!double(ni_test);
   }
 
-  CalcPab(n_cvt, p.e_mode, Hi_eval, p.Uab, p.ab, Pab);
+  DMatrix Pab = CalcPab(n_cvt, p.e_mode, Hi_eval, p.Uab, p.ab, [n_cvt + 2, n_index]);
   CalcPPab(n_cvt, p.e_mode, HiHi_eval, p.Uab, p.ab, Pab, PPab);
   CalcPPPab(n_cvt, p.e_mode, HiHiHi_eval, p.Uab, p.ab, Pab, PPab, PPPab);
 
@@ -1231,8 +1207,6 @@ void CalcRLWald(size_t ni_test, double l, loglikeparam params, ref double beta,
 
   int df = to!int(ni_test) - to!int(n_cvt) - 1;
 
-  DMatrix Pab;
-  Pab.shape = [n_cvt + 2, n_index];
   DMatrix Hi_eval;
   Hi_eval.shape = [1, params.eval.elements.length];
   DMatrix v_temp;
@@ -1248,7 +1222,7 @@ void CalcRLWald(size_t ni_test, double l, loglikeparam params, ref double beta,
   v_temp = add_dmatrix_num(v_temp, 1.0);
   Hi_eval = divide_dmatrix(Hi_eval, v_temp);
 
-  CalcPab(n_cvt, params.e_mode, Hi_eval, params.Uab, params.ab, Pab);
+  DMatrix Pab = CalcPab(n_cvt, params.e_mode, Hi_eval, params.Uab, params.ab, [n_cvt + 2, n_index]);
 
   size_t index_yy = GetabIndex(n_cvt + 2, n_cvt + 2, n_cvt);
   size_t index_xx = GetabIndex(n_cvt + 1, n_cvt + 1, n_cvt);
@@ -1274,8 +1248,6 @@ void CalcRLScore(size_t ni_test, double l, loglikeparam params, double beta,
 
   int df = to!int(ni_test) - to!int(n_cvt) - 1;
 
-  DMatrix Pab;
-  Pab.shape = [n_cvt + 2, n_index];
   DMatrix Hi_eval;
   Hi_eval.shape = [1, params.eval.elements.length];
   DMatrix v_temp;
@@ -1292,7 +1264,7 @@ void CalcRLScore(size_t ni_test, double l, loglikeparam params, double beta,
   v_temp = add_dmatrix_num(v_temp, 1.0);
   Hi_eval = divide_dmatrix(Hi_eval, v_temp);
 
-  CalcPab(n_cvt, params.e_mode, Hi_eval, params.Uab, params.ab, Pab);
+  DMatrix Pab = CalcPab(n_cvt, params.e_mode, Hi_eval, params.Uab, params.ab, [n_cvt + 2, n_index]);
 
   size_t index_yy = GetabIndex(n_cvt + 2, n_cvt + 2, n_cvt);
   size_t index_xx = GetabIndex(n_cvt + 1, n_cvt + 1, n_cvt);
@@ -1464,9 +1436,6 @@ void CalcLmmVgVeBeta(DMatrix eval, DMatrix UtW,
   DMatrix ab;
   ab.shape =[1, n_index];
 
-  DMatrix Pab;
-  Pab.shape = [n_cvt + 2, n_index];
-
   DMatrix Hi_eval;
   Hi_eval.shape =[1, eval.shape[0]];
 
@@ -1527,7 +1496,7 @@ void CalcLmmVgVeBeta(DMatrix eval, DMatrix UtW,
   4.671149335e-295,
   1.630416631e-307];
   Calcab(UtW, Uty, ab);
-  CalcPab(n_cvt, 0, Hi_eval, Uab, ab, Pab);
+  DMatrix Pab = CalcPab(n_cvt, 0, Hi_eval, Uab, ab, [n_cvt + 2, n_index]);
 
   size_t index_yy = GetabIndex(n_cvt + 2, n_cvt + 2, n_cvt);
   double P_yy = accessor(Pab, n_cvt, index_yy);
