@@ -1346,17 +1346,12 @@ void CalcLmmVgVeBeta(DMatrix eval, DMatrix UtW,
   size_t n_cvt = UtW.shape[1], ni_test = UtW.shape[0];
   size_t n_index = (n_cvt + 2 + 1) * (n_cvt + 2) / 2;
 
-  DMatrix Uab;
-  Uab.shape = [ni_test, n_index];
+  DMatrix Uab = zeros_dmatrix(ni_test, n_index);
+  CalcUab(UtW, Uty, Uab);
 
   DMatrix ab;
   ab.shape =[1, n_index];
 
-  DMatrix Hi_eval;
-  Hi_eval.shape =[1, eval.shape[0]];
-
-  DMatrix v_temp;
-  v_temp.shape =[1, eval.shape[0]];
 
   DMatrix HiW;
   HiW.shape = [eval.shape[1], UtW.shape[1]];
@@ -1370,12 +1365,11 @@ void CalcLmmVgVeBeta(DMatrix eval, DMatrix UtW,
   DMatrix Vbeta;
   Vbeta.shape = [UtW.shape[1], UtW.shape[1]];
 
-  Uab = set_zeros_dmatrix(Uab);
-  CalcUab(UtW, Uty, Uab);
 
-  v_temp.elements = eval.elements.dup;
+
+  DMatrix Hi_eval = ones_dmatrix(1, eval.shape[0]);
+  DMatrix v_temp =DMatrix([1, eval.shape[0]], eval.elements);
   v_temp = multiply_dmatrix_num(v_temp, lambda);
-  Hi_eval = set_ones_dmatrix(Hi_eval);
   v_temp = add_dmatrix_num(v_temp, 1.0);
   Hi_eval = divide_dmatrix(Hi_eval, v_temp);
 
@@ -1512,25 +1506,17 @@ void AnalyzeBimbam (Param cPar, DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Ut
   writeln("logl_mle_H0 =======> ", logl_mle_H0);
   writeln("n_index =======> ", n_index);
 
-  DMatrix x;
-  x.shape = [U.shape[0],1];
-  x = set_zeros_dmatrix(x);
+  DMatrix x = zeros_dmatrix(U.shape[0],1);
   DMatrix x_miss;
   x_miss.shape = [1, U.shape[0]];
-  //DMatrix Utx;
-  //Utx.shape = [1, U.shape[1]];
-  //Utx = set_zeros_dmatrix(Utx);
+
   DMatrix ab;
   ab.shape = [1, n_index];
 
   // Create a large matrix.
   size_t msize=10000;
-  DMatrix Xlarge;
-  Xlarge.shape = [U.shape[0], msize];
-  DMatrix UtXlarge;
-  UtXlarge.shape = [U.shape[0], msize];
-  Xlarge = set_zeros_dmatrix(Xlarge);
-  UtXlarge = set_zeros_dmatrix(UtXlarge);
+  DMatrix Xlarge = zeros_dmatrix(U.shape[0], msize);
+  DMatrix UtXlarge = zeros_dmatrix(U.shape[0], msize);
 
 
   //start reading genotypes and analyze
@@ -1542,14 +1528,11 @@ void AnalyzeBimbam (Param cPar, DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Ut
 
   int t = 0;
   
-  DMatrix Uab;
-  Uab.shape = [U.shape[1], n_index];
+  DMatrix Uab = zeros_dmatrix(U.shape[1], n_index);
 
-  Uab = set_zeros_dmatrix(Uab);
-  CalcUab (UtW, Uty, Uab);
+  CalcUab(UtW, Uty, Uab);
 
   foreach (line ; input.byLine) {
-   
     if (indicator_snp.elements[t]==0) {
       t++;
       continue;
@@ -1594,28 +1577,18 @@ void AnalyzeBimbam (Param cPar, DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Ut
       if (c%msize==0) {l=msize;} else {l=c%msize;}
 
       DMatrix Xlarge_sub = get_sub_dmatrix(Xlarge, 0, 0, Xlarge.shape[0], l);
-      //DMatrix UtXlarge_sub = get_sub_dmatrix(UtXlarge, 0, 0, UtXlarge.shape[0], l);
-
       DMatrix UtXlarge_sub = matrix_mult(U.T, Xlarge_sub);
       set_sub_dmatrix(UtXlarge, 0, 0, UtXlarge.shape[0], l, UtXlarge_sub);
 
-      Xlarge = set_zeros_dmatrix(Xlarge);
       for (size_t i=0; i<l; i++) {
 
         DMatrix Utx = get_col(UtXlarge, i);           //view
-        //Utx.elements = UtXlarge_col.elements.dup;
-
         CalcUab(UtW, Uty, Utx, Uab);
-
-        writeln(Uab.shape);
-
+        //writeln(Uab.shape);
         ab = set_zeros_dmatrix(ab);
-
         loglikeparam param1 = loglikeparam(false, ni_test, n_cvt, eval, Uab, ab, 0);
-
         // 3 is before 1.
         if (a_mode==3 || a_mode==4) {
-
           CalcRLScore (ni_test, l_mle_null, param1, beta, se, p_score);
         }
 
@@ -1630,9 +1603,9 @@ void AnalyzeBimbam (Param cPar, DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Ut
         }
 
         SUMSTAT SNPs = SUMSTAT(beta, se, lambda_remle, lambda_mle, p_wald, p_lrt, p_score);
-
         sumStat ~= SNPs;
       }
+      Xlarge = set_zeros_dmatrix(Xlarge);
     }
     t++;
   }
