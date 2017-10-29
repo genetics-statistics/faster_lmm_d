@@ -395,20 +395,15 @@ double LogL_f(double l, void* params) {
   double d;
   size_t index_yy;
 
-  DMatrix Hi_eval;
-  
-  Hi_eval.shape = [1, p.eval.elements.length];
-  DMatrix v_temp;
-  v_temp.shape = [1, p.eval.elements.length];
-
-  v_temp.elements = p.eval.elements.dup;
-
+  DMatrix v_temp =  DMatrix([1, p.eval.elements.length], p.eval.elements);
   v_temp = multiply_dmatrix_num(v_temp, l);
+  
+  DMatrix Hi_eval;
 
   if (p.e_mode == 0) {
-    Hi_eval = set_ones_dmatrix(Hi_eval);
+    Hi_eval = ones_dmatrix(1, p.eval.elements.length);
   } else {
-    Hi_eval.elements = v_temp.elements.dup;
+    Hi_eval = dup_dmatrix(v_temp);
   }
 
   v_temp = add_dmatrix_num(v_temp, 1.0);
@@ -452,18 +447,17 @@ double LogRL_f(double l, void* params) {
   double f = 0.0, logdet_h = 0.0, logdet_hiw = 0.0, d;
   size_t index_ww;
 
-  DMatrix Hi_eval;
-  Hi_eval.shape = [1, p.eval.elements.length];
-  DMatrix v_temp;
-  v_temp.shape = [1, p.eval.elements.length];
-  v_temp.elements = p.eval.elements.dup;
-
+  DMatrix v_temp = DMatrix([1, p.eval.elements.length], p.eval.elements);
   v_temp = multiply_dmatrix_num(v_temp, l);
+  
+  DMatrix Hi_eval;
+  
   if (p.e_mode == 0) {
-    Hi_eval = set_ones_dmatrix(Hi_eval);
+    Hi_eval = ones_dmatrix(1, p.eval.elements.length);
   } else {
-    Hi_eval.elements = v_temp.elements.dup;
+    Hi_eval = dup_dmatrix(v_temp);
   }
+
   v_temp = add_dmatrix_num(v_temp, 1.0);
   Hi_eval = divide_dmatrix(Hi_eval, v_temp);
 
@@ -517,17 +511,12 @@ extern(C) double LogRL_dev1(double l, void* params) {
   double dev1 = 0.0, trace_Hi = 0.0;
   size_t index_ww;
 
-  DMatrix Hi_eval;
-  Hi_eval.shape = [1, p.eval.elements.length];
-  DMatrix HiHi_eval;
-  HiHi_eval.shape = [1, p.eval.elements.length];
-  DMatrix v_temp;
-  v_temp.shape = [1, p.eval.elements.length];
-  v_temp.elements = p.eval.elements.dup;
-
+  DMatrix v_temp =  DMatrix([1, p.eval.elements.length], p.eval.elements);
   v_temp = multiply_dmatrix_num(v_temp, l);
+
+  DMatrix Hi_eval, HiHi_eval;
   if (p.e_mode == 0) {
-    Hi_eval = set_ones_dmatrix(Hi_eval);
+    Hi_eval = ones_dmatrix(1, p.eval.elements.length);
   } else {
     Hi_eval.elements = v_temp.elements;
   }
@@ -535,10 +524,7 @@ extern(C) double LogRL_dev1(double l, void* params) {
   v_temp = add_dmatrix_num(v_temp, 1.0);
   Hi_eval = divide_dmatrix(Hi_eval, v_temp);
 
-  nan_counter(p.Uab);
-  nan_counter(p.ab);
-  HiHi_eval.elements =  Hi_eval.elements.dup;
-  HiHi_eval = slow_multiply_dmatrix(HiHi_eval, Hi_eval);
+  HiHi_eval = slow_multiply_dmatrix(Hi_eval, Hi_eval);
 
   v_temp = set_ones_dmatrix(v_temp);
   trace_Hi = matrix_mult(Hi_eval, v_temp.T).elements[0];
@@ -592,26 +578,20 @@ extern(C) double LogL_dev1(double l, void* params) {
   double dev1 = 0.0, trace_Hi = 0.0;
   size_t index_yy;
 
-  DMatrix Hi_eval;
-  Hi_eval.shape = [1, p.eval.elements.length];
-  DMatrix HiHi_eval;
-  HiHi_eval.shape = [1, p.eval.elements.length];
-  DMatrix v_temp;
-  v_temp.shape = [1, p.eval.elements.length];
-  v_temp.elements = p.eval.elements;
-
+  DMatrix v_temp = DMatrix([1, p.eval.elements.length], p.eval.elements);
   v_temp = multiply_dmatrix_num(v_temp, l);
 
+  DMatrix Hi_eval, HiHi_eval;
   if (p.e_mode == 0) {
-    Hi_eval = set_ones_dmatrix(Hi_eval);
+    Hi_eval = ones_dmatrix(1, p.eval.elements.length);
   } else {
-    Hi_eval.elements = v_temp.elements.dup;
+    Hi_eval = dup_dmatrix(v_temp);
   }
-  v_temp = add_dmatrix_num(v_temp, 1.0);
-  Hi_eval = divide_dmatrix(Hi_eval, v_temp);
 
-  HiHi_eval.elements = Hi_eval.elements.dup;
-  HiHi_eval = slow_multiply_dmatrix(HiHi_eval, Hi_eval);
+  v_temp = add_dmatrix_num(v_temp, 1.0);
+
+  Hi_eval = divide_dmatrix(Hi_eval, v_temp);
+  HiHi_eval = slow_multiply_dmatrix(Hi_eval, Hi_eval);
 
   v_temp = set_ones_dmatrix(v_temp);
   trace_Hi = matrix_mult(Hi_eval, v_temp.T).elements[0];
@@ -660,9 +640,7 @@ extern(C) double LogRL_dev2(double l, void* params) {
 
   DMatrix Hi_eval, HiHi_eval, HiHiHi_eval;
 
-  DMatrix v_temp;
-  v_temp.shape = [1, p.eval.elements.length];
-  v_temp.elements = p.eval.elements;
+  DMatrix v_temp =  DMatrix([1, p.eval.elements.length], p.eval.elements);
 
   v_temp = multiply_dmatrix_num(v_temp, l);
 
@@ -736,13 +714,11 @@ extern(C) double LogL_dev2(double l, void* params) {
   double dev2 = 0.0, trace_Hi = 0.0, trace_HiHi = 0.0;
   size_t index_yy;
   
-  DMatrix Hi_eval, HiHi_eval, HiHiHi_eval;
 
-  DMatrix v_temp;
-  v_temp.shape = [1, p.eval.elements.length];
-  v_temp.elements = p.eval.elements;
-
+  DMatrix v_temp =  DMatrix([1, p.eval.elements.length], p.eval.elements);
   v_temp = multiply_dmatrix_num(v_temp, l);
+
+  DMatrix Hi_eval, HiHi_eval, HiHiHi_eval;
 
   if (p.e_mode == 0) {
     Hi_eval = ones_dmatrix(1, p.eval.elements.length);
@@ -805,13 +781,11 @@ extern(C) void LogL_dev12(double l, void *params, double *dev1, double *dev2) {
   double trace_Hi = 0.0, trace_HiHi = 0.0;
   size_t index_yy;
 
-  DMatrix Hi_eval, HiHi_eval,HiHiHi_eval;
 
-  DMatrix v_temp;
-  v_temp.shape = [1, p.eval.elements.length];
-  v_temp.elements = p.eval.elements.dup;
-
+  DMatrix v_temp =  DMatrix([1, p.eval.elements.length], p.eval.elements);
   v_temp = multiply_dmatrix_num(v_temp, l);
+
+  DMatrix Hi_eval, HiHi_eval,HiHiHi_eval;
 
   if (p.e_mode == 0) {
     Hi_eval = ones_dmatrix(1, p.eval.elements.length);
@@ -879,13 +853,11 @@ extern(C) void LogRL_dev12(double l, void* params, double* dev1, double* dev2) {
   double trace_Hi = 0.0, trace_HiHi = 0.0;
   size_t index_ww;
 
-  DMatrix Hi_eval, HiHi_eval, HiHiHi_eval;
 
-  DMatrix v_temp;
-  v_temp.shape = [1, p.eval.elements.length];
-  v_temp.elements = p.eval.elements;
-
+  DMatrix v_temp =  DMatrix([1, p.eval.elements.length], p.eval.elements);
   v_temp = multiply_dmatrix_num(v_temp, l);
+
+  DMatrix Hi_eval, HiHi_eval, HiHiHi_eval;
 
   if (p.e_mode == 0) {
     Hi_eval = ones_dmatrix(1, p.eval.elements.length);
