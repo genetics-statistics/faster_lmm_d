@@ -155,54 +155,6 @@ void lapack_eigen_symmv(ref DMatrix A, ref DMatrix eval, ref DMatrix evec,
   return;
 }
 
-// Does NOT set eigenvalues to be positive. G gets destroyed. Returns
-// eigen trace and values in U and eval (eigenvalues).
-double EigenDecomp(ref DMatrix G, ref DMatrix U, ref DMatrix eval,
-                   const size_t flag_largematrix) {
-  lapack_eigen_symmv(G, eval, U, flag_largematrix);
-
-  // Calculate track_G=mean(diag(G)).
-  double d = 0.0;
-  for (size_t i = 0; i < eval.elements.length; ++i)
-    d += eval.elements[i];
-
-  d /= to!double(eval.elements.length);
-
-  return d;
-}
-
-// Same as EigenDecomp but zeroes eigenvalues close to zero. When
-// negative eigenvalues remain a warning is issued.
-double EigenDecomp_Zeroed(ref DMatrix G, ref DMatrix U, ref DMatrix eval,
-                          const size_t flag_largematrix) {
-  EigenDecomp(G,U,eval,flag_largematrix);
-  auto d = 0.0;
-  int count_zero_eigenvalues = 0;
-  int count_negative_eigenvalues = 0;
-  for (size_t i = 0; i < eval.elements.length; i++) {
-    if (abs(eval.elements[i]) < EIGEN_MINVALUE)
-      eval.elements[i]  =  0.0;
-    // checks
-    if (eval.elements[i] == 0.0)
-      count_zero_eigenvalues += 1;
-    if (eval.elements[i] < 0.0) // count smaller than -EIGEN_MINVALUE
-      count_negative_eigenvalues += 1;
-    d += eval.elements[i];
-  }
-  d /= to!double(eval.elements.length);
-  if (count_zero_eigenvalues > 1) {
-    string msg = "Matrix G has ";
-    msg ~= to!string(count_zero_eigenvalues);
-    msg ~= " eigenvalues close to zero";
-    writeln(msg);
-  }
-  if (count_negative_eigenvalues > 0) {
-    writeln("Matrix G has more than one negative eigenvalues!");
-  }
-
-  return d;
-}
-
 DMatrix CalcPab(const size_t n_cvt, const size_t e_mode, const DMatrix Hi_eval,
               const DMatrix Uab, const DMatrix ab, const size_t[] shape) {
   size_t index_ab, index_aw, index_bw, index_ww;
@@ -383,12 +335,7 @@ double LogL_f(double l, void* params) {
   size_t ni_test = p.ni_test;
   size_t n_index = (n_cvt + 2 + 1) * (n_cvt + 2) / 2;
 
-  size_t nc_total;
-  if (p.calc_null == true) {
-    nc_total = n_cvt;
-  } else {
-    nc_total = n_cvt + 1;
-  }
+  size_t nc_total = (p.calc_null == true ? n_cvt : n_cvt + 1);
 
   double f = 0.0;
   double logdet_h = 0.0;
@@ -433,16 +380,9 @@ double LogRL_f(double l, void* params) {
   size_t n_cvt = p.n_cvt;
   size_t ni_test = p.ni_test;
   size_t n_index = (n_cvt + 2 + 1) * (n_cvt + 2) / 2;
-
-  double df;
-  size_t nc_total;
-  if (p.calc_null == true) {
-    nc_total = n_cvt;
-    df = to!double(ni_test) - to!double(n_cvt);
-  } else {
-    nc_total = n_cvt + 1;
-    df = to!double(ni_test) - to!double(n_cvt) - 1.0;
-  }
+    
+  size_t nc_total = (p.calc_null == true ? n_cvt : n_cvt + 1);
+  double df = (p.calc_null == true ? to!double(ni_test) - to!double(n_cvt) : to!double(ni_test) - to!double(n_cvt) - 1.0);
 
   double f = 0.0, logdet_h = 0.0, logdet_hiw = 0.0, d;
   size_t index_ww;
@@ -496,17 +436,8 @@ extern(C) double LogRL_dev1(double l, void* params) {
   size_t ni_test = p.ni_test;
   size_t n_index = (n_cvt + 2 + 1) * (n_cvt + 2) / 2;
 
-  double df;
-  size_t nc_total;
-
-  if (p.calc_null == true) {
-    nc_total = n_cvt;
-    df = to!double(ni_test) - to!double(n_cvt);
-  } else {
-    nc_total =  n_cvt + 1;
-    df =  to!double(ni_test) - to!double(n_cvt) - 1.0;
-    
-  }
+  size_t nc_total = (p.calc_null == true ? n_cvt : n_cvt + 1);
+  double df = (p.calc_null == true ? to!double(ni_test) - to!double(n_cvt) : to!double(ni_test) - to!double(n_cvt) - 1.0);
 
   double dev1 = 0.0, trace_Hi = 0.0;
   size_t index_ww;
@@ -567,13 +498,7 @@ extern(C) double LogL_dev1(double l, void* params) {
   size_t ni_test = p.ni_test;
   size_t n_index = (n_cvt + 2 + 1) * (n_cvt + 2) / 2;
 
-  size_t nc_total;
-
-  if (p.calc_null == true) {
-    nc_total = n_cvt;
-  } else {
-    nc_total = n_cvt + 1;
-  }
+  size_t nc_total = (p.calc_null == true ? n_cvt : n_cvt + 1);
 
   double dev1 = 0.0, trace_Hi = 0.0;
   size_t index_yy;
@@ -625,15 +550,8 @@ extern(C) double LogRL_dev2(double l, void* params) {
   size_t ni_test = p.ni_test;
   size_t n_index = (n_cvt + 2 + 1) * (n_cvt + 2) / 2;
 
-  double df;
-  size_t nc_total;
-  if (p.calc_null == true) {
-    nc_total = n_cvt;
-    df = to!double(ni_test) - to!double(n_cvt);
-  } else {
-    nc_total = n_cvt + 1;
-    df = to!double(ni_test) - to!double(n_cvt) - 1.0;
-  }
+  size_t nc_total = (p.calc_null == true ? n_cvt : n_cvt + 1);
+  double df = (p.calc_null == true ? to!double(ni_test) - to!double(n_cvt) : to!double(ni_test) - to!double(n_cvt) - 1.0);
 
   double dev2 = 0.0, trace_Hi = 0.0, trace_HiHi = 0.0;
   size_t index_ww;
@@ -704,12 +622,7 @@ extern(C) double LogL_dev2(double l, void* params) {
   size_t ni_test = p.ni_test;
   size_t n_index = (n_cvt + 2 + 1) * (n_cvt + 2) / 2;
 
-  size_t nc_total;
-  if (p.calc_null == true) {
-    nc_total = n_cvt;
-  } else {
-    nc_total = n_cvt + 1;
-  }
+  size_t nc_total = (p.calc_null == true ? n_cvt : n_cvt + 1);
 
   double dev2 = 0.0, trace_Hi = 0.0, trace_HiHi = 0.0;
   size_t index_yy;
@@ -771,12 +684,7 @@ extern(C) void LogL_dev12(double l, void *params, double *dev1, double *dev2) {
   size_t ni_test = p.ni_test;
   size_t n_index = (n_cvt + 2 + 1) * (n_cvt + 2) / 2;
 
-  size_t nc_total;
-  if (p.calc_null == true) {
-    nc_total = n_cvt;
-  } else {
-    nc_total = n_cvt + 1;
-  }
+  size_t nc_total = (p.calc_null == true ? n_cvt : n_cvt + 1);
 
   double trace_Hi = 0.0, trace_HiHi = 0.0;
   size_t index_yy;
@@ -840,15 +748,8 @@ extern(C) void LogRL_dev12(double l, void* params, double* dev1, double* dev2) {
   size_t ni_test = p.ni_test;
   size_t n_index = (n_cvt + 2 + 1) * (n_cvt + 2) / 2;
 
-  double df;
-  size_t nc_total;
-  if (p.calc_null == true) {
-    nc_total = n_cvt;
-    df = to!double(ni_test) - to!double(n_cvt);
-  } else {
-    nc_total = n_cvt + 1;
-    df = to!double(ni_test) - to!double(n_cvt) - 1.0;
-  }
+  size_t nc_total = (p.calc_null == true ? n_cvt : n_cvt + 1);
+  double df = (p.calc_null == true ? to!double(ni_test) - to!double(n_cvt) : to!double(ni_test) - to!double(n_cvt) - 1.0);
 
   double trace_Hi = 0.0, trace_HiHi = 0.0;
   size_t index_ww;
