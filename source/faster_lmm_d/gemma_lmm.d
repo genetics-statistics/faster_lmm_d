@@ -350,10 +350,8 @@ double LogL_f(double l, void* params) {
   v_temp = add_dmatrix_num(v_temp, 1.0);
   Hi_eval = divide_dmatrix(Hi_eval, v_temp);
 
-  for (size_t i = 0; i < p.eval.elements.length; ++i) {
-    d = v_temp.elements[i];
-    logdet_h += mlog(fabs(d));
-  }
+  foreach (element; v_temp.elements)
+    logdet_h += mlog(fabs(element));
 
   DMatrix Pab = CalcPab(n_cvt, p.e_mode, Hi_eval, p.Uab, p.ab, [n_cvt + 2, n_index]);
 
@@ -389,10 +387,8 @@ double LogRL_f(double l, void* params) {
   v_temp = add_dmatrix_num(v_temp, 1.0);
   Hi_eval = divide_dmatrix(Hi_eval, v_temp);
 
-  for (size_t i = 0; i < p.eval.elements.length; ++i) {
-    d = v_temp.elements[i];
-    logdet_h += mlog(fabs(d));
-  }
+  foreach (element; v_temp.elements)
+    logdet_h += mlog(fabs(element));
 
   DMatrix Pab = CalcPab(n_cvt, p.e_mode, Hi_eval, p.Uab, p.ab, [n_cvt + 2, n_index]);
 
