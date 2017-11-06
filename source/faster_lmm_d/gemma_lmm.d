@@ -376,7 +376,7 @@ double LogRL_f(double l, void* params) {
   size_t nc_total = (p.calc_null == true ? n_cvt : n_cvt + 1);
   double df = (p.calc_null == true ? to!double(ni_test) - to!double(n_cvt) : to!double(ni_test) - to!double(n_cvt) - 1.0);
 
-  double f = 0.0, logdet_h = 0.0, logdet_hiw = 0.0, d;
+  double f = 0.0, logdet_h = 0.0, logdet_hiw = 0.0;
   size_t index_ww;
 
   DMatrix v_temp = DMatrix([1, p.eval.elements.length], p.eval.elements);
@@ -399,10 +399,8 @@ double LogRL_f(double l, void* params) {
   logdet_hiw = 0.0;
   for (size_t i = 0; i < nc_total; ++i) {
     index_ww = GetabIndex(i + 1, i + 1, n_cvt);
-    d = accessor(Pab, i, index_ww);
-    logdet_hiw += mlog(d);
-    d = accessor(Iab, i, index_ww);
-    logdet_hiw -= mlog(d);
+    logdet_hiw += mlog(accessor(Pab, i, index_ww));
+    logdet_hiw -= mlog(accessor(Iab, i, index_ww));
   }
   index_ww = GetabIndex(n_cvt + 2, n_cvt + 2, n_cvt);
   double P_yy = accessor(Pab, nc_total, index_ww);
@@ -946,18 +944,11 @@ void CalcLambda(char func_name, DMatrix eval,
 
   DMatrix Uab = zeros_dmatrix(ni_test, n_index);
 
-  DMatrix ab;
-  ab.shape = [1, n_index];
+  
 
   CalcUab(UtW, Uty, Uab);
-  ab.elements = [6.901535246e-295,
-  6.901535246e-295,
-  4.67120702e-295,
-  4.67120702e-295,
-  4.671149335e-295,
-  1.630416631e-307];
 
-  Calcab(UtW, Uty, ab);
+  DMatrix ab = calc_ab(UtW, Uty, [1, n_index]);
 
   loglikeparam param0 = loglikeparam(true, ni_test, n_cvt, eval, Uab, ab, 0);
 
@@ -1106,7 +1097,7 @@ void CalcUab(DMatrix UtW, DMatrix Uty, DMatrix Utx, ref DMatrix Uab) {
   return;
 }
 
-void Calcab(DMatrix W, DMatrix y, ref DMatrix ab) {
+DMatrix calc_ab(const DMatrix W, const DMatrix y, const size_t[] shape) {
   size_t index_ab;
   size_t n_cvt = W.shape[1];
 
@@ -1114,6 +1105,8 @@ void Calcab(DMatrix W, DMatrix y, ref DMatrix ab) {
   DMatrix v_a, v_b;
   v_a.shape = [1, y.shape[1]];
   v_b.shape = [1, y.shape[1]];
+
+  DMatrix ab = zeros_dmatrix(shape[0], shape[1]);
 
   for (size_t a = 1; a <= n_cvt + 2; ++a) {
     if (a == n_cvt + 1) {
@@ -1146,12 +1139,14 @@ void Calcab(DMatrix W, DMatrix y, ref DMatrix ab) {
     }
   }
 
-  return;
+  return ab;
 }
 
-void Calcab(DMatrix W, DMatrix y, DMatrix x, ref DMatrix ab) {
+DMatrix calc_ab(const DMatrix W, const DMatrix y, const DMatrix x, const size_t[] shape) {
   size_t index_ab;
   size_t n_cvt = W.shape[1];
+
+  DMatrix ab = zeros_dmatrix(shape[0], shape[1]);
 
   double d;
   DMatrix v_b;
@@ -1173,7 +1168,7 @@ void Calcab(DMatrix W, DMatrix y, DMatrix x, ref DMatrix ab) {
     ab.elements[index_ab] = d;
   }
 
-  return;
+  return ab;
 }
 
 // Obtain REML estimate for Vg and Ve using lambda_remle.
@@ -1189,10 +1184,6 @@ void CalcLmmVgVeBeta(DMatrix eval, DMatrix UtW,
 
   DMatrix Uab = zeros_dmatrix(ni_test, n_index);
   CalcUab(UtW, Uty, Uab);
-
-  DMatrix ab;
-  ab.shape =[1, n_index];
-
 
   DMatrix HiW;
   HiW.shape = [eval.shape[1], UtW.shape[1]];
@@ -1240,13 +1231,7 @@ void CalcLmmVgVeBeta(DMatrix eval, DMatrix UtW,
 
   Vbeta = inverse(WHiW);
 
-  ab.elements = [6.901535246e-295,
-  6.901535246e-295,
-  4.67120702e-295,
-  4.67120702e-295,
-  4.671149335e-295,
-  1.630416631e-307];
-  Calcab(UtW, Uty, ab);
+  DMatrix ab = calc_ab(UtW, Uty, [1, n_index]);
   DMatrix Pab = CalcPab(n_cvt, 0, Hi_eval, Uab, ab, [n_cvt + 2, n_index]);
 
   size_t index_yy = GetabIndex(n_cvt + 2, n_cvt + 2, n_cvt);
@@ -1547,11 +1532,11 @@ unittest{
   //CalcUab(UtW, Uty, Utx, Uab);
   //assert();
 
-  //Calcab(W, y, ab);
+  //calc_ab(W, y, ab);
   //assert();
 
   DMatrix x;
-  //Calcab(W, y, x, ab);
+  //calc_ab(W, y, x, ab);
   //assert();
 
   double vg, ve;
