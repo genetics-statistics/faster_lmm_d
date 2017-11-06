@@ -32,8 +32,6 @@ import gsl.math;
 import gsl.min;
 import gsl.roots;
 
-//import progress.bar;
-
 DMatrix read_matrix_from_file2(string filename){
   string input = to!string(std.file.read(filename));
 
@@ -288,20 +286,22 @@ DMatrix CalcPPPab(const size_t n_cvt, const size_t e_mode,
   return PPPab;
 }
 
-size_t GetabIndex(size_t a, size_t b, size_t n_cvt) {
+size_t GetabIndex( const size_t a, const size_t b, const size_t n_cvt) {
   size_t n = n_cvt + 2;
   if (a > n || b > n || a <= 0 || b <= 0) {
     writeln("error in GetabIndex.");
     return 0;
   }
-
+  size_t high, low;
   if (b < a) {
-    size_t temp = b;
-    b = a;
-    a = temp;
+    high = a;
+    low = b;
+  }else{
+    high = b;
+    low = a;
   }
 
-  return (2 * n - a + 2) * (a - 1) / 2 + b - a;
+  return (2 * n - low + 2) * (low - 1) / 2 + high - low;
 }
 
 struct loglikeparam{
@@ -326,7 +326,7 @@ struct loglikeparam{
 }
 
 
-double LogL_f(double l, void* params) {
+double LogL_f(const double l, const void* params) {
 
   auto ptr = cast(loglikeparam *)params;
   loglikeparam p = *ptr;
@@ -364,7 +364,7 @@ double LogL_f(double l, void* params) {
   return f;
 }
 
-double LogRL_f(double l, void* params) {
+double LogRL_f(const double l, const void* params) {
 
   auto ptr = cast(loglikeparam *)params;
   loglikeparam p = *ptr;
@@ -765,10 +765,10 @@ extern(C) void LogRL_dev12(double l, void* params, double* dev1, double* dev2) {
 
 alias Tuple!(double,"l",double,"h") Lambda_tup;
 
-void CalcLambda(const char func_name, void* params, const double l_min,
+void calc_lambda(const char func_name, void* params, const double l_min,
                 const double l_max, const size_t n_region, ref double lambda,
                 ref double logf) {
-  //writeln("in CalcLambda for NOT-NULL");
+  //writeln("in calc_lambda for NOT-NULL");
   if (func_name != 'R' && func_name != 'L' && func_name != 'r' &&
       func_name != 'l') {
     writeln("func_name only takes 'R' or 'L': 'R' for
@@ -927,11 +927,11 @@ void CalcLambda(const char func_name, void* params, const double l_min,
 }
 
 // Calculate lambda in the null model.
-void CalcLambda(char func_name, DMatrix eval,
+void calc_lambda(char func_name, DMatrix eval,
                 DMatrix UtW, DMatrix Uty,
                 ref double l_min, ref double l_max, size_t n_region,
                 ref  double lambda, ref double logl_H0) {
-  writeln("in CalcLambda for null model");
+  writeln("in calc_lambda for null model");
   if (func_name != 'R' && func_name != 'L' && func_name != 'r' &&
       func_name != 'l') {
     writeln("func_name only takes 'R' or 'L': 'R' for
@@ -952,7 +952,7 @@ void CalcLambda(char func_name, DMatrix eval,
 
   loglikeparam param0 = loglikeparam(true, ni_test, n_cvt, eval, Uab, ab, 0);
 
-  CalcLambda(func_name, cast(void *)&param0, l_min, l_max, n_region, lambda, logl_H0);
+  calc_lambda(func_name, cast(void *)&param0, l_min, l_max, n_region, lambda, logl_H0);
 
   return;
 }
@@ -994,7 +994,7 @@ void CalcRLWald(size_t ni_test, double l, loglikeparam params, ref double beta,
   return;
 }
 
-void CalcRLScore(size_t ni_test, double l, loglikeparam params, double beta,
+void calc_RL_score(size_t ni_test, double l, loglikeparam params, double beta,
                       double se, double p_score) {
   size_t n_cvt = params.n_cvt;
   size_t n_index = (n_cvt + 2 + 1) * (n_cvt + 2) / 2;
@@ -1252,10 +1252,10 @@ void CalcLmmVgVeBeta(DMatrix eval, DMatrix UtW,
 }
 
 // Obtain REMLE estimate for PVE using lambda_remle.
-void CalcPve(DMatrix eval, DMatrix UtW,
+void calc_pve(DMatrix eval, DMatrix UtW,
              DMatrix Uty, double lambda, double trace_G,
              ref double pve, ref double pve_se) {
-  writeln("in CalcPve");
+  writeln("in calc_pve");
 
   size_t n_cvt = UtW.shape[1], ni_test = UtW.shape[0];
   size_t n_index = (n_cvt + 2 + 1) * (n_cvt + 2) / 2;
@@ -1275,7 +1275,7 @@ void CalcPve(DMatrix eval, DMatrix UtW,
 
   pve = trace_G * lambda / (trace_G * lambda + 1.0);
   pve_se = trace_G / ((trace_G * lambda + 1.0) * (trace_G * lambda + 1.0)) * se;
-  writeln("out of CalcPve");
+  writeln("out of calc_pve");
 
   return;
 }
@@ -1415,16 +1415,16 @@ void AnalyzeBimbam (Param cPar, DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Ut
         loglikeparam param1 = loglikeparam(false, ni_test, n_cvt, eval, Uab, ab, 0);
         // 3 is before 1.
         if (a_mode==3 || a_mode==4) {
-          CalcRLScore (ni_test, l_mle_null, param1, beta, se, p_score);
+          calc_RL_score (ni_test, l_mle_null, param1, beta, se, p_score);
         }
 
         if (a_mode==1 || a_mode==4) {
-          CalcLambda ('R', cast(void *)&param1, l_min, l_max, n_region, lambda_remle, logl_H1);
+          calc_lambda ('R', cast(void *)&param1, l_min, l_max, n_region, lambda_remle, logl_H1);
           CalcRLWald (ni_test, lambda_remle, param1, beta, se, p_wald);
         }
 
         if (a_mode==2 || a_mode==4) {
-          CalcLambda ('L', cast(void *)&param1, l_min, l_max, n_region, lambda_mle, logl_H1);
+          calc_lambda ('L', cast(void *)&param1, l_min, l_max, n_region, lambda_mle, logl_H1);
           p_lrt=gsl_cdf_chisq_Q (2.0*(logl_H1 - logl_mle_H0), 1);
         }
 
@@ -1475,7 +1475,7 @@ unittest{
   double lambda = 0.7;
   double logf;
   loglikeparam params;
-  //CalcLambda(func_name, cast(void *)&params, l_min, l_max, n_region, lambda, logf);
+  //calc_lambda(func_name, cast(void *)&params, l_min, l_max, n_region, lambda, logf);
   //assert();
 
   // Calculate lambda in the null model.
@@ -1512,7 +1512,7 @@ unittest{
   Uab = zeros_dmatrix(ni_test, n_index);
 
   loglikeparam param0 = loglikeparam(true, ni_test, n_cvt, eval, Uab, ab, 0);
-  //CalcLambda(func_name, eval, UtW, Uty, l_min, l_max, n_region, lambda, logl_H0);
+  //calc_lambda(func_name, eval, UtW, Uty, l_min, l_max, n_region, lambda, logl_H0);
   //assert();
 
   double l = 6;
@@ -1523,7 +1523,7 @@ unittest{
   //assert();
 
   double p_score;
-  //CalcRLScore(ni_test, l, params, beta, se, p_score);
+  //calc_RL_score(ni_test, l, params, beta, se, p_score);
   //assert();
 
   //CalcUab(UtW, Uty, Uab);
@@ -1544,5 +1544,5 @@ unittest{
   //CalcLmmVgVeBeta(eval, UtW, Uty, lambda, vg, ve, beta, se_beta);
 
   double trace_G, pve, pve_se;
-  //CalcPve(eval,  UtW, Uty, lambda, trace_G, pve,  pve_se);
+  //calc_pve(eval,  UtW, Uty, lambda, trace_G, pve,  pve_se);
 }

@@ -278,7 +278,7 @@ void fit_model(Param cPar, DMatrix U, DMatrix eval, DMatrix  UtW, DMatrix UtY, D
     cPar.l_max = 100000;
     cPar.n_region = 10;
 
-    CalcLambda('L', eval, UtW, UtY_col, cPar.l_min, cPar.l_max,
+    calc_lambda('L', eval, UtW, UtY_col, cPar.l_min, cPar.l_max,
                cPar.n_region, cPar.l_mle_null, cPar.logl_mle_H0);
 
     writeln("==============cPar.l_mle_null=======================");
@@ -290,7 +290,7 @@ void fit_model(Param cPar, DMatrix U, DMatrix eval, DMatrix  UtW, DMatrix UtY, D
                     se_beta);
 
 
-    CalcLambda('R', eval, UtW, UtY_col, cPar.l_min, cPar.l_max,
+    calc_lambda('R', eval, UtW, UtY_col, cPar.l_min, cPar.l_max,
                cPar.n_region, cPar.l_remle_null, cPar.logl_remle_H0);
 
     writeln(cPar.l_remle_null);
@@ -300,7 +300,7 @@ void fit_model(Param cPar, DMatrix U, DMatrix eval, DMatrix  UtW, DMatrix UtY, D
                     cPar.vg_remle_null, cPar.ve_remle_null, beta,
                     se_beta);
 
-    CalcPve(eval, UtW, UtY_col, cPar.l_remle_null, cPar.trace_G,
+    calc_pve(eval, UtW, UtY_col, cPar.l_remle_null, cPar.trace_G,
             cPar.pve_null, cPar.pve_se_null);
 
     check_lambda(test_name, cPar);
