@@ -49,110 +49,6 @@ DMatrix read_matrix_from_file2(string filename){
   return DMatrix([rows, elements.length/rows], elements);
 }
 
-void CenterMatrix(ref DMatrix G) {
-  writeln("CenterMatrix");
-  DMatrix w = ones_dmatrix(1, G.shape[0]);
-
-  DMatrix Gw = matrix_mult(G, w);
-  double alpha = -1.0 / to!double(G.shape[0]);
-  DMatrix G1 =  multiply_dmatrix_num(matrix_mult(Gw, w.T), alpha);
-  DMatrix G2 =  multiply_dmatrix_num(matrix_mult(w, Gw.T), alpha);
-  G = add_dmatrix(add_dmatrix(G1, G2), G);
-
-  double alpha_2 = -1.0 / (to!double(G.shape[0]* to!double(G.shape[0])));
-  double d = matrix_mult(w, Gw.T).elements[0];
-  alpha = d / (to!double(G.shape[0]) * to!double(G.shape[0]));
-  G1 =  multiply_dmatrix_num(matrix_mult(w, w.T), alpha);
-  G = add_dmatrix(G1, G);
-
-  for (size_t i = 0; i < G.shape[0]; ++i) {
-    for (size_t j = 0; j < i; ++j) {
-      d = accessor(G, j, i);
-      G.elements[G.cols * i + j] = d;
-    }
-  }
-  writeln(sqrt(to!double(G.elements.length)));
-
-  return;
-}
-
-// Eigenvalue decomposition, matrix A is destroyed. Returns eigenvalues in
-// 'eval'. Also returns matrix 'evec' (U).
-void lapack_eigen_symmv(ref DMatrix A, ref DMatrix eval, ref DMatrix evec,
-                        const size_t flag_largematrix) {
-  if (flag_largematrix == 1) {
-    int N = to!int(A.shape[0]), LDA = to!int(A.shape[0]), INFO, LWORK = -1;
-    char JOBZ = 'V', UPLO = 'L';
-
-    if (N != A.shape[1] || N != eval.elements.length) {
-      writeln("Matrix needs to be symmetric and same dimension in lapack_eigen_symmv.");
-      return;
-    }
-
-    LWORK = 3 * N;
-    //double[LWORK] WORK;
-    double[] WORK;
-    INFO = LAPACKE_dsyev(101, JOBZ, UPLO, N, A.elements.ptr, LDA, eval.elements.ptr);
-      //WORK, &LWORK, &INFO);
-    if (INFO != 0) {
-      writeln("Eigen decomposition unsuccessful in lapack_eigen_symmv.");
-      return;
-    }
-
-    DMatrix A_sub = get_sub_dmatrix(A, 0, 0, N, N);
-    evec.elements = A_sub.elements.dup;
-    evec = evec.T;
-  } else {
-    int N = to!int(A.shape[0]), LDA = to!int(A.shape[0]), LDZ = to!int(A.shape[0]), INFO;
-    int LWORK = -1, LIWORK = -1;
-    char JOBZ = 'V', UPLO = 'L', RANGE = 'A';
-    double ABSTOL = 1.0E-7;
-
-    // VL, VU, IL, IU are not referenced; M equals N if RANGE='A'.
-    double VL = 0.0, VU = 0.0;
-    int IL = 0, IU = 0, M;
-
-    if (N != A.shape[1] || N != eval.elements.length) {
-      writeln("Matrix needs to be symmetric and same dimension in lapack_eigen_symmv.");
-      return;
-    }
-
-    //int[2 * N] ISUPPZ;
-    int[] ISUPPZ;
-
-    double[1] WORK_temp;
-    int[1] IWORK_temp;
-
-    INFO = LAPACKE_dsyevr(101, JOBZ, RANGE, UPLO, N, A.elements.ptr, LDA, VL, VU, IL, IU,
-            ABSTOL, &M, eval.elements.ptr, evec.elements.ptr, LDZ, ISUPPZ.ptr);
-    //, WORK_temp,        &LWORK, IWORK_temp, &LIWORK, &INFO);
-    if (INFO != 0) {
-      writeln("Work space estimate unsuccessful in lapack_eigen_symmv.");
-      return;
-    }
-    LWORK = to!int(WORK_temp[0]);
-    LIWORK = to!int(IWORK_temp[0]);
-
-    double[] WORK;
-     //= new double[LWORK];
-    int[] IWORK;
-    //= new int[LIWORK];
-
-    INFO = LAPACKE_dsyevr(101, JOBZ, RANGE, UPLO, N, A.elements.ptr, LDA, VL, VU, IL, IU,
-            ABSTOL, &M, eval.elements.ptr, evec.elements.ptr, LDZ, ISUPPZ.ptr);
-    //, WORK, &LWORK, IWORK, &LIWORK, &INFO);
-    if (INFO != 0) {
-      writeln("Eigen decomposition unsuccessful in lapack_eigen_symmv.");
-      return;
-    }
-
-    evec = evec.T;
-
-  }
-
-  return;
-}
-
 DMatrix CalcPab(const size_t n_cvt, const size_t e_mode, const DMatrix Hi_eval,
               const DMatrix Uab, const DMatrix ab, const size_t[] shape) {
   size_t index_ab, index_aw, index_bw, index_ww;
@@ -189,8 +85,6 @@ DMatrix CalcPab(const size_t n_cvt, const size_t e_mode, const DMatrix Hi_eval,
   }
   return Pab;
 }
-
-
 
 DMatrix CalcPPab(const size_t n_cvt, const size_t e_mode,
               const DMatrix HiHi_eval, const DMatrix Uab,
