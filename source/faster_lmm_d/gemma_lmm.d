@@ -305,22 +305,22 @@ size_t GetabIndex( const size_t a, const size_t b, const size_t n_cvt) {
 }
 
 struct loglikeparam{
-  size_t n_cvt;
-  size_t ni_test;
-  size_t n_index;
-  bool calc_null;
-  int e_mode;
+  const size_t n_cvt;
+  const size_t ni_test;
+  const size_t n_index;
+  const bool calc_null;
+  const int e_mode;
   DMatrix eval;
   DMatrix Uab;
   DMatrix ab;
 
-  this(bool calc_null, size_t ni_test, size_t n_cvt, DMatrix eval, DMatrix Uab,  DMatrix ab, int e_mode) {
+  this(bool calc_null, size_t ni_test, size_t n_cvt, const DMatrix eval, const DMatrix Uab,  DMatrix ab, int e_mode) {
     this.n_cvt = n_cvt;
     this.ni_test = ni_test;
     this.calc_null = calc_null;
     this.e_mode = e_mode;
-    this.eval = eval;
-    this.Uab = Uab;
+    this.eval = DMatrix(eval);
+    this.Uab = DMatrix(Uab);
     this.ab = ab;
   }
 }
@@ -929,8 +929,8 @@ Lambda_result calc_lambda(const char func_name, void* params, const double l_min
 }
 
 // Calculate lambda in the null model.
-Lambda_result calc_lambda(char func_name, DMatrix eval, DMatrix UtW, DMatrix Uty,
-                  double l_min, double l_max, size_t n_region) {
+Lambda_result calc_lambda(const char func_name, const DMatrix eval, const DMatrix UtW, const DMatrix Uty,
+                  const double l_min, const double l_max, const size_t n_region) {
   writeln("in calc_lambda for null model");
   if (func_name != 'R' && func_name != 'L' && func_name != 'r' &&
       func_name != 'l') {
@@ -987,7 +987,7 @@ Wald_score calc_RL_Wald(size_t ni_test, double l, loglikeparam params) {
 
 alias Tuple!(double, "beta", double, "se", double, "p_score") RL_Score ;
 
-RL_Score calc_RL_score(size_t ni_test, double l, loglikeparam params) {
+RL_Score calc_RL_score(const size_t ni_test, const double l, loglikeparam params) {
   size_t n_cvt = params.n_cvt;
   size_t n_index = (n_cvt + 2 + 1) * (n_cvt + 2) / 2;
 
@@ -1022,7 +1022,7 @@ RL_Score calc_RL_score(size_t ni_test, double l, loglikeparam params) {
   return RL_Score(beta, se, p_score);
 }
 
-DMatrix calc_Uab(const DMatrix UtW, const DMatrix Uty, size_t ni_test, size_t n_index) {
+DMatrix calc_Uab(const DMatrix UtW, const DMatrix Uty, const size_t ni_test, const size_t n_index) {
   size_t index_ab;
   size_t n_cvt = UtW.shape[1];
 
@@ -1065,7 +1065,7 @@ DMatrix calc_Uab(const DMatrix UtW, const DMatrix Uty, size_t ni_test, size_t n_
   return Uab;
 }
 
-DMatrix calc_Uab(DMatrix UtW, DMatrix Uty, DMatrix Utx, size_t ni_test, size_t n_index) {
+DMatrix calc_Uab(const DMatrix UtW, const DMatrix Uty, const DMatrix Utx, const size_t ni_test, const size_t n_index) {
   size_t index_ab;
   size_t n_cvt = UtW.shape[1];
   DMatrix Uab = zeros_dmatrix(ni_test, n_index);
@@ -1075,9 +1075,9 @@ DMatrix calc_Uab(DMatrix UtW, DMatrix Uty, DMatrix Utx, size_t ni_test, size_t n
     DMatrix Uab_col = get_col(Uab, index_ab);
 
     if (b == n_cvt + 2) {
-      Uab_col.elements = Uty.elements;
+      Uab_col.elements = Uty.elements.dup;
     } else if (b == n_cvt + 1) {
-      Uab_col.elements = Utx.elements;
+      Uab_col.elements = Utx.elements.dup;
     } else {
       DMatrix UtW_col = get_col(UtW, b - 1);
       Uab_col.elements = UtW_col.elements.dup;
@@ -1169,8 +1169,7 @@ alias Tuple!(const double, "vg", const double, "ve", DMatrix, "beta", DMatrix, "
 // Obtain REML estimate for Vg and Ve using lambda_remle.
 // Obtain beta and se(beta) for coefficients.
 // ab is not used when e_mode==0.
-Mle_result CalcLmmVgVeBeta(const DMatrix eval, const DMatrix UtW,
-                     DMatrix Uty, double lambda) {
+Mle_result CalcLmmVgVeBeta(const DMatrix eval, const DMatrix UtW, const DMatrix Uty, const double lambda) {
 
   writeln("in CalcLmmVgVeBeta");
   double vg, ve;
@@ -1239,8 +1238,8 @@ Mle_result CalcLmmVgVeBeta(const DMatrix eval, const DMatrix UtW,
 
 alias Tuple!(const double, "pve", const double, "pve_se") Pve_result;
 
-Pve_result calc_pve(DMatrix eval, DMatrix UtW,
-             DMatrix Uty, double lambda, double trace_G) {
+Pve_result calc_pve(const DMatrix eval, const DMatrix UtW,
+             const DMatrix Uty, const double lambda, const double trace_G) {
   writeln("in calc_pve");
 
   size_t n_cvt = UtW.shape[1], ni_test = UtW.shape[0];
@@ -1252,7 +1251,6 @@ Pve_result calc_pve(DMatrix eval, DMatrix UtW,
   DMatrix Uab = calc_Uab(UtW, Uty, ni_test, n_index);
 
   loglikeparam param0 = loglikeparam(true, ni_test, n_cvt, eval, Uab, ab, 0);
-  //write constructor
 
   double se = sqrt(-1.0 / LogRL_dev2(lambda, &param0));
 
@@ -1263,14 +1261,8 @@ Pve_result calc_pve(DMatrix eval, DMatrix UtW,
   return Pve_result(pve, pve_se);
 }
 
-
-struct GWAS_SNPs{
-  bool size;
-}
-
-void AnalyzeBimbam (Param cPar, DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Uty,
-                        DMatrix W, DMatrix y, GWAS_SNPs gwasnps,
-                        size_t n_cvt, size_t LMM_BATCH_SIZE = 100) {
+void AnalyzeBimbam (Param cPar, const DMatrix U, const DMatrix eval, const DMatrix UtW, const DMatrix Uty,
+                    const DMatrix W, const DMatrix y, const size_t n_cvt, const size_t LMM_BATCH_SIZE = 100) {
 
   writeln("indicator_idv");
   DMatrix indicator_idv = read_matrix_from_file2(cPar.indicator_idv_file);
@@ -1283,8 +1275,6 @@ void AnalyzeBimbam (Param cPar, DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Ut
   string filename = cPar.file_geno;
   auto pipe = pipeShell("gunzip -c " ~ filename);
   File input = pipe.stdout;
-
-  n_cvt = 1;
 
   SUMSTAT[] sumStat;
 

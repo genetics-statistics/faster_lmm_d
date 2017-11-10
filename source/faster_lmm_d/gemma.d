@@ -350,11 +350,7 @@ void fit_model(Param cPar, DMatrix U, DMatrix eval, DMatrix  UtW, DMatrix UtY, D
   DMatrix Y_col = get_col(Y, 0);
   DMatrix UtY_col = get_col(UtY, 0);
 
-  GWAS_SNPs setGWASnps;
-
-
-
-  AnalyzeBimbam(cPar, U, eval, UtW, UtY_col, W, Y_col, setGWASnps, 1);
+  AnalyzeBimbam(cPar, U, eval, UtW, UtY_col, W, Y_col, 1);
 }
 
 void check_lambda(string test_name, Param cPar){
