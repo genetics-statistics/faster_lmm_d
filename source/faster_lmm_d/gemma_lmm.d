@@ -947,8 +947,9 @@ Lambda_result calc_lambda(char func_name, DMatrix eval, DMatrix UtW, DMatrix Uty
   return calc_lambda(func_name, cast(void *)&param0, l_min, l_max, n_region);
 }
 
-void CalcRLWald(size_t ni_test, double l, loglikeparam params, ref double beta,
-                     ref double se, ref double p_wald) {
+alias Tuple!(double, "beta", double, "se", double, "p_wald") Wald_score;
+
+Wald_score calc_RL_Wald(size_t ni_test, double l, loglikeparam params) {
   size_t n_cvt = params.n_cvt;
   size_t n_index = (n_cvt + 2 + 1) * (n_cvt + 2) / 2;
 
@@ -976,16 +977,17 @@ void CalcRLWald(size_t ni_test, double l, loglikeparam params, ref double beta,
   double P_xy = accessor(Pab, n_cvt, index_xy);
   double Px_yy = accessor(Pab, n_cvt + 1, index_yy);
 
-  beta = P_xy / P_xx;
+  double beta = P_xy / P_xx;
   double tau = to!double(df) / Px_yy;
-  se = sqrt(1.0 / (tau * P_xx));
-  p_wald = gsl_cdf_fdist_Q((P_yy - Px_yy) * tau, 1.0, df);
+  double se = sqrt(1.0 / (tau * P_xx));
+  double p_wald = gsl_cdf_fdist_Q((P_yy - Px_yy) * tau, 1.0, df);
 
-  return;
+  return Wald_score(beta, se, p_wald);
 }
 
-void calc_RL_score(size_t ni_test, double l, loglikeparam params, double beta,
-                      double se, double p_score) {
+alias Tuple!(double, "beta", double, "se", double, "p_score") RL_Score ;
+
+RL_Score calc_RL_score(size_t ni_test, double l, loglikeparam params) {
   size_t n_cvt = params.n_cvt;
   size_t n_index = (n_cvt + 2 + 1) * (n_cvt + 2) / 2;
 
@@ -1012,14 +1014,12 @@ void calc_RL_score(size_t ni_test, double l, loglikeparam params, double beta,
   double P_xy = accessor(Pab, n_cvt, index_xy);
   double Px_yy = accessor(Pab, n_cvt + 1, index_yy);
 
-  beta = P_xy / P_xx;
+  double beta = P_xy / P_xx;
   double tau = to!double(df) / Px_yy;
-  se = sqrt(1.0 / (tau * P_xx));
+  double se = sqrt(1.0 / (tau * P_xx));
+  double p_score = gsl_cdf_fdist_Q(to!double(ni_test) * P_xy * P_xy / (P_yy * P_xx), 1.0, df);
 
-  p_score =
-      gsl_cdf_fdist_Q(to!double(ni_test) * P_xy * P_xy / (P_yy * P_xx), 1.0, df);
-
-  return;
+  return RL_Score(beta, se, p_score);
 }
 
 DMatrix calc_Uab(const DMatrix UtW, const DMatrix Uty, size_t ni_test, size_t n_index) {
@@ -1397,12 +1397,18 @@ void AnalyzeBimbam (Param cPar, DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Ut
         loglikeparam param1 = loglikeparam(false, ni_test, n_cvt, eval, Uab, ab, 0);
         // 3 is before 1.
         if (a_mode==3 || a_mode==4) {
-          calc_RL_score (ni_test, l_mle_null, param1, beta, se, p_score);
+          auto score = calc_RL_score (ni_test, l_mle_null, param1);
+          beta = score.beta;
+          se = score.se;
+          p_score = score.p_score;
         }
 
         if (a_mode==1 || a_mode==4) {
           lambda_remle = calc_lambda ('R', cast(void *)&param1, l_min, l_max, n_region).lambda;
-          CalcRLWald (ni_test, lambda_remle, param1, beta, se, p_wald);
+          auto score = calc_RL_Wald(ni_test, lambda_remle, param1);
+          beta = score.beta;
+          se = score.se;
+          p_wald = score.p_wald;
         }
 
         if (a_mode==2 || a_mode==4) {
