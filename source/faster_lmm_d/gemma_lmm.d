@@ -164,7 +164,7 @@ DMatrix CalcPab(const size_t n_cvt, const size_t e_mode, const DMatrix Hi_eval,
         index_ab = GetabIndex(a, b, n_cvt);
         if (p == 0) {
           DMatrix Uab_col = get_col(Uab, index_ab);
-          p_ab = matrix_mult(Hi_eval, Uab_col).elements[0]; 
+          p_ab = matrix_mult(Hi_eval, Uab_col).elements[0];
 
           if (e_mode != 0) {
             p_ab = ab.elements[index_ab] - p_ab;
@@ -344,7 +344,7 @@ double LogL_f(const double l, const void* params) {
 
   DMatrix v_temp =  DMatrix([1, p.eval.elements.length], p.eval.elements);
   v_temp = multiply_dmatrix_num(v_temp, l);
-  
+
   DMatrix Hi_eval = (p.e_mode == 0 ? ones_dmatrix(1, p.eval.elements.length): dup_dmatrix(v_temp));
 
   v_temp = add_dmatrix_num(v_temp, 1.0);
@@ -372,7 +372,7 @@ double LogRL_f(const double l, const void* params) {
   size_t n_cvt = p.n_cvt;
   size_t ni_test = p.ni_test;
   size_t n_index = (n_cvt + 2 + 1) * (n_cvt + 2) / 2;
-    
+
   size_t nc_total = (p.calc_null == true ? n_cvt : n_cvt + 1);
   double df = (p.calc_null == true ? to!double(ni_test) - to!double(n_cvt) : to!double(ni_test) - to!double(n_cvt) - 1.0);
 
@@ -381,7 +381,7 @@ double LogRL_f(const double l, const void* params) {
 
   DMatrix v_temp = DMatrix([1, p.eval.elements.length], p.eval.elements);
   v_temp = multiply_dmatrix_num(v_temp, l);
-  
+
   DMatrix Hi_eval = (p.e_mode == 0 ? ones_dmatrix(1, p.eval.elements.length): dup_dmatrix(v_temp));
 
   v_temp = add_dmatrix_num(v_temp, 1.0);
@@ -592,7 +592,7 @@ extern(C) double LogL_dev2(double l, void* params) {
 
   double dev2 = 0.0, trace_Hi = 0.0, trace_HiHi = 0.0;
   size_t index_yy;
-  
+
   DMatrix v_temp =  DMatrix([1, p.eval.elements.length], p.eval.elements);
   v_temp = multiply_dmatrix_num(v_temp, l);
 
@@ -944,7 +944,7 @@ void calc_lambda(char func_name, DMatrix eval,
 
   DMatrix Uab = zeros_dmatrix(ni_test, n_index);
 
-  
+
 
   CalcUab(UtW, Uty, Uab);
 
@@ -1032,7 +1032,7 @@ void calc_RL_score(size_t ni_test, double l, loglikeparam params, double beta,
   return;
 }
 
-void CalcUab(DMatrix UtW, DMatrix Uty, ref DMatrix Uab) {
+void CalcUab(const DMatrix UtW, const DMatrix Uty, ref DMatrix Uab) {
   size_t index_ab;
   size_t n_cvt = UtW.shape[1];
 
@@ -1171,14 +1171,18 @@ DMatrix calc_ab(const DMatrix W, const DMatrix y, const DMatrix x, const size_t[
   return ab;
 }
 
+alias Tuple!(const double, "vg", const double, "ve", DMatrix, "beta", DMatrix, "se_beta") Mle_result;
+
 // Obtain REML estimate for Vg and Ve using lambda_remle.
 // Obtain beta and se(beta) for coefficients.
 // ab is not used when e_mode==0.
-void CalcLmmVgVeBeta(DMatrix eval, DMatrix UtW,
-                     DMatrix Uty, ref double lambda, ref double vg,
-                     ref double ve, ref DMatrix beta, ref DMatrix se_beta) {
+Mle_result CalcLmmVgVeBeta(const DMatrix eval, const DMatrix UtW,
+                     DMatrix Uty, double lambda) {
 
   writeln("in CalcLmmVgVeBeta");
+  double vg, ve;
+  DMatrix beta = DMatrix([1,1] , [0]);
+  DMatrix se_beta = DMatrix([1,1] , [0]);
   size_t n_cvt = UtW.shape[1], ni_test = UtW.shape[0];
   size_t n_index = (n_cvt + 2 + 1) * (n_cvt + 2) / 2;
 
@@ -1186,10 +1190,10 @@ void CalcLmmVgVeBeta(DMatrix eval, DMatrix UtW,
   CalcUab(UtW, Uty, Uab);
 
   DMatrix HiW;
-  HiW.shape = [eval.shape[1], UtW.shape[1]];
+  HiW.shape = [eval.shape[1], UtW.shape[0]];
 
   DMatrix WHiW;
-  WHiW.shape = [UtW.shape[1], UtW.shape[1]];
+  WHiW.shape = [UtW.shape[1], UtW.shape[0]];
 
   DMatrix WHiy;
   WHiy.shape =[1, UtW.shape[1]];
@@ -1198,9 +1202,9 @@ void CalcLmmVgVeBeta(DMatrix eval, DMatrix UtW,
   Vbeta.shape = [UtW.shape[1], UtW.shape[1]];
 
 
-
   DMatrix Hi_eval = ones_dmatrix(1, eval.shape[0]);
   DMatrix v_temp =DMatrix([1, eval.shape[0]], eval.elements);
+
   v_temp = multiply_dmatrix_num(v_temp, lambda);
   v_temp = add_dmatrix_num(v_temp, 1.0);
   Hi_eval = divide_dmatrix(Hi_eval, v_temp);
@@ -1210,6 +1214,7 @@ void CalcLmmVgVeBeta(DMatrix eval, DMatrix UtW,
   for (size_t i = 0; i < UtW.shape[1]; i++) {
     DMatrix HiW_col = get_col(HiW, i);
     HiW_col = slow_multiply_dmatrix(HiW_col, Hi_eval);
+    set_col2(HiW, i, HiW_col);
   }
   WHiW = matrix_mult(HiW, UtW);
   WHiy = matrix_mult(HiW, Uty);
@@ -1248,7 +1253,7 @@ void CalcLmmVgVeBeta(DMatrix eval, DMatrix UtW,
 
   writeln("out of CalcLmmVgVeBeta");
 
-  return;
+  return Mle_result(vg, ve, beta, se_beta);
 }
 
 // Obtain REMLE estimate for PVE using lambda_remle.
@@ -1353,7 +1358,7 @@ void AnalyzeBimbam (Param cPar, DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Ut
   }
 
   int t = 0;
-  
+
   DMatrix Uab = zeros_dmatrix(U.shape[1], n_index);
 
   CalcUab(UtW, Uty, Uab);

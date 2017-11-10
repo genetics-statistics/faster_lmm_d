@@ -411,7 +411,7 @@ void set_sub_dmatrix(ref DMatrix H,  size_t a, size_t b, size_t n1, size_t n2, D
 
 void set_sub_dmatrix2(ref DMatrix H,  size_t a, size_t b, size_t n1, size_t n2, DMatrix H_Sub){
   //size_t start = a *H.rows + b;
-  
+
   double[] elements = [];
   for(size_t i = 0; i < n1; i++){
     for(size_t j = 0; j < n2; j++){

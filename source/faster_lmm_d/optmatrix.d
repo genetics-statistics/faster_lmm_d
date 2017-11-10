@@ -399,4 +399,10 @@ unittest{
                                    7,8,9,7,8]);
 
   assert(matrix_mult(lmatrix, rmatrix) == large_matrix_mult(lmatrix, rmatrix));
+
+  DMatrix a1 = DMatrix([1,2], [3,3]);
+  DMatrix b1 = DMatrix([2,1], [3,3]);
+  writeln(matrix_mult(a1, b1));
+  assert(matrix_mult(a1, b1) == DMatrix([1,1],[18]));
+
 }
