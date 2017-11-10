@@ -75,39 +75,6 @@ DMatrix read_matrix_from_file2(string filename){
   return DMatrix([rows, elements.length/rows], elements);
 }
 
-// Kronecker product.
-void Kronecker(const DMatrix K, const DMatrix V, DMatrix H) {
-  for (size_t i = 0; i < K.shape[0]; i++) {
-    for (size_t j = 0; j < K.shape[1]; j++) {
-      DMatrix H_sub = get_sub_dmatrix(
-          H, i * V.shape[0], j * V.shape[1], V.shape[0], V.shape[1]);
-      H_sub.elements = V.elements.dup;
-      H_sub = multiply_dmatrix_num(H_sub, accessor(K, i, j));
-    }
-  }
-  return;
-}
-
-// Symmetric K matrix.
-void KroneckerSym(const DMatrix K, const DMatrix V, DMatrix H) {
-  for (size_t i = 0; i < K.shape[0]; i++) {
-    for (size_t j = i; j < K.shape[1]; j++) {
-      DMatrix H_sub = get_sub_dmatrix(
-          H, i * V.shape[0], j * V.shape[1], V.shape[0], V.shape[1]);
-      H_sub.elements = V.elements.dup;
-      H_sub = multiply_dmatrix_num(H_sub, accessor(K, i, j));
-
-      if (i != j) {
-        DMatrix H_sub_sym = get_sub_dmatrix(
-            H, j * V.shape[0], i * V.shape[1], V.shape[0], V.shape[1]);
-        H_sub_sym.elements = H_sub.elements.dup;
-      }
-    }
-  }
-  return;
-}
-
-
 void run_gemma(string option_kinship, string option_pheno, string option_covar, string option_geno){
 
   writeln("reading kinship " , option_kinship);
@@ -204,16 +171,9 @@ void run_gemma(string option_kinship, string option_pheno, string option_covar, 
 
 }
 
-
-void CalcVCss(DMatrix a, DMatrix b, DMatrix c, DMatrix d, DMatrix e,
-             ulong f, DMatrix g, DMatrix h, double i, double j, DMatrix k,
-             DMatrix l, DMatrix m, DMatrix n){
-
-}
-
-void batch_run(string option_kinship, string option_pheno, string option_covar,
-              string option_geno, string indicator_idv, string indicator_snp,
-              string test_name){
+void batch_run(const string option_kinship, const string option_pheno, const string option_covar,
+              const string option_geno, const string indicator_idv, const string indicator_snp,
+              const string test_name){
 
   // Read Files.
 
@@ -264,7 +224,8 @@ void batch_run(string option_kinship, string option_pheno, string option_covar,
   return;
 }
 
-void fit_model(Param cPar, DMatrix U, DMatrix eval, DMatrix  UtW, DMatrix UtY, DMatrix Y, DMatrix W, string test_name, size_t n_ph = 1){
+void fit_model(Param cPar, const DMatrix U, const DMatrix eval, const DMatrix UtW,
+               const  DMatrix UtY, const DMatrix Y, const DMatrix W, const string test_name, const size_t n_ph = 1){
   writeln("In LMM fit_model");
 
   if (n_ph == 1) { // one phenotype
