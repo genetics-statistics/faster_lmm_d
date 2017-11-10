@@ -941,8 +941,7 @@ Lambda_result calc_lambda(char func_name, DMatrix eval, DMatrix UtW, DMatrix Uty
 
   size_t n_cvt = UtW.shape[1], ni_test = UtW.shape[0];
   size_t n_index = (n_cvt + 2 + 1) * (n_cvt + 2) / 2;
-  DMatrix Uab = zeros_dmatrix(ni_test, n_index);
-  CalcUab(UtW, Uty, Uab);
+  DMatrix Uab = calc_Uab(UtW, Uty, ni_test, n_index);
   DMatrix ab = calc_ab(UtW, Uty, [1, n_index]);
   loglikeparam param0 = loglikeparam(true, ni_test, n_cvt, eval, Uab, ab, 0);
   return calc_lambda(func_name, cast(void *)&param0, l_min, l_max, n_region);
@@ -1023,9 +1022,11 @@ void calc_RL_score(size_t ni_test, double l, loglikeparam params, double beta,
   return;
 }
 
-void CalcUab(const DMatrix UtW, const DMatrix Uty, ref DMatrix Uab) {
+DMatrix calc_Uab(const DMatrix UtW, const DMatrix Uty, size_t ni_test, size_t n_index) {
   size_t index_ab;
   size_t n_cvt = UtW.shape[1];
+
+  DMatrix Uab = zeros_dmatrix(ni_test, n_index);
 
   DMatrix u_a;
   u_a.shape = [1, Uty.shape[1]];
@@ -1061,12 +1062,13 @@ void CalcUab(const DMatrix UtW, const DMatrix Uty, ref DMatrix Uab) {
       set_col2(Uab, index_ab, Uab_col);
     }
   }
-  return;
+  return Uab;
 }
 
-void CalcUab(DMatrix UtW, DMatrix Uty, DMatrix Utx, ref DMatrix Uab) {
+DMatrix calc_Uab(DMatrix UtW, DMatrix Uty, DMatrix Utx, size_t ni_test, size_t n_index) {
   size_t index_ab;
   size_t n_cvt = UtW.shape[1];
+  DMatrix Uab = zeros_dmatrix(ni_test, n_index);
 
   for (size_t b = 1; b <= n_cvt + 2; ++b) {
     index_ab = GetabIndex(n_cvt + 1, b, n_cvt);
@@ -1085,7 +1087,7 @@ void CalcUab(DMatrix UtW, DMatrix Uty, DMatrix Utx, ref DMatrix Uab) {
     set_col2(Uab, index_ab, Uab_col);
   }
 
-  return;
+  return Uab;
 }
 
 DMatrix calc_ab(const DMatrix W, const DMatrix y, const size_t[] shape) {
@@ -1177,8 +1179,7 @@ Mle_result CalcLmmVgVeBeta(const DMatrix eval, const DMatrix UtW,
   size_t n_cvt = UtW.shape[1], ni_test = UtW.shape[0];
   size_t n_index = (n_cvt + 2 + 1) * (n_cvt + 2) / 2;
 
-  DMatrix Uab = zeros_dmatrix(ni_test, n_index);
-  CalcUab(UtW, Uty, Uab);
+  DMatrix Uab = calc_Uab(UtW, Uty, ni_test, n_index);
 
   DMatrix HiW;
   HiW.shape = [eval.shape[1], UtW.shape[0]];
@@ -1258,13 +1259,10 @@ Pve_result calc_pve(DMatrix eval, DMatrix UtW,
   size_t n_cvt = UtW.shape[1], ni_test = UtW.shape[0];
   size_t n_index = (n_cvt + 2 + 1) * (n_cvt + 2) / 2;
 
-  DMatrix Uab;
-  Uab.shape = [ni_test, n_index];
   DMatrix ab;
   ab.shape = [1, n_index];
 
-  Uab = set_zeros_dmatrix(Uab);
-  CalcUab(UtW, Uty, Uab);
+  DMatrix Uab = calc_Uab(UtW, Uty, ni_test, n_index);
 
   loglikeparam param0 = loglikeparam(true, ni_test, n_cvt, eval, Uab, ab, 0);
   //write constructor
@@ -1352,9 +1350,8 @@ void AnalyzeBimbam (Param cPar, DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Ut
 
   int t = 0;
 
-  DMatrix Uab = zeros_dmatrix(U.shape[1], n_index);
 
-  CalcUab(UtW, Uty, Uab);
+  DMatrix Uab = calc_Uab(UtW, Uty, U.shape[1], n_index);
 
   foreach (line ; input.byLine) {
     if (indicator_snp.elements[t]==0) {
@@ -1407,7 +1404,7 @@ void AnalyzeBimbam (Param cPar, DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Ut
       for (size_t i=0; i<l; i++) {
 
         DMatrix Utx = get_col(UtXlarge, i);           //view
-        CalcUab(UtW, Uty, Utx, Uab);
+        Uab = calc_Uab(UtW, Uty, Utx, U.shape[1], n_index);
         //writeln(Uab.shape);
         ab = set_zeros_dmatrix(ab);
         loglikeparam param1 = loglikeparam(false, ni_test, n_cvt, eval, Uab, ab, 0);
@@ -1524,10 +1521,10 @@ unittest{
   //calc_RL_score(ni_test, l, params, beta, se, p_score);
   //assert();
 
-  //CalcUab(UtW, Uty, Uab);
+  //calc_Uab(UtW, Uty, Uab);
   //assert();
 
-  //CalcUab(UtW, Uty, Utx, Uab);
+  //calc_Uab(UtW, Uty, Utx, Uab);
   //assert();
 
   //calc_ab(W, y, ab);
