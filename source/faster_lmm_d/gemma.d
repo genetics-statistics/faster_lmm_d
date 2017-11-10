@@ -303,8 +303,10 @@ void fit_model(Param cPar, DMatrix U, DMatrix eval, DMatrix  UtW, DMatrix UtY, D
     beta = remle_result.beta;
     se_beta = remle_result.se_beta;
 
-    calc_pve(eval, UtW, UtY_col, cPar.l_remle_null, cPar.trace_G,
-            cPar.pve_null, cPar.pve_se_null);
+    auto pve_result = calc_pve(eval, UtW, UtY_col, cPar.l_remle_null, cPar.trace_G);
+
+    cPar.pve_null = pve_result.pve;
+    cPar.pve_se_null = pve_result.pve_se;
 
     check_lambda(test_name, cPar);
 

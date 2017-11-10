@@ -1257,9 +1257,11 @@ Mle_result CalcLmmVgVeBeta(const DMatrix eval, const DMatrix UtW,
 }
 
 // Obtain REMLE estimate for PVE using lambda_remle.
-void calc_pve(DMatrix eval, DMatrix UtW,
-             DMatrix Uty, double lambda, double trace_G,
-             ref double pve, ref double pve_se) {
+
+alias Tuple!(const double, "pve", const double, "pve_se") Pve_result;
+
+Pve_result calc_pve(DMatrix eval, DMatrix UtW,
+             DMatrix Uty, double lambda, double trace_G) {
   writeln("in calc_pve");
 
   size_t n_cvt = UtW.shape[1], ni_test = UtW.shape[0];
@@ -1278,11 +1280,11 @@ void calc_pve(DMatrix eval, DMatrix UtW,
 
   double se = sqrt(-1.0 / LogRL_dev2(lambda, &param0));
 
-  pve = trace_G * lambda / (trace_G * lambda + 1.0);
-  pve_se = trace_G / ((trace_G * lambda + 1.0) * (trace_G * lambda + 1.0)) * se;
+  double pve = trace_G * lambda / (trace_G * lambda + 1.0);
+  double pve_se = trace_G / ((trace_G * lambda + 1.0) * (trace_G * lambda + 1.0)) * se;
   writeln("out of calc_pve");
 
-  return;
+  return Pve_result(pve, pve_se);
 }
 
 
