@@ -1181,19 +1181,6 @@ Mle_result CalcLmmVgVeBeta(const DMatrix eval, const DMatrix UtW,
 
   DMatrix Uab = calc_Uab(UtW, Uty, ni_test, n_index);
 
-  DMatrix HiW;
-  HiW.shape = [eval.shape[1], UtW.shape[0]];
-
-  DMatrix WHiW;
-  WHiW.shape = [UtW.shape[1], UtW.shape[0]];
-
-  DMatrix WHiy;
-  WHiy.shape =[1, UtW.shape[1]];
-
-  DMatrix Vbeta;
-  Vbeta.shape = [UtW.shape[1], UtW.shape[1]];
-
-
   DMatrix Hi_eval = ones_dmatrix(1, eval.shape[0]);
   DMatrix v_temp =DMatrix([1, eval.shape[0]], eval.elements);
 
@@ -1202,14 +1189,14 @@ Mle_result CalcLmmVgVeBeta(const DMatrix eval, const DMatrix UtW,
   Hi_eval = divide_dmatrix(Hi_eval, v_temp);
 
   // Calculate beta.
-  HiW.elements = UtW.elements.dup;
+  DMatrix HiW =  UtW.T;
   for (size_t i = 0; i < UtW.shape[1]; i++) {
     DMatrix HiW_col = get_col(HiW, i);
     HiW_col = slow_multiply_dmatrix(HiW_col, Hi_eval);
     set_col2(HiW, i, HiW_col);
   }
-  WHiW = matrix_mult(HiW, UtW);
-  WHiy = matrix_mult(HiW, Uty);
+  DMatrix WHiW = matrix_mult(HiW, UtW);
+  DMatrix WHiy = matrix_mult(HiW, Uty);
 
   beta.elements = WHiy.elements.dup;
 
@@ -1226,7 +1213,7 @@ Mle_result CalcLmmVgVeBeta(const DMatrix eval, const DMatrix UtW,
   enforce(LAPACKE_dgesv( 101, n, n, WHiW.elements.ptr, lda, ipiv.ptr,
                       beta.elements.ptr,  ldb ) == 0);
 
-  Vbeta = inverse(WHiW);
+  DMatrix Vbeta = inverse(WHiW);
 
   DMatrix ab = calc_ab(UtW, Uty, [1, n_index]);
   DMatrix Pab = CalcPab(n_cvt, 0, Hi_eval, Uab, ab, [n_cvt + 2, n_index]);
