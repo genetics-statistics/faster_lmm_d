@@ -763,17 +763,19 @@ extern(C) void LogRL_dev12(double l, void* params, double* dev1, double* dev2) {
   return;
 }
 
-alias Tuple!(double,"l",double,"h") Lambda_tup;
+alias Tuple!(double, "l", double, "h") Lambda_tup;
+alias Tuple!(double, "lambda", double, "logf") Lambda_result;
 
-void calc_lambda(const char func_name, void* params, const double l_min,
-                const double l_max, const size_t n_region, ref double lambda,
-                ref double logf) {
+Lambda_result calc_lambda(const char func_name, void* params, const double l_min,
+                const double l_max, const size_t n_region) {
   //writeln("in calc_lambda for NOT-NULL");
+  double lambda, logf;
+
   if (func_name != 'R' && func_name != 'L' && func_name != 'r' &&
       func_name != 'l') {
     writeln("func_name only takes 'R' or 'L': 'R' for
             log-restricted likelihood, 'L' for log-likelihood.");
-    return;
+    exit(0);
   }
 
   Lambda_tup[] lambda_lh;
@@ -923,38 +925,27 @@ void calc_lambda(const char func_name, void* params, const double l_min,
     }
   }
 
-  return;
+  return Lambda_result(lambda, logf);
 }
 
 // Calculate lambda in the null model.
-void calc_lambda(char func_name, DMatrix eval,
-                DMatrix UtW, DMatrix Uty,
-                ref double l_min, ref double l_max, size_t n_region,
-                ref  double lambda, ref double logl_H0) {
+Lambda_result calc_lambda(char func_name, DMatrix eval, DMatrix UtW, DMatrix Uty,
+                  double l_min, double l_max, size_t n_region) {
   writeln("in calc_lambda for null model");
   if (func_name != 'R' && func_name != 'L' && func_name != 'r' &&
       func_name != 'l') {
     writeln("func_name only takes 'R' or 'L': 'R' for
            log-restricted likelihood, 'L' for log-likelihood.");
-    return;
+    exit(0);
   }
 
   size_t n_cvt = UtW.shape[1], ni_test = UtW.shape[0];
   size_t n_index = (n_cvt + 2 + 1) * (n_cvt + 2) / 2;
-
   DMatrix Uab = zeros_dmatrix(ni_test, n_index);
-
-
-
   CalcUab(UtW, Uty, Uab);
-
   DMatrix ab = calc_ab(UtW, Uty, [1, n_index]);
-
   loglikeparam param0 = loglikeparam(true, ni_test, n_cvt, eval, Uab, ab, 0);
-
-  calc_lambda(func_name, cast(void *)&param0, l_min, l_max, n_region, lambda, logl_H0);
-
-  return;
+  return calc_lambda(func_name, cast(void *)&param0, l_min, l_max, n_region);
 }
 
 void CalcRLWald(size_t ni_test, double l, loglikeparam params, ref double beta,
@@ -1426,12 +1417,12 @@ void AnalyzeBimbam (Param cPar, DMatrix U, DMatrix eval, DMatrix UtW, DMatrix Ut
         }
 
         if (a_mode==1 || a_mode==4) {
-          calc_lambda ('R', cast(void *)&param1, l_min, l_max, n_region, lambda_remle, logl_H1);
+          lambda_remle = calc_lambda ('R', cast(void *)&param1, l_min, l_max, n_region).lambda;
           CalcRLWald (ni_test, lambda_remle, param1, beta, se, p_wald);
         }
 
         if (a_mode==2 || a_mode==4) {
-          calc_lambda ('L', cast(void *)&param1, l_min, l_max, n_region, lambda_mle, logl_H1);
+          logl_H1 = calc_lambda ('L', cast(void *)&param1, l_min, l_max, n_region).logf;
           p_lrt=gsl_cdf_chisq_Q (2.0*(logl_H1 - logl_mle_H0), 1);
         }
 

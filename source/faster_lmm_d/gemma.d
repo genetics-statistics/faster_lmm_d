@@ -276,8 +276,10 @@ void fit_model(Param cPar, DMatrix U, DMatrix eval, DMatrix  UtW, DMatrix UtY, D
     cPar.l_max = 100000;
     cPar.n_region = 10;
 
-    calc_lambda('L', eval, UtW, UtY_col, cPar.l_min, cPar.l_max,
-               cPar.n_region, cPar.l_mle_null, cPar.logl_mle_H0);
+    auto lambda_result = calc_lambda('L', eval, UtW, UtY_col, cPar.l_min, cPar.l_max, cPar.n_region);
+
+    cPar.l_mle_null = lambda_result.lambda;
+    cPar.logl_mle_H0 = lambda_result.logf;
 
     writeln("==============cPar.l_mle_null=======================");
     writeln(cPar.l_mle_null);
@@ -290,8 +292,10 @@ void fit_model(Param cPar, DMatrix U, DMatrix eval, DMatrix  UtW, DMatrix UtY, D
     DMatrix beta = mle_result.beta;
     DMatrix se_beta = mle_result.se_beta;
 
-    calc_lambda('R', eval, UtW, UtY_col, cPar.l_min, cPar.l_max,
-               cPar.n_region, cPar.l_remle_null, cPar.logl_remle_H0);
+    auto lambda_result_re = calc_lambda('R', eval, UtW, UtY_col, cPar.l_min, cPar.l_max, cPar.n_region);
+
+    cPar.l_remle_null = lambda_result_re.lambda;
+    cPar.logl_remle_H0 = lambda_result_re.logf;
 
     writeln(cPar.l_remle_null);
     writeln(cPar.logl_remle_H0);
