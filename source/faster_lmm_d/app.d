@@ -66,7 +66,7 @@ void main(string[] args)
 {
   //ProfilerStart();
 
-  string cmd, option_control, option_kinship, option_pheno, option_geno, option_covar, useBLAS, noBLAS, noCUDA, option_logging, 
+  string cmd, option_control, option_kinship, option_pheno, option_geno, option_covar, useBLAS, noBLAS, noCUDA, option_logging,
         option_indicator_idv, option_indicator_snp, option_test_name, option_bfile;
   bool option_help = false;
   bool option_test_kinship = false;
@@ -142,6 +142,11 @@ void main(string[] args)
     }
   }
 
+  version(CUDA) {
+    cuda_init();
+    scope(exit) cuda_destroy();
+  }
+
   if(option_kinship != ""){
     writeln("Running via GEMMA");
     //run_gemma(option_kinship, option_pheno, option_covar, option_geno);
@@ -155,10 +160,6 @@ void main(string[] args)
     trace(ctrl);
   }
 
-  version(CUDA) {
-    cuda_init();
-    scope(exit) cuda_destroy();
-  }
   // ---- Phenotypes
   double[] pheno_vector;
 
