@@ -959,10 +959,10 @@ DMatrix calc_Uab(const DMatrix UtW, const DMatrix Uty, const size_t ni_test, con
   return Uab;
 }
 
-DMatrix calc_Uab(const DMatrix UtW, const DMatrix Uty, const DMatrix Utx, const size_t ni_test, const size_t n_index) {
+DMatrix calc_Uab(const DMatrix UtW, const DMatrix Uty, const DMatrix Utx, const DMatrix Uab_old) {
   size_t index_ab;
   size_t n_cvt = UtW.shape[1];
-  DMatrix Uab = zeros_dmatrix(ni_test, n_index);
+  DMatrix Uab = dup_dmatrix(Uab_old);
 
   for (size_t b = 1; b <= n_cvt + 2; ++b) {
     index_ab = GetabIndex(n_cvt + 1, b, n_cvt);
@@ -1275,7 +1275,7 @@ void AnalyzeBimbam (Param cPar, const DMatrix U, const DMatrix eval, const DMatr
       for (size_t i=0; i<l; i++) {
 
         DMatrix Utx = get_col(UtXlarge, i);           //view
-        Uab = calc_Uab(UtW, Uty, Utx, U.shape[1], n_index);
+        Uab = calc_Uab(UtW, Uty, Utx, Uab);
         //writeln(Uab.shape);
         ab = set_zeros_dmatrix(ab);
         loglikeparam param1 = loglikeparam(false, ni_test, n_cvt, eval, Uab, ab, 0);

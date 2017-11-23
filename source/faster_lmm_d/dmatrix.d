@@ -79,7 +79,7 @@ alias Tuple!(const DMatrix, "geno", immutable string[], "gnames", immutable stri
 
 alias Tuple!(DMatrix, "first", DMatrix, "last")MatrixSplit;
 
-DMatrix dup_dmatrix(DMatrix input){
+DMatrix dup_dmatrix(const DMatrix input){
   return DMatrix(input.shape.dup, input.elements.dup);
 }
 
