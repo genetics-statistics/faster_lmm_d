@@ -274,11 +274,11 @@ bool eqeq(const DMatrix lha, const DMatrix rha) {
 }
 
 DMatrix get_col(const DMatrix input, const ulong colNo) {
-  double[] arr;
   m_items rows = input.rows();
   m_items cols = input.cols();
+  double[] arr = new double[rows];
   for(auto i=0; i < rows; i++) {
-    arr ~= input.elements[i*cols+colNo];
+    arr[i] = input.elements[i*cols+colNo];
   }
   return DMatrix([rows,1],arr);
 }
