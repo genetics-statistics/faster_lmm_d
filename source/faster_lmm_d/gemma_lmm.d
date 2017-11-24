@@ -22,10 +22,11 @@ import std.experimental.logger;
 import std.string;
 
 import faster_lmm_d.dmatrix;
-import faster_lmm_d.optmatrix;
 import faster_lmm_d.gemma_param;
-import gsl.permutation;
+import faster_lmm_d.helpers;
+import faster_lmm_d.optmatrix;
 
+import gsl.permutation;
 import gsl.cdf;
 import gsl.errno;
 import gsl.math;
@@ -1309,7 +1310,22 @@ void AnalyzeBimbam (Param cPar, const DMatrix U, const DMatrix eval, const DMatr
   }
 
   writeln(sumStat);
+  check_assoc_result(sumStat);
   return;
+}
+
+void check_assoc_result(SUMSTAT[] snps){
+
+  enforce(modDiff(snps[0].beta, -0.00181684 ) < 0.001);
+  enforce(modDiff(snps[0].se, 0.0284848) < 0.001);
+  enforce(modDiff(snps[0].lambda_remle, 4.32336) < 0.001);
+  enforce(modDiff(snps[0].lambda_remle, 4.32336) < 0.001);
+
+  enforce(modDiff(snps[$-1].beta, -0.0394518 ) < 0.001);
+  enforce(modDiff(snps[$-1].se, 0.0835906 ) < 0.001);
+  enforce(modDiff(snps[$-1].lambda_remle, 4.32965 ) < 0.001);
+  enforce(modDiff(snps[$-1].lambda_remle, 4.32965 ) < 0.001);
+
 }
 
 unittest{
