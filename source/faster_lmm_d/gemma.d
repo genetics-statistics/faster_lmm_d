@@ -173,7 +173,7 @@ void run_gemma(string option_kinship, string option_pheno, string option_covar, 
 
 void batch_run(const string option_kinship, const string option_pheno, const string option_covar,
               const string option_geno, const string indicator_idv, const string indicator_snp,
-              const string test_name){
+              const size_t ni_total, const string test_name){
 
   // Read Files.
 
@@ -219,13 +219,14 @@ void batch_run(const string option_kinship, const string option_pheno, const str
     return;
   }
 
-  fit_model(cPar, U, eval, UtW, Uty, Y, covar_matrix, test_name);
+  fit_model(cPar, U, eval, UtW, Uty, Y, covar_matrix, ni_total, test_name);
 
   return;
 }
 
 void fit_model(Param cPar, const DMatrix U, const DMatrix eval, const DMatrix UtW,
-               const  DMatrix UtY, const DMatrix Y, const DMatrix W, const string test_name, const size_t n_ph = 1){
+               const  DMatrix UtY, const DMatrix Y, const DMatrix W, const size_t ni_total,
+               const string test_name, const size_t n_ph = 1){
   writeln("In LMM fit_model");
 
   if (n_ph == 1) { // one phenotype
@@ -311,7 +312,7 @@ void fit_model(Param cPar, const DMatrix U, const DMatrix eval, const DMatrix Ut
   DMatrix Y_col = get_col(Y, 0);
   DMatrix UtY_col = get_col(UtY, 0);
 
-  AnalyzeBimbam(cPar, U, eval, UtW, UtY_col, W, Y_col, 1);
+  AnalyzeBimbam(cPar, U, eval, UtW, UtY_col, W, Y_col, 1, ni_total);
 }
 
 void check_lambda(string test_name, Param cPar){

@@ -1157,7 +1157,7 @@ Pve_result calc_pve(const DMatrix eval, const DMatrix UtW,
 }
 
 void AnalyzeBimbam (Param cPar, const DMatrix U, const DMatrix eval, const DMatrix UtW, const DMatrix Uty,
-                    const DMatrix W, const DMatrix y, const size_t n_cvt, const size_t LMM_BATCH_SIZE = 100) {
+                    const DMatrix W, const DMatrix y, const size_t n_cvt, const size_t ni_total, const size_t LMM_BATCH_SIZE = 100) {
 
   writeln("indicator_idv");
   DMatrix indicator_idv = read_matrix_from_file2(cPar.indicator_idv_file);
@@ -1180,7 +1180,6 @@ void AnalyzeBimbam (Param cPar, const DMatrix U, const DMatrix eval, const DMatr
 
   double logl_H1=0.0;
   size_t ni_test = UtW.shape[0];
-  size_t ni_total = 1940;
   size_t n_region = cPar.n_region;
   int a_mode = 1;
   double l_min = cPar.l_min;
@@ -1245,7 +1244,6 @@ void AnalyzeBimbam (Param cPar, const DMatrix U, const DMatrix eval, const DMatr
       }
       else {
         geno=to!double(ch_ptr);
-
         x.elements[c_phen] = geno;
         x_miss.elements[c_phen] = 1.0;
         x_mean += geno;

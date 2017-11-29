@@ -73,6 +73,7 @@ void main(string[] args)
   double option_maf = 0;
   ulong option_pheno_column = 0;
   ulong option_ni_test = 1;
+  ulong option_ni_total;
   ulong option_ni_ph = 1;
 
   globalLogLevel(LogLevel.warning); //default
@@ -98,6 +99,7 @@ void main(string[] args)
     "test-kinship", &option_test_kinship,
     "test-name", &option_test_name,
     "ni_test", &option_ni_test,
+    "ni_total", &option_ni_total,
     "ni_ph", &option_ni_ph,
     "help", &option_help
   );
@@ -150,7 +152,8 @@ void main(string[] args)
   if(option_kinship != ""){
     writeln("Running via GEMMA");
     //run_gemma(option_kinship, option_pheno, option_covar, option_geno);
-    batch_run(option_kinship, option_pheno, option_covar, option_geno, option_indicator_idv, option_indicator_snp, option_test_name);
+    batch_run(option_kinship, option_pheno, option_covar, option_geno, option_indicator_idv,
+               option_indicator_snp, option_ni_total, option_test_name);
   }else{
 
   // ---- Control
