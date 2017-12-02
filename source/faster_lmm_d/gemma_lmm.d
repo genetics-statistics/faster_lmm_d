@@ -60,8 +60,8 @@ DMatrix CalcPab(const size_t n_cvt, const size_t e_mode, const DMatrix Hi_eval,
       for (size_t b = a; b <= n_cvt + 2; ++b) {
         index_ab = GetabIndex(a, b, n_cvt);
         if (p == 0) {
-          DMatrix Uab_col = get_col(Uab, index_ab);
-          p_ab = cpu_matrix_mult(Hi_eval, Uab_col).elements[0];
+          DMatrix Uab_row = get_row(Uab, index_ab);
+          p_ab = cpu_matrix_mult(Hi_eval, Uab_row.T).elements[0];
 
           if (e_mode != 0) {
             p_ab = ab.elements[index_ab] - p_ab;
@@ -99,8 +99,8 @@ DMatrix CalcPPab(const size_t n_cvt, const size_t e_mode,
       for (size_t b = a; b <= n_cvt + 2; ++b) {
         index_ab = GetabIndex(a, b, n_cvt);
         if (p == 0) {
-          DMatrix Uab_col = get_col(Uab, index_ab);
-          p2_ab = cpu_matrix_mult(HiHi_eval, Uab_col).elements[0];  // check its shape is [1,1] else take transpose of HiHi_eval
+          DMatrix Uab_row = get_row(Uab, index_ab);
+          p2_ab = cpu_matrix_mult(HiHi_eval, Uab_row.T).elements[0];  // check its shape is [1,1] else take transpose of HiHi_eval
           if (e_mode != 0) {
             p2_ab = p2_ab - ab.elements[index_ab] +
                     2.0 * Pab.elements[index_ab];
@@ -143,8 +143,8 @@ DMatrix CalcPPPab(const size_t n_cvt, const size_t e_mode,
       for (size_t b = a; b <= n_cvt + 2; ++b) {
         index_ab = GetabIndex(a, b, n_cvt);
         if (p == 0) {
-          DMatrix Uab_col = get_col(Uab, index_ab);
-          p3_ab = cpu_matrix_mult(HiHiHi_eval, Uab_col).elements[0];
+          DMatrix Uab_row = get_row(Uab, index_ab);
+          p3_ab = cpu_matrix_mult(HiHiHi_eval, Uab_row.T).elements[0];
           if (e_mode != 0) {
             p3_ab = ab.elements[index_ab] - p3_ab +
                     3.0 * accessor(PPab, 0, index_ab) -
@@ -838,7 +838,7 @@ Lambda_result calc_lambda(const char func_name, const DMatrix eval, const DMatri
   size_t n_index = (n_cvt + 2 + 1) * (n_cvt + 2) / 2;
   DMatrix Uab = calc_Uab(UtW, Uty, ni_test, n_index);
   DMatrix ab = calc_ab(UtW, Uty, [1, n_index]);
-  loglikeparam param0 = loglikeparam(true, ni_test, n_cvt, eval, Uab, ab, 0);
+  loglikeparam param0 = loglikeparam(true, ni_test, n_cvt, eval, Uab.T, ab, 0);
   return calc_lambda(func_name, cast(void *)&param0, l_min, l_max, n_region);
 }
 
@@ -1110,7 +1110,7 @@ Mle_result CalcLmmVgVeBeta(const DMatrix eval, const DMatrix UtW, const DMatrix 
   DMatrix Vbeta = inverse(WHiW);
 
   DMatrix ab = calc_ab(UtW, Uty, [1, n_index]);
-  DMatrix Pab = CalcPab(n_cvt, 0, Hi_eval, Uab, ab, [n_cvt + 2, n_index]);
+  DMatrix Pab = CalcPab(n_cvt, 0, Hi_eval, Uab.T, ab, [n_cvt + 2, n_index]);
 
   size_t index_yy = GetabIndex(n_cvt + 2, n_cvt + 2, n_cvt);
   double P_yy = accessor(Pab, n_cvt, index_yy);
@@ -1145,7 +1145,7 @@ Pve_result calc_pve(const DMatrix eval, const DMatrix UtW,
 
   DMatrix Uab = calc_Uab(UtW, Uty, ni_test, n_index);
 
-  loglikeparam param0 = loglikeparam(true, ni_test, n_cvt, eval, Uab, ab, 0);
+  loglikeparam param0 = loglikeparam(true, ni_test, n_cvt, eval, Uab.T, ab, 0);
 
   double se = sqrt(-1.0 / LogRL_dev2(lambda, &param0));
 
@@ -1276,7 +1276,7 @@ void AnalyzeBimbam (Param cPar, const DMatrix U, const DMatrix eval, const DMatr
         Uab = calc_Uab(UtW, Uty, Utx, Uab);
         //writeln(Uab.shape);
         ab = set_zeros_dmatrix(ab);
-        loglikeparam param1 = loglikeparam(false, ni_test, n_cvt, eval, Uab, ab, 0);
+        loglikeparam param1 = loglikeparam(false, ni_test, n_cvt, eval, Uab.T, ab, 0);
         // 3 is before 1.
         if (a_mode==3 || a_mode==4) {
           auto score = calc_RL_score (ni_test, l_mle_null, param1);
@@ -1298,7 +1298,7 @@ void AnalyzeBimbam (Param cPar, const DMatrix U, const DMatrix eval, const DMatr
           p_lrt=gsl_cdf_chisq_Q (2.0*(logl_H1 - logl_mle_H0), 1);
         }
 
-        SUMSTAT SNPs = SUMSTAT(beta, se, lambda_remle, lambda_mle, p_wald, p_lrt, p_score);
+        auto SNPs = SUMSTAT(beta, se, lambda_remle, lambda_mle, p_wald, p_lrt, p_score);
         sumStat ~= SNPs;
       }
       Xlarge = set_zeros_dmatrix(Xlarge);
@@ -1307,7 +1307,7 @@ void AnalyzeBimbam (Param cPar, const DMatrix U, const DMatrix eval, const DMatr
   }
 
   writeln(sumStat);
-  //check_assoc_result(sumStat);
+  check_assoc_result(sumStat);
   return;
 }
 
