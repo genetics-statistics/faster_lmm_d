@@ -61,7 +61,7 @@ DMatrix CalcPab(const size_t n_cvt, const size_t e_mode, const DMatrix Hi_eval,
         index_ab = GetabIndex(a, b, n_cvt);
         if (p == 0) {
           DMatrix Uab_col = get_col(Uab, index_ab);
-          p_ab = matrix_mult(Hi_eval, Uab_col).elements[0];
+          p_ab = cpu_matrix_mult(Hi_eval, Uab_col).elements[0];
 
           if (e_mode != 0) {
             p_ab = ab.elements[index_ab] - p_ab;
@@ -100,7 +100,7 @@ DMatrix CalcPPab(const size_t n_cvt, const size_t e_mode,
         index_ab = GetabIndex(a, b, n_cvt);
         if (p == 0) {
           DMatrix Uab_col = get_col(Uab, index_ab);
-          p2_ab = matrix_mult(HiHi_eval, Uab_col).elements[0];  // check its shape is [1,1] else take transpose of HiHi_eval
+          p2_ab = cpu_matrix_mult(HiHi_eval, Uab_col).elements[0];  // check its shape is [1,1] else take transpose of HiHi_eval
           if (e_mode != 0) {
             p2_ab = p2_ab - ab.elements[index_ab] +
                     2.0 * Pab.elements[index_ab];
@@ -144,7 +144,7 @@ DMatrix CalcPPPab(const size_t n_cvt, const size_t e_mode,
         index_ab = GetabIndex(a, b, n_cvt);
         if (p == 0) {
           DMatrix Uab_col = get_col(Uab, index_ab);
-          p3_ab = matrix_mult(HiHiHi_eval, Uab_col).elements[0];
+          p3_ab = cpu_matrix_mult(HiHiHi_eval, Uab_col).elements[0];
           if (e_mode != 0) {
             p3_ab = ab.elements[index_ab] - p3_ab +
                     3.0 * accessor(PPab, 0, index_ab) -
@@ -1159,6 +1159,7 @@ Pve_result calc_pve(const DMatrix eval, const DMatrix UtW,
 void AnalyzeBimbam (Param cPar, const DMatrix U, const DMatrix eval, const DMatrix UtW, const DMatrix Uty,
                     const DMatrix W, const DMatrix y, const size_t n_cvt, const size_t ni_total, const size_t LMM_BATCH_SIZE = 100) {
 
+  DMatrix UT = U.T;
   writeln("indicator_idv");
   DMatrix indicator_idv = read_matrix_from_file2(cPar.indicator_idv_file);
   writeln("indicator_snp");
@@ -1200,8 +1201,6 @@ void AnalyzeBimbam (Param cPar, const DMatrix U, const DMatrix eval, const DMatr
   writeln("n_index =======> ", n_index);
 
   DMatrix x = zeros_dmatrix(U.shape[0],1);
-  DMatrix x_miss;
-  x_miss.shape = [1, U.shape[0]];
 
   DMatrix ab;
   ab.shape = [1, n_index];
@@ -1233,7 +1232,7 @@ void AnalyzeBimbam (Param cPar, const DMatrix U, const DMatrix eval, const DMatr
     auto chr = to!string(line).split(",")[3..$];
 
     x_mean=0.0; c_phen=0; n_miss=0;
-    x_miss = set_zeros_dmatrix(x_miss);
+    DMatrix x_miss = zeros_dmatrix(1, U.shape[0]);
     for (size_t i=0; i<ni_total; ++i) {
       auto ch_ptr = to!string(chr[i].strip());
       if (indicator_idv.elements[i]==0) {continue;}
@@ -1268,7 +1267,7 @@ void AnalyzeBimbam (Param cPar, const DMatrix U, const DMatrix eval, const DMatr
       if (c%msize==0) {l=msize;} else {l=c%msize;}
 
       DMatrix Xlarge_sub = get_sub_dmatrix(Xlarge, 0, 0, Xlarge.shape[0], l);
-      DMatrix UtXlarge_sub = matrix_mult(U.T, Xlarge_sub);
+      DMatrix UtXlarge_sub = matrix_mult(UT, Xlarge_sub);
       set_sub_dmatrix(UtXlarge, 0, 0, UtXlarge.shape[0], l, UtXlarge_sub);
 
       for (size_t i=0; i<l; i++) {
@@ -1308,7 +1307,7 @@ void AnalyzeBimbam (Param cPar, const DMatrix U, const DMatrix eval, const DMatr
   }
 
   writeln(sumStat);
-  check_assoc_result(sumStat);
+  //check_assoc_result(sumStat);
   return;
 }
 

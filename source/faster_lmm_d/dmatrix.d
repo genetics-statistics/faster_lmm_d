@@ -80,7 +80,7 @@ alias Tuple!(const DMatrix, "geno", immutable string[], "gnames", immutable stri
 alias Tuple!(DMatrix, "first", DMatrix, "last")MatrixSplit;
 
 DMatrix dup_dmatrix(const DMatrix input){
-  return DMatrix(input.shape.dup, input.elements.dup);
+  return DMatrix(input.shape.dup, input.elements.dup_fast);
 }
 
 double accessor(const DMatrix input, ulong row, ulong col) {
@@ -274,10 +274,10 @@ bool eqeq(const DMatrix lha, const DMatrix rha) {
 }
 
 DMatrix get_col(const DMatrix input, const ulong colNo) {
-  m_items rows = input.rows();
-  m_items cols = input.cols();
+  m_items rows = input.rows;
+  m_items cols = input.cols;
   double[] arr = new double[rows];
-  for(auto i=0; i < rows; i++) {
+  foreach(i; 0..rows) {
     arr[i] = input.elements[i*cols+colNo];
   }
   return DMatrix([rows,1],arr);
