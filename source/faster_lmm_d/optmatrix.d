@@ -64,10 +64,20 @@ version(CUDA) {
   }
 }
 
+version(CUDA){
+  import faster_lmm_d.cuda;
+  double vector_ddot(const DMatrix lha, const DMatrix rha){
+    return cuda_ddot(lha, rha);
+  }
+} else {
+  double vector_ddot(const DMatrix lha, const DMatrix rha){
+    return cpu_ddot(lha, rha);
+  }
+}
+
 double cpu_ddot(const DMatrix lha, const DMatrix rha){
   return cblas_ddot(to!int(lha.elements.length), lha.elements.ptr, 1, rha.elements.ptr, 1);
 }
-
 
 DMatrix cpu_matrix_mult(const DMatrix lha,const DMatrix rha) {
   double[] C = new double[lha.rows()*rha.cols()];

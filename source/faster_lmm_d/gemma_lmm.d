@@ -61,7 +61,7 @@ DMatrix CalcPab(const size_t n_cvt, const size_t e_mode, const DMatrix Hi_eval,
         index_ab = GetabIndex(a, b, n_cvt);
         if (p == 0) {
           DMatrix Uab_row = get_row(Uab, index_ab);
-          p_ab = cpu_ddot(Hi_eval, Uab_row);
+          p_ab = vector_ddot(Hi_eval, Uab_row);
 
           if (e_mode != 0) {
             p_ab = ab.elements[index_ab] - p_ab;
@@ -100,7 +100,7 @@ DMatrix CalcPPab(const size_t n_cvt, const size_t e_mode,
         index_ab = GetabIndex(a, b, n_cvt);
         if (p == 0) {
           DMatrix Uab_row = get_row(Uab, index_ab);
-          p2_ab = cpu_ddot(HiHi_eval, Uab_row);  // check its shape is [1,1] else take transpose of HiHi_eval
+          p2_ab = vector_ddot(HiHi_eval, Uab_row);  // check its shape is [1,1] else take transpose of HiHi_eval
           if (e_mode != 0) {
             p2_ab = p2_ab - ab.elements[index_ab] +
                     2.0 * Pab.elements[index_ab];
@@ -144,7 +144,7 @@ DMatrix CalcPPPab(const size_t n_cvt, const size_t e_mode,
         index_ab = GetabIndex(a, b, n_cvt);
         if (p == 0) {
           DMatrix Uab_row = get_row(Uab, index_ab);
-          p3_ab = cpu_ddot(HiHiHi_eval, Uab_row);
+          p3_ab = vector_ddot(HiHiHi_eval, Uab_row);
           if (e_mode != 0) {
             p3_ab = ab.elements[index_ab] - p3_ab +
                     3.0 * accessor(PPab, 0, index_ab) -
@@ -306,7 +306,7 @@ extern(C) double LogRL_dev1(double l, void* params) {
   DMatrix HiHi_eval = slow_multiply_dmatrix(Hi_eval, Hi_eval);
 
   v_temp = set_ones_dmatrix(v_temp);
-  trace_Hi = cpu_ddot(Hi_eval, v_temp);
+  trace_Hi = vector_ddot(Hi_eval, v_temp);
 
   if (p.e_mode != 0) {
     trace_Hi = to!double(ni_test) - trace_Hi;
@@ -356,7 +356,7 @@ extern(C) double LogL_dev1(double l, void* params) {
   DMatrix HiHi_eval = slow_multiply_dmatrix(Hi_eval, Hi_eval);
 
   v_temp = set_ones_dmatrix(v_temp);
-  trace_Hi = cpu_ddot(Hi_eval, v_temp);
+  trace_Hi = vector_ddot(Hi_eval, v_temp);
 
   if (p.e_mode != 0) {
     trace_Hi = to!double(ni_test) - trace_Hi;
@@ -399,8 +399,8 @@ extern(C) double LogRL_dev2(double l, void* params) {
   DMatrix HiHiHi_eval = slow_multiply_dmatrix(HiHi_eval, Hi_eval);
 
   v_temp = set_ones_dmatrix(v_temp);
-  trace_Hi = cpu_ddot(Hi_eval, v_temp);
-  trace_HiHi = cpu_ddot(HiHi_eval, v_temp);
+  trace_Hi = vector_ddot(Hi_eval, v_temp);
+  trace_HiHi = vector_ddot(HiHi_eval, v_temp);
 
   if (p.e_mode != 0) {
     trace_Hi = to!double(ni_test) - trace_Hi;
@@ -459,9 +459,9 @@ extern(C) double LogL_dev2(double l, void* params) {
 
   v_temp = set_ones_dmatrix(v_temp);
 
-  trace_Hi = cpu_ddot(Hi_eval, v_temp);
+  trace_Hi = vector_ddot(Hi_eval, v_temp);
 
-  trace_HiHi = cpu_ddot(HiHi_eval, v_temp);
+  trace_HiHi = vector_ddot(HiHi_eval, v_temp);
   if (p.e_mode != 0) {
     trace_Hi = to!double(ni_test) - trace_Hi;
     trace_HiHi = 2 * trace_Hi + trace_HiHi - to!double(ni_test);
@@ -509,8 +509,8 @@ extern(C) void LogL_dev12(double l, void *params, double *dev1, double *dev2) {
   DMatrix HiHiHi_eval = slow_multiply_dmatrix(HiHi_eval, Hi_eval);
 
   v_temp = set_ones_dmatrix(v_temp);
-  trace_Hi = cpu_ddot(Hi_eval, v_temp);
-  trace_HiHi = cpu_ddot(HiHi_eval, v_temp);
+  trace_Hi = vector_ddot(Hi_eval, v_temp);
+  trace_HiHi = vector_ddot(HiHi_eval, v_temp);
 
   if (p.e_mode != 0) {
     trace_Hi = to!double(ni_test) - trace_Hi;
@@ -562,8 +562,8 @@ extern(C) void LogRL_dev12(double l, void* params, double* dev1, double* dev2) {
   DMatrix HiHiHi_eval = slow_multiply_dmatrix(HiHi_eval, Hi_eval);
 
   v_temp = set_ones_dmatrix(v_temp);
-  trace_Hi = cpu_ddot(Hi_eval, v_temp);
-  trace_HiHi = cpu_ddot(HiHi_eval, v_temp);
+  trace_Hi = vector_ddot(Hi_eval, v_temp);
+  trace_HiHi = vector_ddot(HiHi_eval, v_temp);
 
   if (p.e_mode != 0) {
     trace_Hi = to!double(ni_test) - trace_Hi;

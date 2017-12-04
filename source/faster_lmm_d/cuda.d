@@ -142,6 +142,20 @@ version(CUDA) {
    * Matrix multiplication using CUDA.
    */
 
+  double cuda_ddot(const DMatrix lha, const DMatrix rha){
+    double result;
+    auto d_lha = gpu_malloc(lha.size);
+    auto d_rha = gpu_malloc(rha.size);
+
+    cuda_copy_ram_to_gpu(d_lha, lha);
+    cuda_copy_ram_to_gpu(d_rha, rha);
+
+    cublasDdot(cublas_handle, to!int(lha.elements.length), d_lha, 1, d_rha, 1, &result);
+    gpu_free(d_lha);
+    gpu_free(d_rha);
+    return result;
+  }
+
   DMatrix cuda_matrix_mult(const DMatrix _B, const DMatrix _A){
 
     if (_A.byte_size < RUN_CUDA_AT_SIZE && _B.byte_size < RUN_CUDA_AT_SIZE) {
