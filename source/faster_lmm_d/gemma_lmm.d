@@ -1140,8 +1140,8 @@ void AnalyzeBimbam (Param cPar, const DMatrix U, const DMatrix eval, const DMatr
 
   //start reading genotypes and analyze
   size_t c=0, t_last=0;
-  for (size_t t=0; t<indicator_snp.elements.length; ++t) {
-    if (indicator_snp.elements[t]==0) {continue;}
+  foreach (element; indicator_snp.elements) {
+    if (element ==0) {continue;}
     t_last++;
   }
 
@@ -1160,7 +1160,7 @@ void AnalyzeBimbam (Param cPar, const DMatrix U, const DMatrix eval, const DMatr
 
     x_mean=0.0; c_phen=0; n_miss=0;
     DMatrix x_miss = zeros_dmatrix(1, U.shape[0]);
-    for (size_t i=0; i<ni_total; ++i) {
+    foreach ( i; 0..ni_total) {
       auto ch_ptr = to!string(chr[i].strip());
       if (indicator_idv.elements[i]==0) {continue;}
 
@@ -1179,7 +1179,7 @@ void AnalyzeBimbam (Param cPar, const DMatrix U, const DMatrix eval, const DMatr
 
     x_mean/= to!double(ni_test-n_miss);
 
-    for (size_t i=0; i<ni_test; ++i) {
+    foreach (i; 0..ni_test) {
       if ( x_miss.elements[i] == 0) {
         x.elements[i] = x_mean;
       }
@@ -1197,7 +1197,7 @@ void AnalyzeBimbam (Param cPar, const DMatrix U, const DMatrix eval, const DMatr
       DMatrix UtXlarge_sub = matrix_mult(UT, Xlarge_sub);
       set_sub_dmatrix(UtXlarge, 0, 0, UtXlarge.shape[0], l, UtXlarge_sub);
 
-      for (size_t i=0; i<l; i++) {
+      foreach ( i; 0..l) {
 
         DMatrix Utx = get_col(UtXlarge, i);           //view
         Uab = calc_Uab(UtW, Uty, Utx, Uab);
