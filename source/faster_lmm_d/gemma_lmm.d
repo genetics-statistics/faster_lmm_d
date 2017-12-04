@@ -796,14 +796,8 @@ Wald_score calc_RL_Wald(size_t ni_test, double l, loglikeparam params) {
 
   int df = to!int(ni_test) - to!int(n_cvt) - 1;
 
-  DMatrix v_temp;
-  v_temp.shape = [1, params.eval.elements.length];
-  v_temp.elements = params.eval.elements;
-  v_temp = multiply_dmatrix_num(v_temp, l);
-  DMatrix Hi_eval = (params.e_mode == 0 ? ones_dmatrix(1, params.eval.elements.length): dup_dmatrix(v_temp));
-
-  v_temp = add_dmatrix_num(v_temp, 1.0);
-  Hi_eval = divide_dmatrix(Hi_eval, v_temp);
+  DMatrix v_temp = multiply_dmatrix_num(params.eval.T, l);
+  DMatrix Hi_eval = (params.e_mode == 0 ? divide_num_dmatrix(1, add_dmatrix_num(v_temp, 1.0)) : dup_dmatrix(v_temp));
 
   DMatrix Pab = CalcPab(n_cvt, params.e_mode, Hi_eval, params.Uab, params.ab, [n_cvt + 2, n_index]);
 
@@ -832,16 +826,8 @@ RL_Score calc_RL_score(const size_t ni_test, const double l, loglikeparam params
 
   int df = to!int(ni_test) - to!int(n_cvt) - 1;
 
-  DMatrix v_temp;
-  v_temp.shape = [1, params.eval.elements.length];
-
-  v_temp.elements = params.eval.elements;
-  v_temp = multiply_dmatrix_num(v_temp, l);
-
-  DMatrix Hi_eval = (params.e_mode == 0 ? ones_dmatrix(1, params.eval.elements.length): dup_dmatrix(v_temp));
-
-  v_temp = add_dmatrix_num(v_temp, 1.0);
-  Hi_eval = divide_dmatrix(Hi_eval, v_temp);
+  DMatrix v_temp = multiply_dmatrix_num(params.eval.T, l);
+  DMatrix Hi_eval = (params.e_mode == 0 ? divide_num_dmatrix(1, add_dmatrix_num(v_temp, 1.0)) : dup_dmatrix(v_temp));
 
   DMatrix Pab = CalcPab(n_cvt, params.e_mode, Hi_eval, params.Uab, params.ab, [n_cvt + 2, n_index]);
 
@@ -1019,20 +1005,17 @@ Mle_result CalcLmmVgVeBeta(const DMatrix eval, const DMatrix UtW, const DMatrix 
 
   DMatrix Uab = calc_Uab(UtW, Uty, ni_test, n_index);
 
-  DMatrix Hi_eval = ones_dmatrix(1, eval.shape[0]);
-  DMatrix v_temp =DMatrix([1, eval.shape[0]], eval.elements);
-
-  v_temp = multiply_dmatrix_num(v_temp, lambda);
-  v_temp = add_dmatrix_num(v_temp, 1.0);
-  Hi_eval = divide_dmatrix(Hi_eval, v_temp);
+  DMatrix v_temp = multiply_dmatrix_num(eval.T, lambda);
+  DMatrix Hi_eval = divide_num_dmatrix(1, add_dmatrix_num(v_temp, 1.0));
 
   // Calculate beta.
   DMatrix HiW =  UtW.T;
-  for (size_t i = 0; i < UtW.shape[1]; i++) {
+  foreach (i; 0..UtW.shape[1]) {
     DMatrix HiW_col = get_col(HiW, i);
     HiW_col = slow_multiply_dmatrix(HiW_col, Hi_eval);
     set_col2(HiW, i, HiW_col);
   }
+
   DMatrix WHiW = matrix_mult(HiW, UtW);
   DMatrix WHiy = matrix_mult(HiW, Uty);
 
@@ -1064,7 +1047,7 @@ Mle_result CalcLmmVgVeBeta(const DMatrix eval, const DMatrix UtW, const DMatrix 
 
   Vbeta = multiply_dmatrix_num(Vbeta, ve);
 
-  for (size_t i = 0; i < Vbeta.shape[1]; i++) {
+  foreach ( i; 0..Vbeta.shape[1]) {
     se_beta.elements[i] = sqrt(accessor(Vbeta, i, i));
   }
 
