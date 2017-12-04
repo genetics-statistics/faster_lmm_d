@@ -14,7 +14,7 @@ import std.math: sqrt, round;
 import std.stdio;
 import std.typecons; // for Tuples
 
-import cblas : gemm, Transpose, Order;
+import cblas : gemm, Transpose, Order, cblas_ddot;
 
 import faster_lmm_d.dmatrix;
 import faster_lmm_d.helpers;
@@ -63,6 +63,11 @@ version(CUDA) {
     return cpu_matrix_mult(lha,rha);
   }
 }
+
+double cpu_ddot(const DMatrix lha, const DMatrix rha){
+  return cblas_ddot(to!int(lha.elements.length), lha.elements.ptr, 1, rha.elements.ptr, 1);
+}
+
 
 DMatrix cpu_matrix_mult(const DMatrix lha,const DMatrix rha) {
   double[] C = new double[lha.rows()*rha.cols()];
