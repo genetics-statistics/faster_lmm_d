@@ -181,22 +181,14 @@ DMatrix CalcPPPab(const size_t n_cvt, const size_t e_mode,
   return PPPab;
 }
 
-size_t GetabIndex( const size_t a, const size_t b, const size_t n_cvt) {
+size_t GetabIndex( const size_t a, const size_t b, const size_t n_cvt)
+in {
   size_t n = n_cvt + 2;
-  if (a > n || b > n || a <= 0 || b <= 0) {
-    writeln("error in GetabIndex.");
-    return 0;
-  }
-  size_t high, low;
-  if (b < a) {
-    high = a;
-    low = b;
-  }else{
-    high = b;
-    low = a;
-  }
-
-  return (2 * n - low + 2) * (low - 1) / 2 + high - low;
+  assert( a <= n || b <= n || a > 0 || b > 0 , "error in GetabIndex.");
+}
+body {
+  size_t n = n_cvt + 2;
+  return ( b < a ?  ((2 * n - b + 2) * (b - 1) / 2 + a - b ): ((2 * n - a + 2) * (a - 1) / 2 + b - a) );
 }
 
 struct loglikeparam{
@@ -237,16 +229,11 @@ double LogL_f(const double l, const void* params) {
   double d;
   size_t index_yy;
 
-  DMatrix v_temp =  DMatrix([1, p.eval.elements.length], p.eval.elements);
-  v_temp = multiply_dmatrix_num(v_temp, l);
-
-  DMatrix Hi_eval = (p.e_mode == 0 ? ones_dmatrix(1, p.eval.elements.length): dup_dmatrix(v_temp));
-
-  v_temp = add_dmatrix_num(v_temp, 1.0);
-  Hi_eval = divide_dmatrix(Hi_eval, v_temp);
+  DMatrix v_temp = multiply_dmatrix_num(p.eval.T, l);
+  DMatrix Hi_eval = (p.e_mode == 0 ? divide_num_dmatrix(1, add_dmatrix_num(v_temp, 1.0)) : dup_dmatrix(v_temp));
 
   foreach (element; v_temp.elements)
-    logdet_h += mlog(fabs(element));
+    logdet_h += mlog(fabs(element) + 1);
 
   DMatrix Pab = CalcPab(n_cvt, p.e_mode, Hi_eval, p.Uab, p.ab, [n_cvt + 2, n_index]);
 
@@ -274,16 +261,11 @@ double LogRL_f(const double l, const void* params) {
   double f = 0.0, logdet_h = 0.0, logdet_hiw = 0.0;
   size_t index_ww;
 
-  DMatrix v_temp = DMatrix([1, p.eval.elements.length], p.eval.elements);
-  v_temp = multiply_dmatrix_num(v_temp, l);
-
-  DMatrix Hi_eval = (p.e_mode == 0 ? ones_dmatrix(1, p.eval.elements.length): dup_dmatrix(v_temp));
-
-  v_temp = add_dmatrix_num(v_temp, 1.0);
-  Hi_eval = divide_dmatrix(Hi_eval, v_temp);
+  DMatrix v_temp = multiply_dmatrix_num(p.eval.T, l);
+  DMatrix Hi_eval = (p.e_mode == 0 ? divide_num_dmatrix(1, add_dmatrix_num(v_temp, 1.0)) : dup_dmatrix(v_temp));
 
   foreach (element; v_temp.elements)
-    logdet_h += mlog(fabs(element));
+    logdet_h += mlog(fabs(element) + 1);
 
   DMatrix Pab = CalcPab(n_cvt, p.e_mode, Hi_eval, p.Uab, p.ab, [n_cvt + 2, n_index]);
 
@@ -292,11 +274,11 @@ double LogRL_f(const double l, const void* params) {
 
   // Calculate |WHiW|-|WW|.
   logdet_hiw = 0.0;
-  for (size_t i = 0; i < nc_total; ++i) {
+  foreach (i; 0..nc_total) {
     index_ww = GetabIndex(i + 1, i + 1, n_cvt);
-    logdet_hiw += mlog(accessor(Pab, i, index_ww));
-    logdet_hiw -= mlog(accessor(Iab, i, index_ww));
+    logdet_hiw += mlog(accessor(Pab, i, index_ww)) - mlog(accessor(Iab, i, index_ww));
   }
+
   index_ww = GetabIndex(n_cvt + 2, n_cvt + 2, n_cvt);
   double P_yy = accessor(Pab, nc_total, index_ww);
 
@@ -319,14 +301,8 @@ extern(C) double LogRL_dev1(double l, void* params) {
   double dev1 = 0.0, trace_Hi = 0.0;
   size_t index_ww;
 
-  DMatrix v_temp =  DMatrix([1, p.eval.elements.length], p.eval.elements);
-  v_temp = multiply_dmatrix_num(v_temp, l);
-
-  DMatrix Hi_eval = (p.e_mode == 0 ? ones_dmatrix(1, p.eval.elements.length): dup_dmatrix(v_temp));
-
-  v_temp = add_dmatrix_num(v_temp, 1.0);
-  Hi_eval = divide_dmatrix(Hi_eval, v_temp);
-
+  DMatrix v_temp = multiply_dmatrix_num(p.eval.T, l);
+  DMatrix Hi_eval = (p.e_mode == 0 ? divide_num_dmatrix(1, add_dmatrix_num(v_temp, 1.0)) : dup_dmatrix(v_temp));
   DMatrix HiHi_eval = slow_multiply_dmatrix(Hi_eval, Hi_eval);
 
   v_temp = set_ones_dmatrix(v_temp);
@@ -342,7 +318,7 @@ extern(C) double LogRL_dev1(double l, void* params) {
   // Calculate tracePK and trace PKPK.
   double trace_P = trace_Hi;
   double ps_ww, ps2_ww;
-  for (size_t i = 0; i < nc_total; ++i) {
+  foreach (i; 0..nc_total) {
     index_ww = GetabIndex(i + 1, i + 1, n_cvt);
     ps_ww = accessor(Pab, i, index_ww);
     ps2_ww = accessor(PPab, i, index_ww);
@@ -375,14 +351,8 @@ extern(C) double LogL_dev1(double l, void* params) {
   double dev1 = 0.0, trace_Hi = 0.0;
   size_t index_yy;
 
-  DMatrix v_temp = DMatrix([1, p.eval.elements.length], p.eval.elements);
-  v_temp = multiply_dmatrix_num(v_temp, l);
-
-  DMatrix Hi_eval = (p.e_mode == 0 ? ones_dmatrix(1, p.eval.elements.length): dup_dmatrix(v_temp));
-
-  v_temp = add_dmatrix_num(v_temp, 1.0);
-
-  Hi_eval = divide_dmatrix(Hi_eval, v_temp);
+  DMatrix v_temp = multiply_dmatrix_num(p.eval.T, l);
+  DMatrix Hi_eval = (p.e_mode == 0 ? divide_num_dmatrix(1, add_dmatrix_num(v_temp, 1.0)) : dup_dmatrix(v_temp));
   DMatrix HiHi_eval = slow_multiply_dmatrix(Hi_eval, Hi_eval);
 
   v_temp = set_ones_dmatrix(v_temp);
@@ -423,14 +393,8 @@ extern(C) double LogRL_dev2(double l, void* params) {
   double dev2 = 0.0, trace_Hi = 0.0, trace_HiHi = 0.0;
   size_t index_ww;
 
-  DMatrix v_temp =  DMatrix([1, p.eval.elements.length], p.eval.elements);
-
-  v_temp = multiply_dmatrix_num(v_temp, l);
-
-  DMatrix Hi_eval = (p.e_mode == 0 ? ones_dmatrix(1, p.eval.elements.length): dup_dmatrix(v_temp));
-
-  v_temp = add_dmatrix_num(v_temp, 1.0);
-  Hi_eval = divide_dmatrix(Hi_eval, v_temp);
+  DMatrix v_temp = multiply_dmatrix_num(p.eval.T, l);
+  DMatrix Hi_eval = (p.e_mode == 0 ? divide_num_dmatrix(1, add_dmatrix_num(v_temp, 1.0)) : dup_dmatrix(v_temp));
   DMatrix HiHi_eval = slow_multiply_dmatrix(Hi_eval, Hi_eval);
   DMatrix HiHiHi_eval = slow_multiply_dmatrix(HiHi_eval, Hi_eval);
 
@@ -450,7 +414,7 @@ extern(C) double LogRL_dev2(double l, void* params) {
   // Calculate tracePK and trace PKPK.
   double trace_P = trace_Hi, trace_PP = trace_HiHi;
   double ps_ww, ps2_ww, ps3_ww;
-  for (size_t i = 0; i < nc_total; ++i) {
+  foreach(i; 0..nc_total) {
     index_ww = GetabIndex(i + 1, i + 1, n_cvt);
     ps_ww = accessor(Pab, i, index_ww);
     ps2_ww = accessor(PPab, i, index_ww);
@@ -488,15 +452,9 @@ extern(C) double LogL_dev2(double l, void* params) {
   double dev2 = 0.0, trace_Hi = 0.0, trace_HiHi = 0.0;
   size_t index_yy;
 
-  DMatrix v_temp =  DMatrix([1, p.eval.elements.length], p.eval.elements);
-  v_temp = multiply_dmatrix_num(v_temp, l);
-
-  DMatrix Hi_eval = (p.e_mode == 0 ? ones_dmatrix(1, p.eval.elements.length): dup_dmatrix(v_temp));
-
-  v_temp = add_dmatrix_num(v_temp, 1.0);
-
-  Hi_eval = divide_dmatrix(Hi_eval, v_temp);
-  DMatrix HiHi_eval = slow_multiply_dmatrix(Hi_eval, Hi_eval); // gsl_vector_mul();
+  DMatrix v_temp = multiply_dmatrix_num(p.eval.T, l);
+  DMatrix Hi_eval = (p.e_mode == 0 ? divide_num_dmatrix(1, add_dmatrix_num(v_temp, 1.0)) : dup_dmatrix(v_temp));
+  DMatrix HiHi_eval = slow_multiply_dmatrix(Hi_eval, Hi_eval);
   DMatrix HiHiHi_eval = slow_multiply_dmatrix(HiHi_eval, Hi_eval);
 
   v_temp = set_ones_dmatrix(v_temp);
@@ -545,13 +503,8 @@ extern(C) void LogL_dev12(double l, void *params, double *dev1, double *dev2) {
   size_t index_yy;
 
 
-  DMatrix v_temp =  DMatrix([1, p.eval.elements.length], p.eval.elements);
-  v_temp = multiply_dmatrix_num(v_temp, l);
-
-  DMatrix Hi_eval = (p.e_mode == 0 ? ones_dmatrix(1, p.eval.elements.length): dup_dmatrix(v_temp));
-
-  v_temp = add_dmatrix_num(v_temp, 1.0);
-  Hi_eval = divide_dmatrix(Hi_eval, v_temp);
+  DMatrix v_temp = multiply_dmatrix_num(p.eval.T, l);
+  DMatrix Hi_eval = (p.e_mode == 0 ? divide_num_dmatrix(1, add_dmatrix_num(v_temp, 1.0)) : dup_dmatrix(v_temp));
   DMatrix HiHi_eval = slow_multiply_dmatrix(Hi_eval, Hi_eval);
   DMatrix HiHiHi_eval = slow_multiply_dmatrix(HiHi_eval, Hi_eval);
 
@@ -603,15 +556,8 @@ extern(C) void LogRL_dev12(double l, void* params, double* dev1, double* dev2) {
   double trace_Hi = 0.0, trace_HiHi = 0.0;
   size_t index_ww;
 
-
-  DMatrix v_temp =  DMatrix([1, p.eval.elements.length], p.eval.elements);
-  v_temp = multiply_dmatrix_num(v_temp, l);
-
-  DMatrix Hi_eval = (p.e_mode == 0 ? ones_dmatrix(1, p.eval.elements.length): dup_dmatrix(v_temp));
-
-  v_temp = add_dmatrix_num(v_temp, 1.0);
-
-  Hi_eval = divide_dmatrix(Hi_eval, v_temp);
+  DMatrix v_temp = multiply_dmatrix_num(p.eval.T, l);
+  DMatrix Hi_eval = (p.e_mode == 0 ? divide_num_dmatrix(1, add_dmatrix_num(v_temp, 1.0)) : dup_dmatrix(v_temp));
   DMatrix HiHi_eval = slow_multiply_dmatrix(Hi_eval, Hi_eval);
   DMatrix HiHiHi_eval = slow_multiply_dmatrix(HiHi_eval, Hi_eval);
 
@@ -632,7 +578,7 @@ extern(C) void LogRL_dev12(double l, void* params, double* dev1, double* dev2) {
   double trace_P = trace_Hi, trace_PP = trace_HiHi;
 
   double ps_ww, ps2_ww, ps3_ww;
-  for (size_t i = 0; i < nc_total; ++i) {
+  foreach(i; 0..nc_total) {
     index_ww = GetabIndex(i + 1, i + 1, n_cvt);
     ps_ww = accessor(Pab, i, index_ww);
     ps2_ww = accessor(PPab, i, index_ww);
@@ -680,7 +626,7 @@ Lambda_result calc_lambda(const char func_name, void* params, const double l_min
   double lambda_interval = mlog(l_max / l_min) / to!double(n_region);
   double dev1_l, dev1_h, logf_l, logf_h;
   //writeln("lambda_interval = ", lambda_interval);
-  for (size_t i = 0; i < n_region; ++i) {
+  foreach(i; 0..n_region) {
     lambda_l = l_min * exp(lambda_interval * i);
     lambda_h = l_min * exp(lambda_interval * (i + 1.0));
 
@@ -748,7 +694,7 @@ Lambda_result calc_lambda(const char func_name, void* params, const double l_min
     T_fdf = cast(gsl_root_fdfsolver_type*)gsl_root_fdfsolver_newton;
     s_fdf = gsl_root_fdfsolver_alloc(T_fdf);
 
-    for (int i = 0; i < 1; ++i) {
+    foreach(i; 0..1) {
 
       lambda_l = lambda_lh[i].l;
       lambda_h = lambda_lh[i].h;
@@ -852,10 +798,8 @@ Wald_score calc_RL_Wald(size_t ni_test, double l, loglikeparam params) {
 
   DMatrix v_temp;
   v_temp.shape = [1, params.eval.elements.length];
-
   v_temp.elements = params.eval.elements;
   v_temp = multiply_dmatrix_num(v_temp, l);
-
   DMatrix Hi_eval = (params.e_mode == 0 ? ones_dmatrix(1, params.eval.elements.length): dup_dmatrix(v_temp));
 
   v_temp = add_dmatrix_num(v_temp, 1.0);
@@ -1333,11 +1277,7 @@ unittest{
   DMatrix ab = DMatrix([2,2],[1,2,3,4]);
   DMatrix Pab;
 
-
-  size_t index = GetabIndex(4, 9, n_cvt);
-  assert(index == 0);
-
-  index = GetabIndex(4, 9, 16);
+  size_t index = GetabIndex(4, 9, 16);
   assert(index == 56);
 
   //CalcPab(n_cvt , e_mode,  Hi_eval, Uab,  ab, Pab);
