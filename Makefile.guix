@@ -61,7 +61,8 @@ else
   LIBS += -L-lopenblas
 endif
 LIBS   += -L-llapacke -L-llapack
-SRC    = $(wildcard source/faster_lmm_d/*.d)
+SRC    = $(wildcard source/faster_lmm_d/*.d) $(wildcard source/faster_lmm_d/*/*.d)
+
 OBJ    = $(SRC:.d=.o)
 OUT    = build/faster_lmm_d
 
