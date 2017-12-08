@@ -386,42 +386,15 @@ DMatrix matrix_join(DMatrix ul, DMatrix ur, DMatrix dl, DMatrix dr){
 DMatrix get_sub_dmatrix(DMatrix H,  size_t a, size_t b, size_t n1, size_t n2){
   //size_t start = a *H.rows + b;
   double[] elements = [];
-  for(size_t i = 0; i < n1; i++){
-    elements ~= H.elements[(i*H.rows)..(i*H.rows + n2)];
+  for(size_t i = 0; i < n2; i++){
+    elements ~= H.elements[(i*H.rows)..(i*H.rows + n1)];
   }
-  writeln(elements.length);
-  writeln(n1*n2);
-  assert(elements.length == n1*n2);
   return DMatrix([n1, n2], elements);
 }
 
 void set_sub_dmatrix(ref DMatrix H,  size_t a, size_t b, size_t n1, size_t n2, DMatrix H_Sub){
-  //size_t start = a *H.rows + b;
-  writeln(H.shape);
-  writeln(H.elements.length);
-  writeln(H_Sub.shape);
-  writeln(H_Sub.elements.length);
-  double[] elements = [];
   for(size_t i = 0; i < n1; i++){
     for(size_t j = 0; j < n2; j++){
-      H.elements[(i*H.cols) + j] = H_Sub.elements[i*H_Sub.cols + j];
-    }
-  }
-}
-
-void set_sub_dmatrix2(ref DMatrix H,  size_t a, size_t b, size_t n1, size_t n2, DMatrix H_Sub){
-  //size_t start = a *H.rows + b;
-
-  double[] elements = [];
-  for(size_t i = 0; i < n1; i++){
-    for(size_t j = 0; j < n2; j++){
-      writeln("H -> ", H.shape);
-      writeln("H_length -> ", H.elements.length);
-      writeln("H_Sub -> ", H_Sub.shape);
-      writeln("H_sub_length -> ", H_Sub.elements.length);
-      writeln("i = " , i , "j = ", j , "n1 =", n1, "n2 = " , n2 );
-      writeln("H.elements[(i*H.cols) + j]", " -> " , ((i*H.cols) + j), " -> " , H.elements[(i*H.cols) + j]);
-      writeln("H_Sub.elements[(i*H.cols) + j]", " -> " , (i*H_Sub.cols) + j, " -> " , H_Sub.elements[(i*H_Sub.cols) + j]);
       H.elements[(i*H.cols) + j] = H_Sub.elements[i*H_Sub.cols + j];
     }
   }
