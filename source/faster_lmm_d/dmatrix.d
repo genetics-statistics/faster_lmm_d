@@ -384,18 +384,21 @@ DMatrix matrix_join(DMatrix ul, DMatrix ur, DMatrix dl, DMatrix dr){
 }
 
 DMatrix get_sub_dmatrix(DMatrix H,  size_t a, size_t b, size_t n1, size_t n2){
-  //size_t start = a *H.rows + b;
-  double[] elements = [];
-  for(size_t i = 0; i < n1; i++){
-    elements ~= H.elements[(i*H.cols)..(i*H.cols + n2)];
+  size_t index = 0, cols = H.cols;
+  double[] elements = new double[n1*n2];
+  foreach(i; 0..n1){
+    foreach(j; 0..n2){
+      elements[index++] = H.elements[i*cols + j];
+    }
   }
   return DMatrix([n1, n2], elements);
 }
 
 void set_sub_dmatrix(ref DMatrix H,  size_t a, size_t b, size_t n1, size_t n2, DMatrix H_Sub){
-  for(size_t i = 0; i < n1; i++){
-    for(size_t j = 0; j < n2; j++){
-      H.elements[(i*H.cols) + j] = H_Sub.elements[i*H_Sub.cols + j];
+  size_t index = 0, cols = H.cols;
+  foreach(i; 0..n1){
+    foreach(j; 0..n2){
+     H.elements[(i*cols) + j] = H_Sub.elements[index++];
     }
   }
 }
