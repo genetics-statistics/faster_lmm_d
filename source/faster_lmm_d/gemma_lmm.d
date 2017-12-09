@@ -1129,8 +1129,7 @@ void AnalyzeBimbam (Param cPar, const DMatrix U, const DMatrix eval, const DMatr
 
   DMatrix x = zeros_dmatrix(U.shape[0],1);
 
-  DMatrix ab;
-  ab.shape = [1, n_index];
+  DMatrix ab = zeros_dmatrix(1, n_index);
 
   // Create a large matrix.
   size_t msize=10000;
@@ -1196,13 +1195,12 @@ void AnalyzeBimbam (Param cPar, const DMatrix U, const DMatrix eval, const DMatr
       DMatrix Xlarge_sub = get_sub_dmatrix(Xlarge, 0, 0, Xlarge.shape[0], l);
       DMatrix UtXlarge_sub = matrix_mult(UT, Xlarge_sub);
       set_sub_dmatrix(UtXlarge, 0, 0, UtXlarge.shape[0], l, UtXlarge_sub);
-
+      DMatrix UtXlargeT = UtXlarge.T;
       foreach ( i; 0..l) {
 
-        DMatrix Utx = get_col(UtXlarge, i);           //view
+        DMatrix Utx = get_row(UtXlargeT, i);           //view
         Uab = calc_Uab(UtW, Uty, Utx, Uab);
 
-        ab = set_zeros_dmatrix(ab);
         loglikeparam param1 = loglikeparam(false, ni_test, n_cvt, eval, Uab.T, ab, 0);
         // 3 is before 1.
         if (a_mode==3 || a_mode==4) {
