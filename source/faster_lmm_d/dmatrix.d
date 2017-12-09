@@ -386,8 +386,8 @@ DMatrix matrix_join(DMatrix ul, DMatrix ur, DMatrix dl, DMatrix dr){
 DMatrix get_sub_dmatrix(DMatrix H,  size_t a, size_t b, size_t n1, size_t n2){
   //size_t start = a *H.rows + b;
   double[] elements = [];
-  for(size_t i = 0; i < n2; i++){
-    elements ~= H.elements[(i*H.rows)..(i*H.rows + n1)];
+  for(size_t i = 0; i < n1; i++){
+    elements ~= H.elements[(i*H.cols)..(i*H.cols + n2)];
   }
   return DMatrix([n1, n2], elements);
 }

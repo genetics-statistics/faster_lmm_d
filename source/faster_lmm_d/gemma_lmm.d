@@ -1201,7 +1201,7 @@ void AnalyzeBimbam (Param cPar, const DMatrix U, const DMatrix eval, const DMatr
 
         DMatrix Utx = get_col(UtXlarge, i);           //view
         Uab = calc_Uab(UtW, Uty, Utx, Uab);
-        //writeln(Uab.shape);
+
         ab = set_zeros_dmatrix(ab);
         loglikeparam param1 = loglikeparam(false, ni_test, n_cvt, eval, Uab.T, ab, 0);
         // 3 is before 1.
@@ -1230,6 +1230,7 @@ void AnalyzeBimbam (Param cPar, const DMatrix U, const DMatrix eval, const DMatr
       }
       Xlarge = set_zeros_dmatrix(Xlarge);
     }
+
     t++;
   }
 
@@ -1245,10 +1246,10 @@ void check_assoc_result(SUMSTAT[] snps){
   enforce(modDiff(snps[0].lambda_remle, 4.31799) < 0.001);
   enforce(modDiff(snps[0].p_wald, 0.208762) < 0.001);
 
-  enforce(modDiff(snps[$-1].beta, -0.0751448 ) < 0.001);
-  enforce(modDiff(snps[$-1].se, 0.0706869 ) < 0.001);
-  enforce(modDiff(snps[$-1].lambda_remle, 4.30083 ) < 0.001);
-  enforce(modDiff(snps[$-1].p_wald, 0.287935) < 0.001);
+  enforce(modDiff(snps[$-1].beta, 0.0684089 ) < 0.001);
+  enforce(modDiff(snps[$-1].se, 0.0462648 ) < 0.001);
+  enforce(modDiff(snps[$-1].lambda_remle, 4.31939 ) < 0.001);
+  enforce(modDiff(snps[$-1].p_wald, 0.139461) < 0.001);
 }
 
 unittest{
