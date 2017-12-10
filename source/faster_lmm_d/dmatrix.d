@@ -199,7 +199,7 @@ DMatrix zeros_dmatrix(const ulong rows, const ulong cols) {
   return DMatrix([rows, cols], elements);
 }
 
-DMatrix set_zeros_dmatrix(DMatrix a) {
+DMatrix set_zeros_dmatrix(const DMatrix a) {
   ulong rows = a.rows;
   ulong cols = a.cols;
   double[] elements = new double[rows * cols];
@@ -221,7 +221,7 @@ DMatrix ones_dmatrix(const ulong[] shape) {
   return ones_dmatrix(shape[0], shape[1]);
 }
 
-DMatrix set_ones_dmatrix(DMatrix a) {
+DMatrix set_ones_dmatrix(const DMatrix a) {
   ulong rows = a.rows;
   ulong cols = a.cols;
   double[] elements = new double[rows * cols];

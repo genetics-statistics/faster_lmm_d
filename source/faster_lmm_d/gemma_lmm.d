@@ -864,10 +864,10 @@ DMatrix calc_Uab(const DMatrix UtW, const DMatrix Uty, const size_t ni_test, con
     }
 
     if (a == n_cvt + 2) {
-      u_a.elements = Uty.elements.dup;
+      u_a.elements = Uty.elements.dup_fast;
     } else {
       DMatrix UtW_col = get_col(UtW, a - 1);
-      u_a.elements = UtW_col.elements.dup;
+      u_a.elements = UtW_col.elements.dup_fast;
     }
     for (size_t b = a; b >= 1; --b) {
 
@@ -879,10 +879,10 @@ DMatrix calc_Uab(const DMatrix UtW, const DMatrix Uty, const size_t ni_test, con
       DMatrix Uab_col = get_col(Uab, index_ab);
 
       if (b == n_cvt + 2) {
-        Uab_col.elements = Uty.elements.dup;
+        Uab_col.elements = Uty.elements.dup_fast;
       } else {
         DMatrix UtW_col = get_col(UtW, b - 1);
-        Uab_col.elements = UtW_col.elements.dup;
+        Uab_col.elements = UtW_col.elements.dup_fast;
       }
 
       Uab_col = slow_multiply_dmatrix(Uab_col, u_a);
@@ -934,7 +934,7 @@ DMatrix calc_ab(const DMatrix W, const DMatrix y, const size_t[] shape) {
     }
 
     if (a == n_cvt + 2) {
-      v_a.elements = y.elements.dup_fast;
+      v_a.elements = y.elements.dup;
     } else {
       DMatrix W_col = get_col(W, a - 1);
       v_a.elements = W_col.elements.dup;
@@ -948,10 +948,10 @@ DMatrix calc_ab(const DMatrix W, const DMatrix y, const size_t[] shape) {
       index_ab = GetabIndex(a, b, n_cvt);
 
       if (b == n_cvt + 2) {
-        v_b.elements = y.elements.dup_fast;
+        v_b.elements = y.elements.dup;
       } else {
         DMatrix W_col = get_col(W, b - 1);
-        v_b.elements = W_col.elements.dup_fast;
+        v_b.elements = W_col.elements.dup;
       }
 
       d = matrix_mult(v_a.T, v_b).elements[0];
@@ -976,12 +976,12 @@ DMatrix calc_ab(const DMatrix W, const DMatrix y, const DMatrix x, const size_t[
     index_ab = GetabIndex(n_cvt + 1, b, n_cvt);
 
     if (b == n_cvt + 2) {
-      v_b.elements = y.elements.dup_fast;
+      v_b.elements = y.elements.dup;
     } else if (b == n_cvt + 1) {
-      v_b.elements = x.elements.dup_fast;
+      v_b.elements = x.elements.dup;
     } else {
       DMatrix W_col = get_col(W, b - 1);
-      v_b.elements = W_col.elements.dup_fast;
+      v_b.elements = W_col.elements.dup;
     }
 
     d = matrix_mult(x.T, v_b).elements[0];
@@ -1203,7 +1203,7 @@ void AnalyzeBimbam (Param cPar, const DMatrix U, const DMatrix eval, const DMatr
       DMatrix Xlarge_sub = get_sub_dmatrix(Xlarge, 0, 0, Xlarge.shape[0], l);
       DMatrix UtXlarge_sub = matrix_mult(UT, Xlarge_sub);
       UtXlarge = set_sub_dmatrix(UtXlarge, 0, 0, UtXlarge.shape[0], l, UtXlarge_sub);
-      DMatrix UtXlargeT = UtXlarge.T;
+      const DMatrix UtXlargeT = UtXlarge.T;
 
       auto tsps = new SUMSTAT[l];
       auto items = iota(0,l).array;
@@ -1212,6 +1212,7 @@ void AnalyzeBimbam (Param cPar, const DMatrix U, const DMatrix eval, const DMatr
 
         const DMatrix Utx = get_row(UtXlargeT, snp);           //view
         const Uab_new = calc_Uab(UtW, Uty, Utx, Uab);
+        SUMSTAT SNPs;
         loglikeparam param1 = loglikeparam(false, ni_test, n_cvt, eval, Uab_new.T, ab, 0);
         // 3 is before 1.
         if (a_mode==3 || a_mode==4) {
@@ -1222,24 +1223,20 @@ void AnalyzeBimbam (Param cPar, const DMatrix U, const DMatrix eval, const DMatr
         }
 
         if (a_mode==1 || a_mode==4) {
-          lambda_remle = calc_lambda ('R', cast(void *)&param1, l_min, l_max, n_region).lambda;
-          auto score = calc_RL_Wald(ni_test, lambda_remle, param1);
-          beta = score.beta;
-          se = score.se;
-          p_wald = score.p_wald;
+          tsps[snp].lambda_remle = calc_lambda ('R', cast(void *)&param1, l_min, l_max, n_region).lambda;
+          auto score = calc_RL_Wald(ni_test, tsps[snp].lambda_remle, param1);
+          tsps[snp].beta = score.beta;
+          tsps[snp].se = score.se;
+          tsps[snp].p_wald = score.p_wald;
         }
 
         if (a_mode==2 || a_mode==4) {
           logl_H1 = calc_lambda ('L', cast(void *)&param1, l_min, l_max, n_region).logf;
           p_lrt=gsl_cdf_chisq_Q (2.0*(logl_H1 - logl_mle_H0), 1);
         }
-
-        auto SNPs = SUMSTAT(beta, se, lambda_remle, lambda_mle, p_wald, p_lrt, p_score);
-        writeln(SNPs);
-        tsps[snp] = SNPs;
       }
       sumStat ~= tsps;
-      Xlarge = set_zeros_dmatrix(Xlarge);
+      Xlarge = zeros_dmatrix(U.shape[0], msize);
     }
 
     t++;
