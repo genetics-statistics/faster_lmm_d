@@ -1209,32 +1209,18 @@ void AnalyzeBimbam (Param cPar, const DMatrix U, const DMatrix eval, const DMatr
       auto items = iota(0,l).array;
 
       foreach (ref snp; taskPool.parallel(items,100)) {
-
         const DMatrix Utx = get_row(UtXlargeT, snp);           //view
         const Uab_new = calc_Uab(UtW, Uty, Utx, Uab);
         SUMSTAT SNPs;
         loglikeparam param1 = loglikeparam(false, ni_test, n_cvt, eval, Uab_new.T, ab, 0);
-        // 3 is before 1.
-        if (a_mode==3 || a_mode==4) {
-          auto score = calc_RL_score (ni_test, l_mle_null, param1);
-          beta = score.beta;
-          se = score.se;
-          p_score = score.p_score;
-        }
 
-        if (a_mode==1 || a_mode==4) {
-          tsps[snp].lambda_remle = calc_lambda ('R', cast(void *)&param1, l_min, l_max, n_region).lambda;
-          auto score = calc_RL_Wald(ni_test, tsps[snp].lambda_remle, param1);
-          tsps[snp].beta = score.beta;
-          tsps[snp].se = score.se;
-          tsps[snp].p_wald = score.p_wald;
-        }
-
-        if (a_mode==2 || a_mode==4) {
-          logl_H1 = calc_lambda ('L', cast(void *)&param1, l_min, l_max, n_region).logf;
-          p_lrt=gsl_cdf_chisq_Q (2.0*(logl_H1 - logl_mle_H0), 1);
-        }
+        tsps[snp].lambda_remle = calc_lambda ('R', cast(void *)&param1, l_min, l_max, n_region).lambda;
+        auto score = calc_RL_Wald(ni_test, tsps[snp].lambda_remle, param1);
+        tsps[snp].beta = score.beta;
+        tsps[snp].se = score.se;
+        tsps[snp].p_wald = score.p_wald;
       }
+
       sumStat ~= tsps;
       Xlarge = zeros_dmatrix(U.shape[0], msize);
     }
