@@ -17,7 +17,7 @@ import std.string;
 import std.stdio;
 import std.typecons;
 
-import dyaml.all;
+import dyaml;
 
 import faster_lmm_d.dmatrix;
 
