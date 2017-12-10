@@ -1190,11 +1190,7 @@ void AnalyzeBimbam (Param cPar, const DMatrix U, const DMatrix eval, const DMatr
 
     c++;
 
-    auto task_pool = new TaskPool(8);
-    scope(exit) task_pool.finish();
-
     size_t index_snp = 0;
-
 
     if (c % msize==0 || c==t_last) {
       size_t l=0;
@@ -1205,26 +1201,37 @@ void AnalyzeBimbam (Param cPar, const DMatrix U, const DMatrix eval, const DMatr
       UtXlarge = set_sub_dmatrix(UtXlarge, 0, 0, UtXlarge.shape[0], l, UtXlarge_sub);
       const DMatrix UtXlargeT = UtXlarge.T;
 
-      auto tsps = new SUMSTAT[l];
-      auto items = iota(0,l).array;
+      version(PARALLEL) {
+        auto tsps = new SUMSTAT[l];
+        auto items = iota(0,l).array;
 
-      foreach (ref snp; taskPool.parallel(items,100)) {
-        const DMatrix Utx = get_row(UtXlargeT, snp);           //view
-        const Uab_new = calc_Uab(UtW, Uty, Utx, Uab);
-        SUMSTAT SNPs;
-        loglikeparam param1 = loglikeparam(false, ni_test, n_cvt, eval, Uab_new.T, ab, 0);
+        foreach (ref snp; taskPool.parallel(items,100)) {
+          const DMatrix Utx = get_row(UtXlargeT, snp);
+          const Uab_new = calc_Uab(UtW, Uty, Utx, Uab);
+          loglikeparam param1 = loglikeparam(false, ni_test, n_cvt, eval, Uab_new.T, ab, 0);
 
-        tsps[snp].lambda_remle = calc_lambda ('R', cast(void *)&param1, l_min, l_max, n_region).lambda;
-        auto score = calc_RL_Wald(ni_test, tsps[snp].lambda_remle, param1);
-        tsps[snp].beta = score.beta;
-        tsps[snp].se = score.se;
-        tsps[snp].p_wald = score.p_wald;
+          tsps[snp].lambda_remle = calc_lambda ('R', cast(void *)&param1, l_min, l_max, n_region).lambda;
+          auto score = calc_RL_Wald(ni_test, tsps[snp].lambda_remle, param1);
+          tsps[snp].beta = score.beta;
+          tsps[snp].se = score.se;
+          tsps[snp].p_wald = score.p_wald;
+        }
+        sumStat ~= tsps;
       }
+      else{
+        foreach (snp; 0..l) {
+          const DMatrix Utx = get_row(UtXlargeT, snp);
+          const Uab_new = calc_Uab(UtW, Uty, Utx, Uab);
 
-      sumStat ~= tsps;
+          loglikeparam param1 = loglikeparam(false, ni_test, n_cvt, eval, Uab_new.T, ab, 0);
+
+          lambda_remle = calc_lambda ('R', cast(void *)&param1, l_min, l_max, n_region).lambda;
+          auto score = calc_RL_Wald(ni_test, lambda_remle, param1);
+          sumStat ~= SUMSTAT(score.beta, score.se, lambda_remle, score.p_wald);
+        }
+      }
       Xlarge = zeros_dmatrix(U.shape[0], msize);
     }
-
     t++;
   }
 

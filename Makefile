@@ -23,7 +23,7 @@ D_COMPILER=ldc2
 
 LDMD=ldmd2
 
-BACKEND_FLAG='-d-version=CPU'
+BACKEND_FLAG =
 
 ifeq ($(CUDA),1)
   BACKEND_FLAG=-d-version=CUDA
