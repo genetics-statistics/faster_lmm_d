@@ -83,7 +83,7 @@ DMatrix dup_dmatrix(const DMatrix input){
   return DMatrix(input.shape.dup, input.elements.dup_fast);
 }
 
-double accessor(const DMatrix input, ulong row, ulong col) {
+double accessor(const DMatrix input, const ulong row, const ulong col) {
   return input.elements[row*input.cols()+col];
 }
 
@@ -383,7 +383,7 @@ DMatrix matrix_join(DMatrix ul, DMatrix ur, DMatrix dl, DMatrix dr){
   return result;
 }
 
-DMatrix get_sub_dmatrix(DMatrix H,  size_t a, size_t b, size_t n1, size_t n2){
+DMatrix get_sub_dmatrix(const DMatrix H, const size_t a, const size_t b, const size_t n1, const size_t n2){
   size_t index = 0, cols = H.cols;
   double[] elements = new double[n1*n2];
   foreach(i; 0..n1){
@@ -394,7 +394,18 @@ DMatrix get_sub_dmatrix(DMatrix H,  size_t a, size_t b, size_t n1, size_t n2){
   return DMatrix([n1, n2], elements);
 }
 
-void set_sub_dmatrix(ref DMatrix H,  size_t a, size_t b, size_t n1, size_t n2, DMatrix H_Sub){
+DMatrix set_sub_dmatrix(const DMatrix H, const size_t a, const size_t b, const size_t n1, const size_t n2, const DMatrix H_Sub){
+  double[] elements = H.elements.dup;
+  size_t index = 0, cols = H.cols;
+  foreach(i; 0..n1){
+    foreach(j; 0..n2){
+      elements[(i*cols) + j] = H_Sub.elements[index++];
+    }
+  }
+  return DMatrix(H.shape, elements);
+}
+
+void set_sub_dmatrix2(ref DMatrix H,  size_t a, size_t b, size_t n1, size_t n2, DMatrix H_Sub){
   size_t index = 0, cols = H.cols;
   foreach(i; 0..n1){
     foreach(j; 0..n2){

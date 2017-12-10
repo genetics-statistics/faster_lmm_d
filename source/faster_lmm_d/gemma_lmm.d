@@ -13,9 +13,11 @@ import std.conv;
 import std.exception;
 import std.file;
 import std.math;
+import std.parallelism;
 import std.algorithm: min, max, reduce;
 alias mlog = std.math.log;
 import std.process;
+import std.range;
 import std.stdio;
 import std.typecons;
 import std.experimental.logger;
@@ -197,11 +199,11 @@ struct loglikeparam{
   const size_t n_index;
   const bool calc_null;
   const int e_mode;
-  DMatrix eval;
-  DMatrix Uab;
-  DMatrix ab;
+  const DMatrix eval;
+  const DMatrix Uab;
+  const DMatrix ab;
 
-  this(bool calc_null, size_t ni_test, size_t n_cvt, const DMatrix eval, const DMatrix Uab,  DMatrix ab, int e_mode) {
+  this(const bool calc_null, const size_t ni_test, const size_t n_cvt, const DMatrix eval, const DMatrix Uab,  const DMatrix ab, const int e_mode) {
     this.n_cvt = n_cvt;
     this.ni_test = ni_test;
     this.calc_null = calc_null;
@@ -790,7 +792,7 @@ Lambda_result calc_lambda(const char func_name, const DMatrix eval, const DMatri
 
 alias Tuple!(double, "beta", double, "se", double, "p_wald") Wald_score;
 
-Wald_score calc_RL_Wald(size_t ni_test, double l, loglikeparam params) {
+Wald_score calc_RL_Wald(const size_t ni_test, const double l, loglikeparam params) {
   size_t n_cvt = params.n_cvt;
   size_t n_index = (n_cvt + 2 + 1) * (n_cvt + 2) / 2;
 
@@ -884,7 +886,7 @@ DMatrix calc_Uab(const DMatrix UtW, const DMatrix Uty, const size_t ni_test, con
       }
 
       Uab_col = slow_multiply_dmatrix(Uab_col, u_a);
-      set_col2(Uab, index_ab, Uab_col);
+      Uab = set_col(Uab, index_ab, Uab_col);
     }
   }
   return Uab;
@@ -909,7 +911,7 @@ DMatrix calc_Uab(const DMatrix UtW, const DMatrix Uty, const DMatrix Utx, const 
     }
 
     Uab_col = slow_multiply_dmatrix(Uab_col, Utx);
-    set_col2(Uab, index_ab, Uab_col);
+    Uab = set_col(Uab, index_ab, Uab_col);
   }
 
   return Uab;
@@ -1107,13 +1109,13 @@ void AnalyzeBimbam (Param cPar, const DMatrix U, const DMatrix eval, const DMatr
   double geno, x_mean;
 
   double logl_H1=0.0;
-  size_t ni_test = UtW.shape[0];
-  size_t n_region = cPar.n_region;
-  int a_mode = 1;
-  double l_min = cPar.l_min;
-  double l_mle_null = cPar.l_mle_null;
-  double l_max = cPar.l_max;
-  double logl_mle_H0 = cPar.logl_mle_H0;
+  const size_t ni_test = UtW.shape[0];
+  const size_t n_region = cPar.n_region;
+  const int a_mode = 1;
+  const double l_min = cPar.l_min;
+  const double l_mle_null = cPar.l_mle_null;
+  const double l_max = cPar.l_max;
+  const double logl_mle_H0 = cPar.logl_mle_H0;
 
   size_t n_index=(n_cvt+2+1)*(n_cvt+2)/2;
 
@@ -1129,7 +1131,7 @@ void AnalyzeBimbam (Param cPar, const DMatrix U, const DMatrix eval, const DMatr
 
   DMatrix x = zeros_dmatrix(U.shape[0],1);
 
-  DMatrix ab = zeros_dmatrix(1, n_index);
+  const DMatrix ab = zeros_dmatrix(1, n_index);
 
   // Create a large matrix.
   size_t msize=10000;
@@ -1188,20 +1190,29 @@ void AnalyzeBimbam (Param cPar, const DMatrix U, const DMatrix eval, const DMatr
 
     c++;
 
+    auto task_pool = new TaskPool(8);
+    scope(exit) task_pool.finish();
+
+    size_t index_snp = 0;
+
+
     if (c % msize==0 || c==t_last) {
       size_t l=0;
       if (c%msize==0) {l=msize;} else {l=c%msize;}
 
       DMatrix Xlarge_sub = get_sub_dmatrix(Xlarge, 0, 0, Xlarge.shape[0], l);
       DMatrix UtXlarge_sub = matrix_mult(UT, Xlarge_sub);
-      set_sub_dmatrix(UtXlarge, 0, 0, UtXlarge.shape[0], l, UtXlarge_sub);
+      UtXlarge = set_sub_dmatrix(UtXlarge, 0, 0, UtXlarge.shape[0], l, UtXlarge_sub);
       DMatrix UtXlargeT = UtXlarge.T;
-      foreach ( i; 0..l) {
 
-        DMatrix Utx = get_row(UtXlargeT, i);           //view
-        Uab = calc_Uab(UtW, Uty, Utx, Uab);
+      auto tsps = new SUMSTAT[l];
+      auto items = iota(0,l).array;
 
-        loglikeparam param1 = loglikeparam(false, ni_test, n_cvt, eval, Uab.T, ab, 0);
+      foreach (ref snp; taskPool.parallel(items,100)) {
+
+        const DMatrix Utx = get_row(UtXlargeT, snp);           //view
+        const Uab_new = calc_Uab(UtW, Uty, Utx, Uab);
+        loglikeparam param1 = loglikeparam(false, ni_test, n_cvt, eval, Uab_new.T, ab, 0);
         // 3 is before 1.
         if (a_mode==3 || a_mode==4) {
           auto score = calc_RL_score (ni_test, l_mle_null, param1);
@@ -1224,8 +1235,10 @@ void AnalyzeBimbam (Param cPar, const DMatrix U, const DMatrix eval, const DMatr
         }
 
         auto SNPs = SUMSTAT(beta, se, lambda_remle, lambda_mle, p_wald, p_lrt, p_score);
-        sumStat ~= SNPs;
+        writeln(SNPs);
+        tsps[snp] = SNPs;
       }
+      sumStat ~= tsps;
       Xlarge = set_zeros_dmatrix(Xlarge);
     }
 
