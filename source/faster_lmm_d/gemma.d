@@ -23,6 +23,7 @@ import std.string;
 
 import faster_lmm_d.dmatrix;
 import faster_lmm_d.gemma_lmm;
+import faster_lmm_d.gemma_association;
 import faster_lmm_d.gemma_param;
 import faster_lmm_d.kinship;
 import faster_lmm_d.lmm2;
