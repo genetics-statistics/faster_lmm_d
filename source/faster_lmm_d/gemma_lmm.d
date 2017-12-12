@@ -89,6 +89,44 @@ DMatrix CalcPab(const size_t n_cvt, const size_t e_mode, const DMatrix Hi_eval,
   return Pab;
 }
 
+DMatrix calc_Pab_batched(const size_t n_cvt, const size_t e_mode, const DMatrix Hi_eval,
+              const DMatrix Uab, const DMatrix ab, const size_t[] shape, const double[] l) {
+  size_t index_ab, index_aw, index_bw, index_ww;
+  double p_ab, ps_ab, ps_aw, ps_bw, ps_ww;
+  DMatrix Pab = zeros_dmatrix(Hi_eval.shape[0]*shape[0], shape[1]);
+
+  DMatrix p_ab2 = matrix_mult(Hi_eval, Uab.T);
+  const size_t col_counter = Uab.shape[0]/Hi_eval.shape[0];
+  size_t row_counter = shape[0];
+
+  foreach(i; 0..Hi_eval.shape[0]){
+    for (size_t p = 0; p <= n_cvt + 1; ++p) {
+      for (size_t a = p + 1; a <= n_cvt + 2; ++a) {
+        for (size_t b = a; b <= n_cvt + 2; ++b) {
+          index_ab = GetabIndex(a, b, n_cvt);
+          if (p == 0) {
+            p_ab = p_ab2.accessor(i, i * col_counter + index_ab );
+            Pab.elements[Pab.cols * (i * row_counter) + index_ab] = p_ab;
+          } else {
+            index_aw = GetabIndex(a, p, n_cvt);
+            index_bw = GetabIndex(b, p, n_cvt);
+            index_ww = GetabIndex(p, p, n_cvt);
+
+            ps_ab = accessor(Pab, i * row_counter + p - 1, index_ab);
+            ps_aw = accessor(Pab, i * row_counter + p - 1, index_aw);
+            ps_bw = accessor(Pab, i * row_counter + p - 1, index_bw);
+            ps_ww = accessor(Pab, i * row_counter + p - 1, index_ww);
+
+            p_ab = ps_ab - ps_aw * ps_bw / ps_ww;
+            Pab.elements[(p + i * row_counter) * Pab.cols + index_ab] = p_ab;
+          }
+        }
+      }
+    }
+  }
+  return Pab;
+}
+
 DMatrix CalcPPab(const size_t n_cvt, const size_t e_mode,
               const DMatrix HiHi_eval, const DMatrix Uab,
               const DMatrix ab, const DMatrix Pab, const size_t[] shape) {
