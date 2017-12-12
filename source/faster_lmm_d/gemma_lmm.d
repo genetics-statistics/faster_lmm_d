@@ -858,6 +858,45 @@ Wald_score calc_RL_Wald(const size_t ni_test, const double l, loglikeparam param
   return Wald_score(beta, se, p_wald);
 }
 
+SUMSTAT[] calc_RL_Wald_batched(const size_t ni_test, const double[] l, loglikeparam params) {
+  size_t n_cvt = params.n_cvt;
+  size_t n_index = (n_cvt + 2 + 1) * (n_cvt + 2) / 2;
+
+  int df = to!int(ni_test) - to!int(n_cvt) - 1;
+  size_t row_counter = n_cvt + 2;
+
+  double[] v_temp_elements;
+  foreach(i; l){
+    v_temp_elements ~= multiply_dmatrix_num(params.eval.T, i).elements;
+  }
+  DMatrix v_temp = DMatrix([l.length, params.eval.elements.length], v_temp_elements);
+
+  DMatrix Hi_eval = (params.e_mode == 0 ? divide_num_dmatrix(1, add_dmatrix_num(v_temp, 1.0)) : dup_dmatrix(v_temp));
+
+  DMatrix Pab = calc_Pab_batched(n_cvt, params.e_mode, Hi_eval, params.Uab, params.ab, [n_cvt + 2, n_index], l);
+
+  SUMSTAT[] collection;
+
+  foreach(i, j ; l){
+
+    size_t index_yy = GetabIndex(n_cvt + 2, n_cvt + 2, n_cvt);
+    size_t index_xx = GetabIndex(n_cvt + 1, n_cvt + 1, n_cvt);
+    size_t index_xy = GetabIndex(n_cvt + 2, n_cvt + 1, n_cvt);
+
+    double P_yy = accessor(Pab, i * row_counter + n_cvt, index_yy);
+    double P_xx = accessor(Pab, i * row_counter + n_cvt, index_xx);
+    double P_xy = accessor(Pab, i * row_counter + n_cvt, index_xy);
+    double Px_yy = accessor(Pab, i * row_counter + n_cvt + 1, index_yy);
+
+    double beta = P_xy / P_xx;
+    double tau = to!double(df) / Px_yy;
+    double se = sqrt(1.0 / (tau * P_xx));
+    double p_wald = gsl_cdf_fdist_Q((P_yy - Px_yy) * tau, 1.0, df);
+    collection ~= SUMSTAT( beta, se, j, p_wald);
+  }
+  return collection;
+}
+
 alias Tuple!(double, "beta", double, "se", double, "p_score") RL_Score ;
 
 RL_Score calc_RL_score(const size_t ni_test, const double l, loglikeparam params) {
