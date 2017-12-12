@@ -312,8 +312,8 @@ void set_col2(ref DMatrix input, const ulong col_no, const DMatrix arr) {
 }
 
 DMatrix set_row(const DMatrix input, const ulong row_no, const DMatrix arr) {
-  assert(arr.cols == 1);
-  assert(arr.rows == input.cols);
+  //assert(arr.rows == 1);
+  //assert(arr.cols == input.cols);
   auto result = input.elements.dup;
   auto i = 0;
   foreach(col; row_no*input.cols..(row_no+1)*input.cols) {

@@ -154,7 +154,7 @@ void analyze_bimbam(Param cPar, const DMatrix U, const DMatrix eval, const DMatr
         foreach (ref snp; taskPool.parallel(items,100)) {
           const DMatrix Utx = get_row(UtXlargeT, snp);
           const Uab_new = calc_Uab(UtW, Uty, Utx, Uab);
-          loglikeparam param1 = loglikeparam(false, ni_test, n_cvt, eval, Uab_new.T, ab, 0);
+          loglikeparam param1 = loglikeparam(false, ni_test, n_cvt, eval, Uab_new, ab, 0);
 
           tsps[snp].lambda_remle = calc_lambda ('R', cast(void *)&param1, l_min, l_max, n_region).lambda;
           auto score = calc_RL_Wald(ni_test, tsps[snp].lambda_remle, param1);
@@ -169,7 +169,7 @@ void analyze_bimbam(Param cPar, const DMatrix U, const DMatrix eval, const DMatr
           const DMatrix Utx = get_row(UtXlargeT, snp);
           const Uab_new = calc_Uab(UtW, Uty, Utx, Uab);
 
-          loglikeparam param1 = loglikeparam(false, ni_test, n_cvt, eval, Uab_new.T, ab, 0);
+          loglikeparam param1 = loglikeparam(false, ni_test, n_cvt, eval, Uab_new, ab, 0);
 
           lambda_remle = calc_lambda ('R', cast(void *)&param1, l_min, l_max, n_region).lambda;
           auto score = calc_RL_Wald(ni_test, lambda_remle, param1);
@@ -306,7 +306,7 @@ void analyze_bimbam_batched(Param cPar, const DMatrix U, const DMatrix eval, con
         foreach (ref snp; taskPool.parallel(items,100)) {
           const DMatrix Utx = get_row(UtXlargeT, snp);
           const Uab_new = calc_Uab(UtW, Uty, Utx, Uab);
-          loglikeparam param1 = loglikeparam(false, ni_test, n_cvt, eval, Uab_new.T, ab, 0);
+          loglikeparam param1 = loglikeparam(false, ni_test, n_cvt, eval, Uab_new, ab, 0);
 
           tsps[snp].lambda_remle = calc_lambda ('R', cast(void *)&param1, l_min, l_max, n_region).lambda;
           auto score = calc_RL_Wald(ni_test, tsps[snp].lambda_remle, param1);
@@ -319,16 +319,16 @@ void analyze_bimbam_batched(Param cPar, const DMatrix U, const DMatrix eval, con
       else{
         foreach (snp; 0..l) {
           const DMatrix Utx = get_row(UtXlargeT, snp);
-          const Uab_new = calc_Uab(UtW, Uty, Utx, Uab).T;
+          const Uab_new = calc_Uab(UtW, Uty, Utx, Uab);
           Uab_large_elements ~= Uab_new.elements;
 
           loglikeparam param1 = loglikeparam(false, ni_test, n_cvt, eval, Uab_new, ab, 0);
           elements[snp] = calc_lambda ('R', cast(void *)&param1, l_min, l_max, n_region).lambda;
         }
+        DMatrix Uab_large = DMatrix([l*Uab.shape[1] , Uab.shape[0]], Uab_large_elements);
+        loglikeparam param2 = loglikeparam(false, ni_test, n_cvt, eval, Uab_large, ab, 0);
+        sumStat ~= calc_RL_Wald_batched(ni_test, elements, param2);
       }
-      DMatrix Uab_large = DMatrix([l*Uab.shape[1] , Uab.shape[0]], Uab_large_elements);
-      loglikeparam param2 = loglikeparam(false, ni_test, n_cvt, eval, Uab_large, ab, 0);
-      sumStat ~= calc_RL_Wald_batched(ni_test, elements, param2);
       Xlarge = zeros_dmatrix(U.shape[0], msize);
     }
     t++;

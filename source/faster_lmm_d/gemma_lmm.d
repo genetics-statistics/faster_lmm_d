@@ -89,8 +89,8 @@ DMatrix CalcPab(const size_t n_cvt, const size_t e_mode, const DMatrix Hi_eval,
   return Pab;
 }
 
-DMatrix calc_Pab_batched(const size_t n_cvt, const size_t e_mode, const DMatrix Hi_eval,
-              const DMatrix Uab, const DMatrix ab, const size_t[] shape, const double[] l) {
+DMatrix calc_Pab_batched(const size_t n_cvt, const DMatrix Hi_eval, const DMatrix Uab, const DMatrix ab,
+                          const size_t[] shape, const double[] l) {
   size_t index_ab, index_aw, index_bw, index_ww;
   double p_ab, ps_ab, ps_aw, ps_bw, ps_ww;
   DMatrix Pab = zeros_dmatrix(Hi_eval.shape[0]*shape[0], shape[1]);
@@ -108,17 +108,18 @@ DMatrix calc_Pab_batched(const size_t n_cvt, const size_t e_mode, const DMatrix 
             p_ab = p_ab2.accessor(i, i * col_counter + index_ab );
             Pab.elements[Pab.cols * (i * row_counter) + index_ab] = p_ab;
           } else {
+            size_t row_no = i * row_counter + p - 1;
             index_aw = GetabIndex(a, p, n_cvt);
             index_bw = GetabIndex(b, p, n_cvt);
             index_ww = GetabIndex(p, p, n_cvt);
 
-            ps_ab = accessor(Pab, i * row_counter + p - 1, index_ab);
-            ps_aw = accessor(Pab, i * row_counter + p - 1, index_aw);
-            ps_bw = accessor(Pab, i * row_counter + p - 1, index_bw);
-            ps_ww = accessor(Pab, i * row_counter + p - 1, index_ww);
+            ps_ab = accessor(Pab, row_no, index_ab);
+            ps_aw = accessor(Pab, row_no, index_aw);
+            ps_bw = accessor(Pab, row_no, index_bw);
+            ps_ww = accessor(Pab, row_no, index_ww);
 
             p_ab = ps_ab - ps_aw * ps_bw / ps_ww;
-            Pab.elements[(p + i * row_counter) * Pab.cols + index_ab] = p_ab;
+            Pab.elements[(row_no + 1) * Pab.cols + index_ab] = p_ab;
           }
         }
       }
@@ -863,30 +864,30 @@ SUMSTAT[] calc_RL_Wald_batched(const size_t ni_test, const double[] l, loglikepa
   size_t n_index = (n_cvt + 2 + 1) * (n_cvt + 2) / 2;
 
   int df = to!int(ni_test) - to!int(n_cvt) - 1;
-  size_t row_counter = n_cvt + 2;
 
   double[] v_temp_elements;
   foreach(i; l){
-    v_temp_elements ~= multiply_dmatrix_num(params.eval.T, i).elements;
+    v_temp_elements ~= multiply_dmatrix_num(params.eval, i).elements;
   }
   DMatrix v_temp = DMatrix([l.length, params.eval.elements.length], v_temp_elements);
 
-  DMatrix Hi_eval = (params.e_mode == 0 ? divide_num_dmatrix(1, add_dmatrix_num(v_temp, 1.0)) : dup_dmatrix(v_temp));
+  DMatrix Hi_eval = divide_num_dmatrix(1, add_dmatrix_num(v_temp, 1.0));
 
-  DMatrix Pab = calc_Pab_batched(n_cvt, params.e_mode, Hi_eval, params.Uab, params.ab, [n_cvt + 2, n_index], l);
+  DMatrix Pab = calc_Pab_batched(n_cvt, Hi_eval, params.Uab, params.ab, [n_cvt + 2, n_index], l);
 
   SUMSTAT[] collection;
 
   foreach(i, j ; l){
+    size_t row_no = i * (n_cvt + 2) + n_cvt;
 
     size_t index_yy = GetabIndex(n_cvt + 2, n_cvt + 2, n_cvt);
     size_t index_xx = GetabIndex(n_cvt + 1, n_cvt + 1, n_cvt);
     size_t index_xy = GetabIndex(n_cvt + 2, n_cvt + 1, n_cvt);
 
-    double P_yy = accessor(Pab, i * row_counter + n_cvt, index_yy);
-    double P_xx = accessor(Pab, i * row_counter + n_cvt, index_xx);
-    double P_xy = accessor(Pab, i * row_counter + n_cvt, index_xy);
-    double Px_yy = accessor(Pab, i * row_counter + n_cvt + 1, index_yy);
+    double P_yy = accessor(Pab, row_no, index_yy);
+    double P_xx = accessor(Pab, row_no, index_xx);
+    double P_xy = accessor(Pab, row_no, index_xy);
+    double Px_yy = accessor(Pab, row_no + 1, index_yy);
 
     double beta = P_xy / P_xx;
     double tau = to!double(df) / Px_yy;
@@ -970,25 +971,24 @@ DMatrix calc_Uab(const DMatrix UtW, const DMatrix Uty, const size_t ni_test, con
 }
 
 DMatrix calc_Uab(const DMatrix UtW, const DMatrix Uty, const DMatrix Utx, const DMatrix Uab_old) {
-  size_t index_ab;
   size_t n_cvt = UtW.shape[1];
-  DMatrix Uab = dup_dmatrix(Uab_old);
+  DMatrix Uab = Uab_old.T;
 
   for (size_t b = 1; b <= n_cvt + 2; ++b) {
-    index_ab = GetabIndex(n_cvt + 1, b, n_cvt);
-    DMatrix Uab_col = get_col(Uab, index_ab);
+    size_t index_ab = GetabIndex(n_cvt + 1, b, n_cvt);
+    DMatrix Uab_row = get_row(Uab, index_ab);
 
     if (b == n_cvt + 2) {
-      Uab_col.elements = Uty.elements.dup_fast;
+      Uab_row.elements = Uty.elements.dup_fast;
     } else if (b == n_cvt + 1) {
-      Uab_col.elements = Utx.elements.dup_fast;
+      Uab_row.elements = Utx.elements.dup_fast;
     } else {
       DMatrix UtW_col = get_col(UtW, b - 1);
-      Uab_col.elements = UtW_col.elements.dup_fast;
+      Uab_row.elements = UtW_col.elements.dup_fast;
     }
 
-    Uab_col = slow_multiply_dmatrix(Uab_col, Utx);
-    Uab = set_col(Uab, index_ab, Uab_col);
+    Uab_row = slow_multiply_dmatrix(Uab_row, Utx);
+    Uab = set_row(Uab, index_ab, Uab_row);
   }
 
   return Uab;
