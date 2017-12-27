@@ -15,6 +15,7 @@
 #   FORCE_DUPLICATE=1 prevents overwrites (purity)
 #   PARALLEL=0        switch off parallel compute
 #   VALIDATE=1        validates matrix multiplication
+#   LIB_PATH=         set lib path
 #
 #  current combinations are
 #
@@ -25,6 +26,7 @@
 # The following two are modified by the Guix package:
 D_COMPILER=$(shell which ldc2)
 LDC_LIB_PATH=$(shell dirname $(shell dirname $(D_COMPILER)))/lib
+LIB_PATH=$(HOME)/.guix-profile/lib
 
 ifdef CUDA
   CUDA_LIB_PATH=/usr/local/cuda-7.0/lib64
@@ -36,14 +38,14 @@ DUB_INCLUDE = \
 -I~/.dub/packages/cblas-1.0.0/cblas/source/ \
 -I~/.dub/packages/dyaml-0.6.3/dyaml/source/ \
 -I~/.dub/packages/tinyendian-0.1.2/tinyendian/source/ \
--I~/.dub/packages/resusage-0.2.4/resusage/source/
+-I~/.dub/packages/resusage-0.2.7/resusage/source/
 
 DUB_LIBS = \
 $(HOME)/.dub/packages/dstats-1.0.3/dstats/libdstats.a \
 $(HOME)/.dub/packages/dyaml-0.6.3/dyaml/libdyaml.a \
 $(HOME)/.dub/packages/gsl-0.1.8/gsl/libgsl.a \
 $(HOME)/.dub/packages/tinyendian-0.1.2/tinyendian/libtinyendian.a \
-$(HOME)/.dub/packages/resusage-0.2.4/resusage/lib/libresusage.a
+$(HOME)/.dub/packages/resusage-0.2.7/resusage/lib/libresusage.a
 
 ifdef CUDA
   DUB_INCLUDE += -I~/.dub/packages/cuda_d-0.1.0/cuda_d/source/
@@ -54,7 +56,7 @@ DFLAGS = -wi -I./source $(DUB_INCLUDE)
 DLIBS  = $(LDC_LIB_PATH)/libphobos2-ldc.a $(LDC_LIB_PATH)/libdruntime-ldc.a $(DUB_LIBS)
 DLIBS_DEBUG = $(LDC_LIB_PATH)/libphobos2-ldc-debug.a $(LDC_LIB_PATH)/libdruntime-ldc-debug.a $(DUB_LIBS)
 RPATH  =
-LIBS   = -L-L$(LDC_LIB_PATH) -L-lgsl
+LIBS   = -L-L$(LDC_LIB_PATH) -L-L$(LIB_PATH)  -L-lgsl
 ifdef BLAS
   LIBS += -L-lgslcblas -L-lblas
 else
