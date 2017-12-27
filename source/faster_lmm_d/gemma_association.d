@@ -230,7 +230,7 @@ void analyze_bimbam_batched(Param cPar, const DMatrix U, const DMatrix eval, con
   const DMatrix ab = zeros_dmatrix(1, n_index);
 
   // Create a large matrix.
-  size_t msize=1000;
+  size_t msize=2000;
   DMatrix Xlarge = zeros_dmatrix(U.shape[0], msize);
   DMatrix UtXlarge = zeros_dmatrix(U.shape[0], msize);
 
@@ -294,25 +294,32 @@ void analyze_bimbam_batched(Param cPar, const DMatrix U, const DMatrix eval, con
       if (c%msize==0) {l=msize;} else {l=c%msize;}
       DMatrix Uab_large = zeros_dmatrix(l, Uab.shape[0]*Uab.shape[1]);
       double[] elements = new double[l];
-      //double[] Uab_large_elements;
 
       DMatrix Xlarge_sub = get_sub_dmatrix(Xlarge, 0, 0, Xlarge.shape[0], l);
       DMatrix UtXlarge_sub = matrix_mult(UT, Xlarge_sub);
       UtXlarge = set_sub_dmatrix(UtXlarge, 0, 0, UtXlarge.shape[0], l, UtXlarge_sub);
       const DMatrix UtXlargeT = UtXlarge.T;
 
-      //auto tsps = new SUMSTAT[l];
-      auto items = iota(0,l).array;
+      version(PARALLEL){
+        auto items = iota(0,l).array;
 
-      foreach (ref snp; taskPool.parallel(items,100)) {
+        foreach (ref snp; taskPool.parallel(items,10_000)) {
+          const DMatrix Utx = get_row(UtXlargeT, snp);
+          const Uab_new = calc_Uab(UtW, Uty, Utx, Uab);
+          set_row2(Uab_large, snp, Uab_new);
 
-      //foreach (snp; 0..l) {
-        const DMatrix Utx = get_row(UtXlargeT, snp);
-        const Uab_new = calc_Uab(UtW, Uty, Utx, Uab);
-        set_row2(Uab_large, snp, Uab_new);
+          loglikeparam param1 = loglikeparam(false, ni_test, n_cvt, eval, Uab_new, ab, 0);
+          elements[snp] = calc_lambda ('R', cast(void *)&param1, l_min, l_max, n_region).lambda;
+        }
+      }else{
+        foreach (snp; 0..l) {
+          const DMatrix Utx = get_row(UtXlargeT, snp);
+          const Uab_new = calc_Uab(UtW, Uty, Utx, Uab);
+          set_row2(Uab_large, snp, Uab_new);
 
-        loglikeparam param1 = loglikeparam(false, ni_test, n_cvt, eval, Uab_new, ab, 0);
-        elements[snp] = calc_lambda ('R', cast(void *)&param1, l_min, l_max, n_region).lambda;
+          loglikeparam param1 = loglikeparam(false, ni_test, n_cvt, eval, Uab_new, ab, 0);
+          elements[snp] = calc_lambda ('R', cast(void *)&param1, l_min, l_max, n_region).lambda;
+        }
       }
 
       Uab_large.shape = [l*Uab.shape[1] , Uab.shape[0]];

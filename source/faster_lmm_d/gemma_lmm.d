@@ -865,13 +865,19 @@ SUMSTAT[] calc_RL_Wald_batched(const size_t ni_test, const double[] l, loglikepa
 
   const int df = to!int(ni_test) - to!int(n_cvt) - 1;
 
+  DMatrix Hi_eval= zeros_dmatrix(l.length, params.eval.elements.length);
   double[] v_temp_elements;
-  foreach(i; l){
-    v_temp_elements ~= multiply_dmatrix_num(params.eval, i).elements;
+  version(PARALLEL){
+    foreach(i, snp; taskPool.parallel(l,10000)){
+      const DMatrix x =  divide_num_dmatrix(1, add_dmatrix_num(multiply_dmatrix_num(params.eval, snp), 1.0)) ;
+      set_row2(Hi_eval, i, x);
+    }
+  }else{
+    foreach(i, snp; l){
+      const DMatrix x =  divide_num_dmatrix(1, add_dmatrix_num(multiply_dmatrix_num(params.eval, snp), 1.0)) ;
+      set_row2(Hi_eval, i, x);
+    }
   }
-  const DMatrix v_temp = DMatrix([l.length, params.eval.elements.length], v_temp_elements);
-
-  const DMatrix Hi_eval = divide_num_dmatrix(1, add_dmatrix_num(v_temp, 1.0));
 
   const DMatrix Pab = calc_Pab_batched(n_cvt, Hi_eval, params.Uab, params.ab, [n_cvt + 2, n_index], l);
 
@@ -883,7 +889,7 @@ SUMSTAT[] calc_RL_Wald_batched(const size_t ni_test, const double[] l, loglikepa
 
   version(PARALLEL){
 
-    foreach (i, snp; taskPool.parallel(l,100)){
+    foreach (i, snp; taskPool.parallel(l,10000)){
       const size_t row_no = i * (n_cvt + 2) + n_cvt;
 
       const double P_yy = accessor(Pab, row_no, index_yy);
