@@ -152,7 +152,9 @@ run-gperf: gperf
 
 clean:
 	rm -rf build/*
-	rm -rf source/faster_lmm_d/*.{a,o}
+	rm -vf source/faster_lmm_d/*.{a,o}
+	rm -vf source/faster_lmm_d/*/*.{a,o}
+	rm -vf source/test/*.{a,o}
 	rm -f $(OBJ) $(OUT) trace.{def,log}
 
 cleanIR:
