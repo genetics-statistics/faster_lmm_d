@@ -98,7 +98,7 @@ DMatrix matrix_mult(string lname, const DMatrix lha, string rname, const DMatrix
   return matrix_mult(lha,rha);
 }
 
-DMatrix cpu_mat_mult(DMatrix lha, size_t is_lha_transposed, DMatrix rha, size_t is_rha_transposed){
+DMatrix cpu_mat_mult(const DMatrix lha, size_t is_lha_transposed, const DMatrix rha, size_t is_rha_transposed){
   size_t flag = (2 * is_lha_transposed) + is_rha_transposed;
   switch  (flag){
     default: assert(0);
@@ -111,8 +111,8 @@ DMatrix cpu_mat_mult(DMatrix lha, size_t is_lha_transposed, DMatrix rha, size_t 
     }
     case 1: {
       double[] C = new double[lha.rows()*rha.rows()];
-      gemm(Order.RowMajor, Transpose.NoTrans, Transpose.Trans, to!int(lha.rows), to!int(rha.cols), to!int(lha.cols), /*no scaling*/
-            1,lha.elements.ptr, to!int(lha.cols), rha.elements.ptr, to!int(rha.cols), /*no addition*/0, C.ptr, to!int(rha.cols));
+      gemm(Order.RowMajor, Transpose.NoTrans, Transpose.Trans, to!int(lha.rows), to!int(rha.rows), to!int(lha.cols), /*no scaling*/
+            1,lha.elements.ptr, to!int(lha.cols), rha.elements.ptr, to!int(rha.cols), /*no addition*/0, C.ptr, to!int(rha.rows));
       auto res_shape = [lha.rows(),rha.rows()];
       return DMatrix(res_shape, C);
     }

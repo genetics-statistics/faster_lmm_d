@@ -94,8 +94,8 @@ DMatrix calc_Pab_batched(const size_t n_cvt, const DMatrix Hi_eval, const DMatri
   size_t index_ab, index_aw, index_bw, index_ww;
   double p_ab, ps_ab, ps_aw, ps_bw, ps_ww;
   DMatrix Pab = zeros_dmatrix(Hi_eval.shape[0]*shape[0], shape[1]);
-
-  DMatrix p_ab2 = matrix_mult(Hi_eval, Uab.T);
+  
+  DMatrix p_ab2 = cpu_mat_mult(Hi_eval, 0, Uab, 1);
   const size_t col_counter = Uab.shape[0]/Hi_eval.shape[0];
   size_t row_counter = shape[0];
 
@@ -878,6 +878,13 @@ SUMSTAT[] calc_RL_Wald_batched(const size_t ni_test, const double[] l, loglikepa
       set_row2(Hi_eval, i, x);
     }
   }
+  size_t index = 0;
+
+  //foreach(i, snp; l){
+  //  foreach(k; params.eval.elements){
+  //    Hi_eval.elements[index++] = 1/(1 + snp * k );
+  //  }
+  //}
 
   const DMatrix Pab = calc_Pab_batched(n_cvt, Hi_eval, params.Uab, params.ab, [n_cvt + 2, n_index], l);
 
