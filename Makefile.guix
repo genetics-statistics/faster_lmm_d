@@ -25,7 +25,8 @@
 #
 # Example:
 #
-#    make -f Makefile.guix -j 4 LIB_PATH=~/opt/ldc/lib CUDA=1
+#    make -f Makefile.guix -j 4 LIB_PATH=~/opt/ldc/lib 
+#    make -f Makefile.guix -j 4 LIB_PATH=~/opt/ldc/lib CUDA=1 CUDA_LIB_PATH=/home/pjotr/opt/lib
 
 # The following two are modified by the Guix package:
 D_COMPILER=$(shell which ldc2)
