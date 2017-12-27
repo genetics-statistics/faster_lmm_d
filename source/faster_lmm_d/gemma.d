@@ -23,6 +23,7 @@ import std.string;
 
 import faster_lmm_d.dmatrix;
 import faster_lmm_d.gemma_lmm;
+import faster_lmm_d.gemma_association;
 import faster_lmm_d.gemma_param;
 import faster_lmm_d.kinship;
 import faster_lmm_d.lmm2;
@@ -312,7 +313,7 @@ void fit_model(Param cPar, const DMatrix U, const DMatrix eval, const DMatrix Ut
   DMatrix Y_col = get_col(Y, 0);
   DMatrix UtY_col = get_col(UtY, 0);
 
-  AnalyzeBimbam(cPar, U, eval, UtW, UtY_col, W, Y_col, 1, ni_total);
+  analyze_bimbam_batched(cPar, U, eval, UtW, UtY_col, W, Y_col, 1, ni_total);
 }
 
 void check_lambda(string test_name, Param cPar){

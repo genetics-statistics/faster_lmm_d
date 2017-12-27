@@ -4,7 +4,7 @@
     "prasunanand", "pjotrp"
   ],
   "dependencies": {
-    "dyaml": "~>0.5.0",
+    "dyaml": "~>0.6.3",
     "cblas": "~>1.0.0",
     "dstats": "~>1.0.3",
     "gsl": "~>0.1.7",

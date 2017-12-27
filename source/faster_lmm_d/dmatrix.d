@@ -83,7 +83,7 @@ DMatrix dup_dmatrix(const DMatrix input){
   return DMatrix(input.shape.dup, input.elements.dup_fast);
 }
 
-double accessor(const DMatrix input, ulong row, ulong col) {
+double accessor(const DMatrix input, const ulong row, const ulong col) {
   return input.elements[row*input.cols()+col];
 }
 
@@ -199,7 +199,7 @@ DMatrix zeros_dmatrix(const ulong rows, const ulong cols) {
   return DMatrix([rows, cols], elements);
 }
 
-DMatrix set_zeros_dmatrix(DMatrix a) {
+DMatrix set_zeros_dmatrix(const DMatrix a) {
   ulong rows = a.rows;
   ulong cols = a.cols;
   double[] elements = new double[rows * cols];
@@ -221,7 +221,7 @@ DMatrix ones_dmatrix(const ulong[] shape) {
   return ones_dmatrix(shape[0], shape[1]);
 }
 
-DMatrix set_ones_dmatrix(DMatrix a) {
+DMatrix set_ones_dmatrix(const DMatrix a) {
   ulong rows = a.rows;
   ulong cols = a.cols;
   double[] elements = new double[rows * cols];
@@ -312,14 +312,23 @@ void set_col2(ref DMatrix input, const ulong col_no, const DMatrix arr) {
 }
 
 DMatrix set_row(const DMatrix input, const ulong row_no, const DMatrix arr) {
-  assert(arr.cols == 1);
-  assert(arr.rows == input.cols);
+  //assert(arr.rows == 1);
+  //assert(arr.cols == input.cols);
   auto result = input.elements.dup;
   auto i = 0;
   foreach(col; row_no*input.cols..(row_no+1)*input.cols) {
     result[col] = arr.elements[i++];
   }
   return DMatrix(input.shape, result);
+}
+
+void set_row2(ref DMatrix input, const ulong row_no, const DMatrix arr) {
+  //assert(arr.rows == 1);
+  //assert(arr.cols == input.cols);
+  auto i = 0;
+  foreach(col; row_no*input.cols..(row_no+1)*input.cols) {
+    input.elements[col] = arr.elements[i++];
+  }
 }
 
 void nan_counter(const DMatrix input) {
@@ -383,46 +392,33 @@ DMatrix matrix_join(DMatrix ul, DMatrix ur, DMatrix dl, DMatrix dr){
   return result;
 }
 
-DMatrix get_sub_dmatrix(DMatrix H,  size_t a, size_t b, size_t n1, size_t n2){
-  //size_t start = a *H.rows + b;
-  double[] elements = [];
-  for(size_t i = 0; i < n1; i++){
-    elements ~= H.elements[(i*H.rows)..(i*H.rows + n2)];
+DMatrix get_sub_dmatrix(const DMatrix H, const size_t a, const size_t b, const size_t n1, const size_t n2){
+  size_t index = 0, cols = H.cols;
+  double[] elements = new double[n1*n2];
+  foreach(i; 0..n1){
+    foreach(j; 0..n2){
+      elements[index++] = H.elements[i*cols + j];
+    }
   }
-  writeln(elements.length);
-  writeln(n1*n2);
-  assert(elements.length == n1*n2);
   return DMatrix([n1, n2], elements);
 }
 
-void set_sub_dmatrix(ref DMatrix H,  size_t a, size_t b, size_t n1, size_t n2, DMatrix H_Sub){
-  //size_t start = a *H.rows + b;
-  writeln(H.shape);
-  writeln(H.elements.length);
-  writeln(H_Sub.shape);
-  writeln(H_Sub.elements.length);
-  double[] elements = [];
-  for(size_t i = 0; i < n1; i++){
-    for(size_t j = 0; j < n2; j++){
-      H.elements[(i*H.cols) + j] = H_Sub.elements[i*H_Sub.cols + j];
+DMatrix set_sub_dmatrix(const DMatrix H, const size_t a, const size_t b, const size_t n1, const size_t n2, const DMatrix H_Sub){
+  double[] elements = H.elements.dup;
+  size_t index = 0, cols = H.cols;
+  foreach(i; 0..n1){
+    foreach(j; 0..n2){
+      elements[(i*cols) + j] = H_Sub.elements[index++];
     }
   }
+  return DMatrix(H.shape, elements);
 }
 
 void set_sub_dmatrix2(ref DMatrix H,  size_t a, size_t b, size_t n1, size_t n2, DMatrix H_Sub){
-  //size_t start = a *H.rows + b;
-
-  double[] elements = [];
-  for(size_t i = 0; i < n1; i++){
-    for(size_t j = 0; j < n2; j++){
-      writeln("H -> ", H.shape);
-      writeln("H_length -> ", H.elements.length);
-      writeln("H_Sub -> ", H_Sub.shape);
-      writeln("H_sub_length -> ", H_Sub.elements.length);
-      writeln("i = " , i , "j = ", j , "n1 =", n1, "n2 = " , n2 );
-      writeln("H.elements[(i*H.cols) + j]", " -> " , ((i*H.cols) + j), " -> " , H.elements[(i*H.cols) + j]);
-      writeln("H_Sub.elements[(i*H.cols) + j]", " -> " , (i*H_Sub.cols) + j, " -> " , H_Sub.elements[(i*H_Sub.cols) + j]);
-      H.elements[(i*H.cols) + j] = H_Sub.elements[i*H_Sub.cols + j];
+  size_t index = 0, cols = H.cols;
+  foreach(i; 0..n1){
+    foreach(j; 0..n2){
+     H.elements[(i*cols) + j] = H_Sub.elements[index++];
     }
   }
 }

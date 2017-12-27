@@ -10,7 +10,7 @@ import std.file;
 import std.stdio;
 import std.string;
 
-void main(string[] args){
+void call(string[] args){
   string option =  args[1];
   if(option == "geno_tsv_to_rqtl"){
     geno_tsv_to_rqtl(args[2]);
