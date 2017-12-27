@@ -322,6 +322,15 @@ DMatrix set_row(const DMatrix input, const ulong row_no, const DMatrix arr) {
   return DMatrix(input.shape, result);
 }
 
+void set_row2(ref DMatrix input, const ulong row_no, const DMatrix arr) {
+  //assert(arr.rows == 1);
+  //assert(arr.cols == input.cols);
+  auto i = 0;
+  foreach(col; row_no*input.cols..(row_no+1)*input.cols) {
+    input.elements[col] = arr.elements[i++];
+  }
+}
+
 void nan_counter(const DMatrix input) {
   auto nan_counter = 0;
   foreach(element; input.elements) {

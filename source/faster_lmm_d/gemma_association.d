@@ -288,26 +288,34 @@ void analyze_bimbam_batched(Param cPar, const DMatrix U, const DMatrix eval, con
 
     size_t index_snp = 0;
 
+
     if (c % msize==0 || c==t_last) {
       size_t l=0;
       if (c%msize==0) {l=msize;} else {l=c%msize;}
+      DMatrix Uab_large = zeros_dmatrix(l, Uab.shape[0]*Uab.shape[1]);
       double[] elements = new double[l];
-      double[] Uab_large_elements;
+      //double[] Uab_large_elements;
 
       DMatrix Xlarge_sub = get_sub_dmatrix(Xlarge, 0, 0, Xlarge.shape[0], l);
       DMatrix UtXlarge_sub = matrix_mult(UT, Xlarge_sub);
       UtXlarge = set_sub_dmatrix(UtXlarge, 0, 0, UtXlarge.shape[0], l, UtXlarge_sub);
       const DMatrix UtXlargeT = UtXlarge.T;
 
-      foreach (snp; 0..l) {
+      //auto tsps = new SUMSTAT[l];
+      auto items = iota(0,l).array;
+
+      foreach (ref snp; taskPool.parallel(items,100)) {
+
+      //foreach (snp; 0..l) {
         const DMatrix Utx = get_row(UtXlargeT, snp);
         const Uab_new = calc_Uab(UtW, Uty, Utx, Uab);
-        Uab_large_elements ~= Uab_new.elements;
+        set_row2(Uab_large, snp, Uab_new);
 
         loglikeparam param1 = loglikeparam(false, ni_test, n_cvt, eval, Uab_new, ab, 0);
         elements[snp] = calc_lambda ('R', cast(void *)&param1, l_min, l_max, n_region).lambda;
       }
-      DMatrix Uab_large = DMatrix([l*Uab.shape[1] , Uab.shape[0]], Uab_large_elements);
+
+      Uab_large.shape = [l*Uab.shape[1] , Uab.shape[0]];
       loglikeparam param2 = loglikeparam(false, ni_test, n_cvt, eval, Uab_large, ab, 0);
       sumStat ~= calc_RL_Wald_batched(ni_test, elements, param2);
 
