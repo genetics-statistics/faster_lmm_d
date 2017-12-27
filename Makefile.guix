@@ -17,11 +17,15 @@
 #   VALIDATE=1        validates matrix multiplication
 #   LIB_PATH=         set lib path
 #
-#  current combinations are
+# current combinations are
 #
 #   Default:          -
 #   Parallel version: PARALLEL=1 BLAS=1
 #   CUDA version:     CUDA=1
+#
+# Example:
+#
+#    make -f Makefile.guix -j 4 LIB_PATH=~/opt/ldc/lib CUDA=1
 
 # The following two are modified by the Guix package:
 D_COMPILER=$(shell which ldc2)
@@ -55,7 +59,7 @@ endif
 DFLAGS = -wi -I./source $(DUB_INCLUDE)
 DLIBS  = $(LDC_LIB_PATH)/libphobos2-ldc.a $(LDC_LIB_PATH)/libdruntime-ldc.a $(DUB_LIBS)
 DLIBS_DEBUG = $(LDC_LIB_PATH)/libphobos2-ldc-debug.a $(LDC_LIB_PATH)/libdruntime-ldc-debug.a $(DUB_LIBS)
-RPATH  =
+RPATH  =  -L--rpath=$(dir $(realpath $(LIB_PATH)/libstdc++.so.6)):$(dir $(realpath $(LIB_PATH)/libopenblas.so)):$(dir $(realpath $(LIB_PATH)/liblapacke.so.3)):$(dir $(realpath $(LIB_PATH)/libgsl.so.23)):$(dir $(realpath $(LIB_PATH)/librt.so)):$(realpath $(CUDA_LIB_PATH)):/usr/local/cuda-7.0/lib64
 LIBS   = -L-L$(LDC_LIB_PATH) -L-L$(LIB_PATH)  -L-lgsl
 ifdef BLAS
   LIBS += -L-lgslcblas -L-lblas
@@ -69,7 +73,7 @@ OBJ    = $(SRC:.d=.o)
 OUT    = build/faster_lmm_d
 
 ifdef CUDA
-  LIBS += -L-L/usr/local/cuda-7.0/lib64 -L=-lcublas -L=-lcudart -L=-lcuda
+  LIBS += -L-L$(CUDA_LIB_PATH) -L-L/usr/local/cuda-7.0/lib64 -L=-lcublas -L=-lcudart -L=-lcuda
   # LIBS += $(CUDA_LIB_PATH)/libcublas_static.a $(CUDA_LIB_PATH)/libcudart_static.a /usr/lib/x86_64-linux-gnu/crti.o /usr/lib/x86_64-linux-gnu/crt1.o
   # LIBS += $(CUDA_LIB_PATH)/libcublas_static.a $(CUDA_LIB_PATH)/libcudart_static.a /usr/lib/x86_64-linux-gnu/crti.o /usr/lib/x86_64-linux-gnu/crt1.o
 endif
