@@ -13,7 +13,7 @@ import std.exception;
 import std.experimental.logger;
 import std.file;
 
-import faster_lmm_d.cuda;
+// import faster_lmm_d.cuda;
 import faster_lmm_d.dmatrix;
 import faster_lmm_d.helpers;
 import faster_lmm_d.optmatrix;
