@@ -867,24 +867,11 @@ SUMSTAT[] calc_RL_Wald_batched(const size_t ni_test, const double[] l, loglikepa
 
   DMatrix Hi_eval= zeros_dmatrix(l.length, params.eval.elements.length);
   double[] v_temp_elements;
-  version(PARALLEL){
-    foreach(i, snp; taskPool.parallel(l,10000)){
-      const DMatrix x =  divide_num_dmatrix(1, add_dmatrix_num(multiply_dmatrix_num(params.eval, snp), 1.0)) ;
-      set_row2(Hi_eval, i, x);
-    }
-  }else{
-    foreach(i, snp; l){
-      const DMatrix x =  divide_num_dmatrix(1, add_dmatrix_num(multiply_dmatrix_num(params.eval, snp), 1.0)) ;
-      set_row2(Hi_eval, i, x);
-    }
+ 
+  foreach(i, snp; l){
+    const DMatrix x =  divide_num_dmatrix(1, add_dmatrix_num(multiply_dmatrix_num(params.eval, snp), 1.0)) ;
+    set_row2(Hi_eval, i, x);
   }
-  size_t index = 0;
-
-  //foreach(i, snp; l){
-  //  foreach(k; params.eval.elements){
-  //    Hi_eval.elements[index++] = 1/(1 + snp * k );
-  //  }
-  //}
 
   const DMatrix Pab = calc_Pab_batched(n_cvt, Hi_eval, params.Uab, params.ab, [n_cvt + 2, n_index], l);
 
@@ -894,39 +881,19 @@ SUMSTAT[] calc_RL_Wald_batched(const size_t ni_test, const double[] l, loglikepa
   const size_t index_xx = GetabIndex(n_cvt + 1, n_cvt + 1, n_cvt);
   const size_t index_xy = GetabIndex(n_cvt + 2, n_cvt + 1, n_cvt);
 
-  version(PARALLEL){
+  foreach(i, j ; l){
+    const size_t row_no = i * (n_cvt + 2) + n_cvt;
 
-    foreach (i, snp; taskPool.parallel(l,10000)){
-      const size_t row_no = i * (n_cvt + 2) + n_cvt;
+    const double P_yy = accessor(Pab, row_no, index_yy);
+    const double P_xx = accessor(Pab, row_no, index_xx);
+    const double P_xy = accessor(Pab, row_no, index_xy);
+    const double Px_yy = accessor(Pab, row_no + 1, index_yy);
 
-      const double P_yy = accessor(Pab, row_no, index_yy);
-      const double P_xx = accessor(Pab, row_no, index_xx);
-      const double P_xy = accessor(Pab, row_no, index_xy);
-      const double Px_yy = accessor(Pab, row_no + 1, index_yy);
-
-      const double beta = P_xy / P_xx;
-      const double tau = to!double(df) / Px_yy;
-      const double se = sqrt(1.0 / (tau * P_xx));
-      const double p_wald = gsl_cdf_fdist_Q((P_yy - Px_yy) * tau, 1.0, df);
-      collection[i] = SUMSTAT( beta, se, snp, p_wald);
-    }
-
-  }
-  else{
-    foreach(i, j ; l){
-      const size_t row_no = i * (n_cvt + 2) + n_cvt;
-
-      const double P_yy = accessor(Pab, row_no, index_yy);
-      const double P_xx = accessor(Pab, row_no, index_xx);
-      const double P_xy = accessor(Pab, row_no, index_xy);
-      const double Px_yy = accessor(Pab, row_no + 1, index_yy);
-
-      const double beta = P_xy / P_xx;
-      const double tau = to!double(df) / Px_yy;
-      const double se = sqrt(1.0 / (tau * P_xx));
-      const double p_wald = gsl_cdf_fdist_Q((P_yy - Px_yy) * tau, 1.0, df);
-      collection[i] = SUMSTAT( beta, se, j, p_wald);
-    }
+    const double beta = P_xy / P_xx;
+    const double tau = to!double(df) / Px_yy;
+    const double se = sqrt(1.0 / (tau * P_xx));
+    const double p_wald = gsl_cdf_fdist_Q((P_yy - Px_yy) * tau, 1.0, df);
+    collection[i] = SUMSTAT( beta, se, j, p_wald);
   }
 
   return collection;

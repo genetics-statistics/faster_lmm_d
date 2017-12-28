@@ -230,7 +230,7 @@ void analyze_bimbam_batched(Param cPar, const DMatrix U, const DMatrix eval, con
   const DMatrix ab = zeros_dmatrix(1, n_index);
 
   // Create a large matrix.
-  size_t msize=2000;
+  size_t msize=1000;
   DMatrix Xlarge = zeros_dmatrix(U.shape[0], msize);
   DMatrix UtXlarge = zeros_dmatrix(U.shape[0], msize);
 
@@ -246,6 +246,8 @@ void analyze_bimbam_batched(Param cPar, const DMatrix U, const DMatrix eval, con
 
 
   DMatrix Uab = calc_Uab(UtW, Uty, U.shape[1], n_index);
+
+  auto task_pool = new TaskPool(totalCPUs);
 
   foreach (line ; input.byLine) {
     if (indicator_snp.elements[t]==0) {
@@ -286,54 +288,47 @@ void analyze_bimbam_batched(Param cPar, const DMatrix U, const DMatrix eval, con
 
     c++;
 
-    size_t index_snp = 0;
-
-
     if (c % msize==0 || c==t_last) {
       size_t l=0;
       if (c%msize==0) {l=msize;} else {l=c%msize;}
-      DMatrix Uab_large = zeros_dmatrix(l, Uab.shape[0]*Uab.shape[1]);
-      double[] elements = new double[l];
-
-      DMatrix Xlarge_sub = get_sub_dmatrix(Xlarge, 0, 0, Xlarge.shape[0], l);
-      DMatrix UtXlarge_sub = matrix_mult(UT, Xlarge_sub);
-      UtXlarge = set_sub_dmatrix(UtXlarge, 0, 0, UtXlarge.shape[0], l, UtXlarge_sub);
-      const DMatrix UtXlargeT = UtXlarge.T;
-
       version(PARALLEL){
-        auto items = iota(0,l).array;
-
-        foreach (ref snp; taskPool.parallel(items,10_000)) {
-          const DMatrix Utx = get_row(UtXlargeT, snp);
-          const Uab_new = calc_Uab(UtW, Uty, Utx, Uab);
-          set_row2(Uab_large, snp, Uab_new);
-
-          loglikeparam param1 = loglikeparam(false, ni_test, n_cvt, eval, Uab_new, ab, 0);
-          elements[snp] = calc_lambda ('R', cast(void *)&param1, l_min, l_max, n_region).lambda;
-        }
-      }else{
-        foreach (snp; 0..l) {
-          const DMatrix Utx = get_row(UtXlargeT, snp);
-          const Uab_new = calc_Uab(UtW, Uty, Utx, Uab);
-          set_row2(Uab_large, snp, Uab_new);
-
-          loglikeparam param1 = loglikeparam(false, ni_test, n_cvt, eval, Uab_new, ab, 0);
-          elements[snp] = calc_lambda ('R', cast(void *)&param1, l_min, l_max, n_region).lambda;
-        }
+        auto taskk = task(&compute_assoc, Xlarge, UtXlarge, l, UtW, Uty, Uab, ab, eval, UT, ni_test, n_cvt, n_region, l_max, l_min);
+        task_pool.put(taskk);
       }
-
-      Uab_large.shape = [l*Uab.shape[1] , Uab.shape[0]];
-      loglikeparam param2 = loglikeparam(false, ni_test, n_cvt, eval, Uab_large, ab, 0);
-      sumStat ~= calc_RL_Wald_batched(ni_test, elements, param2);
-
+      else{
+        compute_assoc(Xlarge, UtXlarge, l, UtW, Uty, Uab, ab, eval, UT, ni_test, n_cvt, n_region, l_max, l_min);
+      }
       Xlarge = zeros_dmatrix(U.shape[0], msize);
     }
     t++;
   }
-
-  writeln(sumStat);
-  check_assoc_result(sumStat);
+  task_pool.finish(true);
   return;
+}
+
+void compute_assoc( const DMatrix Xlarge, const DMatrix UtXlarge, const size_t l, const DMatrix UtW, 
+                      const DMatrix Uty, const DMatrix Uab, const DMatrix ab, const DMatrix eval, 
+                      const DMatrix UT, const size_t ni_test, const size_t n_cvt, const size_t n_region, 
+                      const double l_max, const double l_min){
+
+  double[] elements = new double[l];
+  double[] Uab_large_elements;
+
+  DMatrix Xlarge_sub = get_sub_dmatrix(Xlarge, 0, 0, Xlarge.shape[0], l);
+  DMatrix UtXlarge_sub = matrix_mult(UT, Xlarge_sub);
+  DMatrix UtXlarge_new = set_sub_dmatrix(UtXlarge, 0, 0, UtXlarge.shape[0], l, UtXlarge_sub);
+
+  foreach (snp; 0..l) {
+    const DMatrix Utx = get_col(UtXlarge_new, snp);
+    const Uab_new = calc_Uab(UtW, Uty, Utx, Uab);
+    Uab_large_elements ~= Uab_new.elements;
+
+    loglikeparam param1 = loglikeparam(false, ni_test, n_cvt, eval, Uab_new, ab, 0);
+    elements[snp] = calc_lambda ('R', cast(void *)&param1, l_min, l_max, n_region).lambda;
+  }
+  DMatrix Uab_large = DMatrix([l*Uab.shape[1] , Uab.shape[0]], Uab_large_elements);
+  loglikeparam param2 = loglikeparam(false, ni_test, n_cvt, eval, Uab_large, ab, 0);
+  writeln(calc_RL_Wald_batched(ni_test, elements, param2)[0]);
 }
 
 void check_assoc_result(SUMSTAT[] snps){
