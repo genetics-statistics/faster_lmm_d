@@ -26,6 +26,7 @@ import faster_lmm_d.optmatrix;
 import faster_lmm_d.output;
 import faster_lmm_d.rqtlreader;
 import faster_lmm_d.tsvreader;
+import faster_lmm_d.gemma_kinship;
 import faster_lmm_d.gemma_lmm;
 
 import test.covar_matrix;
@@ -153,9 +154,13 @@ void main(string[] args)
     writeln("Running via GEMMA");
     //run_gemma(option_kinship, option_pheno, option_covar, option_geno);
 
-    //generate_kinship(option_kinship, option_pheno);
-    batch_run(option_kinship, option_pheno, option_covar, option_geno, option_indicator_idv,
-               option_indicator_snp, option_ni_total, option_test_name);
+    if (cmd == "gk"){
+      generate_kinship(option_kinship, option_pheno);
+    }
+    else{
+      batch_run(option_kinship, option_pheno, option_covar, option_geno, option_indicator_idv,
+                  option_indicator_snp, option_ni_total, option_test_name);
+    }
   }else{
 
   // ---- Control

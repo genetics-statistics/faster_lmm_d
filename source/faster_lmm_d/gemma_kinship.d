@@ -28,29 +28,37 @@ import faster_lmm_d.gemma_param;
 import faster_lmm_d.helpers;
 import faster_lmm_d.optmatrix;
 
-void generate_kinship(string geno_fn, string pheno_fn, bool test_nind){
+void generate_kinship(string geno_fn, string pheno_fn, bool test_nind= false){
 
-  string filename = cPar.file_geno;
+  string filename = geno_fn;
   auto pipe = pipeShell("gunzip -c " ~ filename);
   File input = pipe.stdout;
+
+  int k_mode = 0;
 
   size_t n_miss;
   double d, geno_mean, geno_var;
 
   // setKSnp and/or LOCO support
-  bool process_ksnps = ksnps.size();
+  //bool process_ksnps = ksnps.size();
 
+  DMatrix matrix_kin;
   size_t ni_total = matrix_kin.shape[0];
+
+  double[] indicator_snp;
+
 
   double[] geno = new double[ni_total];
   double[] geno_miss = new double[ni_total];
 
   // Xlarge contains inds x markers
+  size_t K_BATCH_SIZE = 1000;
   const size_t msize = K_BATCH_SIZE;
   DMatrix Xlarge = zeros_dmatrix(ni_total, msize);
 
   // For every SNP read the genotype per individual
   size_t ns_test = 0;
+  size_t t = 0;
   foreach (line ; input.byLine) {
   //for (size_t t = 0; t < indicator_snp.size(); ++t) {
 
@@ -73,24 +81,21 @@ void generate_kinship(string geno_fn, string pheno_fn, bool test_nind){
     geno_var = 0.0;
     //gsl_vector_set_all(geno_miss, 0);
     for (size_t i = 0; i < ni_total; ++i) {
-      //tokens++;
-      //enforce_str(tokens != rend, line + " number of fields");
-      string field = *tokens;
       if (chr[i] == "NA") {
         geno_miss[i] = 0;
         n_miss++;
       } else {
         d = to!double(chr[i]);
         geno[i] = d;
-        geno_miss[i] = 1);
+        geno_miss[i] = 1;
         geno_mean += d;
         geno_var += d * d;
       }
     }
 
-    geno_mean /= (double)(ni_total - n_miss);
-    geno_var += geno_mean * geno_mean * (double)n_miss;
-    geno_var /= (double)ni_total;
+    geno_mean /= to!double(ni_total - n_miss);
+    geno_var += geno_mean * geno_mean * to!double(n_miss);
+    geno_var /= to!double(ni_total);
     geno_var -= geno_mean * geno_mean;
 
     for (size_t i = 0; i < ni_total; ++i) {
@@ -110,15 +115,17 @@ void generate_kinship(string geno_fn, string pheno_fn, bool test_nind){
     }
 
     // set the SNP column ns_test
-    DMatrix Xlarge_col = set_col(Xlarge, ns_test % msize, geno);
+    DMatrix Xlarge_col = set_col(Xlarge, ns_test % msize, DMatrix([geno.length, 1], geno));
 
     ns_test++;
 
     // compute kinship matrix and return in matrix_kin a SNP at a time
     if (ns_test % msize == 0) {
       matrix_kin = matrix_mult(Xlarge, Xlarge.T);
-      Xlarge = zeros_dmatrix(Xlarge);
+      Xlarge = zeros_dmatrix(ni_total, msize);
     }
+
+    t++;
   }
   if (ns_test % msize != 0) {
     matrix_kin = matrix_mult(Xlarge, Xlarge.T);
