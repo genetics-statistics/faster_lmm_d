@@ -2,7 +2,7 @@
    This code is part of faster_lmm_d and published under the GPLv3
    License (see LICENSE.txt)
 
-   Copyright © 2017 Prasun Anand & Pjotr Prins
+   Copyright © 2017 - 2018 Prasun Anand & Pjotr Prins
 */
 
 import core.stdc.stdlib : exit;
@@ -152,6 +152,8 @@ void main(string[] args)
   if(option_kinship != ""){
     writeln("Running via GEMMA");
     //run_gemma(option_kinship, option_pheno, option_covar, option_geno);
+
+    //generate_kinship(option_kinship, option_pheno);
     batch_run(option_kinship, option_pheno, option_covar, option_geno, option_indicator_idv,
                option_indicator_snp, option_ni_total, option_test_name);
   }else{

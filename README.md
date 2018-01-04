@@ -142,4 +142,4 @@ make run-gperf
 
 This software is distributed under the [GPL3 license](https://www.gnu.org/copyleft/gpl.html).
 
-Copyright © 2016, 2017, Prasun Anand and Pjotr Prins
+Copyright © 2016 - 2018, Prasun Anand and Pjotr Prins

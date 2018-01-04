@@ -2,7 +2,7 @@
    This code is part of faster_lmm_d and published under the GPLv3
    License (see LICENSE.txt)
 
-   Copyright © 2017 Prasun Anand & Pjotr Prins
+   Copyright © 2017 - 2018 Prasun Anand & Pjotr Prins
 */
 
 module faster_lmm_d.gemma_association;
@@ -306,9 +306,9 @@ void analyze_bimbam_batched(Param cPar, const DMatrix U, const DMatrix eval, con
   return;
 }
 
-void compute_assoc( const DMatrix Xlarge, const DMatrix UtXlarge, const size_t l, const DMatrix UtW, 
-                      const DMatrix Uty, const DMatrix Uab, const DMatrix ab, const DMatrix eval, 
-                      const DMatrix UT, const size_t ni_test, const size_t n_cvt, const size_t n_region, 
+void compute_assoc( const DMatrix Xlarge, const DMatrix UtXlarge, const size_t l, const DMatrix UtW,
+                      const DMatrix Uty, const DMatrix Uab, const DMatrix ab, const DMatrix eval,
+                      const DMatrix UT, const size_t ni_test, const size_t n_cvt, const size_t n_region,
                       const double l_max, const double l_min){
 
   double[] elements = new double[l];

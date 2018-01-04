@@ -2,7 +2,7 @@
    This code is part of faster_lmm_d and published under the GPLv3
    License (see LICENSE.txt)
 
-   Copyright © 2017 Prasun Anand & Pjotr Prins
+   Copyright © 2017 - 2018 Prasun Anand & Pjotr Prins
 */
 
 module faster_lmm_d.gemma_lmm;
@@ -94,7 +94,7 @@ DMatrix calc_Pab_batched(const size_t n_cvt, const DMatrix Hi_eval, const DMatri
   size_t index_ab, index_aw, index_bw, index_ww;
   double p_ab, ps_ab, ps_aw, ps_bw, ps_ww;
   DMatrix Pab = zeros_dmatrix(Hi_eval.shape[0]*shape[0], shape[1]);
-  
+
   DMatrix p_ab2 = cpu_mat_mult(Hi_eval, 0, Uab, 1);
   const size_t col_counter = Uab.shape[0]/Hi_eval.shape[0];
   size_t row_counter = shape[0];
@@ -867,7 +867,7 @@ SUMSTAT[] calc_RL_Wald_batched(const size_t ni_test, const double[] l, loglikepa
 
   DMatrix Hi_eval= zeros_dmatrix(l.length, params.eval.elements.length);
   double[] v_temp_elements;
- 
+
   foreach(i, snp; l){
     const DMatrix x =  divide_num_dmatrix(1, add_dmatrix_num(multiply_dmatrix_num(params.eval, snp), 1.0)) ;
     set_row2(Hi_eval, i, x);

@@ -2,7 +2,7 @@
    This code is part of faster_lmm_d and published under the GPLv3
    License (see LICENSE.txt)
 
-   Copyright © 2017 Prasun Anand & Pjotr Prins
+   Copyright © 2017 - 2018 Prasun Anand & Pjotr Prins
 */
 
 module faster_lmm_d.brent;
