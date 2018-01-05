@@ -155,7 +155,7 @@ void main(string[] args)
     //run_gemma(option_kinship, option_pheno, option_covar, option_geno);
 
     if (cmd == "gk"){
-      generate_kinship(option_kinship, option_pheno);
+      generate_kinship(option_geno, option_pheno);
     }
     else{
       batch_run(option_kinship, option_pheno, option_covar, option_geno, option_indicator_idv,
