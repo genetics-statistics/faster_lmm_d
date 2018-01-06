@@ -14,7 +14,7 @@ import std.exception;
 import std.file;
 import std.math;
 import std.parallelism;
-import std.algorithm: min, max, reduce;
+import std.algorithm: min, max, reduce, countUntil;
 alias mlog = std.math.log;
 import std.process;
 import std.range;
@@ -138,7 +138,7 @@ void generate_kinship(string geno_fn, string pheno_fn, size_t ni_total = 1940, b
 }
 
 struct SNPINFO{
-  long cM;
+  double cM;
   string chr;
   double maf;
   size_t n_nb;          // Number of neighbours on the right hand side.
@@ -151,7 +151,7 @@ struct SNPINFO{
   long   base_position;
   size_t file_position; // SNP location in file.
 
-  this(string chr, string rs_number, long cM, long base_position, string a_minor,
+  this(string chr, string rs_number, double cM, long base_position, string a_minor,
         string a_major, size_t n_miss, double missingness, double maf, size_t n_idv,
         size_t n_nb, size_t file_position){
     this.cM            = cM;
@@ -184,7 +184,8 @@ bool ReadFile_geno(string geno_fn, int ni_total){
   int[] indicator_snp;
   int[] indicator_idv;
 
-  string[string] mapRS2bp, mapRS2chr, mapRS2cM;
+  string[string] mapRS2chr;
+  long[string] mapRS2bp, mapRS2cM;
 
   string[] setSnps;
 
@@ -206,7 +207,6 @@ bool ReadFile_geno(string geno_fn, int ni_total){
   double[] genotype = new double[W.shape[0]];
   double[] genotype_miss = new double[W.shape[0]];
   DMatrix WtWi;
-  double[] WtWiWtx = new double[W.shape[1]];
   gsl_permutation *pmt = gsl_permutation_alloc(W.shape[1]);
 
   DMatrix WtW = matrix_mult(W, W);
@@ -258,7 +258,7 @@ bool ReadFile_geno(string geno_fn, int ni_total){
       continue;
     }
 
-    if (mapRS2bp.count(rs) == 0) {
+    if (countUntil(mapRS2bp, rs) == 0) {
       if (count_warnings++ < 10) {
         writeln("Can't figure out position for ");
       }
@@ -283,7 +283,7 @@ bool ReadFile_geno(string geno_fn, int ni_total){
     for (int i = 0; i < ni_total; ++i) {
       if (indicator_idv[i] == 0)
         continue;
-      auto digit = to!string(chr[i].strip());
+      auto digit = to!string(chr_val[i].strip());
       if (digit == "NA") {
         genotype_miss[c_idv] = 1;
         n_miss++;
@@ -317,6 +317,9 @@ bool ReadFile_geno(string geno_fn, int ni_total){
       c_idv++;
     }
     maf /= 2.0 * to!double(ni_test - n_miss);
+
+//(string chr, string rs_number, long cM, long base_position, string a_minor, string a_major, ulong n_miss, double missingness, double maf, ulong n_idv, ulong n_nb, ulong file_position) is not callable using argument types
+//(string,     string,           double,  long,               string,         string,         ulong,        double,             double,     ulong,       int,        ulong)
 
     snpInfo ~= SNPINFO(chr,    rs,
                      cM,     b_pos,
@@ -357,8 +360,8 @@ bool ReadFile_geno(string geno_fn, int ni_total){
       }
     }
 
-    DMatrix Wtx = matrix_mult(W, genotype);
-    WtWiWtx = matrix_mult(WtWi, Wtx);
+    DMatrix Wtx = matrix_mult(W, DMatrix([genotype.length, 1], genotype));
+    DMatrix WtWiWtx = matrix_mult(WtWi, Wtx);
     v_x = vector_ddot(genotype, genotype);
     v_w = vector_ddot(Wtx, WtWiWtx);
 
