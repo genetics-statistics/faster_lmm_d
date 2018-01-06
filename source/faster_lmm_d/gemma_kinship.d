@@ -28,6 +28,8 @@ import faster_lmm_d.gemma_param;
 import faster_lmm_d.helpers;
 import faster_lmm_d.optmatrix;
 
+import gsl.permutation;
+
 void generate_kinship(string geno_fn, string pheno_fn, size_t ni_total = 1940, bool test_nind= false){
 
   string filename = geno_fn;
@@ -135,6 +137,37 @@ void generate_kinship(string geno_fn, string pheno_fn, size_t ni_total = 1940, b
   matrix_kin = matrix_kin.T;
 }
 
+struct SNPINFO{
+  long cM;
+  string chr;
+  double maf;
+  size_t n_nb;          // Number of neighbours on the right hand side.
+  size_t n_idv;         // Number of non-missing individuals.
+  size_t n_miss;
+  string a_minor;
+  string a_major;
+  string rs_number;
+  double missingness;
+  long   base_position;
+  size_t file_position; // SNP location in file.
+
+  this(string chr, string rs_number, long cM, long base_position, string a_minor,
+        string a_major, size_t n_miss, double missingness, double maf, size_t n_idv,
+        size_t n_nb, size_t file_position){
+    this.cM            = cM;
+    this.chr           = chr;
+    this.maf           = maf;
+    this.n_nb          = n_nb;
+    this.n_idv         = n_idv;
+    this.n_miss        = n_miss;
+    this.a_minor       = a_minor;
+    this.a_major       = a_major;
+    this.rs_number     = rs_number;
+    this.missingness   = missingness;
+    this.base_position = base_position;
+    this.file_position = file_position;
+  }
+}
 
 // Read bimbam mean genotype file, the first time, to obtain #SNPs for
 // analysis (ns_test) and total #SNP (ns_total).
@@ -149,10 +182,18 @@ bool ReadFile_geno(string geno_fn, int ni_total){
   //                 size_t &ns_test) {
   writeln("ReadFile_geno");
   int[] indicator_snp;
+  int[] indicator_idv;
+
+  string[string] mapRS2bp, mapRS2chr, mapRS2cM;
+
+  string[] setSnps;
+
   //snpInfo.clear();
+
 
   DMatrix W;
   size_t ns_test;
+  SNPINFO[] snpInfo;
   const double maf_level;
   const double miss_level;
   const double hwe_level;
@@ -170,14 +211,15 @@ bool ReadFile_geno(string geno_fn, int ni_total){
 
   DMatrix WtW = matrix_mult(W, W);
   int sig;
-  LUDecomp(WtW, pmt, &sig);
 
-  LUInvert(WtW, pmt, WtWi); // @@
+
+  WtWi = inverse(WtW);
 
   double v_x, v_w;
   int c_idv = 0;
 
   string rs;
+  string chr;
   long b_pos;
   string major;
   string minor;
@@ -186,7 +228,7 @@ bool ReadFile_geno(string geno_fn, int ni_total){
 
   double maf, geno, geno_old;
   size_t n_miss;
-  size_t n_0, n_1, n_2;
+  int n_0, n_1, n_2;
   int flag_poly;
 
   int ni_test = 0;
@@ -203,12 +245,12 @@ bool ReadFile_geno(string geno_fn, int ni_total){
     minor = ch_ptr[1];
     major = ch_ptr[2];
 
-    auto chr = ch_ptr[3..$];
+    auto chr_val = ch_ptr[3..$];
 
-    if (setSnps.size() != 0 && setSnps.count(rs) == 0) {
+    if (setSnps.length != 0 && setSnps.count(rs) == 0) {
       // if SNP in geno but not in -snps we add an missing value
-      SNPINFO sInfo = {"-9", rs, -9, -9, minor, major,
-                       0,    -9, -9, 0,  0,     file_pos};
+      SNPINFO sInfo = SNPINFO("-9", rs, -9, -9, minor, major,
+                       0,    -9, -9, 0,  0,     file_pos);
       snpInfo ~= sInfo;
       indicator_snp ~= 0;
 
@@ -276,13 +318,12 @@ bool ReadFile_geno(string geno_fn, int ni_total){
     }
     maf /= 2.0 * to!double(ni_test - n_miss);
 
-    SNPINFO sInfo = {chr,    rs,
+    snpInfo ~= SNPINFO(chr,    rs,
                      cM,     b_pos,
                      minor,  major,
                      n_miss, to!double(n_miss) / to!double(ni_test),
                      maf,    ni_test - n_miss,
-                     0,      file_pos};
-    snpInfo.push_back(sInfo);
+                     0,      file_pos);
     file_pos++;
 
     if (to!double(n_miss) / to!double(ni_test) > miss_level) {
@@ -316,10 +357,10 @@ bool ReadFile_geno(string geno_fn, int ni_total){
       }
     }
 
-    Wtx = matrix_mult(W, genotype);
-    WtWiWtx - matrix_mult(WtWi, Wtx);
-    v_x = ddot(genotype, genotype);
-    v_w = ddot(Wtx, WtWiWtx);
+    DMatrix Wtx = matrix_mult(W, genotype);
+    WtWiWtx = matrix_mult(WtWi, Wtx);
+    v_x = vector_ddot(genotype, genotype);
+    v_w = vector_ddot(Wtx, WtWiWtx);
 
     if (W.shape[1] != 1 && v_w / v_x >= r2_level) {
       indicator_snp ~= 0;
@@ -330,12 +371,10 @@ bool ReadFile_geno(string geno_fn, int ni_total){
     ns_test++;
   }
 
-  gsl_permutation_free(pmt);
-
   return true;
 }
 
-double CalcHWE(const size_t n_hom1, const size_t n_hom2, const size_t n_ab) {
+double CalcHWE(const int n_hom1, const int n_hom2, const int n_ab) {
   if ((n_hom1 + n_hom2 + n_ab) == 0) {
     return 1;
   }
@@ -348,8 +387,8 @@ double CalcHWE(const size_t n_hom1, const size_t n_hom2, const size_t n_ab) {
   int genotypes = n_ab + n_bb + n_aa;
 
   double[] het_probs = new double[rare_copies + 1];
-  if (het_probs == NULL)
-    writeln("Internal error: SNP-HWE: Unable to allocate array");
+  //if (het_probs == )
+    //writeln("Internal error: SNP-HWE: Unable to allocate array");
 
   int i;
   for (i = 0; i <= rare_copies; i++)
@@ -357,7 +396,7 @@ double CalcHWE(const size_t n_hom1, const size_t n_hom2, const size_t n_ab) {
 
   // Start at midpoint.
   // XZ modified to add (long int)
-  int mid = (to!long(rare_copies) * (2 * to!long(genotypes) - to!long(rare_copies))) / (2 * to!long(genotypes));
+  int mid = (to!int(rare_copies) * (2 * to!int(genotypes) - to!int(rare_copies))) / (2 * to!int(genotypes));
 
   // Check to ensure that midpoint and rare alleles have same
   // parity.
