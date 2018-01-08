@@ -33,7 +33,77 @@ import gsl.permutation;
 
 void kinship_calc(string geno_fn, string pheno_fn, size_t ni_total = 1940, bool test_nind= false){
   Kinship_param x;
+  //DMatrix phenotypes = ReadFile_pheno(pheno_fn, x);
 
+  // convert indicator pheno to iindicator idv
+
+  int[] indicator_idv;
+  int[][] indicator_pheno;
+
+  int k = 1;
+  for (size_t i = 0; i < indicator_pheno.length; i++) {
+    k = 1;
+    for (size_t j = 0; j < indicator_pheno[i].length; j++) {
+      if (indicator_pheno[i][j] == 0) {
+        k = 0;
+      }
+    }
+    indicator_idv ~= k;
+  }
+
+  ns_test = 0;
+
+  process_cvt_phen();
+
+  size_t ns_total = indicator_snp.length;
+
+  // readfile geno
+
+}
+
+DMatrix ReadFile_pheno(string file_pheno, int[] indicator_pheno, DMatrix pheno, size_t[] p_column){
+
+  File input = File(file_pheno);
+
+  string id;
+  double p;
+
+  double[] pheno_row;
+  int[] ind_pheno_row;
+
+  size_t p_max = 0;
+  //= *max_element(p_column.begin(), p_column.end());
+
+  size_t[size_t] mapP2c;
+
+  for (size_t i = 0; i < p_column.length; i++) {
+    mapP2c[p_column[i]] = i;
+    pheno_row ~= -9;
+    ind_pheno_row ~= 0;
+  }
+
+  foreach (line ; input.byLine) {
+    auto ch_ptr = to!string(line).split(",");
+    size_t i = 0;
+    while (i < p_max) {
+      if (mapP2c.count(i + 1) != 0) {
+        if (ch_ptr[i] == "0") {
+          ind_pheno_row[mapP2c[i + 1]] = 0;
+          pheno_row[mapP2c[i + 1]] = -9;
+        } else {
+          p = to!int(ch_ptr[i]);
+          ind_pheno_row[mapP2c[i + 1]] = 1;
+          pheno_row[mapP2c[i + 1]] = p;
+        }
+      }
+      i++;
+    }
+
+    indicator_pheno ~= ind_pheno_row;
+    pheno.elements ~= pheno_row;
+  }
+
+  return pheno;
 }
 
 void generate_kinship(string geno_fn, string pheno_fn, size_t ni_total = 1940, bool test_nind= false){
@@ -464,7 +534,7 @@ DMatrix CopyCvt(DMatrix cvt, int[] indicator_cvt, int[] indicator_idv, size_t n_
 }
 
 
-// Post-process phentoypes and covariates.
+// Post-process phenotypes and covariates.
 void process_cvt_phen(ref Kinship_param x) {
 
   // Convert indicator_pheno to indicator_idv.
