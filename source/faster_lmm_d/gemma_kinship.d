@@ -46,7 +46,7 @@ void generate_kinship(string geno_fn, string pheno_fn, size_t ni_total = 1940, b
 
   DMatrix matrix_kin = zeros_dmatrix(ni_total, ni_total);
 
-  double[] indicator_snp = new double[ni_total];
+  int[] indicator_snp = ReadFile_geno(geno_fn, ni_total);
   foreach(ref ele; indicator_snp){ele = 1;}
 
 
@@ -69,8 +69,6 @@ void generate_kinship(string geno_fn, string pheno_fn, size_t ni_total = 1940, b
     auto chr = to!string(line).split(",")[3..$];
 
     if (test_nind) {
-      // ascertain the number of genotype fields match
-
       if (chr.length != ni_total+3) {
         writeln("Columns in geno file do not match # individuals");
       }
@@ -171,7 +169,7 @@ struct SNPINFO{
 
 // Read bimbam mean genotype file, the first time, to obtain #SNPs for
 // analysis (ns_test) and total #SNP (ns_total).
-bool ReadFile_geno(string geno_fn, int ni_total){
+int[] ReadFile_geno(string geno_fn, ulong ni_total){
   //const string &file_geno, const set<string> &setSnps,
   //                 const gsl_matrix *W, vector<int> &indicator_idv,
   //                 vector<int> &indicator_snp, const double &maf_level,
@@ -192,7 +190,7 @@ bool ReadFile_geno(string geno_fn, int ni_total){
   //snpInfo.clear();
 
 
-  DMatrix W;
+  DMatrix W = ones_dmatrix(ni_total, ni_total);
   size_t ns_test;
   SNPINFO[] snpInfo;
   const double maf_level;
@@ -204,16 +202,12 @@ bool ReadFile_geno(string geno_fn, int ni_total){
   auto pipe = pipeShell("gunzip -c " ~ filename);
   File input = pipe.stdout;
 
-  double[] genotype = new double[W.shape[0]];
-  double[] genotype_miss = new double[W.shape[0]];
-  DMatrix WtWi;
-  gsl_permutation *pmt = gsl_permutation_alloc(W.shape[1]);
+  double[] genotype = new double[ni_total];
+  double[] genotype_miss = new double[ni_total];
 
-  DMatrix WtW = matrix_mult(W, W);
-  int sig;
+  DMatrix WtW = matrix_mult(W.T, W);
 
-
-  WtWi = inverse(WtW);
+  DMatrix WtWi = inverse(WtW);
 
   double v_x, v_w;
   int c_idv = 0;
@@ -257,19 +251,19 @@ bool ReadFile_geno(string geno_fn, int ni_total){
       file_pos++;
       continue;
     }
-
-    if (countUntil(mapRS2bp, rs) == 0) {
-      if (count_warnings++ < 10) {
-        writeln("Can't figure out position for ");
-      }
-      chr = "-9";
-      b_pos = -9;
-      cM = -9;
-    } else {
-      b_pos = mapRS2bp[rs];
-      chr = mapRS2chr[rs];
-      cM = mapRS2cM[rs];
-    }
+    //auto a = countUntil(mapRS2bp, rs);
+    //if (a != -1) {
+    //  if (count_warnings++ < 10) {
+    //    writeln("Can't figure out position for ");
+    //  }
+    //  chr = "-9";
+    //  b_pos = -9;
+    //  cM = -9;
+    //} else {
+    //  b_pos = mapRS2bp[rs];
+    //  chr = mapRS2chr[rs];
+    //  cM = mapRS2cM[rs];
+    //}
 
     maf = 0;
     n_miss = 0;
@@ -374,7 +368,7 @@ bool ReadFile_geno(string geno_fn, int ni_total){
     ns_test++;
   }
 
-  return true;
+  return indicator_snp;
 }
 
 double CalcHWE(const int n_hom1, const int n_hom2, const int n_ab) {
@@ -456,3 +450,155 @@ double CalcHWE(const int n_hom1, const int n_hom2, const int n_ab) {
   return p_hwe;
 }
 
+
+DMatrix CopyCvt(DMatrix cvt, int[] indicator_cvt, int[] indicator_idv, size_t n_cvt) {
+  DMatrix W;
+  size_t ci_test = 0;
+
+  foreach(i, idv; indicator_idv) {
+    if (idv == 0 || indicator_cvt[i] == 0) {
+      continue;
+    }
+    for (size_t j = 0; j < n_cvt; ++j) {
+      W.elements[ci_test * W.rows + j] = cvt.accessor(i, j);
+    }
+    ci_test++;
+  }
+
+  return W;
+}
+
+
+// Post-process phentoypes and covariates.
+void process_cvt_phen() {
+
+  // Convert indicator_pheno to indicator_idv.
+  int k = 1;
+  int[] indicator_idv, indicator_cvt, indicator_weight;
+  int[][] indicator_pheno;
+  int[] indicator_gxe;
+  size_t ni_test, ni_subsample;
+  double[] cvt;
+  int a_mode;
+
+  for (size_t i = 0; i < indicator_pheno.length; i++) {
+    k = 1;
+    for (size_t j = 0; j < indicator_pheno[i].length; j++) {
+      if (indicator_pheno[i][j] == 0) {
+        k = 0;
+      }
+    }
+    indicator_idv ~= k;
+  }
+
+  // Remove individuals with missing covariates.
+  if ((indicator_cvt).length != 0) {
+    for (size_t i = 0; i < (indicator_idv).length; ++i) {
+      indicator_idv[i] *= indicator_cvt[i];
+    }
+  }
+
+  // Remove individuals with missing gxe variables.
+  if ((indicator_gxe).length != 0) {
+    for (size_t i = 0; i < (indicator_idv).length; ++i) {
+      indicator_idv[i] *= indicator_gxe[i];
+    }
+  }
+
+  // Remove individuals with missing residual weights.
+  if ((indicator_weight).length != 0) {
+    for (size_t  i = 0; i < (indicator_idv).length; ++i) {
+      indicator_idv[i] *= indicator_weight[i];
+    }
+  }
+
+  // Obtain ni_test.
+  ni_test = 0;
+  for (size_t  i = 0; i < (indicator_idv).length; ++i) {
+    if (indicator_idv[i] == 0) {
+      continue;
+    }
+    ni_test++;
+  }
+
+  // If subsample number is set, perform a random sub-sampling
+  // to determine the subsampled ids.
+  if (ni_subsample != 0) {
+    if (ni_test < ni_subsample) {
+      writeln("error! number of subsamples is less than number of analyzed individuals. ");
+    } else {
+
+      // Set up random environment.
+      //gsl_rng_env_setup();
+      //gsl_rng *gsl_r;
+      //const gsl_rng_type *gslType;
+      //gslType = gsl_rng_default;
+      //if (randseed < 0) {
+      //  time_t rawtime;
+      //  time(&rawtime);
+      //  tm *ptm = gmtime(&rawtime);
+
+      //  randseed = (unsigned)(ptm->tm_hour % 24 * 3600 + ptm->tm_min * 60 +
+      //                        ptm->tm_sec);
+      //}
+      //gsl_r = gsl_rng_alloc(gslType);
+      //gsl_rng_set(gsl_r, randseed);
+
+      // From ni_test, sub-sample ni_subsample.
+      size_t[] a, b;
+      for (size_t i = 0; i < ni_subsample; i++) {
+        a ~= 0;
+      }
+      for (size_t i = 0; i < ni_test; i++) {
+        b ~= i;
+      }
+
+      //gsl_ran_choose(gsl_r, static_cast<void *>(&a[0]), ni_subsample,
+      //               static_cast<void *>(&b[0]), ni_test, sizeof(size_t));
+
+      // Re-set indicator_idv and ni_test.
+      int j = 0;
+      for (size_t i = 0; i < (indicator_idv).length; ++i) {
+        if (indicator_idv[i] == 0) {
+          continue;
+        }
+        //////////////////////////////////
+        //             FIXME            //
+        //////////////////////////////////
+        //if (find(a.begin(), a.end(), j) == a.end()) {
+        //  indicator_idv[i] = 0;
+        //}
+        j++;
+      }
+      ni_test = ni_subsample;
+    }
+  }
+
+  // Check ni_test.
+  if (ni_test == 0 && a_mode != 15) {
+    error = true;
+    writeln("error! number of analyzed individuals equals 0. ");
+    return;
+  }
+
+  // Check covariates to see if they are correlated with each
+  // other, and to see if the intercept term is included.
+  // After getting ni_test.
+  // Add or remove covariates.
+
+
+  if (indicator_cvt.length != 0) {
+    //CheckCvt();
+  } else {
+
+    double[] cvt_row;
+    cvt_row ~= 1;
+
+    for (size_t i = 0; i < indicator_idv.length; ++i) {
+      indicator_cvt ~= 1;
+      cvt ~= cvt_row;
+    }
+  }
+
+  return;
+}
