@@ -30,6 +30,12 @@ import faster_lmm_d.optmatrix;
 
 import gsl.permutation;
 
+
+void kinship_calc(string geno_fn, string pheno_fn, size_t ni_total = 1940, bool test_nind= false){
+  Kinship_param x;
+
+}
+
 void generate_kinship(string geno_fn, string pheno_fn, size_t ni_total = 1940, bool test_nind= false){
 
   string filename = geno_fn;
@@ -190,7 +196,8 @@ int[] ReadFile_geno(string geno_fn, ulong ni_total){
   //snpInfo.clear();
 
 
-  DMatrix W = ones_dmatrix(ni_total, ni_total);
+  DMatrix W;
+
   size_t ns_test;
   SNPINFO[] snpInfo;
   const double maf_level;
@@ -209,21 +216,12 @@ int[] ReadFile_geno(string geno_fn, ulong ni_total){
 
   DMatrix WtWi = inverse(WtW);
 
-  double v_x, v_w;
   int c_idv = 0;
-
-  string rs;
-  string chr;
+  int n_0, n_1, n_2, flag_poly;
   long b_pos;
-  string major;
-  string minor;
-  double cM;
-  size_t file_pos;
-
-  double maf, geno, geno_old;
-  size_t n_miss;
-  int n_0, n_1, n_2;
-  int flag_poly;
+  double v_x, v_w, maf, geno, geno_old, cM;
+  string rs, chr, major, minor;
+  size_t file_pos, n_miss;
 
   int ni_test = 0;
   for (int i = 0; i < ni_total; ++i) {
@@ -311,9 +309,6 @@ int[] ReadFile_geno(string geno_fn, ulong ni_total){
       c_idv++;
     }
     maf /= 2.0 * to!double(ni_test - n_miss);
-
-//(string chr, string rs_number, long cM, long base_position, string a_minor, string a_major, ulong n_miss, double missingness, double maf, ulong n_idv, ulong n_nb, ulong file_position) is not callable using argument types
-//(string,     string,           double,  long,               string,         string,         ulong,        double,             double,     ulong,       int,        ulong)
 
     snpInfo ~= SNPINFO(chr,    rs,
                      cM,     b_pos,
@@ -451,7 +446,7 @@ double CalcHWE(const int n_hom1, const int n_hom2, const int n_ab) {
 }
 
 
-DMatrix CopyCvt(DMatrix cvt, int[] indicator_cvt, int[] indicator_idv, size_t n_cvt) {
+DMatrix CopyCvt(DMatrix cvt, int[] indicator_cvt, int[] indicator_idv, size_t n_cvt, ref Kinship_param x) {
   DMatrix W;
   size_t ci_test = 0;
 
@@ -470,7 +465,7 @@ DMatrix CopyCvt(DMatrix cvt, int[] indicator_cvt, int[] indicator_idv, size_t n_
 
 
 // Post-process phentoypes and covariates.
-void process_cvt_phen() {
+void process_cvt_phen(ref Kinship_param x) {
 
   // Convert indicator_pheno to indicator_idv.
   int k = 1;
@@ -599,6 +594,5 @@ void process_cvt_phen() {
       cvt ~= cvt_row;
     }
   }
-
-  return;
+  x.cvt = DMatrix([indicator_idv.length, cvt.length/indicator_idv.length] , cvt);
 }

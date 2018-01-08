@@ -82,6 +82,13 @@ struct Param{
 
 }
 
+struct Kinship_param{
+  DMatrix cvt;
+  int[] indicator_idv;
+  int[] indicator_snp;
+  int[] indicator_weight;
+}
+
 struct mapRS{
   void clear(){}
 }
