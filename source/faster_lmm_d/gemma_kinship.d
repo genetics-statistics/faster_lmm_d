@@ -24,12 +24,32 @@ import std.experimental.logger;
 import std.string;
 
 import faster_lmm_d.dmatrix;
+import faster_lmm_d.gemma_lmm;
 import faster_lmm_d.gemma_param;
 import faster_lmm_d.helpers;
 import faster_lmm_d.optmatrix;
 
 import gsl.permutation;
 
+DMatrix kinship_from_gemma(string fn, string test_name = ""){
+  DMatrix X = read_matrix_from_file2(fn);
+
+  DMatrix kinship = matrix_mult(X, X.T);
+  DMatrix kinship_norm = divide_dmatrix_num(kinship, 10768);
+
+  //if(test_name == "mouse_hs_1940"){
+    check_kinship_from_gemma(test_name, kinship_norm.elements[0..3]);
+  //}
+  return kinship_norm;
+}
+
+void check_kinship_from_gemma(string test_name, double[] top){
+  enforce(modDiff(top[0], 0.335059 ) < 0.001);
+  enforce(modDiff(top[1], -0.0227226 ) < 0.001);
+  enforce(modDiff(top[2], 0.0103535 ) < 0.001);
+
+  writeln("kinship tests pass successfully");
+}
 
 void kinship_calc(string geno_fn, string pheno_fn, size_t ni_total = 1940, bool test_nind= false){
   Kinship_param x;
@@ -51,11 +71,11 @@ void kinship_calc(string geno_fn, string pheno_fn, size_t ni_total = 1940, bool 
     indicator_idv ~= k;
   }
 
-  ns_test = 0;
+  //size_t ns_test = 0;
 
-  process_cvt_phen();
+  //process_cvt_phen();
 
-  size_t ns_total = indicator_snp.length;
+  //size_t ns_total = indicator_snp.length;
 
   // readfile geno
 
@@ -86,7 +106,8 @@ DMatrix ReadFile_pheno(string file_pheno, int[] indicator_pheno, DMatrix pheno, 
     auto ch_ptr = to!string(line).split(",");
     size_t i = 0;
     while (i < p_max) {
-      if (mapP2c.count(i + 1) != 0) {
+      //if (mapP2c.count(i + 1) != 0) {
+      if(true){
         if (ch_ptr[i] == "0") {
           ind_pheno_row[mapP2c[i + 1]] = 0;
           pheno_row[mapP2c[i + 1]] = -9;
@@ -130,7 +151,7 @@ void generate_kinship(string geno_fn, string pheno_fn, size_t ni_total = 1940, b
   double[] geno_miss = new double[ni_total];
 
   // Xlarge contains inds x markers
-  size_t K_BATCH_SIZE = 1000;
+  size_t K_BATCH_SIZE = 1940;
   const size_t msize = K_BATCH_SIZE;
   DMatrix Xlarge = zeros_dmatrix(ni_total, msize);
 
