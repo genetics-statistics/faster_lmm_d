@@ -37,48 +37,26 @@ DMatrix kinship_from_gemma(string fn, string test_name = ""){
   DMatrix kinship = matrix_mult(X, X.T);
   DMatrix kinship_norm = divide_dmatrix_num(kinship, 10768);
 
+  writeln(kinship_norm.shape);
   //if(test_name == "mouse_hs_1940"){
-    check_kinship_from_gemma(test_name, kinship_norm.elements[0..3]);
+    check_kinship_from_gemma(test_name, kinship_norm.elements[0..3], kinship_norm.elements[$-3..$]);
   //}
   return kinship_norm;
 }
 
-void check_kinship_from_gemma(string test_name, double[] top){
+void check_kinship_from_gemma(string test_name, double[] top, double[] bottom){
+
+  writeln(top);
   enforce(modDiff(top[0], 0.335059 ) < 0.001);
   enforce(modDiff(top[1], -0.0227226 ) < 0.001);
   enforce(modDiff(top[2], 0.0103535 ) < 0.001);
 
+  writeln(bottom);
+  enforce(modDiff(bottom[0], 0.0039059 ) < 0.001);
+  enforce(modDiff(bottom[1], -0.0210802 ) < 0.001);
+  enforce(modDiff(bottom[2], 0.3881094925 ) < 0.001);
+
   writeln("kinship tests pass successfully");
-}
-
-void kinship_calc(string geno_fn, string pheno_fn, size_t ni_total = 1940, bool test_nind= false){
-  Kinship_param x;
-  //DMatrix phenotypes = ReadFile_pheno(pheno_fn, x);
-
-  // convert indicator pheno to iindicator idv
-
-  int[] indicator_idv;
-  int[][] indicator_pheno;
-
-  int k = 1;
-  for (size_t i = 0; i < indicator_pheno.length; i++) {
-    k = 1;
-    for (size_t j = 0; j < indicator_pheno[i].length; j++) {
-      if (indicator_pheno[i][j] == 0) {
-        k = 0;
-      }
-    }
-    indicator_idv ~= k;
-  }
-
-  //size_t ns_test = 0;
-
-  //process_cvt_phen();
-
-  //size_t ns_total = indicator_snp.length;
-
-  // readfile geno
-
 }
 
 DMatrix ReadFile_pheno(string file_pheno, int[] indicator_pheno, DMatrix pheno, size_t[] p_column){
