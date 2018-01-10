@@ -859,7 +859,7 @@ Wald_score calc_RL_Wald(const size_t ni_test, const double l, loglikeparam param
   return Wald_score(beta, se, p_wald);
 }
 
-SUMSTAT[] calc_RL_Wald_batched(const size_t ni_test, const double[] l, loglikeparam params) {
+void calc_RL_Wald_batched(const size_t ni_test, const double[] l, loglikeparam params, string[] indicators, File f) {
   const size_t n_cvt = params.n_cvt;
   const size_t n_index = (n_cvt + 2 + 1) * (n_cvt + 2) / 2;
 
@@ -893,10 +893,9 @@ SUMSTAT[] calc_RL_Wald_batched(const size_t ni_test, const double[] l, loglikepa
     const double tau = to!double(df) / Px_yy;
     const double se = sqrt(1.0 / (tau * P_xx));
     const double p_wald = gsl_cdf_fdist_Q((P_yy - Px_yy) * tau, 1.0, df);
-    collection[i] = SUMSTAT( beta, se, j, p_wald);
+    auto collect = SUMSTAT( beta, se, j, p_wald, indicators[i]);
+    f.write(indicators[i], "\t", collect.beta, "\t", collect.se, "\t", j, "\t", collect.p_wald, "\n");
   }
-
-  return collection;
 }
 
 alias Tuple!(double, "beta", double, "se", double, "p_score") RL_Score ;

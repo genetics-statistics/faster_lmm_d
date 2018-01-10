@@ -48,7 +48,7 @@ void analyze_bimbam(Param cPar, const DMatrix U, const DMatrix eval, const DMatr
   auto pipe = pipeShell("gunzip -c " ~ filename);
   File input = pipe.stdout;
 
-  SUMSTAT[] sumStat;
+  auto f = File("test.txt", "w");
 
   double lambda_mle=0, lambda_remle=0, beta=0, se=0, p_wald=0;
   double p_lrt=0, p_score=0;
@@ -97,13 +97,17 @@ void analyze_bimbam(Param cPar, const DMatrix U, const DMatrix eval, const DMatr
 
   DMatrix Uab = calc_Uab(UtW, Uty, U.shape[1], n_index);
 
+  string[] indicators;
+
   foreach (line ; input.byLine) {
     if (indicator_snp.elements[t]==0) {
       t++;
       continue;
     }
 
-    auto chr = to!string(line).split(",")[3..$];
+    auto chr_values = to!string(line).split(",");
+    indicators ~= to!string(chr_values[0]);
+    auto chr = chr_values[3..$];
 
     x_mean=0.0; c_phen=0; n_miss=0;
     DMatrix x_miss = zeros_dmatrix(1, U.shape[0]);
@@ -158,11 +162,8 @@ void analyze_bimbam(Param cPar, const DMatrix U, const DMatrix eval, const DMatr
 
           tsps[snp].lambda_remle = calc_lambda ('R', cast(void *)&param1, l_min, l_max, n_region).lambda;
           auto score = calc_RL_Wald(ni_test, tsps[snp].lambda_remle, param1);
-          tsps[snp].beta = score.beta;
-          tsps[snp].se = score.se;
-          tsps[snp].p_wald = score.p_wald;
+          f.write(indicators[snp], "\t", score.beta, "\t", score.se, "\t", tsps[snp].lambda_remle, "\t", score.p_wald, "\n");
         }
-        sumStat ~= tsps;
       }
       else{
         foreach (snp; 0..l) {
@@ -173,16 +174,16 @@ void analyze_bimbam(Param cPar, const DMatrix U, const DMatrix eval, const DMatr
 
           lambda_remle = calc_lambda ('R', cast(void *)&param1, l_min, l_max, n_region).lambda;
           auto score = calc_RL_Wald(ni_test, lambda_remle, param1);
-          sumStat ~= SUMSTAT(score.beta, score.se, lambda_remle, score.p_wald);
+          f.write(indicators[snp], "\t", score.beta, "\t", score.se, "\t", lambda_remle, "\t", score.p_wald, "\n");
         }
       }
       Xlarge = zeros_dmatrix(U.shape[0], msize);
+      indicators = [];
     }
     t++;
   }
 
-  writeln(sumStat);
-  check_assoc_result(sumStat);
+  check_assoc_result();
   return;
 }
 
@@ -197,7 +198,7 @@ void analyze_bimbam_batched(Param cPar, const DMatrix U, const DMatrix eval, con
   auto pipe = pipeShell("gunzip -c " ~ filename);
   File input = pipe.stdout;
 
-  SUMSTAT[] sumStat;
+  auto f = File("test.txt", "w");
 
   double lambda_mle=0, lambda_remle=0, beta=0, se=0, p_wald=0;
   double p_lrt=0, p_score=0;
@@ -249,13 +250,17 @@ void analyze_bimbam_batched(Param cPar, const DMatrix U, const DMatrix eval, con
 
   auto task_pool = new TaskPool(totalCPUs);
 
+  string[] indicators;
+
   foreach (line ; input.byLine) {
     if (indicator_snp.elements[t]==0) {
       t++;
       continue;
     }
 
-    auto chr = to!string(line).split(",")[3..$];
+    auto chr_values = to!string(line).split(",");
+    indicators ~= to!string(chr_values[0]);
+    auto chr = chr_values[3..$];
 
     x_mean=0.0; c_phen=0; n_miss=0;
     DMatrix x_miss = zeros_dmatrix(1, U.shape[0]);
@@ -292,24 +297,27 @@ void analyze_bimbam_batched(Param cPar, const DMatrix U, const DMatrix eval, con
       size_t l=0;
       if (c%msize==0) {l=msize;} else {l=c%msize;}
       version(PARALLEL){
-        auto taskk = task(&compute_assoc, Xlarge, UtXlarge, l, UtW, Uty, Uab, ab, eval, UT, ni_test, n_cvt, n_region, l_max, l_min);
+        auto taskk = task(&compute_assoc, Xlarge, UtXlarge, l, UtW, Uty, Uab, ab, eval, UT, ni_test, n_cvt, n_region, l_max, l_min, indicators, f);
         task_pool.put(taskk);
       }
       else{
-        compute_assoc(Xlarge, UtXlarge, l, UtW, Uty, Uab, ab, eval, UT, ni_test, n_cvt, n_region, l_max, l_min);
+        compute_assoc(Xlarge, UtXlarge, l, UtW, Uty, Uab, ab, eval, UT, ni_test, n_cvt, n_region, l_max, l_min, indicators, f);
       }
       Xlarge = zeros_dmatrix(U.shape[0], msize);
+      indicators = [];
     }
     t++;
   }
   task_pool.finish(true);
+  f.close;
+  check_assoc_result();
   return;
 }
 
 void compute_assoc( const DMatrix Xlarge, const DMatrix UtXlarge, const size_t l, const DMatrix UtW,
                       const DMatrix Uty, const DMatrix Uab, const DMatrix ab, const DMatrix eval,
                       const DMatrix UT, const size_t ni_test, const size_t n_cvt, const size_t n_region,
-                      const double l_max, const double l_min){
+                      const double l_max, const double l_min, string[] indicators, File f){
 
   double[] elements = new double[l];
   double[] Uab_large_elements;
@@ -328,20 +336,30 @@ void compute_assoc( const DMatrix Xlarge, const DMatrix UtXlarge, const size_t l
   }
   DMatrix Uab_large = DMatrix([l*Uab.shape[1] , Uab.shape[0]], Uab_large_elements);
   loglikeparam param2 = loglikeparam(false, ni_test, n_cvt, eval, Uab_large, ab, 0);
-  writeln(calc_RL_Wald_batched(ni_test, elements, param2)[0]);
+  calc_RL_Wald_batched(ni_test, elements, param2, indicators, f);
 }
 
-void check_assoc_result(SUMSTAT[] snps){
+void check_assoc_result(){
 
-  enforce(modDiff(snps[0].beta, -0.0778866 ) < 0.001);
-  enforce(modDiff(snps[0].se, 0.061935) < 0.001);
-  enforce(modDiff(snps[0].lambda_remle, 4.31799) < 0.001);
-  enforce(modDiff(snps[0].p_wald, 0.208762) < 0.001);
-
-  enforce(modDiff(snps[$-1].beta, 0.0684089 ) < 0.001);
-  enforce(modDiff(snps[$-1].se, 0.0462648 ) < 0.001);
-  enforce(modDiff(snps[$-1].lambda_remle, 4.31939 ) < 0.001);
-  enforce(modDiff(snps[$-1].p_wald, 0.139461) < 0.001);
-
+  File outf = File("test.txt");
+  int count = 0;
+  foreach(line; outf.byLine){
+    auto values = to!string(line).split("\t");
+    if(values[0] == "rs3683945"){
+      enforce(modDiff(to!double(values[1]), -0.0778866 ) < 0.001);
+      enforce(modDiff(to!double(values[2]), 0.061935) < 0.001);
+      enforce(modDiff(to!double(values[3]), 4.31799) < 0.001);
+      enforce(modDiff(to!double(values[4]), 0.208762) < 0.001);
+      count += 1;
+    }
+    else if(values[0] == "rs6193060"){
+      enforce(modDiff(to!double(values[1]), 0.0684089 ) < 0.001);
+      enforce(modDiff(to!double(values[2]), 0.0462648 ) < 0.001);
+      enforce(modDiff(to!double(values[3]), 4.31939 ) < 0.001);
+      enforce(modDiff(to!double(values[4]), 0.139461) < 0.001);
+      count += 1;
+    }
+  }
+  enforce(count == 2);
   writeln("LMM Association tests pass.");
 }
