@@ -859,7 +859,7 @@ Wald_score calc_RL_Wald(const size_t ni_test, const double l, loglikeparam param
   return Wald_score(beta, se, p_wald);
 }
 
-void calc_RL_Wald_batched(const size_t ni_test, const double[] l, loglikeparam params, string[] indicators, File f) {
+void calc_RL_Wald_batched(const size_t ni_test, const double[] l, loglikeparam params, const string[] indicators, File f) {
   const size_t n_cvt = params.n_cvt;
   const size_t n_index = (n_cvt + 2 + 1) * (n_cvt + 2) / 2;
 

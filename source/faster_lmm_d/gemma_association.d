@@ -317,7 +317,7 @@ void analyze_bimbam_batched(Param cPar, const DMatrix U, const DMatrix eval, con
 void compute_assoc( const DMatrix Xlarge, const DMatrix UtXlarge, const size_t l, const DMatrix UtW,
                       const DMatrix Uty, const DMatrix Uab, const DMatrix ab, const DMatrix eval,
                       const DMatrix UT, const size_t ni_test, const size_t n_cvt, const size_t n_region,
-                      const double l_max, const double l_min, string[] indicators, File f){
+                      const double l_max, const double l_min, const string[] indicators, File f){
 
   double[] elements = new double[l];
   double[] Uab_large_elements;
