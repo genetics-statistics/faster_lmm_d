@@ -665,3 +665,34 @@ void process_cvt_phen(ref Kinship_param x) {
   }
   x.cvt = DMatrix([indicator_idv.length, cvt.length/indicator_idv.length] , cvt);
 }
+
+
+void check_indicator_snp(int[] indicator_idv){
+  enforce(modDiff(to!double(indicator_idv[0]), 0 ) < 0.001);
+  enforce(modDiff(to!double(indicator_idv[1]), 0 ) < 0.001);
+  enforce(modDiff(to!double(indicator_idv[2]), 0 ) < 0.001);
+
+  enforce(modDiff(to!double(indicator_idv[$-3]), 0) < 0.001);
+  enforce(modDiff(to!double(indicator_idv[$-2]), 0) < 0.001);
+  enforce(modDiff(to!double(indicator_idv[$-1]), 0) < 0.001);
+}
+
+void check_indicator_idv(int[] indicator_cvt){
+  enforce(modDiff(to!double(indicator_cvt[0]), 0 ) < 0.001);
+  enforce(modDiff(to!double(indicator_cvt[1]), 0 ) < 0.001);
+  enforce(modDiff(to!double(indicator_cvt[2]), 0 ) < 0.001);
+
+  enforce(modDiff(to!double(indicator_cvt[$-3]), 0) < 0.001);
+  enforce(modDiff(to!double(indicator_cvt[$-2]), 0) < 0.001);
+  enforce(modDiff(to!double(indicator_cvt[$-1]), 0) < 0.001);
+}
+
+void check_indicator_idv(int[] indicator_snp){
+  enforce(modDiff(to!double(indicator_snp[0]), 0 ) < 0.001);
+  enforce(modDiff(to!double(indicator_snp[1]), 0 ) < 0.001);
+  enforce(modDiff(to!double(indicator_snp[2]), 0 ) < 0.001);
+
+  enforce(modDiff(to!double(indicator_snp[$-3]), 0) < 0.001);
+  enforce(modDiff(to!double(indicator_snp[$-2]), 0) < 0.001);
+  enforce(modDiff(to!double(indicator_snp[$-1]), 0) < 0.001);
+}

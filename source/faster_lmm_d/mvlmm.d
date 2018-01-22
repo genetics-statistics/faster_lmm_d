@@ -298,9 +298,9 @@ void analyze_bimbam_mvlmm(const gsl_matrix *U, const gsl_vector *eval,
 
     for (size_t i = 0; i < ni_test; ++i) {
       if (gsl_vector_get(x_miss, i) == 0) {
-        gsl_vector_set(x, i, x_mean);
+        x[i] = x_mean;
       }
-      geno = gsl_vector_get(x, i);
+      geno = x[i];
     }
 
     gsl_vector_view Xlarge_col = gsl_matrix_column(Xlarge, csnp % msize);
@@ -393,7 +393,7 @@ void analyze_bimbam_mvlmm(const gsl_matrix *U, const gsl_vector *eval,
 
         // Store summary data.
         for (size_t i = 0; i < d_size; i++) {
-          v_beta[i] = gsl_vector_get(beta, i);
+          v_beta[i] = beta[i];
         }
 
         c = 0;
