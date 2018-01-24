@@ -59,7 +59,18 @@ void check_kinship_from_gemma(string test_name, double[] top, double[] bottom){
   writeln("kinship tests pass successfully");
 }
 
-DMatrix ReadFile_pheno(string file_pheno, int[] indicator_pheno, DMatrix pheno, size_t[] p_column){
+
+void Read_files(string geno_fn, string pheno_fn, string co_variate_fn = ""){
+  int[] indicator_pheno;
+  size_t[] p_column;
+  DMatrix pheno = ReadFile_pheno(pheno_fn, indicator_pheno, p_column);
+  //ReadFile_geno();
+  //ReadFile_covariates();
+}
+
+DMatrix ReadFile_pheno(string file_pheno, int[] indicator_pheno, size_t[] p_column){
+
+  DMatrix pheno;
 
   File input = File(file_pheno);
 
@@ -105,7 +116,21 @@ DMatrix ReadFile_pheno(string file_pheno, int[] indicator_pheno, DMatrix pheno, 
   return pheno;
 }
 
+// similar to batch_run mode 21||22
 void generate_kinship(string geno_fn, string pheno_fn, size_t ni_total = 1940, bool test_nind= false){
+  bimbam_kin(geno_fn, geno_fn);
+  validate_kinship();
+}
+
+bool validate_kinship(){
+  return true;
+}
+
+void bimbam_kin(string geno_fn, string pheno_fn, size_t ni_total = 1940, bool test_nind= false){
+  //(const string file_geno, const set<string> ksnps,
+  //vector<int> &indicator_snp, const int k_mode,
+  //const int display_pace, gsl_matrix *matrix_kin,
+  //const bool test_nind) {
 
   string filename = geno_fn;
   auto pipe = pipeShell("gunzip -c " ~ filename);
@@ -281,6 +306,8 @@ int[] ReadFile_geno(string geno_fn, ulong ni_total){
   double[] genotype = new double[ni_total];
   double[] genotype_miss = new double[ni_total];
 
+
+  // W refers to covariates
   DMatrix WtW = matrix_mult(W.T, W);
 
   DMatrix WtWi = inverse(WtW);
@@ -667,6 +694,7 @@ void process_cvt_phen(ref Kinship_param x) {
 }
 
 
+
 void check_indicator_snp(int[] indicator_idv){
   enforce(modDiff(to!double(indicator_idv[0]), 0 ) < 0.001);
   enforce(modDiff(to!double(indicator_idv[1]), 0 ) < 0.001);
@@ -687,7 +715,7 @@ void check_indicator_idv(int[] indicator_cvt){
   enforce(modDiff(to!double(indicator_cvt[$-1]), 0) < 0.001);
 }
 
-void check_indicator_idv(int[] indicator_snp){
+void check_indicator_cvt(int[] indicator_snp){
   enforce(modDiff(to!double(indicator_snp[0]), 0 ) < 0.001);
   enforce(modDiff(to!double(indicator_snp[1]), 0 ) < 0.001);
   enforce(modDiff(to!double(indicator_snp[2]), 0 ) < 0.001);
@@ -695,4 +723,24 @@ void check_indicator_idv(int[] indicator_snp){
   enforce(modDiff(to!double(indicator_snp[$-3]), 0) < 0.001);
   enforce(modDiff(to!double(indicator_snp[$-2]), 0) < 0.001);
   enforce(modDiff(to!double(indicator_snp[$-1]), 0) < 0.001);
+}
+
+void check_pheno(double[] pheno){
+  enforce(modDiff(to!double(pheno[0]), 0 ) < 0.001);
+  enforce(modDiff(to!double(pheno[1]), 0 ) < 0.001);
+  enforce(modDiff(to!double(pheno[2]), 0 ) < 0.001);
+
+  enforce(modDiff(to!double(pheno[$-3]), 0) < 0.001);
+  enforce(modDiff(to!double(pheno[$-2]), 0) < 0.001);
+  enforce(modDiff(to!double(pheno[$-1]), 0) < 0.001);
+}
+
+void check_covariates_W(DMatrix covariate_matrix){
+  enforce(modDiff(to!double(covariate_matrix.elements[0]), 0 ) < 0.001);
+  enforce(modDiff(to!double(covariate_matrix.elements[1]), 0 ) < 0.001);
+  enforce(modDiff(to!double(covariate_matrix.elements[2]), 0 ) < 0.001);
+
+  enforce(modDiff(to!double(covariate_matrix.elements[$-3]), 0) < 0.001);
+  enforce(modDiff(to!double(covariate_matrix.elements[$-2]), 0) < 0.001);
+  enforce(modDiff(to!double(covariate_matrix.elements[$-1]), 0) < 0.001);
 }
