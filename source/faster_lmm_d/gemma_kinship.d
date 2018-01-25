@@ -8,6 +8,7 @@
 module faster_lmm_d.gemma_kinship;
 
 import core.stdc.stdlib : exit;
+import core.stdc.time;
 
 import std.conv;
 import std.exception;
@@ -30,6 +31,8 @@ import faster_lmm_d.helpers;
 import faster_lmm_d.optmatrix;
 
 import gsl.permutation;
+import gsl.rng;
+import gsl.randist;
 
 DMatrix kinship_from_gemma(string fn, string test_name = ""){
   DMatrix X = read_matrix_from_file2(fn);
@@ -63,8 +66,9 @@ void check_kinship_from_gemma(string test_name, double[] top, double[] bottom){
 void Read_files(string geno_fn, string pheno_fn, string co_variate_fn = ""){
   int[] indicator_pheno;
   size_t[] p_column;
+  // find p_column
   DMatrix pheno = ReadFile_pheno(pheno_fn, indicator_pheno, p_column);
-  //ReadFile_geno();
+  ReadFile_geno(geno_fn, 0);
   //ReadFile_covariates();
 }
 
@@ -80,8 +84,7 @@ DMatrix ReadFile_pheno(string file_pheno, int[] indicator_pheno, size_t[] p_colu
   double[] pheno_row;
   int[] ind_pheno_row;
 
-  size_t p_max = 0;
-  //= *max_element(p_column.begin(), p_column.end());
+  size_t p_max = p_column.reduce!(max);
 
   size_t[size_t] mapP2c;
 
@@ -95,8 +98,7 @@ DMatrix ReadFile_pheno(string file_pheno, int[] indicator_pheno, size_t[] p_colu
     auto ch_ptr = to!string(line).split(",");
     size_t i = 0;
     while (i < p_max) {
-      //if (mapP2c.count(i + 1) != 0) {
-      if(true){
+      if(!mapP2c.get(i+1, 0)){  // check
         if (ch_ptr[i] == "0") {
           ind_pheno_row[mapP2c[i + 1]] = 0;
           pheno_row[mapP2c[i + 1]] = -9;
@@ -287,10 +289,7 @@ int[] ReadFile_geno(string geno_fn, ulong ni_total){
 
   string[] setSnps;
 
-  //snpInfo.clear();
-
-
-  DMatrix W;
+  DMatrix W; // W must be provided
 
   size_t ns_test;
   SNPINFO[] snpInfo;
@@ -345,19 +344,18 @@ int[] ReadFile_geno(string geno_fn, ulong ni_total){
       file_pos++;
       continue;
     }
-    //auto a = countUntil(mapRS2bp, rs);
-    //if (a != -1) {
-    //  if (count_warnings++ < 10) {
-    //    writeln("Can't figure out position for ");
-    //  }
-    //  chr = "-9";
-    //  b_pos = -9;
-    //  cM = -9;
-    //} else {
-    //  b_pos = mapRS2bp[rs];
-    //  chr = mapRS2chr[rs];
-    //  cM = mapRS2cM[rs];
-    //}
+    if (mapRS2bp.get(rs, 0) != -1) { // check
+      if (count_warnings++ < 10) {
+        writeln("Can't figure out position for ");
+      }
+      chr = "-9";
+      b_pos = -9;
+      cM = -9;
+    } else {
+      b_pos = mapRS2bp[rs];
+      chr = mapRS2chr[rs];
+      cM = mapRS2cM[rs];
+    }
 
     maf = 0;
     n_miss = 0;
@@ -620,20 +618,19 @@ void process_cvt_phen(ref Kinship_param x) {
     } else {
 
       // Set up random environment.
-      //gsl_rng_env_setup();
-      //gsl_rng *gsl_r;
-      //const gsl_rng_type *gslType;
-      //gslType = gsl_rng_default;
-      //if (randseed < 0) {
-      //  time_t rawtime;
-      //  time(&rawtime);
-      //  tm *ptm = gmtime(&rawtime);
+      size_t randseed = -1;
+      gsl_rng_env_setup();
+      gsl_rng *gsl_r;
+      const gsl_rng_type *gslType = gsl_rng_default;
+      if (randseed < 0) {
+        time_t rawtime;
+        time(&rawtime);
+        tm *ptm = gmtime(&rawtime);
 
-      //  randseed = (unsigned)(ptm->tm_hour % 24 * 3600 + ptm->tm_min * 60 +
-      //                        ptm->tm_sec);
-      //}
-      //gsl_r = gsl_rng_alloc(gslType);
-      //gsl_rng_set(gsl_r, randseed);
+        randseed = (ptm.tm_hour % 24 * 3600 + ptm.tm_min * 60 + ptm.tm_sec);
+      }
+      gsl_r = gsl_rng_alloc(gslType);
+      gsl_rng_set(gsl_r, randseed);
 
       // From ni_test, sub-sample ni_subsample.
       size_t[] a, b;
@@ -644,8 +641,7 @@ void process_cvt_phen(ref Kinship_param x) {
         b ~= i;
       }
 
-      //gsl_ran_choose(gsl_r, static_cast<void *>(&a[0]), ni_subsample,
-      //               static_cast<void *>(&b[0]), ni_test, sizeof(size_t));
+      gsl_ran_choose(gsl_r, cast(void *)(&a[0]), ni_subsample, cast(void *)(&b[0]), ni_test, size_t.sizeof);
 
       // Re-set indicator_idv and ni_test.
       int j = 0;
