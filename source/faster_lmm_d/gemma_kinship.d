@@ -35,7 +35,7 @@ import gsl.rng;
 import gsl.randist;
 
 
-alias Tuple!(DMatrix, "cvt", int[], "indicator_idv", int[], "indicator_snp", int[], "indicator_weight") Kinship_param ;
+alias Tuple!(DMatrix, "cvt", int[], "indicator_cvt", int[], "indicator_idv", int, "n_cvt") Indicators_result ;
 alias Tuple!(DMatrix, "pheno", DMatrix, "indicator_pheno") Pheno_result;
 
 DMatrix kinship_from_gemma(string fn, string test_name = ""){
@@ -71,15 +71,10 @@ void Read_files(string geno_fn, string pheno_fn, string co_variate_fn = ""){
   double[] indicator_pheno;
   size_t[] p_column;
   // find p_column
-  //DMatrix cvt = cvt_pheno.cvt;
-  //size_t indicator_idv = cvt_pheno.indicator_idv;
-  //size_t n_cvt = cvt_pheno.n_cvt;
-  //int[] indicator_weight = cvt_pheno.indicator_weight;
-  //DMatrix W = CopyCvt(cvt, indicator_cvt, indicator_idv, n_cvt);
   auto pheno = ReadFile_pheno(pheno_fn, indicator_pheno, p_column);
-  process_cvt_phen(pheno.indicator_pheno);
-  ReadFile_geno(geno_fn, 0);
-  //ReadFile_covariates();
+  auto indicators = process_cvt_phen(pheno.indicator_pheno);
+  DMatrix W = CopyCvt(indicators.cvt, indicators.indicator_cvt, indicators.indicator_idv, indicators.n_cvt);
+  //ReadFile_geno(geno_fn, 0);
 }
 
 Pheno_result ReadFile_pheno(string file_pheno, double[] indicator_pheno, size_t[] p_column){
@@ -558,7 +553,7 @@ double CalcHWE(const int n_hom1, const int n_hom2, const int n_ab) {
 
 
 DMatrix CopyCvt(DMatrix cvt, int[] indicator_cvt, int[] indicator_idv, size_t n_cvt) {
-  DMatrix W;
+  DMatrix W = zeros_dmatrix(10768, n_cvt); // ni_test missing
   size_t ci_test = 0;
 
   foreach(i, idv; indicator_idv) {
@@ -576,7 +571,7 @@ DMatrix CopyCvt(DMatrix cvt, int[] indicator_cvt, int[] indicator_idv, size_t n_
 
 
 // Post-process phenotypes and covariates.
-int process_cvt_phen( DMatrix indicator_pheno){
+Indicators_result process_cvt_phen( DMatrix indicator_pheno){
 
   writeln(indicator_pheno.shape);
 
@@ -683,7 +678,7 @@ int process_cvt_phen( DMatrix indicator_pheno){
   if (ni_test == 0 && a_mode != 15) {
     error = true;
     writeln("error! number of analyzed individuals equals 0. ");
-    return 1;
+    exit(0);
   }
 
   // Check covariates to see if they are correlated with each
@@ -705,10 +700,11 @@ int process_cvt_phen( DMatrix indicator_pheno){
     }
   }
   DMatrix s_cvt = DMatrix([indicator_idv.length, cvt.length/indicator_idv.length] , cvt);
+
   writeln(indicator_idv);
   writeln(s_cvt);
   writeln("done process_cvt_phen");
-  return 1;
+  return Indicators_result(s_cvt, indicator_cvt, indicator_idv, 1940);
 }
 
 
