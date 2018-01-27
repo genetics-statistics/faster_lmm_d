@@ -15,7 +15,7 @@ import std.exception;
 import std.file;
 import std.math;
 import std.parallelism;
-import std.algorithm: min, max, reduce, countUntil;
+import std.algorithm: min, max, reduce, countUntil, canFind;
 alias mlog = std.math.log;
 import std.process;
 import std.range;
@@ -33,6 +33,10 @@ import faster_lmm_d.optmatrix;
 import gsl.permutation;
 import gsl.rng;
 import gsl.randist;
+
+
+alias Tuple!(DMatrix, "cvt", int[], "indicator_idv", int[], "indicator_snp", int[], "indicator_weight") Kinship_param ;
+alias Tuple!(DMatrix, "pheno", DMatrix, "indicator_pheno") Pheno_result;
 
 DMatrix kinship_from_gemma(string fn, string test_name = ""){
   DMatrix X = read_matrix_from_file2(fn);
@@ -67,12 +71,18 @@ void Read_files(string geno_fn, string pheno_fn, string co_variate_fn = ""){
   double[] indicator_pheno;
   size_t[] p_column;
   // find p_column
-  DMatrix pheno = ReadFile_pheno(pheno_fn, indicator_pheno, p_column);
+  //DMatrix cvt = cvt_pheno.cvt;
+  //size_t indicator_idv = cvt_pheno.indicator_idv;
+  //size_t n_cvt = cvt_pheno.n_cvt;
+  //int[] indicator_weight = cvt_pheno.indicator_weight;
+  //DMatrix W = CopyCvt(cvt, indicator_cvt, indicator_idv, n_cvt);
+  auto pheno = ReadFile_pheno(pheno_fn, indicator_pheno, p_column);
+  process_cvt_phen(pheno.indicator_pheno);
   ReadFile_geno(geno_fn, 0);
   //ReadFile_covariates();
 }
 
-DMatrix ReadFile_pheno(string file_pheno, double[] indicator_pheno, size_t[] p_column){
+Pheno_result ReadFile_pheno(string file_pheno, double[] indicator_pheno, size_t[] p_column){
 
   DMatrix pheno;
 
@@ -96,6 +106,8 @@ DMatrix ReadFile_pheno(string file_pheno, double[] indicator_pheno, size_t[] p_c
     ind_pheno_row ~= 0;
   }
 
+  int rows = 0;
+
   foreach (line ; input.byLine) {
     auto ch_ptr = to!string(line).split("\t");
     size_t i = 0;
@@ -114,10 +126,11 @@ DMatrix ReadFile_pheno(string file_pheno, double[] indicator_pheno, size_t[] p_c
     }
 
     indicator_pheno ~= ind_pheno_row;
+    rows++;
     pheno.elements ~= pheno_row;
   }
 
-  return pheno;
+  return Pheno_result(pheno, DMatrix([rows, indicator_pheno.length/rows ],indicator_pheno));
 }
 
 // similar to batch_run mode 21||22
@@ -544,7 +557,7 @@ double CalcHWE(const int n_hom1, const int n_hom2, const int n_ab) {
 }
 
 
-DMatrix CopyCvt(DMatrix cvt, int[] indicator_cvt, int[] indicator_idv, size_t n_cvt, ref Kinship_param x) {
+DMatrix CopyCvt(DMatrix cvt, int[] indicator_cvt, int[] indicator_idv, size_t n_cvt) {
   DMatrix W;
   size_t ci_test = 0;
 
@@ -563,21 +576,22 @@ DMatrix CopyCvt(DMatrix cvt, int[] indicator_cvt, int[] indicator_idv, size_t n_
 
 
 // Post-process phenotypes and covariates.
-void process_cvt_phen(ref Kinship_param x) {
+int process_cvt_phen( DMatrix indicator_pheno){
+
+  writeln(indicator_pheno.shape);
 
   // Convert indicator_pheno to indicator_idv.
   int k = 1;
   int[] indicator_idv, indicator_cvt, indicator_weight;
-  int[][] indicator_pheno;
   int[] indicator_gxe;
   size_t ni_test, ni_subsample;
   double[] cvt;
   int a_mode;
 
-  for (size_t i = 0; i < indicator_pheno.length; i++) {
+  for (size_t i = 0; i < indicator_pheno.elements.length; i++) {
     k = 1;
-    for (size_t j = 0; j < indicator_pheno[i].length; j++) {
-      if (indicator_pheno[i][j] == 0) {
+    for (size_t j = 0; j < indicator_pheno.cols; j++) {
+      if (indicator_pheno.accessor(i,j) == 0) {
         k = 0;
       }
     }
@@ -648,7 +662,7 @@ void process_cvt_phen(ref Kinship_param x) {
       gsl_ran_choose(gsl_r, cast(void *)(&a[0]), ni_subsample, cast(void *)(&b[0]), ni_test, size_t.sizeof);
 
       // Re-set indicator_idv and ni_test.
-      int j = 0;
+      size_t j = 0;
       for (size_t i = 0; i < (indicator_idv).length; ++i) {
         if (indicator_idv[i] == 0) {
           continue;
@@ -656,9 +670,9 @@ void process_cvt_phen(ref Kinship_param x) {
         //////////////////////////////////
         //             FIXME            //
         //////////////////////////////////
-        //if (find(a.begin(), a.end(), j) == a.end()) {
-        //  indicator_idv[i] = 0;
-        //}
+        if (a.canFind(j)){
+          indicator_idv[i] = 0;
+        }
         j++;
       }
       ni_test = ni_subsample;
@@ -669,7 +683,7 @@ void process_cvt_phen(ref Kinship_param x) {
   if (ni_test == 0 && a_mode != 15) {
     error = true;
     writeln("error! number of analyzed individuals equals 0. ");
-    return;
+    return 1;
   }
 
   // Check covariates to see if they are correlated with each
@@ -690,7 +704,11 @@ void process_cvt_phen(ref Kinship_param x) {
       cvt ~= cvt_row;
     }
   }
-  x.cvt = DMatrix([indicator_idv.length, cvt.length/indicator_idv.length] , cvt);
+  DMatrix s_cvt = DMatrix([indicator_idv.length, cvt.length/indicator_idv.length] , cvt);
+  writeln(indicator_idv);
+  writeln(s_cvt);
+  writeln("done process_cvt_phen");
+  return 1;
 }
 
 

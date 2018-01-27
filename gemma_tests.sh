@@ -3,7 +3,7 @@
 if [ $1 -eq 0 ];
 then
 echo "running kinship test"
-./build/faster_lmm_d --geno=./data/gemma/mouse_genotype.txt --kinship=output.txt  --cmd=gk
+./build/faster_lmm_d --pheno= --geno=./data/gemma/mouse_genotype.txt --kinship=output.txt --pheno=./data/gemma/mouse_hs1940.pheno.txt  --cmd=gk
 fi
 
 if [ $1 -eq 1 ];
