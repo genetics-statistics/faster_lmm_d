@@ -64,7 +64,7 @@ void check_kinship_from_gemma(string test_name, double[] top, double[] bottom){
 
 
 void Read_files(string geno_fn, string pheno_fn, string co_variate_fn = ""){
-  int[] indicator_pheno;
+  double[] indicator_pheno;
   size_t[] p_column;
   // find p_column
   DMatrix pheno = ReadFile_pheno(pheno_fn, indicator_pheno, p_column);
@@ -72,7 +72,7 @@ void Read_files(string geno_fn, string pheno_fn, string co_variate_fn = ""){
   //ReadFile_covariates();
 }
 
-DMatrix ReadFile_pheno(string file_pheno, int[] indicator_pheno, size_t[] p_column){
+DMatrix ReadFile_pheno(string file_pheno, double[] indicator_pheno, size_t[] p_column){
 
   DMatrix pheno;
 
@@ -82,7 +82,9 @@ DMatrix ReadFile_pheno(string file_pheno, int[] indicator_pheno, size_t[] p_colu
   double p;
 
   double[] pheno_row;
-  int[] ind_pheno_row;
+  double[] ind_pheno_row;
+
+  p_column = [1]; // modify it later for multiple elements in p_column
 
   size_t p_max = p_column.reduce!(max);
 
@@ -95,15 +97,15 @@ DMatrix ReadFile_pheno(string file_pheno, int[] indicator_pheno, size_t[] p_colu
   }
 
   foreach (line ; input.byLine) {
-    auto ch_ptr = to!string(line).split(",");
+    auto ch_ptr = to!string(line).split("\t");
     size_t i = 0;
     while (i < p_max) {
-      if(!mapP2c.get(i+1, 0)){  // check
-        if (ch_ptr[i] == "0") {
+      if((i+1) in mapP2c){
+        if (ch_ptr[i] == "NA") {
           ind_pheno_row[mapP2c[i + 1]] = 0;
           pheno_row[mapP2c[i + 1]] = -9;
         } else {
-          p = to!int(ch_ptr[i]);
+          p = to!double(ch_ptr[i]);
           ind_pheno_row[mapP2c[i + 1]] = 1;
           pheno_row[mapP2c[i + 1]] = p;
         }
@@ -119,7 +121,9 @@ DMatrix ReadFile_pheno(string file_pheno, int[] indicator_pheno, size_t[] p_colu
 }
 
 // similar to batch_run mode 21||22
-void generate_kinship(string geno_fn, string pheno_fn, size_t ni_total = 1940, bool test_nind= false){
+void generate_kinship(string geno_fn, string pheno_fn, bool test_nind= false){
+  writeln("in generate kinship");
+  Read_files(geno_fn, pheno_fn);
   bimbam_kin(geno_fn, geno_fn);
   validate_kinship();
 }
