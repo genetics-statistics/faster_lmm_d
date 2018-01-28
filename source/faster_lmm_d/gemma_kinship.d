@@ -66,15 +66,24 @@ void check_kinship_from_gemma(string test_name, double[] top, double[] bottom){
   writeln("kinship tests pass successfully");
 }
 
+// similar to batch_run mode 21||22
+void generate_kinship(string geno_fn, string pheno_fn, bool test_nind= false){
+  writeln("in generate kinship");
+  Read_files(geno_fn, pheno_fn);
+  bimbam_kin(geno_fn, geno_fn);
+  validate_kinship();
+}
 
 void Read_files(string geno_fn, string pheno_fn, string co_variate_fn = ""){
   double[] indicator_pheno;
   size_t[] p_column;
   // find p_column
   auto pheno = ReadFile_pheno(pheno_fn, indicator_pheno, p_column);
+  check_pheno(pheno.pheno);
+  check_indicator_pheno(pheno.indicator_pheno);
   auto indicators = process_cvt_phen(pheno.indicator_pheno);
   DMatrix W = CopyCvt(indicators.cvt, indicators.indicator_cvt, indicators.indicator_idv, indicators.n_cvt);
-  //ReadFile_geno(geno_fn, 0);
+  ReadFile_geno(geno_fn, 0);
 }
 
 Pheno_result ReadFile_pheno(string file_pheno, double[] indicator_pheno, size_t[] p_column){
@@ -124,16 +133,8 @@ Pheno_result ReadFile_pheno(string file_pheno, double[] indicator_pheno, size_t[
     rows++;
     pheno.elements ~= pheno_row;
   }
-
+  pheno.shape = [rows, pheno.elements.length/rows ];
   return Pheno_result(pheno, DMatrix([rows, indicator_pheno.length/rows ],indicator_pheno));
-}
-
-// similar to batch_run mode 21||22
-void generate_kinship(string geno_fn, string pheno_fn, bool test_nind= false){
-  writeln("in generate kinship");
-  Read_files(geno_fn, pheno_fn);
-  bimbam_kin(geno_fn, geno_fn);
-  validate_kinship();
 }
 
 bool validate_kinship(){
@@ -739,14 +740,34 @@ void check_indicator_cvt(int[] indicator_snp){
   enforce(modDiff(to!double(indicator_snp[$-1]), 0) < 0.001);
 }
 
-void check_pheno(double[] pheno){
-  enforce(modDiff(to!double(pheno[0]), 0 ) < 0.001);
-  enforce(modDiff(to!double(pheno[1]), 0 ) < 0.001);
-  enforce(modDiff(to!double(pheno[2]), 0 ) < 0.001);
+void check_pheno(DMatrix pheno){
+  enforce(pheno.rows == 1940);
+  enforce(pheno.cols ==    1);
 
-  enforce(modDiff(to!double(pheno[$-3]), 0) < 0.001);
-  enforce(modDiff(to!double(pheno[$-2]), 0) < 0.001);
-  enforce(modDiff(to!double(pheno[$-1]), 0) < 0.001);
+  enforce(modDiff(to!double(pheno.elements[0]),  0.224992 ) < 0.001);
+  enforce(modDiff(to!double(pheno.elements[1]), -0.974543 ) < 0.001);
+  enforce(modDiff(to!double(pheno.elements[2]),  0.19591 ) < 0.001);
+
+  enforce(modDiff(to!double(pheno.elements[$-3]),  0.69698) < 0.001);
+  enforce(modDiff(to!double(pheno.elements[$-2]), -9) < 0.001);
+  enforce(modDiff(to!double(pheno.elements[$-1]), -9) < 0.001);
+
+  writeln("pheno tests pass");
+}
+
+void check_indicator_pheno(DMatrix indicator_pheno){
+  enforce(indicator_pheno.rows == 1940);
+  enforce(indicator_pheno.cols ==    1);
+
+  enforce(indicator_pheno.elements[0] == 1);
+  enforce(indicator_pheno.elements[1] == 1);
+  enforce(indicator_pheno.elements[2] == 1);
+
+  enforce(indicator_pheno.elements[$-3] == 1);
+  enforce(indicator_pheno.elements[$-2] == 0);
+  enforce(indicator_pheno.elements[$-1] == 0);
+
+  writeln("indicator pheno pheno tests pass");
 }
 
 void check_covariates_W(DMatrix covariate_matrix){
