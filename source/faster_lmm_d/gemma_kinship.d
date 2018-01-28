@@ -35,7 +35,7 @@ import gsl.rng;
 import gsl.randist;
 
 
-alias Tuple!(DMatrix, "cvt", int[], "indicator_cvt", int[], "indicator_idv", int, "n_cvt") Indicators_result ;
+alias Tuple!(DMatrix, "cvt", int[], "indicator_cvt", int[], "indicator_idv", int, "n_cvt", size_t, "ni_test") Indicators_result ;
 alias Tuple!(DMatrix, "pheno", DMatrix, "indicator_pheno") Pheno_result;
 
 DMatrix kinship_from_gemma(string fn, string test_name = ""){
@@ -70,7 +70,7 @@ void check_kinship_from_gemma(string test_name, double[] top, double[] bottom){
 void generate_kinship(string geno_fn, string pheno_fn, bool test_nind= false){
   writeln("in generate kinship");
   Read_files(geno_fn, pheno_fn);
-  bimbam_kin(geno_fn, geno_fn);
+  //bimbam_kin(geno_fn, geno_fn);
   validate_kinship();
 }
 
@@ -83,7 +83,7 @@ void Read_files(string geno_fn, string pheno_fn, string co_variate_fn = ""){
   check_indicator_pheno(pheno.indicator_pheno);
   auto indicators = process_cvt_phen(pheno.indicator_pheno);
   DMatrix W = CopyCvt(indicators.cvt, indicators.indicator_cvt, indicators.indicator_idv, indicators.n_cvt);
-  ReadFile_geno(geno_fn, 0);
+  ReadFile_geno(geno_fn, 1940, W);
 }
 
 Pheno_result ReadFile_pheno(string file_pheno, double[] indicator_pheno, size_t[] p_column){
@@ -161,7 +161,8 @@ void bimbam_kin(string geno_fn, string pheno_fn, size_t ni_total = 1940, bool te
 
   DMatrix matrix_kin = zeros_dmatrix(ni_total, ni_total);
 
-  int[] indicator_snp = ReadFile_geno(geno_fn, ni_total);
+  DMatrix W;
+  int[] indicator_snp = ReadFile_geno(geno_fn, ni_total, W);
   foreach(ref ele; indicator_snp){ele = 1;}
 
 
@@ -284,7 +285,7 @@ struct SNPINFO{
 
 // Read bimbam mean genotype file, the first time, to obtain #SNPs for
 // analysis (ns_test) and total #SNP (ns_total).
-int[] ReadFile_geno(string geno_fn, ulong ni_total){
+int[] ReadFile_geno(string geno_fn, ulong ni_total, DMatrix W){
   //const string &file_geno, const set<string> &setSnps,
   //                 const gsl_matrix *W, vector<int> &indicator_idv,
   //                 vector<int> &indicator_snp, const double &maf_level,
@@ -293,7 +294,7 @@ int[] ReadFile_geno(string geno_fn, ulong ni_total){
   //                 map<string, long int> &mapRS2bp,
   //                 map<string, double> &mapRS2cM, vector<SNPINFO> &snpInfo,
   //                 size_t &ns_test) {
-  writeln("ReadFile_geno");
+  writeln("ReadFile_geno", geno_fn);
   int[] indicator_snp;
   int[] indicator_idv;
 
@@ -301,8 +302,6 @@ int[] ReadFile_geno(string geno_fn, ulong ni_total){
   long[string] mapRS2bp, mapRS2cM;
 
   string[] setSnps;
-
-  DMatrix W; // W must be provided
 
   size_t ns_test;
   SNPINFO[] snpInfo;
@@ -458,6 +457,8 @@ int[] ReadFile_geno(string geno_fn, ulong ni_total){
 
     DMatrix Wtx = matrix_mult(W, DMatrix([genotype.length, 1], genotype));
     DMatrix WtWiWtx = matrix_mult(WtWi, Wtx);
+    writeln(WtWiWtx.shape);
+
     v_x = vector_ddot(genotype, genotype);
     v_w = vector_ddot(Wtx, WtWiWtx);
 
@@ -555,14 +556,18 @@ double CalcHWE(const int n_hom1, const int n_hom2, const int n_ab) {
 
 DMatrix CopyCvt(DMatrix cvt, int[] indicator_cvt, int[] indicator_idv, size_t n_cvt) {
   DMatrix W = zeros_dmatrix(10768, n_cvt); // ni_test missing
+  //writeln("n_cvt => ", n_cvt);
+  //writeln("cvt => ", cvt);
+
   size_t ci_test = 0;
 
   foreach(i, idv; indicator_idv) {
+    //writeln(i);
     if (idv == 0 || indicator_cvt[i] == 0) {
       continue;
     }
     for (size_t j = 0; j < n_cvt; ++j) {
-      W.elements[ci_test * W.rows + j] = cvt.accessor(i, j);
+      W.elements[ci_test * W.cols + j] = cvt.accessor(i, j);
     }
     ci_test++;
   }
@@ -700,12 +705,19 @@ Indicators_result process_cvt_phen( DMatrix indicator_pheno){
       cvt ~= cvt_row;
     }
   }
+
+  //writeln(cvt);
   DMatrix s_cvt = DMatrix([indicator_idv.length, cvt.length/indicator_idv.length] , cvt);
 
-  writeln(indicator_idv);
-  writeln(s_cvt);
   writeln("done process_cvt_phen");
-  return Indicators_result(s_cvt, indicator_cvt, indicator_idv, 1940);
+  writeln(ni_test);
+  //check_indicator_cvt(cvt);
+  //check_cvt(cvt);
+
+  //check_indicator_idv(indicator_idv);
+
+  //exit(0);
+  return Indicators_result(s_cvt, indicator_cvt, indicator_idv, 1, ni_test);
 }
 
 
