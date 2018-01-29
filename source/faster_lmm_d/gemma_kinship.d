@@ -286,14 +286,7 @@ struct SNPINFO{
 // Read bimbam mean genotype file, the first time, to obtain #SNPs for
 // analysis (ns_test) and total #SNP (ns_total).
 int[] ReadFile_geno(string geno_fn, ulong ni_total, DMatrix W){
-  //const string &file_geno, const set<string> &setSnps,
-  //                 const gsl_matrix *W, vector<int> &indicator_idv,
-  //                 vector<int> &indicator_snp, const double &maf_level,
-  //                 const double &miss_level, const double &hwe_level,
-  //                 const double &r2_level, map<string, string> &mapRS2chr,
-  //                 map<string, long int> &mapRS2bp,
-  //                 map<string, double> &mapRS2cM, vector<SNPINFO> &snpInfo,
-  //                 size_t &ns_test) {
+
   writeln("ReadFile_geno", geno_fn);
   int[] indicator_snp;
   int[] indicator_idv;
@@ -668,9 +661,6 @@ Indicators_result process_cvt_phen( DMatrix indicator_pheno){
         if (indicator_idv[i] == 0) {
           continue;
         }
-        //////////////////////////////////
-        //             FIXME            //
-        //////////////////////////////////
         if (a.canFind(j)){
           indicator_idv[i] = 0;
         }
@@ -711,8 +701,8 @@ Indicators_result process_cvt_phen( DMatrix indicator_pheno){
 
   writeln("done process_cvt_phen");
   writeln(ni_test);
-  //check_indicator_cvt(cvt);
-  //check_cvt(cvt);
+  check_indicator_cvt(cvt);
+  check_cvt_matrix(s_cvt);
 
   //check_indicator_idv(indicator_idv);
 
@@ -742,14 +732,27 @@ void check_indicator_idv(int[] indicator_cvt){
   enforce(modDiff(to!double(indicator_cvt[$-1]), 0) < 0.001);
 }
 
-void check_indicator_cvt(int[] indicator_snp){
-  enforce(modDiff(to!double(indicator_snp[0]), 0 ) < 0.001);
-  enforce(modDiff(to!double(indicator_snp[1]), 0 ) < 0.001);
-  enforce(modDiff(to!double(indicator_snp[2]), 0 ) < 0.001);
+void check_indicator_cvt(double[] indicator_snp){
+  enforce(modDiff(to!double(indicator_snp[0]), 1 ) < 0.001);
+  enforce(modDiff(to!double(indicator_snp[1]), 1 ) < 0.001);
+  enforce(modDiff(to!double(indicator_snp[2]), 1 ) < 0.001);
 
-  enforce(modDiff(to!double(indicator_snp[$-3]), 0) < 0.001);
-  enforce(modDiff(to!double(indicator_snp[$-2]), 0) < 0.001);
-  enforce(modDiff(to!double(indicator_snp[$-1]), 0) < 0.001);
+  enforce(modDiff(to!double(indicator_snp[$-3]), 1) < 0.001);
+  enforce(modDiff(to!double(indicator_snp[$-2]), 1) < 0.001);
+  enforce(modDiff(to!double(indicator_snp[$-1]), 1) < 0.001);
+}
+
+void check_cvt_matrix(DMatrix cvt){
+  enforce(cvt.rows == 1940);
+  enforce(cvt.cols ==    1);
+
+  enforce(modDiff(to!double(cvt.elements[0]), 1 ) < 0.001);
+  enforce(modDiff(to!double(cvt.elements[1]), 1 ) < 0.001);
+  enforce(modDiff(to!double(cvt.elements[2]), 1 ) < 0.001);
+
+  enforce(modDiff(to!double(cvt.elements[$-3]), 1) < 0.001);
+  enforce(modDiff(to!double(cvt.elements[$-2]), 1) < 0.001);
+  enforce(modDiff(to!double(cvt.elements[$-1]), 1) < 0.001);
 }
 
 void check_pheno(DMatrix pheno){
