@@ -89,7 +89,9 @@ void Read_files(string geno_fn, string pheno_fn, string co_variate_fn = ""){
 
   check_covariates_W(W);
 
-  ReadFile_geno(geno_fn, 1940, W);
+  int[] indicator_snp = ReadFile_geno(geno_fn, 1940, W);
+
+  bimbam_kin(geno_fn, pheno_fn, W, indicator_snp);
 }
 
 Pheno_result ReadFile_pheno(string file_pheno, double[] indicator_pheno, size_t[] p_column){
@@ -147,7 +149,7 @@ bool validate_kinship(){
   return true;
 }
 
-void bimbam_kin(string geno_fn, string pheno_fn, size_t ni_total = 1940, bool test_nind= false){
+void bimbam_kin(string geno_fn, string pheno_fn, DMatrix W, int[] indicator_snp, size_t ni_total = 1940, bool test_nind= false){
   //(const string file_geno, const set<string> ksnps,
   //vector<int> &indicator_snp, const int k_mode,
   //const int display_pace, gsl_matrix *matrix_kin,
@@ -167,8 +169,6 @@ void bimbam_kin(string geno_fn, string pheno_fn, size_t ni_total = 1940, bool te
 
   DMatrix matrix_kin = zeros_dmatrix(ni_total, ni_total);
 
-  DMatrix W;
-  int[] indicator_snp = ReadFile_geno(geno_fn, ni_total, W);
   foreach(ref ele; indicator_snp){ele = 1;}
 
 
@@ -176,7 +176,7 @@ void bimbam_kin(string geno_fn, string pheno_fn, size_t ni_total = 1940, bool te
   double[] geno_miss = new double[ni_total];
 
   // Xlarge contains inds x markers
-  size_t K_BATCH_SIZE = 1940;
+  size_t K_BATCH_SIZE = 20000;
   const size_t msize = K_BATCH_SIZE;
   DMatrix Xlarge = zeros_dmatrix(ni_total, msize);
 
@@ -200,7 +200,9 @@ void bimbam_kin(string geno_fn, string pheno_fn, size_t ni_total = 1940, bool te
     geno_mean = 0.0;
     n_miss = 0;
     geno_var = 0.0;
-    //gsl_vector_set_all(geno_miss, 0);
+
+    foreach(ref ele; geno_miss){ele = 0;}
+
     for (size_t i = 0; i < ni_total; ++i) {
       auto digit = to!string(chr[i].strip());
       if (digit == "NA") {
@@ -237,7 +239,8 @@ void bimbam_kin(string geno_fn, string pheno_fn, size_t ni_total = 1940, bool te
     }
 
     // set the SNP column ns_test
-    DMatrix Xlarge_col = set_col(Xlarge, ns_test % msize, DMatrix([geno.length, 1], geno));
+    //writeln(geno);
+    set_col2(Xlarge, ns_test % msize, DMatrix([geno.length, 1], geno));
 
     ns_test++;
 
@@ -254,8 +257,11 @@ void bimbam_kin(string geno_fn, string pheno_fn, size_t ni_total = 1940, bool te
   }
 
   matrix_kin = divide_dmatrix_num(matrix_kin, ns_test);
-  matrix_kin = matrix_kin.T;
+  //matrix_kin = matrix_kin.T;
+
+  writeln(matrix_kin.shape);
 }
+
 
 struct SNPINFO{
   double cM;
@@ -797,9 +803,9 @@ void check_indicator_pheno(DMatrix indicator_pheno){
 }
 
 void check_covariates_W(DMatrix covariate_matrix){
-  writeln(covariate_matrix.shape);
-  writeln(covariate_matrix.elements[0..3]);
-  writeln(covariate_matrix.elements[$-3..$]);
+  enforce(covariate_matrix.rows == 1410);
+  enforce(covariate_matrix.cols ==    1);
+
   enforce(modDiff(to!double(covariate_matrix.elements[0]), 1 ) < 0.001);
   enforce(modDiff(to!double(covariate_matrix.elements[1]), 1 ) < 0.001);
   enforce(modDiff(to!double(covariate_matrix.elements[2]), 1 ) < 0.001);
