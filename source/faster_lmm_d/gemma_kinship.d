@@ -77,12 +77,18 @@ void generate_kinship(string geno_fn, string pheno_fn, bool test_nind= false){
 void Read_files(string geno_fn, string pheno_fn, string co_variate_fn = ""){
   double[] indicator_pheno;
   size_t[] p_column;
-  // find p_column
+
   auto pheno = ReadFile_pheno(pheno_fn, indicator_pheno, p_column);
   check_pheno(pheno.pheno);
   check_indicator_pheno(pheno.indicator_pheno);
   auto indicators = process_cvt_phen(pheno.indicator_pheno);
+
+  size_t ni_test = indicators.ni_test;
+
   DMatrix W = CopyCvt(indicators.cvt, indicators.indicator_cvt, indicators.indicator_idv, indicators.n_cvt);
+
+  check_covariates_W(W);
+
   ReadFile_geno(geno_fn, 1940, W);
 }
 
@@ -324,8 +330,8 @@ int[] ReadFile_geno(string geno_fn, ulong ni_total, DMatrix W){
   size_t file_pos, n_miss;
 
   int ni_test = 0;
-  for (int i = 0; i < ni_total; ++i) {
-    ni_test += indicator_idv[i];
+  foreach (element; indicator_idv) {
+    ni_test += element;
   }
   ns_test = 0;
 
@@ -371,8 +377,8 @@ int[] ReadFile_geno(string geno_fn, ulong ni_total, DMatrix W){
     n_2 = 0;
     c_idv = 0;
     foreach(ref ele; genotype_miss){ele = 0;}
-    for (int i = 0; i < ni_total; ++i) {
-      if (indicator_idv[i] == 0)
+    foreach (i, idv; indicator_idv) {
+      if (idv == 0)
         continue;
       auto digit = to!string(chr_val[i].strip());
       if (digit == "NA") {
@@ -548,10 +554,8 @@ double CalcHWE(const int n_hom1, const int n_hom2, const int n_ab) {
 
 
 DMatrix CopyCvt(DMatrix cvt, int[] indicator_cvt, int[] indicator_idv, size_t n_cvt) {
-  DMatrix W = zeros_dmatrix(10768, n_cvt); // ni_test missing
-  //writeln("n_cvt => ", n_cvt);
-  //writeln("cvt => ", cvt);
-
+  size_t ni_test = 1410;
+  DMatrix W = zeros_dmatrix(ni_test, n_cvt); // ni_test missing
   size_t ci_test = 0;
 
   foreach(i, idv; indicator_idv) {
@@ -701,12 +705,11 @@ Indicators_result process_cvt_phen( DMatrix indicator_pheno){
 
   writeln("done process_cvt_phen");
   writeln(ni_test);
+
   check_indicator_cvt(cvt);
   check_cvt_matrix(s_cvt);
+  check_indicator_idv(indicator_idv);
 
-  //check_indicator_idv(indicator_idv);
-
-  //exit(0);
   return Indicators_result(s_cvt, indicator_cvt, indicator_idv, 1, ni_test);
 }
 
@@ -720,16 +723,20 @@ void check_indicator_snp(int[] indicator_idv){
   enforce(modDiff(to!double(indicator_idv[$-3]), 0) < 0.001);
   enforce(modDiff(to!double(indicator_idv[$-2]), 0) < 0.001);
   enforce(modDiff(to!double(indicator_idv[$-1]), 0) < 0.001);
+
+  writeln("indicator snp tests pass");
 }
 
-void check_indicator_idv(int[] indicator_cvt){
-  enforce(modDiff(to!double(indicator_cvt[0]), 0 ) < 0.001);
-  enforce(modDiff(to!double(indicator_cvt[1]), 0 ) < 0.001);
-  enforce(modDiff(to!double(indicator_cvt[2]), 0 ) < 0.001);
+void check_indicator_idv(int[] indicator_idv){
+  enforce(modDiff(to!double(indicator_idv[0]), 1 ) < 0.001);
+  enforce(modDiff(to!double(indicator_idv[1]), 1 ) < 0.001);
+  enforce(modDiff(to!double(indicator_idv[2]), 1 ) < 0.001);
 
-  enforce(modDiff(to!double(indicator_cvt[$-3]), 0) < 0.001);
-  enforce(modDiff(to!double(indicator_cvt[$-2]), 0) < 0.001);
-  enforce(modDiff(to!double(indicator_cvt[$-1]), 0) < 0.001);
+  enforce(modDiff(to!double(indicator_idv[$-3]), 1) < 0.001);
+  enforce(modDiff(to!double(indicator_idv[$-2]), 0) < 0.001);
+  enforce(modDiff(to!double(indicator_idv[$-1]), 0) < 0.001);
+
+  writeln("indicator idv tests pass");
 }
 
 void check_indicator_cvt(double[] indicator_snp){
@@ -740,6 +747,8 @@ void check_indicator_cvt(double[] indicator_snp){
   enforce(modDiff(to!double(indicator_snp[$-3]), 1) < 0.001);
   enforce(modDiff(to!double(indicator_snp[$-2]), 1) < 0.001);
   enforce(modDiff(to!double(indicator_snp[$-1]), 1) < 0.001);
+
+  writeln("indicator cvt tests pass");
 }
 
 void check_cvt_matrix(DMatrix cvt){
@@ -753,6 +762,8 @@ void check_cvt_matrix(DMatrix cvt){
   enforce(modDiff(to!double(cvt.elements[$-3]), 1) < 0.001);
   enforce(modDiff(to!double(cvt.elements[$-2]), 1) < 0.001);
   enforce(modDiff(to!double(cvt.elements[$-1]), 1) < 0.001);
+
+  writeln("cvt_matrix tests pass");
 }
 
 void check_pheno(DMatrix pheno){
@@ -786,11 +797,16 @@ void check_indicator_pheno(DMatrix indicator_pheno){
 }
 
 void check_covariates_W(DMatrix covariate_matrix){
-  enforce(modDiff(to!double(covariate_matrix.elements[0]), 0 ) < 0.001);
-  enforce(modDiff(to!double(covariate_matrix.elements[1]), 0 ) < 0.001);
-  enforce(modDiff(to!double(covariate_matrix.elements[2]), 0 ) < 0.001);
+  writeln(covariate_matrix.shape);
+  writeln(covariate_matrix.elements[0..3]);
+  writeln(covariate_matrix.elements[$-3..$]);
+  enforce(modDiff(to!double(covariate_matrix.elements[0]), 1 ) < 0.001);
+  enforce(modDiff(to!double(covariate_matrix.elements[1]), 1 ) < 0.001);
+  enforce(modDiff(to!double(covariate_matrix.elements[2]), 1 ) < 0.001);
 
-  enforce(modDiff(to!double(covariate_matrix.elements[$-3]), 0) < 0.001);
-  enforce(modDiff(to!double(covariate_matrix.elements[$-2]), 0) < 0.001);
-  enforce(modDiff(to!double(covariate_matrix.elements[$-1]), 0) < 0.001);
+  enforce(modDiff(to!double(covariate_matrix.elements[$-3]), 1) < 0.001);
+  enforce(modDiff(to!double(covariate_matrix.elements[$-2]), 1) < 0.001);
+  enforce(modDiff(to!double(covariate_matrix.elements[$-1]), 1) < 0.001);
+
+  writeln("covariates tests pass");
 }
