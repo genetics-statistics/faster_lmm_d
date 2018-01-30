@@ -149,7 +149,7 @@ bool validate_kinship(){
   return true;
 }
 
-void bimbam_kin(string geno_fn, string pheno_fn, DMatrix W, int[] indicator_snp, size_t ni_total = 1940, bool test_nind= false){
+DMatrix bimbam_kin(string geno_fn, string pheno_fn, DMatrix W, int[] indicator_snp, size_t ni_total = 1940, bool test_nind= false){
   //(const string file_geno, const set<string> ksnps,
   //vector<int> &indicator_snp, const int k_mode,
   //const int display_pace, gsl_matrix *matrix_kin,
@@ -256,10 +256,18 @@ void bimbam_kin(string geno_fn, string pheno_fn, DMatrix W, int[] indicator_snp,
     matrix_kin = matrix_mult(Xlarge, Xlarge.T);
   }
 
+  writeln(ns_test);
+
   matrix_kin = divide_dmatrix_num(matrix_kin, ns_test);
-  //matrix_kin = matrix_kin.T;
+  matrix_kin = matrix_kin.T;
+
+
 
   writeln(matrix_kin.shape);
+  writeln(matrix_kin.elements[0..3]);
+  writeln(matrix_kin.elements[$-3..$]);
+
+  return matrix_kin;
 }
 
 
