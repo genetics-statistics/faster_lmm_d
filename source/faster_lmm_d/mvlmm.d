@@ -1778,3 +1778,75 @@ void CalcCRT(){
 
   return;
 }
+// Update Vg, Ve.
+void UpdateVgVe(){
+                //const gsl_matrix *Hessian_inv, const gsl_vector *gradient,
+                //const double step_scale, gsl_matrix *V_g, gsl_matrix *V_e) {
+  size_t v_size = gradient.size / 2, d_size = V_g.shape[0];
+  size_t v;
+
+  DMatrix vec_v; // = gsl_vector_alloc(v_size * 2);
+
+  double d;
+
+  // Vectorize Vg and Ve.
+  for (size_t i = 0; i < d_size; i++) {
+    for (size_t j = 0; j < d_size; j++) {
+      if (j < i) {
+        continue;
+      }
+      v = GetIndex(i, j, d_size);
+
+      d = V_g.accessor(i, j);
+      vec_v.elements[v] = d;
+
+      d = V_e.accessor(i, j);
+      vec_v.elements[v + v_size] = d;
+    }
+  }
+
+  //vec_v = matrix_mult(-1.0 * step_scale, Hessian_inv, gradient); // TODO
+
+  // Save Vg and Ve.
+  for (size_t i = 0; i < d_size; i++) {
+    for (size_t j = 0; j < d_size; j++) {
+      if (j < i) {
+        continue;
+      }
+      v = GetIndex(i, j, d_size);
+
+      d = vec_v.elements[v];
+      V_g.set(i, j) = d;
+      V_g.set(j, i) = d;
+
+      d = vec_v.elements[v + v_size];
+      V_e.set(i, j) = d;
+      V_e.set(j, i) = d;
+    }
+  }
+
+  return;
+}
+
+// p-value correction
+// mode=1 Wald; mode=2 LRT; mode=3 SCORE;
+double PCRT(){
+            //const size_t mode, const size_t d_size, const double p_value,
+            //const double crt_a, const double crt_b, const double crt_c) {
+  double p_crt = 0.0, chisq_crt = 0.0, q = to!double(d_size);
+  double chisq = gsl_cdf_chisq_Qinv(p_value, to!double(d_size));
+
+  if (mode == 1) {
+    double a = crt_c / (2.0 * q * (q + 2.0));
+    double b = 1.0 + (crt_a + crt_b) / (2.0 * q);
+    chisq_crt = (-1.0 * b + sqrt(b * b + 4.0 * a * chisq)) / (2.0 * a);
+  } else if (mode == 2) {
+    chisq_crt = chisq / (1.0 + crt_a / (2.0 * q));
+  } else {
+    chisq_crt = chisq;
+  }
+
+  p_crt = gsl_cdf_chisq_Q(chisq_crt, to!double(d_size));
+
+  return p_crt;
+}
