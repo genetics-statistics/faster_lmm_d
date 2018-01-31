@@ -814,9 +814,9 @@ double MphNR(){
 
         // Calculate QixHiy and yPy.
         Calc_xHiy(Y, xHi_all, xHiy);
-        gsl_blas_dgemv(CblasNoTrans, 1.0, Qi, xHiy, 0.0, QixHiy);
+        QixHiy = matrix_mult(Qi, xHiy);
 
-        gsl_blas_ddot(QixHiy, xHiy, &yPy);
+        yPy = vector_ddot(QixHiy, xHiy);
         yPy = Calc_yHiy(Y, Hiy_all) - yPy;
 
         // Calculate log likelihood/restricted likelihood value.
@@ -849,8 +849,7 @@ double MphNR(){
 
     logl_old = logl_new;
 
-    CalcDev(func_name, eval, Qi, Hi_all, xHi_all, Hiy_all, QixHiy, gradient,
-            Hessian_inv, crt_a, crt_b, crt_c);
+    CalcDev(func_name, eval, Qi, Hi_all, xHi_all, Hiy_all, QixHiy, gradient, Hessian_inv, crt_a, crt_b, crt_c);
   }
 
   // Mutiply Hessian_inv with -1.0.
@@ -945,6 +944,449 @@ void MphCalcBeta(){
       se_B.set(i, j) = sqrt(Vbeta.accessor(j * d_size + i, j * d_size + i));
     }
   }
+
+  return;
+}
+
+// Calculate first-order and second-order derivatives.
+void CalcDev(){
+             //const char func_name, const gsl_vector *eval, const gsl_matrix *Qi,
+             //const gsl_matrix *Hi, const gsl_matrix *xHi, const gsl_matrix *Hiy,
+             //const gsl_vector *QixHiy, gsl_vector *gradient,
+             //gsl_matrix *Hessian_inv, double &crt_a, double &crt_b,
+             //double &crt_c) {
+  if (func_name != 'R' && func_name != 'L' && func_name != 'r' && func_name != 'l') {
+    writeln("func_name only takes 'R' or 'L': 'R' for log-restricted likelihood, 'L' for log-likelihood.");
+    return;
+  }
+
+  size_t dc_size = Qi.shape[0], d_size = Hi.shape[0];
+  size_t c_size = dc_size / d_size;
+  size_t v_size = d_size * (d_size + 1) / 2;
+  size_t v1, v2;
+  double dev1_g, dev1_e, dev2_gg, dev2_ee, dev2_ge;
+
+  DMatrix Hessian; // = gsl_matrix_alloc(v_size * 2, v_size * 2);
+
+  DMatrix xHiDHiy_all_g; // = gsl_matrix_alloc(dc_size, v_size);
+  DMatrix xHiDHiy_all_e; // = gsl_matrix_alloc(dc_size, v_size);
+  DMatrix xHiDHix_all_g; // = gsl_matrix_alloc(dc_size, v_size * dc_size);
+  DMatrix xHiDHix_all_e; // = gsl_matrix_alloc(dc_size, v_size * dc_size);
+  DMatrix xHiDHixQixHiy_all_g; // = gsl_matrix_alloc(dc_size, v_size);
+  DMatrix xHiDHixQixHiy_all_e; // = gsl_matrix_alloc(dc_size, v_size);
+
+  DMatrix QixHiDHiy_all_g; // = gsl_matrix_alloc(dc_size, v_size);
+  DMatrix QixHiDHiy_all_e; // = gsl_matrix_alloc(dc_size, v_size);
+  DMatrix QixHiDHix_all_g; // = gsl_matrix_alloc(dc_size, v_size * dc_size);
+  DMatrix QixHiDHix_all_e; // = gsl_matrix_alloc(dc_size, v_size * dc_size);
+  DMatrix QixHiDHixQixHiy_all_g; // = gsl_matrix_alloc(dc_size, v_size);
+  DMatrix QixHiDHixQixHiy_all_e; // = gsl_matrix_alloc(dc_size, v_size);
+
+  DMatrix xHiDHiDHiy_all_gg; // = gsl_matrix_alloc(dc_size, v_size * v_size);
+  DMatrix xHiDHiDHiy_all_ee; // = gsl_matrix_alloc(dc_size, v_size * v_size);
+  DMatrix xHiDHiDHiy_all_ge; // = gsl_matrix_alloc(dc_size, v_size * v_size);
+  DMatrix xHiDHiDHix_all_gg; // = gsl_matrix_alloc(dc_size, v_size * v_size * dc_size);
+  DMatrix xHiDHiDHix_all_ee; // = gsl_matrix_alloc(dc_size, v_size * v_size * dc_size);
+  DMatrix xHiDHiDHix_all_ge; // = gsl_matrix_alloc(dc_size, v_size * v_size * dc_size);
+
+  // Calculate xHiDHiy_all, xHiDHix_all and xHiDHixQixHiy_all.
+  Calc_xHiDHiy_all(eval, xHi, Hiy, xHiDHiy_all_g, xHiDHiy_all_e);
+  Calc_xHiDHix_all(eval, xHi, xHiDHix_all_g, xHiDHix_all_e);
+  Calc_xHiDHixQixHiy_all(xHiDHix_all_g, xHiDHix_all_e, QixHiy,
+                         xHiDHixQixHiy_all_g, xHiDHixQixHiy_all_e);
+
+  Calc_xHiDHiDHiy_all(v_size, eval, Hi, xHi, Hiy, xHiDHiDHiy_all_gg, xHiDHiDHiy_all_ee, xHiDHiDHiy_all_ge);
+  Calc_xHiDHiDHix_all(v_size, eval, Hi, xHi, xHiDHiDHix_all_gg, xHiDHiDHix_all_ee, xHiDHiDHix_all_ge);
+
+  // Calculate QixHiDHiy_all, QixHiDHix_all and QixHiDHixQixHiy_all.
+  Calc_QiVec_all(Qi, xHiDHiy_all_g, xHiDHiy_all_e, QixHiDHiy_all_g, QixHiDHiy_all_e);
+  Calc_QiVec_all(Qi, xHiDHixQixHiy_all_g, xHiDHixQixHiy_all_e, QixHiDHixQixHiy_all_g, QixHiDHixQixHiy_all_e);
+  Calc_QiMat_all(Qi, xHiDHix_all_g, xHiDHix_all_e, QixHiDHix_all_g, QixHiDHix_all_e);
+
+  double tHiD_g, tHiD_e, tPD_g, tPD_e, tHiDHiD_gg, tHiDHiD_ee;
+  double tHiDHiD_ge, tPDPD_gg, tPDPD_ee, tPDPD_ge;
+  double yPDPy_g, yPDPy_e, yPDPDPy_gg, yPDPDPy_ee, yPDPDPy_ge;
+
+  // Calculate gradient and Hessian for Vg.
+  for (size_t i1 = 0; i1 < d_size; i1++) {
+    for (size_t j1 = 0; j1 < d_size; j1++) {
+      if (j1 < i1) {
+        continue;
+      }
+      v1 = GetIndex(i1, j1, d_size);
+
+      Calc_yPDPy(eval, Hiy, QixHiy, xHiDHiy_all_g, xHiDHiy_all_e, xHiDHixQixHiy_all_g, xHiDHixQixHiy_all_e, i1, j1, yPDPy_g, yPDPy_e);
+
+      if (func_name == 'R' || func_name == 'r') {
+        Calc_tracePD(eval, Qi, Hi, xHiDHix_all_g, xHiDHix_all_e, i1, j1, tPD_g, tPD_e);
+
+        dev1_g = -0.5 * tPD_g + 0.5 * yPDPy_g;
+        dev1_e = -0.5 * tPD_e + 0.5 * yPDPy_e;
+      } else {
+        Calc_traceHiD(eval, Hi, i1, j1, tHiD_g, tHiD_e);
+
+        dev1_g = -0.5 * tHiD_g + 0.5 * yPDPy_g;
+        dev1_e = -0.5 * tHiD_e + 0.5 * yPDPy_e;
+      }
+
+      gsl_vector_set(gradient, v1, dev1_g);
+      gsl_vector_set(gradient, v1 + v_size, dev1_e);
+
+      for (size_t i2 = 0; i2 < d_size; i2++) {
+        for (size_t j2 = 0; j2 < d_size; j2++) {
+          if (j2 < i2) {
+            continue;
+          }
+          v2 = GetIndex(i2, j2, d_size);
+
+          if (v2 < v1) {
+            continue;
+          }
+
+          Calc_yPDPDPy(eval, Hi, xHi, Hiy, QixHiy, xHiDHiy_all_g, xHiDHiy_all_e,
+                       QixHiDHiy_all_g, QixHiDHiy_all_e, xHiDHixQixHiy_all_g,
+                       xHiDHixQixHiy_all_e, QixHiDHixQixHiy_all_g,
+                       QixHiDHixQixHiy_all_e, xHiDHiDHiy_all_gg,
+                       xHiDHiDHiy_all_ee, xHiDHiDHiy_all_ge, xHiDHiDHix_all_gg,
+                       xHiDHiDHix_all_ee, xHiDHiDHix_all_ge, i1, j1, i2, j2,
+                       yPDPDPy_gg, yPDPDPy_ee, yPDPDPy_ge);
+
+          // AI for REML.
+          if (func_name == 'R' || func_name == 'r') {
+            Calc_tracePDPD(eval, Qi, Hi, xHi, QixHiDHix_all_g, QixHiDHix_all_e,
+                           xHiDHiDHix_all_gg, xHiDHiDHix_all_ee,
+                           xHiDHiDHix_all_ge, i1, j1, i2, j2, tPDPD_gg,
+                           tPDPD_ee, tPDPD_ge);
+
+            dev2_gg = 0.5 * tPDPD_gg - yPDPDPy_gg;
+            dev2_ee = 0.5 * tPDPD_ee - yPDPDPy_ee;
+            dev2_ge = 0.5 * tPDPD_ge - yPDPDPy_ge;
+          } else {
+            Calc_traceHiDHiD(eval, Hi, i1, j1, i2, j2, tHiDHiD_gg, tHiDHiD_ee,
+                             tHiDHiD_ge);
+
+            dev2_gg = 0.5 * tHiDHiD_gg - yPDPDPy_gg;
+            dev2_ee = 0.5 * tHiDHiD_ee - yPDPDPy_ee;
+            dev2_ge = 0.5 * tHiDHiD_ge - yPDPDPy_ge;
+          }
+
+          // Set up Hessian.
+          Hessian.set(v1, v2) = dev2_gg;
+          Hessian.set(v1 + v_size, v2 + v_size) = dev2_ee;
+          Hessian.set(v1, v2 + v_size) = dev2_ge;
+          Hessian.set(v2 + v_size, v1) = dev2_ge;
+
+          if (v1 != v2) {
+            Hessian.set(v2, v1) = dev2_gg;
+            Hessian.set(v2 + v_size, v1 + v_size) = dev2_ee;
+            Hessian.set(v2, v1 + v_size) = dev2_ge;
+            Hessian.set(v1 + v_size, v2) = dev2_ge;
+          }
+        }
+      }
+    }
+  }
+
+  // Invert Hessian.
+  int sig;
+  gsl_permutation *pmt = gsl_permutation_alloc(v_size * 2);
+
+  LUDecomp(Hessian, pmt, &sig);
+  LUInvert(Hessian, pmt, Hessian_inv);
+
+  gsl_permutation_free(pmt);
+
+  // Calculate Edgeworth correction factors after inverting
+  // Hessian.
+  if (c_size > 1) {
+    CalcCRT(Hessian_inv, Qi, QixHiDHix_all_g, QixHiDHix_all_e,
+            xHiDHiDHix_all_gg, xHiDHiDHix_all_ee, xHiDHiDHix_all_ge, d_size,
+            crt_a, crt_b, crt_c);
+  } else {
+    crt_a = 0.0;
+    crt_b = 0.0;
+    crt_c = 0.0;
+  }
+
+  return;
+}
+
+// Calculate (xHiDHiy) for every pair (i,j).
+void Calc_xHiDHiy_all(){
+                      //const gsl_vector *eval, const gsl_matrix *xHi,
+                      //const gsl_matrix *Hiy, gsl_matrix *xHiDHiy_all_g,
+                      //gsl_matrix *xHiDHiy_all_e) {
+  xHiDHiy_all_g = zeros_dmatrix(xHiDHiy_all_g.shape[0], xHiDHiy_all_g.shape[1]);
+  xHiDHiy_all_e = zeros_dmatrix(xHiDHiy_all_e.shape[0], xHiDHiy_all_e.shape[1]);
+
+  size_t d_size = Hiy.shape[0];
+  size_t v;
+
+  for (size_t i = 0; i < d_size; i++) {
+    for (size_t j = 0; j < d_size; j++) {
+      if (j < i) {
+        continue;
+      }
+      v = GetIndex(i, j, d_size);
+
+      //gsl_vector_view
+      DMatrix xHiDHiy_g = get_col(xHiDHiy_all_g, v);
+      //gsl_vector_view
+      DMatrix xHiDHiy_e = get_col(xHiDHiy_all_e, v);
+
+      Calc_xHiDHiy(eval, xHi, Hiy, i, j, &xHiDHiy_g.vector, &xHiDHiy_e.vector);
+    }
+  }
+  return;
+}
+
+// Calculate (xHiDHix) for every pair (i,j).
+void Calc_xHiDHix_all(){
+                      //const gsl_vector *eval, const gsl_matrix *xHi,
+                      //gsl_matrix *xHiDHix_all_g, gsl_matrix *xHiDHix_all_e) {
+  xHiDHix_all_g = zeros_dmatrix(xHiDHix_all_g.shape[0]. xHiDHix_all_g.shape[1]);
+  xHiDHix_all_e = zeros_dmatrix(xHiDHix_all_e.shape[0]. xHiDHix_all_e.shape[1]);
+
+  size_t d_size = xHi.shape[1] / eval.size, dc_size = xHi.shape[0];
+  size_t v;
+
+  for (size_t i = 0; i < d_size; i++) {
+    for (size_t j = 0; j < d_size; j++) {
+      if (j < i) {
+        continue;
+      }
+      v = GetIndex(i, j, d_size);
+
+      //gsl_matrix_view
+      DMatrix xHiDHix_g = get_sub_dmatrix(xHiDHix_all_g, 0, v * dc_size, dc_size, dc_size);
+      //gsl_matrix_view
+      DMatrix xHiDHix_e = get_sub_dmatrix(xHiDHix_all_e, 0, v * dc_size, dc_size, dc_size);
+
+      Calc_xHiDHix(eval, xHi, i, j, &xHiDHix_g.matrix, &xHiDHix_e.matrix);
+    }
+  }
+  return;
+}
+
+// Calculate (xHiDHiy) for every pair (i,j).
+void Calc_xHiDHiDHiy_all(){
+                         //const size_t v_size, const gsl_vector *eval,
+                         //const gsl_matrix *Hi, const gsl_matrix *xHi,
+                         //const gsl_matrix *Hiy, gsl_matrix *xHiDHiDHiy_all_gg,
+                         //gsl_matrix *xHiDHiDHiy_all_ee,
+                         //gsl_matrix *xHiDHiDHiy_all_ge) {
+  xHiDHiDHiy_all_gg = zeros_dmatrix(xHiDHiDHiy_all_gg.shape[0], xHiDHiDHiy_all_gg.shape[1]);
+  xHiDHiDHiy_all_ee = zeros_dmatrix(xHiDHiDHiy_all_ee.shape[0], xHiDHiDHiy_all_ee.shape[1]);
+  xHiDHiDHiy_all_ge = zeros_dmatrix(xHiDHiDHiy_all_ge.shape[0], xHiDHiDHiy_all_ge.shape[1]);
+
+  size_t d_size = Hiy.shape[0];
+  size_t v1, v2;
+
+  for (size_t i1 = 0; i1 < d_size; i1++) {
+    for (size_t j1 = 0; j1 < d_size; j1++) {
+      if (j1 < i1) {
+        continue;
+      }
+      v1 = GetIndex(i1, j1, d_size);
+
+      for (size_t i2 = 0; i2 < d_size; i2++) {
+        for (size_t j2 = 0; j2 < d_size; j2++) {
+          if (j2 < i2) {
+            continue;
+          }
+          v2 = GetIndex(i2, j2, d_size);
+
+          //gsl_vector_view
+          DMatrix xHiDHiDHiy_gg = get_col(xHiDHiDHiy_all_gg, v1 * v_size + v2);
+          //gsl_vector_view
+          DMatrix xHiDHiDHiy_ee = get_col(xHiDHiDHiy_all_ee, v1 * v_size + v2);
+          //gsl_vector_view
+          DMatrix xHiDHiDHiy_ge = get_col(xHiDHiDHiy_all_ge, v1 * v_size + v2);
+
+          Calc_xHiDHiDHiy(eval, Hi, xHi, Hiy, i1, j1, i2, j2, &xHiDHiDHiy_gg.vector, &xHiDHiDHiy_ee.vector, &xHiDHiDHiy_ge.vector);
+        }
+      }
+    }
+  }
+  return;
+}
+
+// Calculate (xHiDHix) for every pair (i,j).
+void Calc_xHiDHiDHix_all(){
+                         //(const size_t v_size, const gsl_vector *eval,
+                         //const gsl_matrix *Hi, const gsl_matrix *xHi,
+                         //gsl_matrix *xHiDHiDHix_all_gg,
+                         //gsl_matrix *xHiDHiDHix_all_ee,
+                         //gsl_matrix *xHiDHiDHix_all_ge) {
+  xHiDHiDHix_all_gg = zeros_dmatrix(xHiDHiDHix_all_gg.shape[0], xHiDHiDHix_all_gg.shape[1]);
+  xHiDHiDHix_all_ee = zeros_dmatrix(xHiDHiDHix_all_ee.shape[0], xHiDHiDHix_all_ee.shape[1]);
+  xHiDHiDHix_all_ge = zeros_dmatrix(xHiDHiDHix_all_ge.shape[0], xHiDHiDHix_all_ge.shape[1]);
+
+  size_t d_size = xHi.shape[1] / eval.size, dc_size = xHi.shape[0];
+  size_t v1, v2;
+
+  for (size_t i1 = 0; i1 < d_size; i1++) {
+    for (size_t j1 = 0; j1 < d_size; j1++) {
+      if (j1 < i1) {
+        continue;
+      }
+      v1 = GetIndex(i1, j1, d_size);
+
+      for (size_t i2 = 0; i2 < d_size; i2++) {
+        for (size_t j2 = 0; j2 < d_size; j2++) {
+          if (j2 < i2) {
+            continue;
+          }
+          v2 = GetIndex(i2, j2, d_size);
+
+          if (v2 < v1) {
+            continue;
+          }
+
+          //gsl_matrix_view
+          DMatrix xHiDHiDHix_gg1 = get_sub_dmatrix( xHiDHiDHix_all_gg, 0, (v1 * v_size + v2) * dc_size, dc_size, dc_size);
+          //gsl_matrix_view
+          DMatrix xHiDHiDHix_ee1 = get_sub_dmatrix( xHiDHiDHix_all_ee, 0, (v1 * v_size + v2) * dc_size, dc_size, dc_size);
+          //gsl_matrix_view
+          DMatrix xHiDHiDHix_ge1 = get_sub_dmatrix( xHiDHiDHix_all_ge, 0, (v1 * v_size + v2) * dc_size, dc_size, dc_size);
+
+          Calc_xHiDHiDHix(eval, Hi, xHi, i1, j1, i2, j2, &xHiDHiDHix_gg1.matrix, &xHiDHiDHix_ee1.matrix, &xHiDHiDHix_ge1.matrix);
+
+          if (v2 != v1) {
+            //gsl_matrix_view
+            DMatrix xHiDHiDHix_gg2 = get_sub_dmatrix( xHiDHiDHix_all_gg, 0, (v2 * v_size + v1) * dc_size, dc_size, dc_size);
+            //gsl_matrix_view
+            DMatrix xHiDHiDHix_ee2 = get_sub_dmatrix( xHiDHiDHix_all_ee, 0, (v2 * v_size + v1) * dc_size, dc_size, dc_size);
+            //gsl_matrix_view
+            DMatrix xHiDHiDHix_ge2 = get_sub_dmatrix( xHiDHiDHix_all_ge, 0, (v2 * v_size + v1) * dc_size, dc_size, dc_size);
+
+            //gsl_matrix_memcpy(&xHiDHiDHix_gg2.matrix, &xHiDHiDHix_gg1.matrix);
+            //gsl_matrix_memcpy(&xHiDHiDHix_ee2.matrix, &xHiDHiDHix_ee1.matrix);
+            //gsl_matrix_memcpy(&xHiDHiDHix_ge2.matrix, &xHiDHiDHix_ge1.matrix);
+          }
+        }
+      }
+    }
+  }
+
+  return;
+}
+
+// Calculate (xHiDHix)Qi(xHiy) for every pair (i,j).
+void Calc_xHiDHixQixHiy_all(){
+                            //const gsl_matrix *xHiDHix_all_g,
+                            //const gsl_matrix *xHiDHix_all_e,
+                            //const gsl_vector *QixHiy,
+                            //gsl_matrix *xHiDHixQixHiy_all_g,
+                            //gsl_matrix *xHiDHixQixHiy_all_e) {
+  size_t dc_size = xHiDHix_all_g.shape[0];
+  size_t v_size = xHiDHix_all_g.shape[1] / dc_size;
+
+  for (size_t i = 0; i < v_size; i++) {
+    //gsl_matrix_const_view
+    DMatrix xHiDHix_g = get_sub_dmatrix( xHiDHix_all_g, 0, i * dc_size, dc_size, dc_size);
+    //gsl_matrix_const_view
+    DMatrix xHiDHix_e = get_sub_dmatrix( xHiDHix_all_e, 0, i * dc_size, dc_size, dc_size);
+
+    DMatrix xHiDHixQixHiy_g = get_col(xHiDHixQixHiy_all_g, i);
+    DMatrix xHiDHixQixHiy_e = get_col(xHiDHixQixHiy_all_e, i);
+
+    xHiDHixQixHiy_g = matrix_mult(xHiDHix_g, QixHiy);
+    xHiDHixQixHiy_e = matrix_mult(xHiDHix_e, QixHiy);
+  }
+
+  return;
+}
+
+// Calculate Qi(xHiDHiy) and Qi(xHiDHix)Qi(xHiy) for each pair of i,j (i<=j).
+void Calc_QiVec_all(){
+                    //const gsl_matrix *Qi, const gsl_matrix *vec_all_g,
+                    //const gsl_matrix *vec_all_e, gsl_matrix *Qivec_all_g,
+                    //gsl_matrix *Qivec_all_e) {
+  for (size_t i = 0; i < vec_all_g.shape[1]; i++) {
+    //gsl_vector_const_view
+    DMatrix vec_g = get_col(vec_all_g, i);
+    //gsl_vector_const_view
+    DMatrix vec_e = get_col(vec_all_e, i);
+
+    //gsl_vector_view
+    DMatrix Qivec_g = get_col(Qivec_all_g, i);
+    //gsl_vector_view
+    DMatrix Qivec_e = get_col(Qivec_all_e, i);
+
+    Qivec_g = matrix_mult(Qi, vec_g);
+    Qivec_e = matrix_mult(Qi, vec_e);
+  }
+
+  return;
+}
+
+// Calculate Qi(xHiDHix) for each pair of i,j (i<=j).
+void Calc_QiMat_all(){
+                    //const gsl_matrix *Qi, const gsl_matrix *mat_all_g,
+                    //const gsl_matrix *mat_all_e, gsl_matrix *Qimat_all_g,
+                    //gsl_matrix *Qimat_all_e) {
+  size_t dc_size = Qi.shape[0];
+  size_t v_size = mat_all_g.shape[1] / mat_all_g.shape[0];
+
+  for (size_t i = 0; i < v_size; i++) {
+    //gsl_matrix_const_view
+    DMatrix mat_g = get_sub_dmatrix(mat_all_g, 0, i * dc_size, dc_size, dc_size);
+    //gsl_matrix_const_view
+    DMatrix mat_e = get_sub_dmatrix(mat_all_e, 0, i * dc_size, dc_size, dc_size);
+
+    //gsl_matrix_view
+    DMatrix Qimat_g = get_sub_dmatrix(Qimat_all_g, 0, i * dc_size, dc_size, dc_size);
+    //gsl_matrix_view
+    DMatrix Qimat_e = get_sub_dmatrix(Qimat_all_e, 0, i * dc_size, dc_size, dc_size);
+
+    Qimat_g = matrix_mult(Qi, mat_g);
+    Qimat_e = matrix_mult(Qi, mat_e);
+  }
+
+  return;
+}
+
+// Calculate yPDPy
+// yPDPy = y(Hi-HixQixHi)D(Hi-HixQixHi)y
+//       = ytHiDHiy - (yHix)Qi(xHiDHiy) - (yHiDHix)Qi(xHiy)
+//         + (yHix)Qi(xHiDHix)Qi(xtHiy)
+void Calc_yPDPy(){
+                //const gsl_vector *eval, const gsl_matrix *Hiy,
+                //const gsl_vector *QixHiy, const gsl_matrix *xHiDHiy_all_g,
+                //const gsl_matrix *xHiDHiy_all_e,
+                //const gsl_matrix *xHiDHixQixHiy_all_g,
+                //const gsl_matrix *xHiDHixQixHiy_all_e, const size_t i,
+                //const size_t j, double &yPDPy_g, double &yPDPy_e) {
+  size_t d_size = Hiy.shape[0];
+  size_t v = GetIndex(i, j, d_size);
+
+  double d;
+
+  // First part: ytHiDHiy.
+  Calc_yHiDHiy(eval, Hiy, i, j, yPDPy_g, yPDPy_e);
+
+  // Second and third parts: -(yHix)Qi(xHiDHiy)-(yHiDHix)Qi(xHiy)
+  //gsl_vector_const_view
+  DMatrix xHiDHiy_g = get_col(xHiDHiy_all_g, v);
+  //gsl_vector_const_view
+  DMatrix xHiDHiy_e = get_col(xHiDHiy_all_e, v);
+
+  d = vector_ddot(QixHiy, xHiDHiy_g);
+  yPDPy_g -= d * 2.0;
+  gsl_blas_ddot(QixHiy, &xHiDHiy_e.vector, &d);
+  yPDPy_e -= d * 2.0;
+
+  // Fourth part: +(yHix)Qi(xHiDHix)Qi(xHiy).
+  //gsl_vector_const_view
+  DMatrix xHiDHixQixHiy_g = get_col(xHiDHixQixHiy_all_g, v);
+  //gsl_vector_const_view
+  DMatrix xHiDHixQixHiy_e = get_col(xHiDHixQixHiy_all_e, v);
+
+  d = vector_ddot(QixHiy, xHiDHixQixHiy_g);
+  yPDPy_g += d;
+  d = vector_ddot(QixHiy, xHiDHixQixHiy_e);
+  yPDPy_e += d;
 
   return;
 }
