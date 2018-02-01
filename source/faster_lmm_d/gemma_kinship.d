@@ -89,7 +89,7 @@ void Read_files(string geno_fn, string pheno_fn, string co_variate_fn = ""){
 
   check_covariates_W(W);
 
-  int[] indicator_snp = ReadFile_geno(geno_fn, 1940, W);
+  int[] indicator_snp = ReadFile_geno(geno_fn, 1940, W, indicators.indicator_idv);
 
   bimbam_kin(geno_fn, pheno_fn, W, indicator_snp);
 }
@@ -183,10 +183,14 @@ DMatrix bimbam_kin(string geno_fn, string pheno_fn, DMatrix W, int[] indicator_s
   // For every SNP read the genotype per individual
   size_t ns_test = 0;
   size_t t = 0;
-  foreach (line ; input.byLine) {
 
-    if (indicator_snp[t] == 0)
+  size_t lines_processed;
+  foreach (line ; input.byLine) {
+    lines_processed++;
+    if (indicator_snp[t] == 0){
+      writeln("dropped at ",t);
       continue;
+    }
 
     auto chr = to!string(line).split(",")[3..$];
 
@@ -257,15 +261,18 @@ DMatrix bimbam_kin(string geno_fn, string pheno_fn, DMatrix W, int[] indicator_s
   }
 
   writeln(ns_test);
+  writeln("lines_processed  => ", lines_processed);
+
+  exit(0);
 
   matrix_kin = divide_dmatrix_num(matrix_kin, ns_test);
   matrix_kin = matrix_kin.T;
 
 
 
-  writeln(matrix_kin.shape);
-  writeln(matrix_kin.elements[0..3]);
-  writeln(matrix_kin.elements[$-3..$]);
+  //writeln(matrix_kin.shape);
+  //writeln(matrix_kin.elements[0..3]);
+  //writeln(matrix_kin.elements[$-3..$]);
 
   return matrix_kin;
 }
@@ -305,11 +312,10 @@ struct SNPINFO{
 
 // Read bimbam mean genotype file, the first time, to obtain #SNPs for
 // analysis (ns_test) and total #SNP (ns_total).
-int[] ReadFile_geno(string geno_fn, ulong ni_total, DMatrix W){
+int[] ReadFile_geno(string geno_fn, ulong ni_total, DMatrix W, int[] indicator_idv){
 
   writeln("ReadFile_geno", geno_fn);
   int[] indicator_snp;
-  int[] indicator_idv;
 
   string[string] mapRS2chr;
   long[string] mapRS2bp, mapRS2cM;
@@ -318,18 +324,22 @@ int[] ReadFile_geno(string geno_fn, ulong ni_total, DMatrix W){
 
   size_t ns_test;
   SNPINFO[] snpInfo;
-  const double maf_level;
-  const double miss_level;
-  const double hwe_level;
-  const double r2_level;
+  const double maf_level = 0.01;
+  const double miss_level = 0.05;
+  const double hwe_level = 0;
+  const double r2_level = 0.9999;
+
 
   string filename = geno_fn;
   auto pipe = pipeShell("gunzip -c " ~ filename);
   File input = pipe.stdout;
 
-  double[] genotype = new double[ni_total];
-  double[] genotype_miss = new double[ni_total];
+  double[] genotype = new double[W.shape[0]];
+  double[] genotype_miss = new double[W.shape[0]];
 
+  //writeln(indicator_idv);
+  //writeln(indicator_idv.length);
+  //exit(0);
 
   // W refers to covariates
   DMatrix WtW = matrix_mult(W.T, W);
@@ -352,6 +362,7 @@ int[] ReadFile_geno(string geno_fn, ulong ni_total, DMatrix W){
   file_pos = 0;
   auto count_warnings = 0;
   foreach (line ; input.byLine) {
+    writeln("read line");
     auto ch_ptr = to!string(line).split(",");
     rs = ch_ptr[0];
     minor = ch_ptr[1];
@@ -367,6 +378,7 @@ int[] ReadFile_geno(string geno_fn, ulong ni_total, DMatrix W){
       indicator_snp ~= 0;
 
       file_pos++;
+
       continue;
     }
     if (mapRS2bp.get(rs, 0) != -1) { // check
@@ -395,6 +407,7 @@ int[] ReadFile_geno(string geno_fn, ulong ni_total, DMatrix W){
       if (idv == 0)
         continue;
       auto digit = to!string(chr_val[i].strip());
+      //writeln(digit);
       if (digit == "NA") {
         genotype_miss[c_idv] = 1;
         n_miss++;
@@ -414,7 +427,6 @@ int[] ReadFile_geno(string geno_fn, ulong ni_total, DMatrix W){
       }
 
       genotype[c_idv] = geno;
-
       if (flag_poly == 0) {
         geno_old = geno;
         flag_poly = 2;
@@ -427,6 +439,7 @@ int[] ReadFile_geno(string geno_fn, ulong ni_total, DMatrix W){
 
       c_idv++;
     }
+
     maf /= 2.0 * to!double(ni_test - n_miss);
 
     snpInfo ~= SNPINFO(chr,    rs,
@@ -464,13 +477,15 @@ int[] ReadFile_geno(string geno_fn, ulong ni_total, DMatrix W){
     for (size_t i = 0; i < genotype.length; ++i) {
       if (genotype_miss[i] == 1) {
         geno = maf * 2.0;
+        writeln(geno);
         genotype[i] = geno;
       }
     }
 
-    DMatrix Wtx = matrix_mult(W, DMatrix([genotype.length, 1], genotype));
+    DMatrix Wtx = matrix_mult(W.T, DMatrix([genotype.length, 1], genotype));
+    writeln(genotype);
     DMatrix WtWiWtx = matrix_mult(WtWi, Wtx);
-    writeln(WtWiWtx.shape);
+    //writeln(WtWiWtx);
 
     v_x = vector_ddot(genotype, genotype);
     v_w = vector_ddot(Wtx, WtWiWtx);
@@ -482,6 +497,7 @@ int[] ReadFile_geno(string geno_fn, ulong ni_total, DMatrix W){
 
     indicator_snp ~= 1;
     ns_test++;
+    exit(0);
   }
 
   return indicator_snp;
