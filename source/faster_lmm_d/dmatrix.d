@@ -83,6 +83,10 @@ DMatrix dup_dmatrix(const DMatrix input){
   return DMatrix(input.shape.dup, input.elements.dup_fast);
 }
 
+void set(ref DMatrix mat, size_t row, size_t col, double value){
+  mat.elements[row* mat.cols + col] = value;
+}
+
 double accessor(const DMatrix input, const ulong row, const ulong col) {
   return input.elements[row*input.cols()+col];
 }

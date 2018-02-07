@@ -30,12 +30,10 @@ import faster_lmm_d.optmatrix;
 
 import gsl.permutation;
 
-void analyze_bimbam_mvlmm(Param cPar){
-  //const gsl_matrix *U, const gsl_vector *eval,
-                          //const gsl_matrix *UtW, const gsl_matrix *UtY) {
+void analyze_bimbam_mvlmm(const DMatrix U, const DMatrix eval,
+                          const DMatrix UtW, const DMatrix UtY, string file_geno) {
 
-  DMatrix U, eval, UtW, UtY;
-  string filename = cPar.file_geno;
+  string filename = file_geno;
   auto pipe = pipeShell("gunzip -c " ~ filename);
   File input = pipe.stdout;
 
@@ -123,7 +121,27 @@ void analyze_bimbam_mvlmm(Param cPar){
   double em_prec = 0;
   size_t nr_iter = 0;
   double nr_prec = 0;
+  double l_min = 0;
+  double l_max = 0;
+  size_t n_region;
+  double[] Vg_remle_null;
+  double[] Ve_remle_null;
+  double[] VVg_remle_null;
+  double[] VVe_remle_null;
+  double[] beta_remle_null;
+  double[] se_beta_remle_null;
+  double logl_remle_H0;
 
+  double[] Vg_mle_null;
+  double[] Ve_mle_null;
+  double[] VVg_mle_null;
+  double[] VVe_mle_null;
+  double[] beta_mle_null;
+  double[] se_beta_mle_null;
+  double logl_mle_H0;
+  int[] indicator_snp;
+  int a_mode;
+  size_t ni_test, ni_total;
 
 
   MphInitial(em_iter, em_prec, nr_iter, nr_prec, eval, X_sub, Y, l_min, l_max, n_region, V_g, V_e, B_sub);
@@ -140,8 +158,8 @@ void analyze_bimbam_mvlmm(Param cPar){
       Vg_remle_null ~= V_g.accessor(i, j);
       Ve_remle_null ~= V_e.accessor(i, j);
       //cpar params
-      //VVg_remle_null ~= Hessian.accessor(c, c);
-      //VVe_remle_null ~= Hessian.accessor(c + v_size, c + v_size);
+      VVg_remle_null ~= Hessian.accessor(c, c);
+      VVe_remle_null ~= Hessian.accessor(c + v_size, c + v_size);
       c++;
     }
   }
@@ -267,17 +285,15 @@ void analyze_bimbam_mvlmm(Param cPar){
 
   // Start reading genotypes and analyze.
   size_t csnp = 0, t_last = 0;
-  for (size_t t = 0; t < indicator_snp.size(); ++t) {
+  for (size_t t = 0; t < indicator_snp.length; ++t) {
     if (indicator_snp[t] == 0) {
       continue;
     }
     t_last++;
   }
-  for (size_t t = 0; t < indicator_snp.size(); ++t) {
-    safeGetline(infile, line).eof();
-    if (t % d_pace == 0 || t == (ns_total - 1)) {
-      ProgressBar("Reading SNPs", t, ns_total - 1);
-    }
+  for (size_t t = 0; t < indicator_snp.length; ++t) {
+    //safeGetline(infile, line).eof();
+
     if (indicator_snp[t] == 0) {
       continue;
     }
@@ -289,20 +305,20 @@ void analyze_bimbam_mvlmm(Param cPar){
     x_mean = 0.0;
     c_phen = 0;
     n_miss = 0;
-    gsl_vector_set_zero(x_miss);
+    //gsl_vector_set_zero(x_miss);
     for (size_t i = 0; i < ni_total; ++i) {
       ch_ptr = strtok_safe(NULL, " , \t");
       if (indicator_idv[i] == 0) {
         continue;
       }
 
-      if (strcmp(ch_ptr, "NA") == 0) {
-        gsl_vector_set(x_miss, c_phen, 0.0);
+      if (ch_ptr == "NA") {
+        x_miss.elements[c_phen] = 0.0;
         n_miss++;
       } else {
         geno = atof(ch_ptr);
 
-        x[c_phen] = geno;
+        x.elements[c_phen] = geno;
         x_miss[c_phen] = 1.0;
         x_mean += geno;
       }
@@ -312,10 +328,10 @@ void analyze_bimbam_mvlmm(Param cPar){
     x_mean /= to!double(ni_test - n_miss);
 
     for (size_t i = 0; i < ni_test; ++i) {
-      if (gsl_vector_get(x_miss, i) == 0) {
-        x[i] = x_mean;
+      if (x_miss.elements[i] == 0) {
+        x.elements[i] = x_mean;
       }
-      geno = x[i];
+      geno = x.elements[i];
     }
 
     DMatrix Xlarge_col = get_col(Xlarge, csnp % msize);
@@ -394,9 +410,8 @@ void analyze_bimbam_mvlmm(Param cPar){
           p_wald = MphCalcP(eval, X_row, X_sub, Y, V_g, V_e, UltVehiY, beta, Vbeta);
 
           if (p_wald < p_nr) {
-            logl_H1 =
-                MphNR('R', nr_iter / 10, nr_prec * 10, eval, X, Y, Hi_all,
-                      xHi_all, Hiy_all, V_g, V_e, Hessian, crt_a, crt_b, crt_c);
+            logl_H1 = MphNR('R', nr_iter / 10, nr_prec * 10, eval, X, Y, Hi_all,
+                            xHi_all, Hiy_all, V_g, V_e, Hessian, crt_a, crt_b, crt_c);
             p_wald = MphCalcP(eval, X_row, &X_sub, Y, V_g, V_e, UltVehiY, beta, Vbeta);
 
             if (crt == 1) {
@@ -406,8 +421,8 @@ void analyze_bimbam_mvlmm(Param cPar){
         }
 
         // Store summary data.
-        for (size_t i = 0; i < d_size; i++) {
-          v_beta[i] = beta[i];
+        for (size_t k = 0; i < d_size; k++) {
+          v_beta[k] = beta.elements[k];
         }
 
         c = 0;
@@ -439,7 +454,7 @@ void MphInitial(const size_t em_iter, const double em_prec,
   V_e = zeros_dmatrix(V_e.shape[0], V_e.shape[1]);
   B   = zeros_dmatrix(B.shape[0], B.shape[1]);
 
-  size_t n_size = eval.length, c_size = X.shape[0], d_size = Y.shape[0];
+  size_t n_size = eval.elements.length, c_size = X.shape[0], d_size = Y.shape[0];
   double a, b, c;
   double lambda, logl, vg, ve;
 
@@ -455,10 +470,10 @@ void MphInitial(const size_t em_iter, const double em_prec,
     //gsl_vector_const_view
     DMatrix Y_row = get_row(Y, i);
     CalcLambda('R', eval, Xt, Y_row, l_min, l_max, n_region, lambda, logl);
-    CalcLmmVgVeBeta(eval, Xt, Y_row, lambda, vg, ve, beta_temp, se_beta_temp);
+    //CalcLmmVgVeBeta(eval, Xt, Y_row, lambda, vg, ve, beta_temp, se_beta_temp);
 
-    V_g.set(i, i) = vg;
-    V_e.set(i, i) = ve;
+    V_g.set(i, i, vg);
+    V_e.set(i, i, ve);
   }
 
   // If number of phenotypes is above four, then obtain the off
@@ -496,7 +511,7 @@ void MphInitial(const size_t em_iter, const double em_prec,
       //gsl_vector_view
       DMatrix Y_sub1 = get_row(Y_sub, 0);
       //gsl_vector_const_view
-      DMatrix Y_1 = ger_row(Y, i);
+      DMatrix Y_1 = get_row(Y, i);
       Y_sub1 = Y_1;
 
       for (size_t j = i + 1; j < d_size; j++) {
@@ -851,6 +866,99 @@ double MphNR(const char func_name, const size_t max_iter, const double max_prec,
   Hessian_inv = multiply_dmatrix_num(Hessian_inv, -1.0);
 
   return logl_new;
+}
+
+// Calculate p-value, beta (d by 1 vector) and V(beta).
+double MphCalcP(const DMatrix eval, const DMatrix x_vec, const DMatrix W,
+                const DMatrix Y, const DMatrix V_g, const DMatrix V_e,
+                DMatrix UltVehiY, DMatrix beta, DMatrix Vbeta) {
+  size_t n_size = eval.elements.length, c_size = W.shape[0], d_size = V_g.shape[0];
+  size_t dc_size = d_size * c_size;
+  double delta, dl, d, d1, d2, dy, dx, dw; //  logdet_Ve, logdet_Q, p_value;
+
+  DMatrix D_l; // = gsl_vector_alloc(d_size);
+  DMatrix UltVeh; // = gsl_matrix_alloc(d_size, d_size);
+  DMatrix UltVehi; // = gsl_matrix_alloc(d_size, d_size);
+  DMatrix Qi; // = gsl_matrix_alloc(dc_size, dc_size);
+  DMatrix WHix; // = gsl_matrix_alloc(dc_size, d_size);
+  DMatrix QiWHix; // = gsl_matrix_alloc(dc_size, d_size);
+
+  DMatrix xPx; // = gsl_matrix_alloc(d_size, d_size);
+  DMatrix xPy; // = gsl_vector_alloc(d_size);
+  DMatrix WHiy; // = gsl_vector_alloc(dc_size);
+
+  //gsl_matrix_set_zero(xPx);
+  //gsl_matrix_set_zero(WHix);
+  //gsl_vector_set_zero(xPy);
+  //gsl_vector_set_zero(WHiy);
+
+  // Eigen decomposition and calculate log|Ve|.
+  EigenProc(V_g, V_e, D_l, UltVeh, UltVehi);
+
+  // Calculate Qi and log|Q|.
+  CalcQi(eval, D_l, W, Qi);
+
+  // Calculate UltVehiY.
+  UltVehiY = matrix_mult(UltVehi, Y);
+
+  // Calculate WHix, WHiy, xHiy, xHix.
+  for (size_t i = 0; i < d_size; i++) {
+    dl = D_l.elements[i];
+
+    d1 = 0.0;
+    d2 = 0.0;
+    for (size_t k = 0; k < n_size; k++) {
+      delta = gsl_vector_get(eval, k);
+      dx = x_vec.elements[k];
+      dy = UltVehiY.accessor(i, k);
+
+      d1 += dx * dy / (delta * dl + 1.0);
+      d2 += dx * dx / (delta * dl + 1.0);
+    }
+    gsl_vector_set(xPy, i, d1);
+    gsl_matrix_set(xPx, i, i, d2);
+
+    for (size_t j = 0; j < c_size; j++) {
+      d1 = 0.0;
+      d2 = 0.0;
+      for (size_t k = 0; k < n_size; k++) {
+        delta = gsl_vector_get(eval, k);
+        dx = x_vec.elements[k];
+        dw = W.accessor(j, k);
+        dy = UltVehiY.accessor(i, k);
+
+        d1 += dx * dw / (delta * dl + 1.0);
+        d2 += dy * dw / (delta * dl + 1.0);
+      }
+      WHix.set(j * d_size + i, i, d1);
+      WHiy.set(j * d_size + i, d2);
+    }
+  }
+
+  QiWHix = matrix_mult(Qi, WHix);
+  xPx    = matrix_mult(WHix.T, QiWHix);
+  xPy    = matrix_mult(QiWHix.T, WHiy, );
+
+  // Calculate V(beta) and beta.
+  int sig;
+  gsl_permutation *pmt = gsl_permutation_alloc(d_size);
+  LUDecomp(xPx, pmt, &sig);
+  LUSolve(xPx, pmt, xPy, D_l);
+  LUInvert(xPx, pmt, Vbeta);
+
+  // Need to multiply UltVehi on both sides or one side.
+  beta  = matrix_mult(UltVeh.T, D_l);
+  xPx   = matrix_mult(Vbeta, UltVeh);
+  Vbeta = matrix_mult(UltVeh.T, xPx);
+
+  // Calculate test statistic and p value.
+  d = vector_ddot(D_l, xPy);
+
+  double p_value = gsl_cdf_chisq_Q(d, to!double(d_size));
+
+  gsl_permutation_free(pmt);
+
+  return p_value;
 }
 
 void MphCalcBeta(const DMatrix eval, const DMatrix W, const DMatrix Y, const DMatrix V_g,
@@ -1821,9 +1929,8 @@ void UpdateVgVe(){
 
 // p-value correction
 // mode=1 Wald; mode=2 LRT; mode=3 SCORE;
-double PCRT(){
-            //const size_t mode, const size_t d_size, const double p_value,
-            //const double crt_a, const double crt_b, const double crt_c) {
+double PCRT(const size_t mode, const size_t d_size, const double p_value,
+            const double crt_a, const double crt_b, const double crt_c) {
   double p_crt = 0.0, chisq_crt = 0.0, q = to!double(d_size);
   double chisq = gsl_cdf_chisq_Qinv(p_value, to!double(d_size));
 
