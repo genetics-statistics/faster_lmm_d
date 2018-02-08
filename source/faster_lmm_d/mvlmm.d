@@ -29,6 +29,7 @@ import faster_lmm_d.helpers;
 import faster_lmm_d.optmatrix;
 
 import gsl.permutation;
+import gsl.cdf;
 
 void analyze_bimbam_mvlmm(const DMatrix U, const DMatrix eval,
                           const DMatrix UtW, const DMatrix UtY, string file_geno) {
@@ -37,8 +38,7 @@ void analyze_bimbam_mvlmm(const DMatrix U, const DMatrix eval,
   auto pipe = pipeShell("gunzip -c " ~ filename);
   File input = pipe.stdout;
 
-  string line;
-  char *ch_ptr;
+  string ch_ptr;
 
   double logl_H0 = 0.0, logl_H1 = 0.0, p_wald = 0, p_lrt = 0, p_score = 0;
   double crt_a, crt_b, crt_c;
@@ -140,6 +140,7 @@ void analyze_bimbam_mvlmm(const DMatrix U, const DMatrix eval,
   double[] se_beta_mle_null;
   double logl_mle_H0;
   int[] indicator_snp;
+  int[] indicator_idv;
   int a_mode;
   size_t ni_test, ni_total;
 
@@ -291,10 +292,11 @@ void analyze_bimbam_mvlmm(const DMatrix U, const DMatrix eval,
     }
     t_last++;
   }
-  for (size_t t = 0; t < indicator_snp.length; ++t) {
-    //safeGetline(infile, line).eof();
+  int t = 0;
+  foreach (line ; input.byLine) {
 
     if (indicator_snp[t] == 0) {
+      t++;
       continue;
     }
 
@@ -306,8 +308,9 @@ void analyze_bimbam_mvlmm(const DMatrix U, const DMatrix eval,
     c_phen = 0;
     n_miss = 0;
     //gsl_vector_set_zero(x_miss);
+    auto chr = to!string(line).split(",");
     for (size_t i = 0; i < ni_total; ++i) {
-      ch_ptr = strtok_safe(NULL, " , \t");
+      ch_ptr = chr[i];
       if (indicator_idv[i] == 0) {
         continue;
       }
@@ -316,10 +319,10 @@ void analyze_bimbam_mvlmm(const DMatrix U, const DMatrix eval,
         x_miss.elements[c_phen] = 0.0;
         n_miss++;
       } else {
-        geno = atof(ch_ptr);
+        geno = to!double(ch_ptr);
 
         x.elements[c_phen] = geno;
-        x_miss[c_phen] = 1.0;
+        x_miss.elements[c_phen] = 1.0;
         x_mean += geno;
       }
       c_phen++;
@@ -369,6 +372,9 @@ void analyze_bimbam_mvlmm(const DMatrix U, const DMatrix eval,
         B = B_null;
 
         // 3 is before 1.
+        //set Values
+        double p_nr, crt;
+
         if (a_mode == 3 || a_mode == 4) {
           p_score = MphCalcP(eval, X_row, X_sub, Y, V_g_null,
                              V_e_null, UltVehiY, beta, Vbeta);
@@ -412,7 +418,7 @@ void analyze_bimbam_mvlmm(const DMatrix U, const DMatrix eval,
           if (p_wald < p_nr) {
             logl_H1 = MphNR('R', nr_iter / 10, nr_prec * 10, eval, X, Y, Hi_all,
                             xHi_all, Hiy_all, V_g, V_e, Hessian, crt_a, crt_b, crt_c);
-            p_wald = MphCalcP(eval, X_row, &X_sub, Y, V_g, V_e, UltVehiY, beta, Vbeta);
+            p_wald = MphCalcP(eval, X_row, X_sub, Y, V_g, V_e, UltVehiY, beta, Vbeta);
 
             if (crt == 1) {
               p_wald = PCRT(1, d_size, p_wald, crt_a, crt_b, crt_c);
@@ -421,16 +427,16 @@ void analyze_bimbam_mvlmm(const DMatrix U, const DMatrix eval,
         }
 
         // Store summary data.
-        for (size_t k = 0; i < d_size; k++) {
+        for (size_t k = 0; k < d_size; k++) {
           v_beta[k] = beta.elements[k];
         }
 
         c = 0;
-        for (size_t i = 0; i < d_size; i++) {
-          for (size_t j = i; j < d_size; j++) {
-            v_Vg[c] = V_g.accessor(i, j);
-            v_Ve[c] = V_e.accessor(i, j);
-            v_Vbeta[c] = Vbeta.accessor(i, j);
+        for (size_t k = 0; k < d_size; k++) {
+          for (size_t j = k; j < d_size; j++) {
+            v_Vg[c] = V_g.accessor(k, j);
+            v_Ve[c] = V_e.accessor(k, j);
+            v_Vbeta[c] = Vbeta.accessor(k, j);
             c++;
           }
         }
@@ -439,6 +445,8 @@ void analyze_bimbam_mvlmm(const DMatrix U, const DMatrix eval,
         sumStat ~= SNPs;
       }
     }
+
+    t++;
   }
   return;
 }
@@ -524,10 +532,10 @@ void MphInitial(const size_t em_iter, const double em_prec,
         Vg_sub = zeros_dmatrix(Vg_sub.shape[0], Vg_sub.shape[1]);
         //gsl_matrix_set_zero(Ve_sub);
         VE_sub = zeros_dmatrix(Ve_sub.shape[0], Ve_sub.shape[1]);
-        Vg_sub.set(0, 0) = V_g.accessor(i, i);
-        Ve_sub.set(0, 0) = V_e.accessor(i, i);
-        Vg_sub.set(1, 1) = V_g.accessor(j, j);
-        Ve_sub.set(1, 1) = V_e.accessor(j, j);
+        Vg_sub.set(0, 0, V_g.accessor(i, i));
+        Ve_sub.set(0, 0, V_e.accessor(i, i));
+        Vg_sub.set(1, 1, V_g.accessor(j, j));
+        Ve_sub.set(1, 1, V_e.accessor(j, j));
 
         logl = MphEM('R', em_iter, em_prec, eval, X, Y_sub, U_hat, E_hat,
                      OmegaU, OmegaE, UltVehiY, UltVehiBX, UltVehiU, UltVehiE,
@@ -535,11 +543,11 @@ void MphInitial(const size_t em_iter, const double em_prec,
         logl = MphNR('R', nr_iter, nr_prec, eval, X, Y_sub, Hi_all, xHi_all,
                      Hiy_all, Vg_sub, Ve_sub, Hessian, a, b, c);
 
-        V_g.set(i, j) = Vg_sub.accessor(0, 1);
-        V_g.set(j, i) = Vg_sub.accessor(0, 1);
+        V_g.set(i, j, Vg_sub.accessor(0, 1));
+        V_g.set(j, i, Vg_sub.accessor(0, 1));
 
-        V_e.set(i, j) = Ve_sub.accessor(0, 1);
-        V_e.set(j, i) = Ve_sub.accessor(0, 1);
+        V_e.set(i, j, Ve_sub.accessor(0, 1));
+        V_e.set(j, i, Ve_sub.accessor(0, 1));
       }
     }
   }
@@ -653,7 +661,7 @@ double MphEM(const char func_name, const size_t max_iter, const double max_prec,
   gsl_blas_dsyrk(CblasUpper, CblasNoTrans, 1.0, X, 0.0, XXt);
   for (size_t i = 0; i < c_size; ++i) {
     for (size_t j = 0; j < i; ++j) {
-      XXt.set(i, j) = XXt.accessor(j, i);
+      XXt.set(i, j, XXt.accessor(j, i));
     }
   }
 
@@ -663,10 +671,10 @@ double MphEM(const char func_name, const size_t max_iter, const double max_prec,
   // Calculate the constant for logl.
   if (func_name == 'R' || func_name == 'r') {
     logl_const =
-        -0.5 * to!double(n_size - c_size) * to!double(d_size) * log(2.0 * M_PI) +
+        -0.5 * to!double(n_size - c_size) * to!double(d_size) * mlog(2.0 * PI) +
         0.5 * to!double(d_size) * LULndet(XXt);
   } else {
-    logl_const = -0.5 * to!double(n_size) * to!double(d_size) * log(2.0 * M_PI);
+    logl_const = -0.5 * to!double(n_size) * to!double(d_size) * mlog(2.0 * PI);
   }
 
   // Start EM.
@@ -2360,6 +2368,133 @@ void analyze_plink(){
         MPHSUMSTAT SNPs = {v_beta, p_wald, p_lrt, p_score, v_Vg, v_Ve, v_Vbeta};
         sumStat ~= SNPs;
       }
+    }
+  }
+
+  return;
+}
+
+// 'R' for restricted likelihood and 'L' for likelihood.
+// 'R' update B and 'L' don't.
+// only calculate -0.5*\sum_{k=1}^n|H_k|-0.5yPxy.
+double MphCalcLogL(const DMatrix eval, const DMatrix xHiy, const DMatrix D_l,
+                   const DMatrix UltVehiY, const DMatrix Qi) {
+
+  size_t n_size = eval.size, d_size = D_l.size, dc_size = Qi.shape[0];
+  double logl = 0.0, delta, dl, y, d;
+
+  // Calculate yHiy+log|H_k|.
+  for (size_t k = 0; k < n_size; k++) {
+    delta = gsl_vector_get(eval, k);
+    for (size_t i = 0; i < d_size; i++) {
+      y = UltVehiY.accessor(i, k);
+      dl = D_l.elements[i];
+      d = delta * dl + 1.0;
+
+      logl += y * y / d + mlog(d);
+    }
+  }
+
+  // Calculate the rest of yPxy.
+  DMatrix Qiv; // = gsl_vector_alloc(dc_size);
+
+  Qiv = matrix_mult(Qi, xHiy);
+  d = vector_ddot(xHiy, Qiv);
+
+  logl -= d;
+
+  return -0.5 * logl;
+}
+
+// Qi=(\sum_{k=1}^n x_kx_k^T\otimes(delta_k*Dl+I)^{-1} )^{-1}.
+double CalcQi(const DMatrix eval, const DMatrix D_l,
+              const DMatrix X, DMatrix Qi) {
+  size_t n_size = eval.size, d_size = D_l.size, dc_size = Qi.shape[0];
+  size_t c_size = dc_size / d_size;
+
+  double delta, dl, d1, d2, d, logdet_Q;
+
+  DMatrix ; //Q = gsl_matrix_alloc(dc_size, dc_size);
+  //gsl_matrix_set_zero(Q);
+
+  for (size_t i = 0; i < c_size; i++) {
+    for (size_t j = 0; j < c_size; j++) {
+      for (size_t l = 0; l < d_size; l++) {
+        dl = D_l.elements[l];
+
+        if (j < i) {
+          d = Q/accessor( j * d_size + l, i * d_size + l);
+        } else {
+          d = 0.0;
+          for (size_t k = 0; k < n_size; k++) {
+            d1 = X.accessor( i, k);
+            d2 = X.accessor( j, k);
+            delta = eval.elements[k];
+            d += d1 * d2 / (dl * delta + 1.0); // @@
+          }
+        }
+
+        Q.set(i * d_size + l, j * d_size + l, d);
+      }
+    }
+  }
+
+  // Calculate LU decomposition of Q, and invert Q and calculate |Q|.
+  int sig;
+  gsl_permutation *pmt = gsl_permutation_alloc(dc_size);
+  LUDecomp(Q, pmt, &sig);
+  LUInvert(Q, pmt, Qi);
+
+  logdet_Q = LULndet(Q);
+
+  gsl_permutation_free(pmt);
+
+  return logdet_Q;
+}
+
+// xHiy=\sum_{k=1}^n x_k\otimes ((delta_k*Dl+I)^{-1}Ul^TVe^{-1/2}y.
+void CalcXHiY(const DMatrix eval, const DMatrix D_l,
+              const DMatrix X, const DMatrix UltVehiY,
+              DMatrix xHiy) {
+  size_t n_size = eval.size, c_size = X.shape[0], d_size = D_l.size;
+
+  //gsl_vector_set_zero(xHiy);
+
+  double x, delta, dl, y, d;
+  for (size_t i = 0; i < d_size; i++) {
+    dl = D_l.elements[i];
+    for (size_t j = 0; j < c_size; j++) {
+      d = 0.0;
+      for (size_t k = 0; k < n_size; k++) {
+        x = X.accessor(j, k);
+        y = UltVehiY.accessor(i, k);
+        delta = eval.elements[k];
+        d += x * y / (delta * dl + 1.0);
+      }
+      xHiy.elements[j * d_size + i] = d;
+    }
+  }
+
+  return;
+}
+
+// OmegaU=D_l/(delta Dl+I)^{-1}
+// OmegaE=delta D_l/(delta Dl+I)^{-1}
+void CalcOmega(const DMatrix eval, const DMatrix D_l,
+               DMatrix OmegaU, DMatrix OmegaE) {
+  size_t n_size = eval.size, d_size = D_l.size;
+  double delta, dl, d_u, d_e;
+
+  for (size_t k = 0; k < n_size; k++) {
+    delta = eval.elements[k];
+    for (size_t i = 0; i < d_size; i++) {
+      dl = D_l.elements[i];
+
+      d_u = dl / (delta * dl + 1.0);  // @@
+      d_e = delta * d_u;
+
+      OmegaU.set(i, k, d_u);
+      OmegaE.set(i, k, d_e);
     }
   }
 
