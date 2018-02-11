@@ -31,9 +31,22 @@ import faster_lmm_d.optmatrix;
 import gsl.permutation;
 import gsl.cdf;
 
+// Results for mvLMM.
+struct MPHSUMSTAT {
+  double[] v_beta;  // REML estimator for beta.
+  double p_wald;          // p value from a Wald test.
+  double p_lrt;           // p value from a likelihood ratio test.
+  double p_score;         // p value from a score test.
+  double[] v_Vg;    // Estimator for Vg, right half.
+  double[] v_Ve;    // Estimator for Ve, right half.
+  double[] v_Vbeta; // Estimator for Vbeta, right half.
+};
+
+
 void analyze_bimbam_mvlmm(const DMatrix U, const DMatrix eval,
                           const DMatrix UtW, const DMatrix UtY, string file_geno) {
 
+  MPHSUMSTAT[] sumStat;
   string filename = file_geno;
   auto pipe = pipeShell("gunzip -c " ~ filename);
   File input = pipe.stdout;
@@ -531,7 +544,7 @@ void MphInitial(const size_t em_iter, const double em_prec,
 
         Vg_sub = zeros_dmatrix(Vg_sub.shape[0], Vg_sub.shape[1]);
         //gsl_matrix_set_zero(Ve_sub);
-        VE_sub = zeros_dmatrix(Ve_sub.shape[0], Ve_sub.shape[1]);
+        Ve_sub = zeros_dmatrix(Ve_sub.shape[0], Ve_sub.shape[1]);
         Vg_sub.set(0, 0, V_g.accessor(i, i));
         Ve_sub.set(0, 0, V_e.accessor(i, i));
         Vg_sub.set(1, 1, V_g.accessor(j, j));
@@ -593,14 +606,14 @@ void MphInitial(const size_t em_iter, const double em_prec,
     }
   }
 
-  gsl_blas_dgemv(CblasNoTrans, 1.0, Qi, XHiy, 0.0, beta);
+  beta = matrix_mult(Qi, XHiy);
 
   // Multiply beta by UltVeh and save to B.
   for (size_t i = 0; i < c_size; i++) {
     //gsl_vector_view
     DMatrix B_col = get_col(B, i);
     //gsl_vector_view
-    DMatrix beta_sub = gsl_vector_subvector(beta, i * d_size, d_size);
+    DMatrix beta_sub;// = gsl_vector_subvector(beta, i * d_size, d_size);
     B_col = matrix_mult(UltVeh.T, beta_sub);
     B_col = matrix_mult(beta_sub, UltVeh);
   }
@@ -638,7 +651,7 @@ double MphEM(const char func_name, const size_t max_iter, const double max_prec,
     return 0.0;
   }
 
-  size_t n_size = eval.length, c_size = X.shape[0], d_size = Y.shape[0];
+  size_t n_size = eval.size, c_size = X.shape[0], d_size = Y.shape[0];
   size_t dc_size = d_size * c_size;
 
   DMatrix XXt; // = gsl_matrix_alloc(c_size, c_size);
@@ -747,7 +760,7 @@ double MphNR(const char func_name, const size_t max_iter, const double max_prec,
     writeln("func_name only takes 'R' or 'L': 'R' for log-restricted likelihood, 'L' for log-likelihood.");
     return 0.0;
   }
-  size_t n_size = eval.length, c_size = X.shape[0], d_size = Y.shape[0];
+  size_t n_size = eval.size, c_size = X.shape[0], d_size = Y.shape[0];
   size_t dc_size = d_size * c_size;
   size_t v_size = d_size * (d_size + 1) / 2;
 
@@ -783,10 +796,10 @@ double MphNR(const char func_name, const size_t max_iter, const double max_prec,
   // Calculate the constant for logl.
   if (func_name == 'R' || func_name == 'r') {
     logl_const =
-        -0.5 * to!double(n_size - c_size) * to!double(d_size) * log(2.0 * M_PI) +
+        -0.5 * to!double(n_size - c_size) * to!double(d_size) * mlog(2.0 * PI) +
         0.5 * to!double(d_size) * LULndet(XXt);
   } else {
-    logl_const = -0.5 * to!double(n_size) * to!double(d_size) * log(2.0 * M_PI);
+    logl_const = -0.5 * to!double(n_size) * to!double(d_size) * mlog(2.0 * PI);
   }
 
   // Optimization iterations.
@@ -810,14 +823,14 @@ double MphNR(const char func_name, const size_t max_iter, const double max_prec,
       V_temp = V_e;
       EigenDecomp(V_temp, U_temp, D_temp, 0);
       for (size_t i = 0; i < d_size; i++) {
-        if (gsl_vector_get(D_temp, i) <= 0) {
+        if (D_temp.elements[i] <= 0) {
           flag_pd = 0;
         }
       }
       V_temp = V_g;
       EigenDecomp(V_temp, U_temp, D_temp, 0);
       for (size_t i = 0; i < d_size; i++) {
-        if (gsl_vector_get(D_temp, i) <= 0) {
+        if (D_temp.elements[i] <= 0) {
           flag_pd = 0;
         }
       }
@@ -2666,6 +2679,94 @@ void CalcSigma(const char func_name, const DMatrix eval,
   Sigma_uu = matrix_mult(UltVeh.T, M);
   M = matrix_mult(Sigma_ee, UltVeh);
   Sigma_ee = matrix_mult(UltVeh.T, M);
+
+  return;
+}
+
+// Calculate all Hi and return logdet_H=\sum_{k=1}^{n}log|H_k|
+// and calculate Qi and return logdet_Q
+// and calculate yPy.
+void CalcHiQi(const DMatrix eval, const DMatrix X,
+              const DMatrix V_g, const DMatrix V_e, DMatrix Hi_all,
+              DMatrix Qi, double logdet_H, double logdet_Q) {
+  Hi_all = zeros_dmatrix(Hi_all.shape[0], Hi_all.shape[1]);
+  Qi = zeros_dmatrix(Qi.shape[0], Qi.shape[1]);
+  logdet_H = 0.0;
+  logdet_Q = 0.0;
+
+  size_t n_size = eval.size, c_size = X.shape[0], d_size = V_g.shape[0];
+  double logdet_Ve = 0.0, delta, dl, d;
+
+  DMatrix mat_dd; // = gsl_matrix_alloc(d_size, d_size);
+  DMatrix UltVeh; // = gsl_matrix_alloc(d_size, d_size);
+  DMatrix UltVehi; // = gsl_matrix_alloc(d_size, d_size);
+  DMatrix D_l; // = gsl_vector_alloc(d_size);
+
+  // Calculate D_l, UltVeh and UltVehi.
+  logdet_Ve = EigenProc(V_g, V_e, D_l, UltVeh, UltVehi);
+
+  // Calculate each Hi and log|H_k|.
+  logdet_H = to!double(n_size) * logdet_Ve;
+  for (size_t k = 0; k < n_size; k++) {
+    delta = eval.elements[k];
+
+    //gsl_matrix_memcpy(mat_dd, UltVehi);
+    for (size_t i = 0; i < d_size; i++) {
+      dl = gsl_vector_get(D_l, i);
+      d = delta * dl + 1.0;
+
+      //gsl_vector_view
+      DMatrix mat_row = get_row(mat_dd, i);
+      mat_row = divide_dmatrix_num(mat_row, d); // @@
+
+      logdet_H += mlog(d);
+    }
+
+    //gsl_matrix_view
+    DMatrix Hi_k = get_sub_dmatrix(Hi_all, 0, k * d_size, d_size, d_size);
+    Hi_k = matrix_mult(UltVehi.T, mat_dd);
+  }
+
+  // Calculate Qi, and multiply I\o times UtVeh on both side and
+  // calculate logdet_Q, don't forget to substract
+  // c_size*logdet_Ve.
+  logdet_Q = CalcQi(eval, D_l, X, Qi) - to!double(c_size) * logdet_Ve;
+
+  for (size_t i = 0; i < c_size; i++) {
+    for (size_t j = 0; j < c_size; j++) {
+      //gsl_matrix_view
+      DMatrix Qi_sub = get_sub_dmatrix(Qi, i * d_size, j * d_size, d_size, d_size);
+      if (j < i) {
+        //gsl_matrix_view
+        DMatrix Qi_sym = get_sub_dmatrix(Qi, j * d_size, i * d_size, d_size, d_size);
+        //gsl_matrix_transpose_memcpy(&Qi_sub.matrix, &Qi_sym.matrix);
+      } else {
+        mat_dd = matrix_mult(Qi_sub, UltVeh);
+        Qi_sub = matrix_mult(UltVeh.T, mat_dd);
+      }
+    }
+  }
+
+  return;
+}
+
+
+// Calculate all Hiy.
+void Calc_Hiy_all(const DMatrix Y, const DMatrix Hi_all, DMatrix Hiy_all) {
+  Hiy_all = zeros_dmatrix(Hiy_all.shape[0], Hiy_all.shape[1]);
+
+  size_t n_size = Y.shape[1], d_size = Y.shape[0];
+
+  for (size_t k = 0; k < n_size; k++) {
+    //gsl_matrix_const_view
+    DMatrix Hi_k = get_sub_dmatrix(Hi_all, 0, k * d_size, d_size, d_size);
+    //gsl_vector_const_view
+    DMatrix y_k = get_col(Y, k);
+    //gsl_vector_view
+    DMatrix Hiy_k = gsl_matrix_column(Hiy_all, k);
+
+    Hiy_k = matrix_mult(Hi_k, y_k.vector);
+  }
 
   return;
 }
