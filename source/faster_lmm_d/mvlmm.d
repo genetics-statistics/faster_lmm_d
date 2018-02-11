@@ -2500,3 +2500,172 @@ void CalcOmega(const DMatrix eval, const DMatrix D_l,
 
   return;
 }
+
+void UpdateL_B(const DMatrix X, const DMatrix XXti,
+               const DMatrix UltVehiY, const DMatrix UltVehiU,
+               DMatrix UltVehiBX, DMatrix UltVehiB) {
+  size_t c_size = X.shape[0], d_size = UltVehiY.shape[0];
+
+  DMatrix YUX; // = gsl_matrix_alloc(d_size, c_size);
+
+  //gsl_matrix_memcpy(UltVehiBX, UltVehiY);
+  //gsl_matrix_sub(UltVehiBX, UltVehiU);
+
+  YUX = matrix_mult(UltVehiBX, X.T);
+  UltVehiB = matrix_mult(YUX, XXti);
+
+  return;
+}
+
+void UpdateRL_B(const DMatrix xHiy, const DMatrix Qi, DMatrix UltVehiB) {
+  size_t d_size = UltVehiB.shape[0], c_size = UltVehiB.shape[1], dc_size = Qi.shape[0];
+
+  // Calculate b=Qiv.
+  DMatrix b = matrix_mult(Qi, xHiy);
+
+  // Copy b to UltVehiB.
+  for (size_t i = 0; i < c_size; i++) {
+    //gsl_vector_view
+    DMatrix UltVehiB_col = get_col(UltVehiB, i);
+    //gsl_vector_const_view
+    DMatrix b_subcol; // = gsl_vector_const_subvector(b, i * d_size, d_size);
+    //gsl_vector_memcpy(UltVehiB_col, b_subcol);
+  }
+  return;
+}
+
+void UpdateU(const DMatrix OmegaE, const DMatrix UltVehiY,
+             const DMatrix UltVehiBX, DMatrix UltVehiU) {
+  //gsl_matrix_memcpy(UltVehiU, UltVehiY);
+  UltVehiU = subtract_dmatrix(UltVehiU, UltVehiBX);
+  UltVehiU = slow_multiply_dmatrix(UltVehiU, OmegaE);
+  return;
+}
+
+
+void UpdateE(const DMatrix UltVehiY, const DMatrix UltVehiBX,
+             const DMatrix UltVehiU, DMatrix UltVehiE) {
+  //gsl_matrix_memcpy(UltVehiE, UltVehiY);
+  UltVehiE = subtract_dmatrix(UltVehiE, UltVehiBX);
+  UltVehiE = subtract_dmatrix(UltVehiE, UltVehiU);
+
+  return;
+}
+
+void UpdateV(const DMatrix eval, const DMatrix U, const DMatrix E,
+             const DMatrix Sigma_uu, const DMatrix Sigma_ee,
+             DMatrix V_g, DMatrix V_e) {
+  size_t n_size = eval.size, d_size = U.shape[0];
+
+  V_g = zeros_dmatrix(V_g.shape[0], V_g.shape[1]);
+  V_e = zeros_dmatrix(V_e.shape[0], V_e.shape[1]);
+
+  double delta;
+
+  // Calculate the first part: UD^{-1}U^T and EE^T.
+  for (size_t k = 0; k < n_size; k++) {
+    delta = eval.elements[k];
+    if (delta == 0) {
+      continue;
+    }
+
+    //gsl_vector_const_view
+    DMatrix U_col = get_col(U, k);
+    // IMP
+    //gsl_blas_dsyr(CblasUpper, 1.0 / delta, &U_col.vector, V_g);
+  }
+
+  // IMP
+  //gsl_blas_dsyrk(CblasUpper, CblasNoTrans, 1.0, E, 0.0, V_e);
+
+  // Copy the upper part to lower part.
+  for (size_t i = 0; i < d_size; i++) {
+    for (size_t j = 0; j < i; j++) {
+      V_g.set(i, j, V_g.accessor(j, i));
+      V_e.set(i, j, V_e.accessor(j, i));
+    }
+  }
+
+  // Add Sigma.
+  V_g = add_dmatrix(V_g, Sigma_uu);
+  V_e = add_dmatrix(V_e, Sigma_ee);
+
+  // Scale by 1/n.
+  V_g = multiply_dmatrix_num(V_g, 1.0 / to!double(n_size));
+  V_e = multiply_dmatrix_num(V_e, 1.0 / to!double(n_size));
+
+  return;
+}
+
+void CalcSigma(const char func_name, const DMatrix eval,
+               const DMatrix D_l, const DMatrix X,
+               const DMatrix OmegaU, const DMatrix OmegaE,
+               const DMatrix UltVeh, const DMatrix Qi,
+               DMatrix Sigma_uu, DMatrix Sigma_ee) {
+  if(func_name != 'R' && func_name != 'L' && func_name != 'r' && func_name != 'l') {
+    writeln("func_name only takes 'R' or 'L': 'R' for log-restricted likelihood, 'L' for log-likelihood.");
+    return;
+  }
+
+  size_t n_size = eval.size, c_size = X.shape[0];
+  size_t d_size = D_l.size, dc_size = Qi.shape[0];
+
+  gsl_matrix_set_zero(Sigma_uu);
+  gsl_matrix_set_zero(Sigma_ee);
+
+  double delta, dl, x, d;
+
+  // Calculate the first diagonal term.
+  //gsl_vector_view
+  DMatrix Suu_diag = get_diagonal(Sigma_uu);
+  //gsl_vector_view
+  DMatrix See_diag = get_diagonal(Sigma_ee);
+
+  for (size_t k = 0; k < n_size; k++) {
+    //gsl_vector_const_view
+    DMatrix OmegaU_col = get_col(OmegaU, k);
+    //gsl_vector_const_view
+    DMatrix OmegaE_col = get_col(OmegaE, k);
+
+    Suu_diag = add_dmatrix(Suu_diag, OmegaU_col);
+    Suu_diag = add_dmatrix(See_diag, OmegaE_col);
+  }
+
+  // Calculate the second term for REML.
+  if (func_name == 'R' || func_name == 'r') {
+    DMatrix M_u; // = gsl_matrix_alloc(dc_size, d_size);
+    DMatrix M_e; // = gsl_matrix_alloc(dc_size, d_size);
+    DMatrix QiM; // = gsl_matrix_alloc(dc_size, d_size);
+
+    M_u = zeros_dmatrix(M_u.shape[0], M_u.shape[1]);
+    M_e = zeros_dmatrix(M_e.shape[0], M_e.shape[1]);
+
+    for (size_t k = 0; k < n_size; k++) {
+      delta = eval.elements[k];
+
+      for (size_t i = 0; i < d_size; i++) {
+        dl =D_l.elements[i];
+        for (size_t j = 0; j < c_size; j++) {
+          x = X.accessor(j, k);
+          d = x / (delta * dl + 1.0);
+          M_e.set(j * d_size + i, i, d);
+          M_u.set(j * d_size + i, i, d * dl);
+        }
+      }
+      QiM = matrix_mult(Qi, M_u);
+      // IMP : note delta scaling
+      //matrix_mult(CblasTrans, CblasNoTrans, delta, M_u, QiM, 1.0, Sigma_uu);
+
+      QiM = matrix_mult(Qi, M_e);
+      Sigma_ee = matrix_mult(M_e.T, QiM);
+    }
+  }
+
+  // Multiply both sides by VehUl.
+  DMatrix M = matrix_mult(Sigma_uu, UltVeh);
+  Sigma_uu = matrix_mult(UltVeh.T, M);
+  M = matrix_mult(Sigma_ee, UltVeh);
+  Sigma_ee = matrix_mult(UltVeh.T, M);
+
+  return;
+}

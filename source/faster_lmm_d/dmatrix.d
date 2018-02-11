@@ -91,6 +91,15 @@ double accessor(const DMatrix input, const ulong row, const ulong col) {
   return input.elements[row*input.cols()+col];
 }
 
+DMatrix get_diagonal(const DMatrix input){
+  assert(input.rows == input.cols);
+  double[] elements = new double[input.rows];
+  foreach(i; 0..input.rows){
+    elements ~= input.accessor(i, i);
+  }
+  return DMatrix([input.rows, 1], elements);
+}
+
 DMatrix log_dmatrix(const DMatrix input) {
   m_items total_items = input.size();
   double[] elements = new double[total_items];
