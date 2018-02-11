@@ -1615,13 +1615,13 @@ void Calc_yPDPDPy(const DMatrix eval, const DMatrix Hi, const DMatrix xHi,
   DMatrix xHiDHiDHix_ge = get_sub_dmatrix(xHiDHiDHix_all_ge, 0, (v1 * v_size + v2) * dc_size, dc_size, dc_size);
 
   xHiDHiDHixQixHiy = matrix_mult(xHiDHiDHix_gg, QixHiy);
-  d = vector_ddot(xHiDHiDHixQixHiy, QixHiy, &d);
+  d = vector_ddot(xHiDHiDHixQixHiy, QixHiy);
   yPDPDPy_gg += d;
   xHiDHiDHixQixHiy = matrix_mult(xHiDHiDHix_ee, QixHiy);
-  d = vector_ddot(xHiDHiDHixQixHiy, QixHiy, &d);
+  d = vector_ddot(xHiDHiDHixQixHiy, QixHiy);
   yPDPDPy_ee += d;
   xHiDHiDHixQixHiy = matrix_mult(xHiDHiDHix_ge, QixHiy);
-  d = vector_ddot(xHiDHiDHixQixHiy, QixHiy, &d);
+  d = vector_ddot(xHiDHiDHixQixHiy, QixHiy);
   yPDPDPy_ge += d;
 
   // Eighth part: - (yHix)Qi(xHiDHix)Qi(xHiDHix)Qi(xHiy).
@@ -1630,11 +1630,11 @@ void Calc_yPDPDPy(const DMatrix eval, const DMatrix Hi, const DMatrix xHi,
   //gsl_vector_const_view
   DMatrix QixHiDHixQixHiy_e1 = get_col(QixHiDHixQixHiy_all_e, v1);
 
-  d = (QixHiDHixQixHiy_g1, xHiDHixQixHiy_g2);
+  d = vector_ddot(QixHiDHixQixHiy_g1, xHiDHixQixHiy_g2);
   yPDPDPy_gg -= d;
-  d = (QixHiDHixQixHiy_e1, xHiDHixQixHiy_e2);
+  d = vector_ddot(QixHiDHixQixHiy_e1, xHiDHixQixHiy_e2);
   yPDPDPy_ee -= d;
-  d = (QixHiDHixQixHiy_g1, xHiDHixQixHiy_e2);
+  d = vector_ddot(QixHiDHixQixHiy_g1, xHiDHixQixHiy_e2);
   yPDPDPy_ge -= d;
 
   return;
@@ -3116,6 +3116,264 @@ void Calc_xHiDHix(const DMatrix eval, const DMatrix xHi, const size_t i,
 
       mat_dcdc_t = multiply_dmatrix_num(mat_dcdc_t, delta);
       xHiDHix_g = add_dmatrix(xHiDHix_g, mat_dcdc_t);
+    }
+  }
+
+  return;
+}
+
+void Calc_xHiDHiDHiy(const DMatrix eval, const DMatrix Hi,
+                     const DMatrix xHi, const DMatrix Hiy,
+                     const size_t i1, const size_t j1, const size_t i2,
+                     const size_t j2, DMatrix xHiDHiDHiy_gg,
+                     DMatrix xHiDHiDHiy_ee, DMatrix xHiDHiDHiy_ge) {
+  xHiDHiDHiy_gg = zeros_dmatrix(xHiDHiDHiy_gg.shape[0], xHiDHiDHiy_gg.shape[1]);
+  xHiDHiDHiy_ee = zeros_dmatrix(xHiDHiDHiy_ee.shape[0], xHiDHiDHiy_ee.shape[1]);
+  xHiDHiDHiy_ge = zeros_dmatrix(xHiDHiDHiy_ge.shape[0], xHiDHiDHiy_ge.shape[1]);
+
+  size_t n_size = eval.size, d_size = Hiy.shape[0];
+
+  double delta, d_Hiy_i, d_Hiy_j, d_Hi_i1i2, d_Hi_i1j2;
+  double d_Hi_j1i2, d_Hi_j1j2;
+
+  for (size_t k = 0; k < n_size; k++) {
+    delta = eval.elements[k];
+
+    //gsl_vector_const_view
+    DMatrix xHi_col_i = get_col(xHi, k * d_size + i1);
+    //gsl_vector_const_view
+    DMatrix xHi_col_j = get_col(xHi, k * d_size + j1);
+
+    d_Hiy_i = Hiy.accessor(i2, k);
+    d_Hiy_j = Hiy.accessor(j2, k);
+
+    d_Hi_i1i2 = Hi.accessor(i1, k * d_size + i2);
+    d_Hi_i1j2 = Hi.accessor(i1, k * d_size + j2);
+    d_Hi_j1i2 = Hi.accessor(j1, k * d_size + i2);
+    d_Hi_j1j2 = Hi.accessor(j1, k * d_size + j2);
+
+    if (i1 == j1) {
+      //gsl_blas_daxpy(delta * delta * d_Hi_j1i2 * d_Hiy_j, &xHi_col_i.vector,
+      //               xHiDHiDHiy_gg);
+      //gsl_blas_daxpy(d_Hi_j1i2 * d_Hiy_j, &xHi_col_i.vector, xHiDHiDHiy_ee);
+      //gsl_blas_daxpy(delta * d_Hi_j1i2 * d_Hiy_j, &xHi_col_i.vector,
+      //               xHiDHiDHiy_ge);
+
+      if (i2 != j2) {
+        //gsl_blas_daxpy(delta * delta * d_Hi_j1j2 * d_Hiy_i, &xHi_col_i.vector,
+        //               xHiDHiDHiy_gg);
+        //gsl_blas_daxpy(d_Hi_j1j2 * d_Hiy_i, &xHi_col_i.vector, xHiDHiDHiy_ee);
+        //gsl_blas_daxpy(delta * d_Hi_j1j2 * d_Hiy_i, &xHi_col_i.vector,
+        //               xHiDHiDHiy_ge);
+      }
+    } else {
+      //gsl_blas_daxpy(delta * delta * d_Hi_j1i2 * d_Hiy_j, &xHi_col_i.vector,
+      //               xHiDHiDHiy_gg);
+      //gsl_blas_daxpy(d_Hi_j1i2 * d_Hiy_j, &xHi_col_i.vector, xHiDHiDHiy_ee);
+      //gsl_blas_daxpy(delta * d_Hi_j1i2 * d_Hiy_j, &xHi_col_i.vector,
+      //               xHiDHiDHiy_ge);
+
+      //gsl_blas_daxpy(delta * delta * d_Hi_i1i2 * d_Hiy_j, &xHi_col_j.vector,
+      //               xHiDHiDHiy_gg);
+      //gsl_blas_daxpy(d_Hi_i1i2 * d_Hiy_j, &xHi_col_j.vector, xHiDHiDHiy_ee);
+      //gsl_blas_daxpy(delta * d_Hi_i1i2 * d_Hiy_j, &xHi_col_j.vector,
+      //               xHiDHiDHiy_ge);
+
+      if (i2 != j2) {
+        //gsl_blas_daxpy(delta * delta * d_Hi_j1j2 * d_Hiy_i, &xHi_col_i.vector,
+        //               xHiDHiDHiy_gg);
+        //gsl_blas_daxpy(d_Hi_j1j2 * d_Hiy_i, &xHi_col_i.vector, xHiDHiDHiy_ee);
+        //gsl_blas_daxpy(delta * d_Hi_j1j2 * d_Hiy_i, &xHi_col_i.vector,
+        //               xHiDHiDHiy_ge);
+
+        //gsl_blas_daxpy(delta * delta * d_Hi_i1j2 * d_Hiy_i, &xHi_col_j.vector,
+        //               xHiDHiDHiy_gg);
+        //gsl_blas_daxpy(d_Hi_i1j2 * d_Hiy_i, &xHi_col_j.vector, xHiDHiDHiy_ee);
+        //gsl_blas_daxpy(delta * d_Hi_i1j2 * d_Hiy_i, &xHi_col_j.vector,
+        //               xHiDHiDHiy_ge);
+      }
+    }
+  }
+
+  return;
+}
+
+void Calc_xHiDHiDHix(const DMatrix eval, const DMatrix Hi,
+                     const DMatrix xHi, const size_t i1, const size_t j1,
+                     const size_t i2, const size_t j2,
+                     DMatrix xHiDHiDHix_gg, DMatrix xHiDHiDHix_ee,
+                     DMatrix xHiDHiDHix_ge) {
+  xHiDHiDHix_gg = zeros_dmatrix(xHiDHiDHix_gg.shape[0], xHiDHiDHix_gg.shape[1]);
+  xHiDHiDHix_ee = zeros_dmatrix(xHiDHiDHix_ee.shape[0], xHiDHiDHix_ee.shape[1]);
+  xHiDHiDHix_ge = zeros_dmatrix(xHiDHiDHix_ge.shape[0], xHiDHiDHix_ge.shape[1]);
+
+  size_t n_size = eval.size, d_size = Hi.shape[0], dc_size = xHi.shape[0];
+
+  double delta, d_Hi_i1i2, d_Hi_i1j2, d_Hi_j1i2, d_Hi_j1j2;
+
+  DMatrix mat_dcdc; // = gsl_matrix_alloc(dc_size, dc_size);
+
+  for (size_t k = 0; k < n_size; k++) {
+    delta = eval.elements[k];
+
+    //gsl_vector_const_view
+    DMatrix xHi_col_i1 = get_col(xHi, k * d_size + i1);
+    //gsl_vector_const_view
+    DMatrix xHi_col_j1 = get_col(xHi, k * d_size + j1);
+    //gsl_vector_const_view
+    DMatrix xHi_col_i2 = get_col(xHi, k * d_size + i2);
+    //gsl_vector_const_view
+    DMatrix xHi_col_j2 = get_col(xHi, k * d_size + j2);
+
+    d_Hi_i1i2 = Hi.accessor(i1, k * d_size + i2);
+    d_Hi_i1j2 = Hi.accessor(i1, k * d_size + j2);
+    d_Hi_j1i2 = Hi.accessor(j1, k * d_size + i2);
+    d_Hi_j1j2 = Hi.accessor(j1, k * d_size + j2);
+
+    if (i1 == j1) {
+      mat_dcdc = zeros_dmatrix(mat_dcdc.shape[0], mat_dcdc.shape[1]);
+      //gsl_blas_dger(d_Hi_j1i2, &xHi_col_i1.vector, &xHi_col_j2.vector, mat_dcdc);
+
+      xHiDHiDHix_ee = add_dmatrix(xHiDHiDHix_ee, mat_dcdc);
+      mat_dcdc = multiply_dmatrix_num(mat_dcdc, delta);
+      xHiDHiDHix_ge = add_dmatrix(xHiDHiDHix_ge, mat_dcdc);
+      mat_dcdc = multiply_dmatrix_num(mat_dcdc, delta);
+      xHiDHiDHix_gg = add_dmatrix(xHiDHiDHix_gg, mat_dcdc);
+
+      if (i2 != j2) {
+        mat_dcdc = zeros_dmatrix(mat_dcdc.shape[0], mat_dcdc.shape[1]);
+        //gsl_blas_dger(d_Hi_j1j2, xHi_col_i1, xHi_col_i2, mat_dcdc);
+
+        xHiDHiDHix_ee = add_dmatrix(xHiDHiDHix_ee, mat_dcdc);
+        mat_dcdc = multiply_dmatrix_num(mat_dcdc, delta);
+        xHiDHiDHix_ge = add_dmatrix(xHiDHiDHix_ge, mat_dcdc);
+        mat_dcdc = multiply_dmatrix_num(mat_dcdc, delta);
+        xHiDHiDHix_gg = add_dmatrix(xHiDHiDHix_gg, mat_dcdc);
+      }
+    } else {
+      mat_dcdc = zeros_dmatrix(mat_dcdc.shape[0], mat_dcdc.shape[1]);
+      gsl_blas_dger(d_Hi_j1i2, &xHi_col_i1.vector, &xHi_col_j2.vector,
+                    mat_dcdc);
+
+      xHiDHiDHix_ee = add_dmatrix(xHiDHiDHix_ee, mat_dcdc);
+      mat_dcdc = multiply_dmatrix_num(mat_dcdc, delta);
+      xHiDHiDHix_ge = add_dmatrix(xHiDHiDHix_ge, mat_dcdc);
+      mat_dcdc = multiply_dmatrix_num(mat_dcdc, delta);
+      xHiDHiDHix_gg = add_dmatrix(xHiDHiDHix_gg, mat_dcdc);
+
+      mat_dcdc = zeros_dmatrix(mat_dcdc.shape[0], mat_dcdc.shape[1]);
+      //gsl_blas_dger(d_Hi_i1i2, &xHi_col_j1.vector, &xHi_col_j2.vector, mat_dcdc);
+
+      xHiDHiDHix_ee = add_dmatrix(xHiDHiDHix_ee, mat_dcdc);
+      mat_dcdc = multiply_dmatrix_num(mat_dcdc, delta);
+      xHiDHiDHix_ge = add_dmatrix(xHiDHiDHix_ge, mat_dcdc);
+      mat_dcdc = multiply_dmatrix_num(mat_dcdc, delta);
+      xHiDHiDHix_gg = add_dmatrix(xHiDHiDHix_gg, mat_dcdc);
+
+      if (i2 != j2) {
+        mat_dcdc = zeros_dmatrix(mat_dcdc.shape[0], mat_dcdc.shape[1]);
+        gsl_blas_dger(d_Hi_j1j2, &xHi_col_i1.vector, &xHi_col_i2.vector,
+                      mat_dcdc);
+
+        xHiDHiDHix_ee = add_dmatrix(xHiDHiDHix_ee, mat_dcdc);
+        mat_dcdc = multiply_dmatrix_num(mat_dcdc, delta);
+        xHiDHiDHix_ge = add_dmatrix(xHiDHiDHix_ge, mat_dcdc);
+        mat_dcdc = multiply_dmatrix_num(mat_dcdc, delta);
+        xHiDHiDHix_gg = add_dmatrix(xHiDHiDHix_gg, mat_dcdc);
+
+        mat_dcdc = zeros_dmatrix(mat_dcdc.shape[0], mat_dcdc.shape[1]);
+        //gsl_blas_dger(d_Hi_i1j2, &xHi_col_j1.vector, &xHi_col_i2.vector, mat_dcdc);
+
+        gsl_matrix_add(xHiDHiDHix_ee, mat_dcdc);
+        mat_dcdc = multiply_dmatrix_num(mat_dcdc, delta);
+        gsl_matrix_add(xHiDHiDHix_ge, mat_dcdc);
+        mat_dcdc = multiply_dmatrix_num(mat_dcdc, delta);
+        gsl_matrix_add(xHiDHiDHix_gg, mat_dcdc);
+      }
+    }
+  }
+
+  return;
+}
+
+void Calc_yHiDHiy(const DMatrix eval, const DMatrix Hiy, const size_t i,
+                  const size_t j, double yHiDHiy_g, double yHiDHiy_e) {
+  yHiDHiy_g = 0.0;
+  yHiDHiy_e = 0.0;
+
+  size_t n_size = eval.size;
+
+  double delta, d1, d2;
+
+  for (size_t k = 0; k < n_size; k++) {
+    delta = eval.elements[k];
+    d1 = Hiy.accessor(i, k);
+    d2 = Hiy.accessor(j, k);
+
+    if (i == j) {
+      yHiDHiy_g += delta * d1 * d2;
+      yHiDHiy_e += d1 * d2;
+    } else {
+      yHiDHiy_g += delta * d1 * d2 * 2.0;
+      yHiDHiy_e += d1 * d2 * 2.0;
+    }
+  }
+
+  return;
+}
+
+void Calc_yHiDHiDHiy(const DMatrix eval, const DMatrix Hi,
+                     const DMatrix Hiy, const size_t i1, const size_t j1,
+                     const size_t i2, const size_t j2, double yHiDHiDHiy_gg,
+                     double yHiDHiDHiy_ee, double yHiDHiDHiy_ge) {
+  yHiDHiDHiy_gg = 0.0;
+  yHiDHiDHiy_ee = 0.0;
+  yHiDHiDHiy_ge = 0.0;
+
+  size_t n_size = eval.size, d_size = Hiy.shape[0];
+
+  double delta, d_Hiy_i1, d_Hiy_j1, d_Hiy_i2, d_Hiy_j2;
+  double d_Hi_i1i2, d_Hi_i1j2, d_Hi_j1i2, d_Hi_j1j2;
+
+  for (size_t k = 0; k < n_size; k++) {
+    delta = eval.elements[k];
+
+    d_Hiy_i1 = Hiy.accessor(i1, k);
+    d_Hiy_j1 = Hiy.accessor(j1, k);
+    d_Hiy_i2 = Hiy.accessor(i2, k);
+    d_Hiy_j2 = Hiy.accessor(j2, k);
+
+    d_Hi_i1i2 = Hi.accessor(i1, k * d_size + i2);
+    d_Hi_i1j2 = Hi.accessor(i1, k * d_size + j2);
+    d_Hi_j1i2 = Hi.accessor(j1, k * d_size + i2);
+    d_Hi_j1j2 = Hi.accessor(j1, k * d_size + j2);
+
+    if (i1 == j1) {
+      yHiDHiDHiy_gg += delta * delta * (d_Hiy_i1 * d_Hi_j1i2 * d_Hiy_j2);
+      yHiDHiDHiy_ee += (d_Hiy_i1 * d_Hi_j1i2 * d_Hiy_j2);
+      yHiDHiDHiy_ge += delta * (d_Hiy_i1 * d_Hi_j1i2 * d_Hiy_j2);
+
+      if (i2 != j2) {
+        yHiDHiDHiy_gg += delta * delta * (d_Hiy_i1 * d_Hi_j1j2 * d_Hiy_i2);
+        yHiDHiDHiy_ee += (d_Hiy_i1 * d_Hi_j1j2 * d_Hiy_i2);
+        yHiDHiDHiy_ge += delta * (d_Hiy_i1 * d_Hi_j1j2 * d_Hiy_i2);
+      }
+    } else {
+      yHiDHiDHiy_gg += delta * delta * (d_Hiy_i1 * d_Hi_j1i2 * d_Hiy_j2 +
+                                        d_Hiy_j1 * d_Hi_i1i2 * d_Hiy_j2);
+      yHiDHiDHiy_ee +=
+          (d_Hiy_i1 * d_Hi_j1i2 * d_Hiy_j2 + d_Hiy_j1 * d_Hi_i1i2 * d_Hiy_j2);
+      yHiDHiDHiy_ge += delta * (d_Hiy_i1 * d_Hi_j1i2 * d_Hiy_j2 +
+                                d_Hiy_j1 * d_Hi_i1i2 * d_Hiy_j2);
+
+      if (i2 != j2) {
+        yHiDHiDHiy_gg += delta * delta * (d_Hiy_i1 * d_Hi_j1j2 * d_Hiy_i2 +
+                                          d_Hiy_j1 * d_Hi_i1j2 * d_Hiy_i2);
+        yHiDHiDHiy_ee +=
+            (d_Hiy_i1 * d_Hi_j1j2 * d_Hiy_i2 + d_Hiy_j1 * d_Hi_i1j2 * d_Hiy_i2);
+        yHiDHiDHiy_ge += delta * (d_Hiy_i1 * d_Hi_j1j2 * d_Hiy_i2 +
+                                  d_Hiy_j1 * d_Hi_i1j2 * d_Hiy_i2);
+      }
     }
   }
 
