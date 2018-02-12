@@ -664,7 +664,7 @@ double MphEM(const char func_name, const size_t max_iter, const double max_prec,
   DMatrix Sigma_uu; // = gsl_matrix_alloc(d_size, d_size);
   DMatrix Sigma_ee; // = gsl_matrix_alloc(d_size, d_size);
   DMatrix xHiy; // = gsl_vector_alloc(dc_size);
-  gsl_permutation pmt = gsl_permutation_alloc(c_size);
+  gsl_permutation* pmt = gsl_permutation_alloc(c_size);
 
   double logl_const = 0.0, logl_old = 0.0, logl_new = 0.0;
   double logdet_Q, logdet_Ve;
@@ -789,7 +789,7 @@ double MphNR(const char func_name, const size_t max_iter, const double max_prec,
     }
   }
 
-  gsl_permutation pmt = gsl_permutation_alloc(c_size);
+  gsl_permutation* pmt = gsl_permutation_alloc(c_size);
   LUDecomp(XXt, pmt, &sig);
   gsl_permutation_free(pmt);
 
@@ -965,7 +965,8 @@ double MphCalcP(const DMatrix eval, const DMatrix x_vec, const DMatrix W,
   gsl_permutation *pmt = gsl_permutation_alloc(d_size);
   LUDecomp(xPx, pmt, &sig);
   LUSolve(xPx, pmt, xPy, D_l);
-  LUInvert(xPx, pmt, Vbeta);
+  //LUInvert(xPx, pmt, Vbeta);
+  Vbeta = xPx.inverse();
 
   // Need to multiply UltVehi on both sides or one side.
   beta  = matrix_mult(UltVeh.T, D_l);
@@ -1208,13 +1209,14 @@ void CalcDev(const char func_name, const DMatrix eval, const DMatrix Qi,
 
   // Invert Hessian.
   int sig;
-  gsl_permutation *pmt = gsl_permutation_alloc(v_size * 2);
+  //gsl_permutation *pmt = gsl_permutation_alloc(v_size * 2);
 
-  LUDecomp(Hessian, pmt, &sig);
-  LUInvert(Hessian, pmt, Hessian_inv);
+  //LUDecomp(Hessian, pmt, &sig);
+  //LUInvert(Hessian, pmt, Hessian_inv);
 
-  gsl_permutation_free(pmt);
+  //gsl_permutation_free(pmt);
 
+  Hessian_inv = Hessian.inverse();
   // Calculate Edgeworth correction factors after inverting
   // Hessian.
   if (c_size > 1) {
@@ -1654,6 +1656,10 @@ void CalcCRT(const DMatrix Hessian_inv, const DMatrix Qi,
   crt_b = 0.0;
   crt_c = 0.0;
 
+  // SET VALUES : todo
+
+  DMatrix QiM_g, QiM_e;
+
   size_t dc_size = Qi.shape[0], v_size = Hessian_inv.shape[0] / 2;
   size_t c_size = dc_size / d_size;
   double h_gg, h_ge, h_ee, d, B = 0.0, C = 0.0, D = 0.0;
@@ -1694,10 +1700,9 @@ void CalcCRT(const DMatrix Hessian_inv, const DMatrix Qi,
 
   //gsl_matrix_memcpy(Qi_sub, &Qi_s);
   LUDecomp(Qi_sub, pmt, &sig);
-  LUInvert(Qi_sub, pmt, Qi_si);
+  Qi_si = Qi_sub.inverse();
 
   gsl_permutation_free(pmt);
-  gsl_matrix_free(Qi_sub);
 
   // Calculate correction factors.
   for (size_t v1 = 0; v1 < v_size; v1++) {
@@ -1924,12 +1929,12 @@ void UpdateVgVe(const DMatrix Hessian_inv, const DMatrix gradient,
       v = GetIndex(i, j, d_size);
 
       d = vec_v.elements[v];
-      V_g.set(i, j) = d;
-      V_g.set(j, i) = d;
+      V_g.set(i, j, d);
+      V_g.set(j, i, d);
 
       d = vec_v.elements[v + v_size];
-      V_e.set(i, j) = d;
-      V_e.set(j, i) = d;
+      V_e.set(i, j, d);
+      V_e.set(j, i, d);
     }
   }
 
@@ -1958,16 +1963,14 @@ double PCRT(const size_t mode, const size_t d_size, const double p_value,
   return p_crt;
 }
 
-void analyze_plink(){
-//                  (const gsl_matrix *U, const gsl_vector *eval,
-//                    const gsl_matrix *UtW, const gsl_matrix *UtY) {
-  debug_msg("entering");
-  string file_bed = file_bfile + ".bed";
-  if (!infile) {
-    writeln("error reading bed file:");
-    return;
-  }
+void analyze_plink(const DMatrix U, const DMatrix eval,
+                   const DMatrix UtW, const DMatrix UtY, string file_bed) {
+  writeln("entering");
 
+  MPHSUMSTAT[] sumStat;
+
+  auto pipe = pipeShell("gunzip -c " ~ file_bed);
+  File input = pipe.stdout;
 
   char ch;
   //bitset<8> b;
@@ -1981,11 +1984,14 @@ void analyze_plink(){
   size_t n_size = UtY.shape[0], d_size = UtY.shape[1], c_size = UtW.shape[1];
   size_t dc_size = d_size * (c_size + 1), v_size = d_size * (d_size + 1) / 2;
 
+  //set VALUE : TODO
+
+  size_t LMM_BATCH_SIZE = 5000;
+
   // Create a large matrix.
   size_t msize = LMM_BATCH_SIZE;
-  DMatrix Xlarge; // = gsl_matrix_alloc(U->size1, msize);
+  DMatrix Xlarge = zeros_dmatrix(U.shape[0], msize);
   DMatrix UtXlarge; // = gsl_matrix_alloc(U->size1, msize);
-  gsl_matrix_set_zero(Xlarge);
 
   // Large matrices for EM.
   DMatrix U_hat; // = gsl_matrix_alloc(d_size, n_size);
@@ -2041,6 +2047,33 @@ void analyze_plink(){
   //gsl_vector_view
   DMatrix B_col = get_col(B, c_size);
   //gsl_vector_set_zero(B_col);
+
+  size_t em_iter = 0; //check
+  double em_prec = 0;
+  size_t nr_iter = 0;
+  double nr_prec = 0;
+  double l_min = 0;
+  double l_max = 0;
+  size_t n_region;
+  double[] Vg_remle_null;
+  double[] Ve_remle_null;
+  double[] VVg_remle_null;
+  double[] VVe_remle_null;
+  double[] beta_remle_null;
+  double[] se_beta_remle_null;
+  double logl_remle_H0;
+
+  double[] Vg_mle_null;
+  double[] Ve_mle_null;
+  double[] VVg_mle_null;
+  double[] VVe_mle_null;
+  double[] beta_mle_null;
+  double[] se_beta_mle_null;
+  double logl_mle_H0;
+  int[] indicator_snp;
+  int[] indicator_idv;
+  int a_mode;
+  size_t ni_test, ni_total;
 
   MphInitial(em_iter, em_prec, nr_iter, nr_prec, eval, X_sub, Y, l_min,
              l_max, n_region, V_g, V_e, B_sub);
@@ -2110,7 +2143,7 @@ void analyze_plink(){
   logl_H0 = MphEM('L', em_iter, em_prec, eval, X_sub, Y, U_hat, E_hat,
                   OmegaU, OmegaE, UltVehiY, UltVehiBX, UltVehiU, UltVehiE, V_g,
                   V_e, B_sub);
-  logl_H0 = MphNR('L', nr_iter, nr_prec, eval, &X_sub, Y, Hi_all,
+  logl_H0 = MphNR('L', nr_iter, nr_prec, eval, X_sub, Y, Hi_all,
                   xHi_all_sub, Hiy_all, V_g, V_e, Hessian, crt_a, crt_b,
                   crt_c);
   MphCalcBeta(eval, X_sub, Y, V_g, V_e, UltVehiY, B_sub, se_B_null);
@@ -2188,9 +2221,9 @@ void analyze_plink(){
   // Start reading genotypes and analyze.
   // Calculate n_bit and c, the number of bit for each snp.
   if (ni_total % 4 == 0) {
-    n_bit = ni_total / 4;
+    n_bit = to!int(ni_total / 4);
   } else {
-    n_bit = ni_total / 4 + 1;
+    n_bit = to!int(ni_total / 4 + 1);
   }
 
   // Print the first three magic numbers.
@@ -2200,7 +2233,7 @@ void analyze_plink(){
   }
 
   size_t csnp = 0, t_last = 0;
-  for (size_t t = 0; t < indicator_snp.size(); ++t) {
+  for (size_t t = 0; t < indicator_snp.length; ++t) {
     if (indicator_snp[t] == 0) {
       continue;
     }
@@ -2258,9 +2291,9 @@ void analyze_plink(){
     x_mean /= to!double(ni_test - n_miss);
 
     for (size_t i = 0; i < ni_test; ++i) {
-      geno = gsl_vector_get(x, i);
+      geno = x.elements[i];
       if (geno == -9) {
-        gsl_vector_set(x, i, x_mean);
+        x.elements[i] = x_mean;
         geno = x_mean;
       }
     }
@@ -2285,11 +2318,11 @@ void analyze_plink(){
 
       UtXlarge_sub = matrix_mult(U.T, Xlarge_sub);
 
-      gsl_matrix_set_zero(Xlarge);
+      Xlarge = zeros_dmatrix(Xlarge.shape[0], Xlarge.shape[1]);
 
       for (size_t i = 0; i < l; i++) {
         //gsl_vector_view
-        DMatrix UtXlarge_col = gsl_matrix_column(UtXlarge, i);
+        DMatrix UtXlarge_col = get_col(UtXlarge, i);
         //gsl_vector_memcpy(X_row, UtXlarge_col);
 
         // Initial values.
@@ -2298,6 +2331,10 @@ void analyze_plink(){
         //gsl_matrix_memcpy(B, B_null);
 
         // 3 is before 1.
+        // Set value : TODO
+        double crt;
+        size_t p_nr;
+
         if (a_mode == 3 || a_mode == 4) {
           p_score = MphCalcP(eval, X_row, X_sub, Y, V_g_null, V_e_null, UltVehiY, beta, Vbeta);
 
@@ -2386,7 +2423,7 @@ double MphCalcLogL(const DMatrix eval, const DMatrix xHiy, const DMatrix D_l,
 
   // Calculate yHiy+log|H_k|.
   for (size_t k = 0; k < n_size; k++) {
-    delta = gsl_vector_get(eval, k);
+    delta = eval.elements[k];
     for (size_t i = 0; i < d_size; i++) {
       y = UltVehiY.accessor(i, k);
       dl = D_l.elements[i];
@@ -2415,8 +2452,7 @@ double CalcQi(const DMatrix eval, const DMatrix D_l,
 
   double delta, dl, d1, d2, d, logdet_Q;
 
-  DMatrix ; //Q = gsl_matrix_alloc(dc_size, dc_size);
-  //gsl_matrix_set_zero(Q);
+  DMatrix Q = zeros_dmatrix(dc_size, dc_size);
 
   for (size_t i = 0; i < c_size; i++) {
     for (size_t j = 0; j < c_size; j++) {
@@ -3379,3 +3415,21 @@ void Calc_yHiDHiDHiy(const DMatrix eval, const DMatrix Hi,
 
   return;
 }
+
+
+// Does NOT set eigenvalues to be positive. G gets destroyed. Returns
+// eigen trace and values in U and eval (eigenvalues).
+double EigenDecomp(DMatrix G, DMatrix U, DMatrix eval,
+                   const size_t flag_largematrix) {
+  //lapack_eigen_symmv(G, eval, U, flag_largematrix);
+
+  // Calculate track_G=mean(diag(G)).
+  double d = 0.0;
+  for (size_t i = 0; i < eval.size; ++i)
+    d += eval.elements[i];
+
+  d /= to!double(eval.size);
+
+  return d;
+}
+
