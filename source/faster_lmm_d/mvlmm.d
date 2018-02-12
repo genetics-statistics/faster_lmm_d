@@ -671,7 +671,7 @@ double MphEM(const char func_name, const size_t max_iter, const double max_prec,
   int sig;
 
   // Calculate |XXt| and (XXt)^{-1}.
-  gsl_blas_dsyrk(CblasUpper, CblasNoTrans, 1.0, X, 0.0, XXt);
+  //gsl_blas_dsyrk(CblasUpper, CblasNoTrans, 1.0, X, 0.0, XXt);
   for (size_t i = 0; i < c_size; ++i) {
     for (size_t j = 0; j < i; ++j) {
       XXt.set(i, j, XXt.accessor(j, i));
@@ -782,7 +782,7 @@ double MphNR(const char func_name, const size_t max_iter, const double max_prec,
   DMatrix gradient; // = gsl_vector_alloc(v_size * 2);
 
   // Calculate |XXt| and (XXt)^{-1}.
-  gsl_blas_dsyrk(CblasUpper, CblasNoTrans, 1.0, X, 0.0, XXt);
+  //gsl_blas_dsyrk(CblasUpper, CblasNoTrans, 1.0, X, 0.0, XXt);
   for (size_t i = 0; i < c_size; ++i) {
     for (size_t j = 0; j < i; ++j) {
       XXt.set(i, j, XXt.accessor(j, i));
@@ -2460,7 +2460,7 @@ double CalcQi(const DMatrix eval, const DMatrix D_l,
         dl = D_l.elements[l];
 
         if (j < i) {
-          d = Q/accessor( j * d_size + l, i * d_size + l);
+          d = Q.accessor( j * d_size + l, i * d_size + l);
         } else {
           d = 0.0;
           for (size_t k = 0; k < n_size; k++) {
@@ -2647,8 +2647,8 @@ void CalcSigma(const char func_name, const DMatrix eval,
   size_t n_size = eval.size, c_size = X.shape[0];
   size_t d_size = D_l.size, dc_size = Qi.shape[0];
 
-  gsl_matrix_set_zero(Sigma_uu);
-  gsl_matrix_set_zero(Sigma_ee);
+  Sigma_uu = zeros_dmatrix(Sigma_uu.shape[0], Sigma_uu.shape[1]);
+  Sigma_ee = zeros_dmatrix(Sigma_ee.shape[0], Sigma_ee.shape[1]);
 
   double delta, dl, x, d;
 
@@ -2736,7 +2736,7 @@ void CalcHiQi(const DMatrix eval, const DMatrix X,
 
     //gsl_matrix_memcpy(mat_dd, UltVehi);
     for (size_t i = 0; i < d_size; i++) {
-      dl = gsl_vector_get(D_l, i);
+      dl = D_l.elements[i];
       d = delta * dl + 1.0;
 
       //gsl_vector_view
@@ -2787,9 +2787,9 @@ void Calc_Hiy_all(const DMatrix Y, const DMatrix Hi_all, DMatrix Hiy_all) {
     //gsl_vector_const_view
     DMatrix y_k = get_col(Y, k);
     //gsl_vector_view
-    DMatrix Hiy_k = gsl_matrix_column(Hiy_all, k);
+    DMatrix Hiy_k = get_col(Hiy_all, k);
 
-    Hiy_k = matrix_mult(Hi_k, y_k.vector);
+    Hiy_k = matrix_mult(Hi_k, y_k);
   }
 
   return;
@@ -2830,7 +2830,7 @@ double Calc_yHiy(const DMatrix Y, const DMatrix Hiy_all) {
     //gsl_vector_const_view
     DMatrix Hiy_k = get_col(Hiy_all, k);
 
-    D = vector_ddot(Hiy_k, y_k);
+    d = vector_ddot(Hiy_k, y_k);
     yHiy += d;
   }
 
@@ -3118,8 +3118,8 @@ void Calc_xHiDHiy(const DMatrix eval, const DMatrix xHi,
 
 void Calc_xHiDHix(const DMatrix eval, const DMatrix xHi, const size_t i,
                   const size_t j, DMatrix xHiDHix_g, DMatrix xHiDHix_e) {
-  xHiDHiy_g = zeros_dmatrix(xHiDHiy_g.shape[0], xHiDHiy_g.shape[1]);
-  xHiDHiy_e = zeros_dmatrix(xHiDHiy_e.shape[0], xHiDHiy_e.shape[1]);
+  xHiDHix_g = zeros_dmatrix(xHiDHix_g.shape[0], xHiDHix_g.shape[1]);
+  xHiDHix_e = zeros_dmatrix(xHiDHix_e.shape[0], xHiDHix_e.shape[1]);
 
   size_t n_size = eval.size, dc_size = xHi.shape[0];
   size_t d_size = xHi.shape[1] / n_size;
@@ -3288,8 +3288,7 @@ void Calc_xHiDHiDHix(const DMatrix eval, const DMatrix Hi,
       }
     } else {
       mat_dcdc = zeros_dmatrix(mat_dcdc.shape[0], mat_dcdc.shape[1]);
-      gsl_blas_dger(d_Hi_j1i2, &xHi_col_i1.vector, &xHi_col_j2.vector,
-                    mat_dcdc);
+      //gsl_blas_dger(d_Hi_j1i2, &xHi_col_i1.vector, &xHi_col_j2.vector, mat_dcdc);
 
       xHiDHiDHix_ee = add_dmatrix(xHiDHiDHix_ee, mat_dcdc);
       mat_dcdc = multiply_dmatrix_num(mat_dcdc, delta);
@@ -3308,8 +3307,7 @@ void Calc_xHiDHiDHix(const DMatrix eval, const DMatrix Hi,
 
       if (i2 != j2) {
         mat_dcdc = zeros_dmatrix(mat_dcdc.shape[0], mat_dcdc.shape[1]);
-        gsl_blas_dger(d_Hi_j1j2, &xHi_col_i1.vector, &xHi_col_i2.vector,
-                      mat_dcdc);
+        //gsl_blas_dger(d_Hi_j1j2, &xHi_col_i1.vector, &xHi_col_i2.vector, mat_dcdc);
 
         xHiDHiDHix_ee = add_dmatrix(xHiDHiDHix_ee, mat_dcdc);
         mat_dcdc = multiply_dmatrix_num(mat_dcdc, delta);
@@ -3320,11 +3318,11 @@ void Calc_xHiDHiDHix(const DMatrix eval, const DMatrix Hi,
         mat_dcdc = zeros_dmatrix(mat_dcdc.shape[0], mat_dcdc.shape[1]);
         //gsl_blas_dger(d_Hi_i1j2, &xHi_col_j1.vector, &xHi_col_i2.vector, mat_dcdc);
 
-        gsl_matrix_add(xHiDHiDHix_ee, mat_dcdc);
+        xHiDHiDHix_ee = add_dmatrix(xHiDHiDHix_ee, mat_dcdc);
         mat_dcdc = multiply_dmatrix_num(mat_dcdc, delta);
-        gsl_matrix_add(xHiDHiDHix_ge, mat_dcdc);
+        xHiDHiDHix_ge = add_dmatrix(xHiDHiDHix_ge, mat_dcdc);
         mat_dcdc = multiply_dmatrix_num(mat_dcdc, delta);
-        gsl_matrix_add(xHiDHiDHix_gg, mat_dcdc);
+        xHiDHiDHix_gg = add_dmatrix(xHiDHiDHix_gg, mat_dcdc);
       }
     }
   }
@@ -3433,3 +3431,32 @@ double EigenDecomp(DMatrix G, DMatrix U, DMatrix eval,
   return d;
 }
 
+
+// Same as EigenDecomp but zeroes eigenvalues close to zero. When
+// negative eigenvalues remain a warning is issued.
+double EigenDecomp_Zeroed(DMatrix G, DMatrix U, DMatrix eval,
+                          const size_t flag_largematrix) {
+  EigenDecomp(G,U,eval,flag_largematrix);
+  auto d = 0.0;
+  int count_zero_eigenvalues = 0;
+  int count_negative_eigenvalues = 0;
+  for (size_t i = 0; i < eval.size; i++) {
+    if (eval.elements[i] < EIGEN_MINVALUE)
+      eval.elements[i] = 0.0;
+    // checks
+    if (eval.elements[i] == 0.0)
+      count_zero_eigenvalues += 1;
+    if (eval.elements[i]  < 0.0) // count smaller than -EIGEN_MINVALUE
+      count_negative_eigenvalues += 1;
+    d += eval.elements[i] ;
+  }
+  d /= to!double(eval.size);
+  if (count_zero_eigenvalues > 1) {
+    writeln("Matrix G has ", count_zero_eigenvalues, " eigenvalues close to zero");
+  }
+  if (count_negative_eigenvalues > 0) {
+    writeln("Matrix G has more than one negative eigenvalues!");
+  }
+
+  return d;
+}
