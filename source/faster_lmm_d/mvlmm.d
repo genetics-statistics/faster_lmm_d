@@ -490,11 +490,14 @@ void MphInitial(const size_t em_iter, const double em_prec,
   for (size_t i = 0; i < d_size; i++) {
     //gsl_vector_const_view
     DMatrix Y_row = get_row(Y, i);
-    CalcLambda('R', eval, Xt, Y_row, l_min, l_max, n_region, lambda, logl);
-    //CalcLmmVgVeBeta(eval, Xt, Y_row, lambda, vg, ve, beta_temp, se_beta_temp);
+    auto res = calc_lambda('R', eval, Xt, Y_row, l_min, l_max, n_region);
+    lambda = res. lambda;
+    logl = res.logf;
 
-    V_g.set(i, i, vg);
-    V_e.set(i, i, ve);
+    auto vgvebeta = CalcLmmVgVeBeta(eval, Xt, Y_row, lambda);
+
+    V_g.set(i, i, vgvebeta.vg);
+    V_e.set(i, i, vgvebeta.ve);
   }
 
   // If number of phenotypes is above four, then obtain the off
@@ -664,7 +667,6 @@ double MphEM(const char func_name, const size_t max_iter, const double max_prec,
   DMatrix Sigma_uu; // = gsl_matrix_alloc(d_size, d_size);
   DMatrix Sigma_ee; // = gsl_matrix_alloc(d_size, d_size);
   DMatrix xHiy; // = gsl_vector_alloc(dc_size);
-  gsl_permutation* pmt = gsl_permutation_alloc(c_size);
 
   double logl_const = 0.0, logl_old = 0.0, logl_new = 0.0;
   double logdet_Q, logdet_Ve;
@@ -678,14 +680,13 @@ double MphEM(const char func_name, const size_t max_iter, const double max_prec,
     }
   }
 
-  LUDecomp(XXt, pmt, &sig);
-  LUInvert(XXt, pmt, XXti);
+  XXti = XXt.inverse;
 
   // Calculate the constant for logl.
   if (func_name == 'R' || func_name == 'r') {
     logl_const =
         -0.5 * to!double(n_size - c_size) * to!double(d_size) * mlog(2.0 * PI) +
-        0.5 * to!double(d_size) * LULndet(XXt);
+        0.5 * to!double(d_size) * det(XXt);
   } else {
     logl_const = -0.5 * to!double(n_size) * to!double(d_size) * mlog(2.0 * PI);
   }
@@ -746,8 +747,6 @@ double MphEM(const char func_name, const size_t max_iter, const double max_prec,
     UpdateV(eval, U_hat, E_hat, Sigma_uu, Sigma_ee, V_g, V_e);
   }
 
-  gsl_permutation_free(pmt);
-
   return logl_new;
 }
 
@@ -789,15 +788,11 @@ double MphNR(const char func_name, const size_t max_iter, const double max_prec,
     }
   }
 
-  gsl_permutation* pmt = gsl_permutation_alloc(c_size);
-  LUDecomp(XXt, pmt, &sig);
-  gsl_permutation_free(pmt);
-
   // Calculate the constant for logl.
   if (func_name == 'R' || func_name == 'r') {
     logl_const =
         -0.5 * to!double(n_size - c_size) * to!double(d_size) * mlog(2.0 * PI) +
-        0.5 * to!double(d_size) * LULndet(XXt);
+        0.5 * to!double(d_size) * det(XXt);
   } else {
     logl_const = -0.5 * to!double(n_size) * to!double(d_size) * mlog(2.0 * PI);
   }
@@ -963,8 +958,9 @@ double MphCalcP(const DMatrix eval, const DMatrix x_vec, const DMatrix W,
   // Calculate V(beta) and beta.
   int sig;
   gsl_permutation *pmt = gsl_permutation_alloc(d_size);
-  LUDecomp(xPx, pmt, &sig);
-  LUSolve(xPx, pmt, xPy, D_l);
+  // TODO
+  //LUDecomp(xPx, pmt, &sig);
+  //LUSolve(xPx, pmt, xPy, D_l);
   //LUInvert(xPx, pmt, Vbeta);
   Vbeta = xPx.inverse();
 
@@ -1699,10 +1695,7 @@ void CalcCRT(const DMatrix Hessian_inv, const DMatrix Qi,
   gsl_permutation *pmt = gsl_permutation_alloc(d_size);
 
   //gsl_matrix_memcpy(Qi_sub, &Qi_s);
-  LUDecomp(Qi_sub, pmt, &sig);
   Qi_si = Qi_sub.inverse();
-
-  gsl_permutation_free(pmt);
 
   // Calculate correction factors.
   for (size_t v1 = 0; v1 < v_size; v1++) {
@@ -1972,9 +1965,9 @@ void analyze_plink(const DMatrix U, const DMatrix eval,
   auto pipe = pipeShell("gunzip -c " ~ file_bed);
   File input = pipe.stdout;
 
-  char ch;
+  char[] ch;
   //bitset<8> b;
-  bit[] b;
+  int[] b = new int[8];
 
   double logl_H0 = 0.0, logl_H1 = 0.0, p_wald = 0, p_lrt = 0, p_score = 0;
   double crt_a, crt_b, crt_c;
@@ -2074,6 +2067,7 @@ void analyze_plink(const DMatrix U, const DMatrix eval,
   int[] indicator_idv;
   int a_mode;
   size_t ni_test, ni_total;
+  int[] snpInfo;
 
   MphInitial(em_iter, em_prec, nr_iter, nr_prec, eval, X_sub, Y, l_min,
              l_max, n_region, V_g, V_e, B_sub);
@@ -2228,8 +2222,8 @@ void analyze_plink(const DMatrix U, const DMatrix eval,
 
   // Print the first three magic numbers.
   for (int i = 0; i < 3; ++i) {
-    infile.read(ch, 1);
-    b = ch[0];
+    //infile.read(ch, 1);
+    b ~= to!int(ch[0]);  // check
   }
 
   size_t csnp = 0, t_last = 0;
@@ -2245,7 +2239,7 @@ void analyze_plink(const DMatrix U, const DMatrix eval,
     }
 
     // n_bit, and 3 is the number of magic numbers.
-    infile.seekg(t * n_bit + 3);
+    //infile.seekg(t * n_bit + 3);
 
     // read genotypes
     x_mean = 0.0;
@@ -2253,8 +2247,8 @@ void analyze_plink(const DMatrix U, const DMatrix eval,
     ci_total = 0;
     ci_test = 0;
     for (int i = 0; i < n_bit; ++i) {
-      infile.read(ch, 1);
-      b = ch[0];
+      //infile.read(ch, 1);
+      b ~= to!int(ch[0]);  // check
 
       // Minor allele homozygous: 2.0; major: 0.0;
       for (size_t j = 0; j < 4; ++j) {
@@ -2389,16 +2383,16 @@ void analyze_plink(const DMatrix U, const DMatrix eval,
 
 
         // Store summary data.
-        for (size_t i = 0; i < d_size; i++) {
-          v_beta[i] = beta.elements[i];
+        for (size_t j = 0; j < d_size; j++) {
+          v_beta[j] = beta.elements[j];
         }
 
         c = 0;
-        for (size_t i = 0; i < d_size; i++) {
-          for (size_t j = i; j < d_size; j++) {
-            v_Vg[c] = V_g.accessor( i, j);
-            v_Ve[c] = V_e.accessor( i, j);
-            v_Vbeta[c] = Vbeta.accessor( i, j);
+        for (size_t k = 0; k < d_size; k++) {
+          for (size_t j = k; j < d_size; j++) {
+            v_Vg[c] = V_g.accessor( k, j);
+            v_Ve[c] = V_e.accessor( k, j);
+            v_Vbeta[c] = Vbeta.accessor( k, j);
             c++;
           }
         }
@@ -2477,14 +2471,8 @@ double CalcQi(const DMatrix eval, const DMatrix D_l,
   }
 
   // Calculate LU decomposition of Q, and invert Q and calculate |Q|.
-  int sig;
-  gsl_permutation *pmt = gsl_permutation_alloc(dc_size);
-  LUDecomp(Q, pmt, &sig);
-  LUInvert(Q, pmt, Qi);
-
-  logdet_Q = LULndet(Q);
-
-  gsl_permutation_free(pmt);
+  Qi = Q.inverse;
+  logdet_Q = det(Q);
 
   return logdet_Q;
 }
@@ -3189,44 +3177,32 @@ void Calc_xHiDHiDHiy(const DMatrix eval, const DMatrix Hi,
     d_Hi_j1j2 = Hi.accessor(j1, k * d_size + j2);
 
     if (i1 == j1) {
-      //gsl_blas_daxpy(delta * delta * d_Hi_j1i2 * d_Hiy_j, &xHi_col_i.vector,
-      //               xHiDHiDHiy_gg);
-      //gsl_blas_daxpy(d_Hi_j1i2 * d_Hiy_j, &xHi_col_i.vector, xHiDHiDHiy_ee);
-      //gsl_blas_daxpy(delta * d_Hi_j1i2 * d_Hiy_j, &xHi_col_i.vector,
-      //               xHiDHiDHiy_ge);
+      //gsl_blas_daxpy(delta * delta * d_Hi_j1i2 * d_Hiy_j, xHi_col_i, xHiDHiDHiy_gg);
+      //gsl_blas_daxpy(d_Hi_j1i2 * d_Hiy_j, xHi_col_i, xHiDHiDHiy_ee);
+      //gsl_blas_daxpy(delta * d_Hi_j1i2 * d_Hiy_j, xHi_col_i, xHiDHiDHiy_ge);
 
       if (i2 != j2) {
-        //gsl_blas_daxpy(delta * delta * d_Hi_j1j2 * d_Hiy_i, &xHi_col_i.vector,
-        //               xHiDHiDHiy_gg);
-        //gsl_blas_daxpy(d_Hi_j1j2 * d_Hiy_i, &xHi_col_i.vector, xHiDHiDHiy_ee);
-        //gsl_blas_daxpy(delta * d_Hi_j1j2 * d_Hiy_i, &xHi_col_i.vector,
-        //               xHiDHiDHiy_ge);
+        //gsl_blas_daxpy(delta * delta * d_Hi_j1j2 * d_Hiy_i, xHi_col_i, xHiDHiDHiy_gg);
+        //gsl_blas_daxpy(d_Hi_j1j2 * d_Hiy_i, xHi_col_i, xHiDHiDHiy_ee);
+        //gsl_blas_daxpy(delta * d_Hi_j1j2 * d_Hiy_i, xHi_col_i, xHiDHiDHiy_ge);
       }
     } else {
-      //gsl_blas_daxpy(delta * delta * d_Hi_j1i2 * d_Hiy_j, &xHi_col_i.vector,
-      //               xHiDHiDHiy_gg);
-      //gsl_blas_daxpy(d_Hi_j1i2 * d_Hiy_j, &xHi_col_i.vector, xHiDHiDHiy_ee);
-      //gsl_blas_daxpy(delta * d_Hi_j1i2 * d_Hiy_j, &xHi_col_i.vector,
-      //               xHiDHiDHiy_ge);
+      //gsl_blas_daxpy(delta * delta * d_Hi_j1i2 * d_Hiy_j, xHi_col_i, xHiDHiDHiy_gg);
+      //gsl_blas_daxpy(d_Hi_j1i2 * d_Hiy_j, xHi_col_i, xHiDHiDHiy_ee);
+      //gsl_blas_daxpy(delta * d_Hi_j1i2 * d_Hiy_j, xHi_col_i, xHiDHiDHiy_ge);
 
-      //gsl_blas_daxpy(delta * delta * d_Hi_i1i2 * d_Hiy_j, &xHi_col_j.vector,
-      //               xHiDHiDHiy_gg);
-      //gsl_blas_daxpy(d_Hi_i1i2 * d_Hiy_j, &xHi_col_j.vector, xHiDHiDHiy_ee);
-      //gsl_blas_daxpy(delta * d_Hi_i1i2 * d_Hiy_j, &xHi_col_j.vector,
-      //               xHiDHiDHiy_ge);
+      //gsl_blas_daxpy(delta * delta * d_Hi_i1i2 * d_Hiy_j, xHi_col_j, xHiDHiDHiy_gg);
+      //gsl_blas_daxpy(d_Hi_i1i2 * d_Hiy_j, xHi_col_j, xHiDHiDHiy_ee);
+      //gsl_blas_daxpy(delta * d_Hi_i1i2 * d_Hiy_j, xHi_col_j, xHiDHiDHiy_ge);
 
       if (i2 != j2) {
-        //gsl_blas_daxpy(delta * delta * d_Hi_j1j2 * d_Hiy_i, &xHi_col_i.vector,
-        //               xHiDHiDHiy_gg);
-        //gsl_blas_daxpy(d_Hi_j1j2 * d_Hiy_i, &xHi_col_i.vector, xHiDHiDHiy_ee);
-        //gsl_blas_daxpy(delta * d_Hi_j1j2 * d_Hiy_i, &xHi_col_i.vector,
-        //               xHiDHiDHiy_ge);
+        //gsl_blas_daxpy(delta * delta * d_Hi_j1j2 * d_Hiy_i, xHi_col_i, xHiDHiDHiy_gg);
+        //gsl_blas_daxpy(d_Hi_j1j2 * d_Hiy_i, xHi_col_i, xHiDHiDHiy_ee);
+        //gsl_blas_daxpy(delta * d_Hi_j1j2 * d_Hiy_i, xHi_col_i, xHiDHiDHiy_ge);
 
-        //gsl_blas_daxpy(delta * delta * d_Hi_i1j2 * d_Hiy_i, &xHi_col_j.vector,
-        //               xHiDHiDHiy_gg);
-        //gsl_blas_daxpy(d_Hi_i1j2 * d_Hiy_i, &xHi_col_j.vector, xHiDHiDHiy_ee);
-        //gsl_blas_daxpy(delta * d_Hi_i1j2 * d_Hiy_i, &xHi_col_j.vector,
-        //               xHiDHiDHiy_ge);
+        //gsl_blas_daxpy(delta * delta * d_Hi_i1j2 * d_Hiy_i, xHi_col_j, xHiDHiDHiy_gg);
+        //gsl_blas_daxpy(d_Hi_i1j2 * d_Hiy_i, xHi_col_j, xHiDHiDHiy_ee);
+        //gsl_blas_daxpy(delta * d_Hi_i1j2 * d_Hiy_i, xHi_col_j, xHiDHiDHiy_ge);
       }
     }
   }
