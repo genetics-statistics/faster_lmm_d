@@ -39,6 +39,10 @@ struct pair2{
   double value;
 }
 
+struct HYPBSLMM{
+  int id;
+}
+
 // If a_mode==13, then run probit model.
 void MCMC(const DMatrix X, const DMatrix y) {
 
@@ -57,18 +61,18 @@ void MCMC(const DMatrix X, const DMatrix y) {
   DMatrix Xtz_old;    // = gsl_vector_alloc(s_max);
   DMatrix beta_old;   // = gsl_vector_alloc(s_max);
 
-  DMatrix Xgamma_new = gsl_matrix_alloc(ni_test, s_max);
-  DMatrix XtX_new = gsl_matrix_alloc(s_max, s_max);
+  DMatrix Xgamma_new; // = gsl_matrix_alloc(ni_test, s_max);
+  DMatrix XtX_new; // = gsl_matrix_alloc(s_max, s_max);
   DMatrix Xtz_new;  // = gsl_vector_alloc(s_max);
   DMatrix beta_new;   // = gsl_vector_alloc(s_max);
 
   double ztz = 0.0;
-  gsl_vector_memcpy(z, y);
+  //gsl_vector_memcpy(z, y);
 
   // For quantitative traits, y is centered already in
   // gemma.cpp, but just in case.
   double mean_z = CenterVector(z);
-  gsl_blas_ddot(z, z, &ztz);
+  ztz = vector_ddot(z, z);
 
   double logPost_new, logPost_old;
   double logMHratio;
@@ -154,9 +158,11 @@ void MCMC(const DMatrix X, const DMatrix y) {
       if (cHyp_old.n_gamma == 0) {
         logPost_old = CalcPosterior(ztz, cHyp_old);
       } else {
-        gsl_matrix_view Xold_sub = gsl_matrix_submatrix(Xgamma_old, 0, 0, ni_test, rank_old.size());
-        gsl_vector_view Xtz_sub = gsl_vector_subvector(Xtz_old, 0, rank_old.size());
-        gsl_blas_dgemv(CblasTrans, 1.0, &Xold_sub.matrix, z, 0.0, &Xtz_sub.vector);
+        //gsl_matrix_view
+        DMatrix Xold_sub = get_sub_dmatrix(Xgamma_old, 0, 0, ni_test, rank_old.size());
+        //gsl_vector_view
+        DMatrix Xtz_sub; // = gsl_vector_subvector(Xtz_old, 0, rank_old.size());
+        Xtz_sub = matrix_mult(Xold_sub.T, z);
         logPost_old = CalcPosterior(Xgamma_old, XtX_old, Xtz_old, ztz, rank_old.size(), Xb_old, beta_old, cHyp_old);
       }
     }
@@ -212,20 +218,28 @@ void MCMC(const DMatrix X, const DMatrix y) {
             rank_old.push_back(rank_new[i]);
           }
 
-          gsl_matrix_view Xold_sub = gsl_matrix_submatrix(Xgamma_old, 0, 0, ni_test, rank_new.size());
-          gsl_matrix_view XtXold_sub = gsl_matrix_submatrix(XtX_old, 0, 0, rank_new.size(), rank_new.size());
-          gsl_vector_view Xtzold_sub = gsl_vector_subvector(Xtz_old, 0, rank_new.size());
-          gsl_vector_view betaold_sub = gsl_vector_subvector(beta_old, 0, rank_new.size());
+          //gsl_matrix_view
+          DMatrix Xold_sub = get_sub_dmatrix(Xgamma_old, 0, 0, ni_test, rank_new.size());
+          //gsl_matrix_view
+          DMatrix XtXold_sub = get_sub_dmatrix(XtX_old, 0, 0, rank_new.size(), rank_new.size());
+          //gsl_vector_view
+          DMatrix Xtzold_sub; // = gsl_vector_subvector(Xtz_old, 0, rank_new.size());
+          //gsl_vector_view
+          DMatrix betaold_sub; // = gsl_vector_subvector(beta_old, 0, rank_new.size());
 
-          gsl_matrix_view Xnew_sub = gsl_matrix_submatrix(Xgamma_new, 0, 0, ni_test, rank_new.size());
-          gsl_matrix_view XtXnew_sub = gsl_matrix_submatrix(XtX_new, 0, 0, rank_new.size(), rank_new.size());
-          gsl_vector_view Xtznew_sub = gsl_vector_subvector(Xtz_new, 0, rank_new.size());
-          gsl_vector_view betanew_sub = gsl_vector_subvector(beta_new, 0, rank_new.size());
+          //gsl_matrix_view
+          DMatrix Xnew_sub = get_sub_dmatrix(Xgamma_new, 0, 0, ni_test, rank_new.size());
+          //gsl_matrix_view
+          DMatrix XtXnew_sub = get_sub_dmatrix(XtX_new, 0, 0, rank_new.size(), rank_new.size());
+          //gsl_vector_view
+          DMatrix Xtznew_sub; // = gsl_vector_subvector(Xtz_new, 0, rank_new.size());
+          //gsl_vector_view
+          DMatrix betanew_sub; // = gsl_vector_subvector(beta_new, 0, rank_new.size());
 
-          gsl_matrix_memcpy(Xold_sub, Xnew_sub);
-          gsl_matrix_memcpy(XtXold_sub, XtXnew_sub);
-          gsl_vector_memcpy(Xtzold_sub, Xtznew_sub);
-          gsl_vector_memcpy(betaold_sub, betanew_sub);
+          //gsl_matrix_memcpy(Xold_sub, Xnew_sub);
+          //gsl_matrix_memcpy(XtXold_sub, XtXnew_sub);
+          //gsl_vector_memcpy(Xtzold_sub, Xtznew_sub);
+          //gsl_vector_memcpy(betaold_sub, betanew_sub);
         }
       } else {
         cHyp_new = cHyp_old;
@@ -287,7 +301,7 @@ void MCMC(const DMatrix X, const DMatrix y) {
       }
     }
   }
-  cout << endl;
+  writeln("\n");
 
   w_col = w % w_pace;
   WriteResult(1, Result_hyp, Result_gamma, w_col);
@@ -337,7 +351,7 @@ void MCMC(const DMatrix U, const DMatrix UtX,
 
   pair[] beta_g;
   for (size_t i = 0; i < ns_test; i++) {
-    beta_g.push_back(make_pair(0.0, 0.0));
+    beta_g ~= (make_pair(0.0, 0.0));
   }
 
   size_t[] rank_new, rank_old;
@@ -419,7 +433,7 @@ void MCMC(const DMatrix U, const DMatrix UtX,
       SampleZ(y, z_hat, z);
       mean_z = CenterVector(z);
 
-      gsl_blas_dgemv(CblasTrans, 1.0, U, z, 0.0, Utz);
+      Utz = matrix_mult(U.T, z);
 
       // First proposal.
       if (cHyp_old.n_gamma == 0 || cHyp_old.rho == 0) {
@@ -561,7 +575,7 @@ void MCMC(const DMatrix U, const DMatrix UtX,
       }
     }
   }
-  cout << endl;
+  write("\n");
 
   w_col = w % w_pace;
   WriteResult(1, Result_hyp, Result_gamma, w_col);
@@ -581,3 +595,239 @@ void MCMC(const DMatrix U, const DMatrix UtX,
 
   return;
 }
+
+// Make sure that both y and X are centered already.
+void MatrixCalcLmLR(const DMatrix X, const DMatrix y,
+                    pair2 pos_loglr) {
+  double yty, xty, xtx, log_lr;
+  yty = vector_ddot(y, y);
+
+  for (size_t i = 0; i < X.shape[1]; ++i) {
+    //gsl_vector_const_view
+    DMatrix X_col = get_col(X, i);
+    xtx = vector_ddot(X_col, X_col);
+    xty = vector_ddot(X_col, y);
+
+    log_lr = 0.5 * to!double(y.size )* (log(yty) - log(yty - xty * xty / xtx));
+    pos_loglr ~= pair2(i, log_lr);
+  }
+
+  return;
+}
+
+// Center the vector y.
+double CenterVector(DMatrix y) {
+  double d = 0.0;
+
+  for (size_t i = 0; i < y.size; ++i) {
+    d += y.elements[i];
+  }
+  d /= to!double(y.size);
+
+  sub_dmatrix_num(y, d);
+
+  return d;
+}
+
+// Center the vector y.
+void CenterVector(DMatrix y, const DMatrix W) {
+  DMatrix WtW; // = gsl_matrix_safe_alloc(W->size2, W->size2);
+  DMatrix Wty; // = gsl_vector_safe_alloc(W->size2);
+  DMatrix WtWiWty; // = gsl_vector_safe_alloc(W->size2);
+
+  WtW = matrix_mult(W.T, W);
+  Wty = matrix_mult(W.T, y);
+
+  int sig;
+  gsl_permutation *pmt = gsl_permutation_alloc(W.shape[1]);
+  LUDecomp(WtW, pmt, &sig);
+  LUSolve(WtW, pmt, Wty, WtWiWty);
+
+  // note -1
+  //gsl_blas_dgemv(CblasNoTrans, -1.0, W, WtWiWty, 1.0, y);
+
+  return;
+}
+
+double CalcPosterior(const DMatrix Uty, const DMatrix K_eval,
+                      DMatrix Utu, DMatrix alpha_prime, HYPBSLMM cHyp) {
+
+  double sigma_b2 = cHyp.h * (1.0 - cHyp.rho) / (trace_G * (1 - cHyp.h));
+
+  DMatrix Utu_rand; // = gsl_vector_alloc(Uty.size);
+  DMatrix weight_Hi; // = gsl_vector_alloc(Uty.size);
+
+  double logpost = 0.0;
+  double d, ds, uy, Hi_yy = 0, logdet_H = 0.0;
+  for (size_t i = 0; i < ni_test; ++i) {
+    d = K_eval.elements[i] * sigma_b2;
+    ds = d / (d + 1.0);
+    d = 1.0 / (d + 1.0);
+    weight_Hi.elements[i] = d;
+
+    logdet_H -= mlog(d);
+    uy = Uty.elements[i];
+    Hi_yy += d * uy * uy;
+
+    Utu_rand.elements[i] =gsl_ran_gaussian(gsl_r, 1) * sqrt(ds);
+  }
+
+  // Sample tau.
+  double tau = 1.0;
+  if (a_mode == 11) {
+    tau = gsl_ran_gamma(gsl_r, to!double(ni_test) / 2.0, 2.0 / Hi_yy);
+  }
+
+  // Sample alpha.
+  //gsl_vector_memcpy(alpha_prime, Uty);
+  alpha_prime = slow_multiply_dmatrix(alpha_prime, weight_Hi);
+  alpha_prime = multiply_dmatrix_num(alpha_prime, sigma_b2);
+
+  // Sample u.
+  //gsl_vector_memcpy(Utu, alpha_prime);
+  Utu  = slow_multiply_dmatrix(Utu, K_eval);
+  if (a_mode == 11) {
+    Utu_rand = multiply_dmatrix_num(Utu_rand, sqrt(1.0 / tau));
+  }
+  Utu = add_dmatrix(Utu, Utu_rand);
+
+  // For quantitative traits, calculate pve and ppe.
+  if (a_mode == 11) {
+    d = vector_ddot(Utu, Utu);
+    cHyp.pve = d / to!double(ni_test);
+    cHyp.pve /= cHyp.pve + 1.0 / tau;
+    cHyp.pge = 0.0;
+  }
+
+  // Calculate likelihood.
+  logpost = -0.5 * logdet_H;
+  if (a_mode == 11) {
+    logpost -= 0.5 * to!double(ni_test) * mlog(Hi_yy);
+  } else {
+    logpost -= 0.5 * Hi_yy;
+  }
+
+  logpost += (to!double(cHyp.n_gamma) - 1.0) * cHyp.logp +
+             (to!double(ns_test) - to!double(cHyp.n_gamma)) * mlog(1 - exp(cHyp.logp));
+
+
+  return logpost;
+}
+
+double CalcPosterior(const DMatrix UtXgamma, const DMatrix Uty,
+                            const DMatrix K_eval, DMatrix UtXb,
+                            DMatrix Utu, DMatrix alpha_prime,
+                            DMatrix beta, HYPBSLMM cHyp) {
+  clock_t time_start;
+
+  double sigma_a2 = cHyp.h * cHyp.rho /
+                    (trace_G * (1 - cHyp.h) * exp(cHyp.logp) * to!double(ns_test));
+  double sigma_b2 = cHyp.h * (1.0 - cHyp.rho) / (trace_G * (1 - cHyp.h));
+
+  double logpost = 0.0;
+  double d, ds, uy, P_yy = 0, logdet_O = 0.0, logdet_H = 0.0;
+
+  DMatrix UtXgamma_eval; // = gsl_matrix_alloc(UtXgamma->size1, UtXgamma->size2);
+  DMatrix Omega; // = gsl_matrix_alloc(UtXgamma->size2, UtXgamma->size2);
+  DMatrix XtHiy; // = gsl_vector_alloc(UtXgamma->size2);
+  DMatrix beta_hat; // = gsl_vector_alloc(UtXgamma->size2);
+  DMatrix Utu_rand; // = gsl_vector_alloc(UtXgamma->size1);
+  DMatrix weight_Hi; // = gsl_vector_alloc(UtXgamma->size1);
+
+  //gsl_matrix_memcpy(UtXgamma_eval, UtXgamma);
+
+  logdet_H = 0.0;
+  P_yy = 0.0;
+  for (size_t i = 0; i < ni_test; ++i) {
+    //gsl_vector_view
+    DMatrix UtXgamma_row = get_row(UtXgamma_eval, i);
+    d = K_eval.elements[i] * sigma_b2;
+    ds = d / (d + 1.0);
+    d = 1.0 / (d + 1.0);
+    weight_Hi.elements[i] = d;
+
+    logdet_H -= mlog(d);
+    uy = Uty.elements[i];
+    P_yy += d * uy * uy;
+    UtXgamma_row = multiply_dmatrix_num(UtXgamma_row, d);
+
+    Utu_rand.elements[i] = gsl_ran_gaussian(gsl_r, 1) * sqrt(ds);
+  }
+
+  // Calculate Omega.
+  Omega = ones_dmatrix(Omega.shape[0], Omega.shape[1]);
+
+  //lapack_dgemm((char *)"T", (char *)"N", sigma_a2, UtXgamma_eval, UtXgamma, 1.0, Omega);
+
+  // Calculate beta_hat.
+  XtHiy = matrix_mult(UtXgamma_eval.T, Uty);
+
+  logdet_O = CholeskySolve(Omega, XtHiy, beta_hat);
+
+  gsl_vector_scale(beta_hat, sigma_a2);
+
+  d = vector_ddot(XtHiy, beta_hat);
+  P_yy -= d;
+
+  // Sample tau.
+  double tau = 1.0;
+  if (a_mode == 11) {
+    tau = gsl_ran_gamma(gsl_r,  to!double(ni_test) / 2.0, 2.0 / P_yy);
+  }
+
+  // Sample beta.
+  for (size_t i = 0; i < beta.size; i++) {
+    d = gsl_ran_gaussian(gsl_r, 1);
+    beta.elements[i] = d;
+  }
+  gsl_blas_dtrsv(CblasUpper, CblasNoTrans, CblasNonUnit, Omega, beta);
+
+  // This computes inv(L^T(Omega)) %*% beta.
+  gsl_vector_scale(beta, sqrt(sigma_a2 / tau));
+  gsl_vector_add(beta, beta_hat);
+  gsl_blas_dgemv(CblasNoTrans, 1.0, UtXgamma, beta, 0.0, UtXb);
+
+  // Sample alpha.
+  //gsl_vector_memcpy(alpha_prime, Uty);
+  alpha_prime =  subtract_dmatrix(alpha_prime, UtXb);
+  alpha_prime = slow_multiply_dmatrix(alpha_prime, weight_Hi);
+  alpha_prime = multiply_dmatrix_num(alpha_prime, sigma_b2);
+
+  // Sample u.
+  //gsl_vector_memcpy(Utu, alpha_prime);
+  Utu = slow_multiply_dmatrix(Utu, K_eval);
+
+  if (a_mode == 11) {
+    Utu_rand = multiply_dmatrix_num(Utu_rand, sqrt(1.0 / tau));
+  }
+  Utu = add_dmatrix(Utu, Utu_rand);
+
+  // For quantitative traits, calculate pve and pge.
+  if (a_mode == 11) {
+    d = vector_ddot(UtXb, UtXb);
+    cHyp.pge = d / to!double(ni_test);
+
+    d = vector_ddot(Utu, Utu);
+    cHyp.pve = cHyp.pge + d / to!double(ni_test);
+
+    if (cHyp.pve == 0) {
+      cHyp.pge = 0.0;
+    } else {
+      cHyp.pge /= cHyp.pve;
+    }
+    cHyp.pve /= cHyp.pve + 1.0 / tau;
+  }
+
+  logpost = -0.5 * logdet_H - 0.5 * logdet_O;
+  if (a_mode == 11) {
+    logpost -= 0.5 * to!double(ni_test) * mlog(P_yy);
+  } else {
+    logpost -= 0.5 * P_yy;
+  }
+  logpost +=
+      (to!double(cHyp.n_gamma) - 1.0) * cHyp.logp +
+      (to!double(ns_test) - to!double(cHyp.n_gamma)) * log(1.0 - exp(cHyp.logp));
+
+  return logpost;
+}
+
