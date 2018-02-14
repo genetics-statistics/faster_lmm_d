@@ -831,3 +831,233 @@ double CalcPosterior(const DMatrix UtXgamma, const DMatrix Uty,
   return logpost;
 }
 
+// Calculate pve and pge, and calculate z_hat for case-control data.
+void CalcCC_PVEnZ(const DMatrix U, const DMatrix Utu, DMatrix z_hat, HYPBSLMM cHyp) {
+  double d;
+
+  d = vector_ddot(Utu, Utu);
+  cHyp.pve = d / to!double(ni_test);
+
+  z_hat = matrix_mult(U, Utu);
+
+  cHyp.pve /= cHyp.pve + 1.0;
+  cHyp.pge = 0.0;
+
+  return;
+}
+
+// Calculate pve and pge, and calculate z_hat for case-control data.
+void CalcCC_PVEnZ(const DMatrix U, const DMatrix UtXb,
+                         const DMatrix Utu, DMatrix z_hat,
+                         HYPBSLMM cHyp) {
+  double d;
+  DMatrix UtXbU; // = gsl_vector_alloc(Utu->size);
+
+  d = vector_ddot(UtXb, UtXb);
+  cHyp.pge = d / to!double(ni_test);
+
+  gsl_blas_ddot(Utu, Utu, &d);
+  cHyp.pve = cHyp.pge + d / to!double(ni_test);
+
+  //gsl_vector_memcpy(UtXbU, Utu);
+  UtXbU = add_dmatrix(UtXbU, UtXb);
+  z_hat = matrix_mult(U, UtXbU);
+
+  if (cHyp.pve == 0) {
+    cHyp.pge = 0.0;
+  } else {
+    cHyp.pge /= cHyp.pve;
+  }
+
+  cHyp.pve /= cHyp.pve + 1.0;
+
+  return;
+}
+
+void SampleZ(const DMatrix y, const DMatrix z_hat, DMatrix z) {
+  double d1, d2, z_rand = 0.0;
+  for (size_t i = 0; i < z.size; ++i) {
+    d1 = y.elements[i];
+    d2 = z_hat.elements[i];
+
+    // y is centered for case control studies.
+    if (d1 <= 0.0) {
+
+      // Control, right truncated.
+      do {
+        z_rand = d2 + gsl_ran_gaussian(gsl_r, 1.0);
+      } while (z_rand > 0.0);
+    } else {
+      do {
+        z_rand = d2 + gsl_ran_gaussian(gsl_r, 1.0);
+      } while (z_rand < 0.0);
+    }
+
+    z.elements[i] = z_rand;
+  }
+
+  return;
+}
+
+double ProposeHnRho(const HYPBSLMM cHyp_old, HYPBSLMM cHyp_new, const size_t repeat) {
+
+  double h = cHyp_old.h, rho = cHyp_old.rho;
+
+  double d_h = (h_max - h_min) * h_scale,
+         d_rho = (rho_max - rho_min) * rho_scale;
+
+  for (size_t i = 0; i < repeat; ++i) {
+    h = h + (gsl_rng_uniform(gsl_r) - 0.5) * d_h;
+    if (h < h_min) {
+      h = 2 * h_min - h;
+    }
+    if (h > h_max) {
+      h = 2 * h_max - h;
+    }
+
+    rho = rho + (gsl_rng_uniform(gsl_r) - 0.5) * d_rho;
+    if (rho < rho_min) {
+      rho = 2 * rho_min - rho;
+    }
+    if (rho > rho_max) {
+      rho = 2 * rho_max - rho;
+    }
+  }
+  cHyp_new.h = h;
+  cHyp_new.rho = rho;
+  return 0.0;
+}
+
+double ProposePi(const HYPBSLMM cHyp_old, HYPBSLMM cHyp_new, const size_t repeat) {
+  double logp_old = cHyp_old.logp, logp_new = cHyp_old.logp;
+  double log_ratio = 0.0;
+
+  double d_logp = min(0.1, (logp_max - logp_min) * logp_scale);
+
+  for (size_t i = 0; i < repeat; ++i) {
+    logp_new = logp_old + (gsl_rng_uniform(gsl_r) - 0.5) * d_logp;
+    if (logp_new < logp_min) {
+      logp_new = 2 * logp_min - logp_new;
+    }
+    if (logp_new > logp_max) {
+      logp_new = 2 * logp_max - logp_new;
+    }
+    log_ratio += logp_new - logp_old;
+    logp_old = logp_new;
+  }
+  cHyp_new.logp = logp_new;
+
+  return log_ratio;
+}
+
+bool comp_vec(size_t a, size_t b) { return (a < b); }
+
+double ProposeGamma(const size_t[] rank_old, size_t[] rank_new, const double p_gamma,
+                           const HYPBSLMM cHyp_old, HYPBSLMM cHyp_new, const size_t repeat) {
+  size_t[int] mapRank2in;
+  size_t r;
+  double unif, logp = 0.0;
+  int flag_gamma;
+  size_t r_add, r_remove, col_id;
+
+  rank_new = [];
+  if (cHyp_old.n_gamma != rank_old.size()) {
+    writeln("size wrong");
+  }
+
+  if (cHyp_old.n_gamma != 0) {
+    for (size_t i = 0; i < rank_old.size(); ++i) {
+      r = rank_old[i];
+      rank_new ~= r;
+      mapRank2in[r] = 1;
+    }
+  }
+  cHyp_new.n_gamma = cHyp_old.n_gamma;
+
+  for (size_t i = 0; i < repeat; ++i) {
+    unif = gsl_rng_uniform(gsl_r);
+
+    if (unif < 0.40 && cHyp_new.n_gamma < s_max) {
+      flag_gamma = 1;
+    } else if (unif >= 0.40 && unif < 0.80 && cHyp_new.n_gamma > s_min) {
+      flag_gamma = 2;
+    } else if (unif >= 0.80 && cHyp_new.n_gamma > 0 &&
+               cHyp_new.n_gamma < ns_test) {
+      flag_gamma = 3;
+    } else {
+      flag_gamma = 4;
+    }
+
+    if (flag_gamma == 1) {
+
+      // Add a SNP.
+      do {
+        r_add = gsl_ran_discrete(gsl_r, gsl_t);
+      } while (mapRank2in.count(r_add) != 0);
+
+      double prob_total = 1.0;
+      for (size_t i = 0; i < cHyp_new.n_gamma; ++i) {
+        r = rank_new[i];
+        prob_total -= p_gamma[r];
+      }
+
+      mapRank2in[r_add] = 1;
+      rank_new ~= r_add;
+      cHyp_new.n_gamma++;
+      logp += -mlog(p_gamma[r_add] / prob_total) - mlog(to!double(cHyp_new.n_gamma));
+    } else if (flag_gamma == 2) {
+
+      // Delete a SNP.
+      col_id = gsl_rng_uniform_int(gsl_r, cHyp_new.n_gamma);
+      r_remove = rank_new[col_id];
+
+      double prob_total = 1.0;
+      for (size_t i = 0; i < cHyp_new.n_gamma; ++i) {
+        r = rank_new[i];
+        prob_total -= p_gamma[r];
+      }
+      prob_total += p_gamma[r_remove];
+
+      mapRank2in.erase(r_remove);
+      rank_new.erase(rank_new.begin() + col_id);
+      logp += mlog(p_gamma[r_remove] / prob_total) + mlog(to!double(cHyp_new.n_gamma));
+      cHyp_new.n_gamma--;
+    } else if (flag_gamma == 3) {
+
+      // Switch a SNP.
+      col_id = gsl_rng_uniform_int(gsl_r, cHyp_new.n_gamma);
+      r_remove = rank_new[col_id];
+
+      // Be careful with the proposal.
+      do {
+        r_add = gsl_ran_discrete(gsl_r, gsl_t);
+      } while (mapRank2in.count(r_add) != 0);
+
+      double prob_total = 1.0;
+      for (size_t i = 0; i < cHyp_new.n_gamma; ++i) {
+        r = rank_new[i];
+        prob_total -= p_gamma[r];
+      }
+
+      logp += mlog(p_gamma[r_remove] /
+                  (prob_total + p_gamma[r_remove] - p_gamma[r_add]));
+      logp -= mlog(p_gamma[r_add] / prob_total);
+
+      mapRank2in.erase(r_remove);
+      mapRank2in[r_add] = 1;
+      rank_new.erase(rank_new.begin() + col_id);
+      rank_new ~= r_add;
+    } else {
+      logp += 0;
+    } // Do not change.
+  }
+
+  stable_sort(rank_new.begin(), rank_new.end(), comp_vec);
+
+  mapRank2in = [];
+  return logp;
+}
+
+bool comp_lr(pair2 a, pair2 b) {
+  return (a.second > b.second);
+}
