@@ -44,6 +44,7 @@ struct pair2{
 
 struct HYPBSLMM{
   int id;
+  int n_gamma;
 }
 
 // If a_mode==13, then run probit model.
@@ -136,9 +137,9 @@ void MCMC(const DMatrix X, const DMatrix y) {
     logPost_old = CalcPosterior(ztz, cHyp_old);
   } else {
     SetXgamma(Xgamma_old, X, rank_old);
-    CalcXtX(Xgamma_old, z, rank_old.size(), XtX_old, Xtz_old);
+    CalcXtX(Xgamma_old, z, rank_old.length, XtX_old, Xtz_old);
     logPost_old = CalcPosterior(Xgamma_old, XtX_old, Xtz_old, ztz,
-                                rank_old.size(), Xb_old, beta_old, cHyp_old);
+                                rank_old.length, Xb_old, beta_old, cHyp_old);
   }
 
   // Calculate centered z_hat, and pve.
@@ -168,11 +169,11 @@ void MCMC(const DMatrix X, const DMatrix y) {
         logPost_old = CalcPosterior(ztz, cHyp_old);
       } else {
         //gsl_matrix_view
-        DMatrix Xold_sub = get_sub_dmatrix(Xgamma_old, 0, 0, ni_test, rank_old.size());
+        DMatrix Xold_sub = get_sub_dmatrix(Xgamma_old, 0, 0, ni_test, rank_old.length);
         //gsl_vector_view
-        DMatrix Xtz_sub; // = gsl_vector_subvector(Xtz_old, 0, rank_old.size());
+        DMatrix Xtz_sub; // = gsl_vector_subvector(Xtz_old, 0, rank_old.length);
         Xtz_sub = matrix_mult(Xold_sub.T, z);
-        logPost_old = CalcPosterior(Xgamma_old, XtX_old, Xtz_old, ztz, rank_old.size(), Xb_old, beta_old, cHyp_old);
+        logPost_old = CalcPosterior(Xgamma_old, XtX_old, Xtz_old, ztz, rank_old.length, Xb_old, beta_old, cHyp_old);
       }
     }
 
@@ -840,6 +841,105 @@ double CalcPosterior(const DMatrix UtXgamma, const DMatrix Uty,
   return logpost;
 }
 
+double CalcPosterior(const double yty, HYPBSLMM cHyp) {
+  double logpost = 0.0;
+
+  // For quantitative traits, calculate pve and pge.
+  // Pve and pge for case/control data are calculted in CalcCC_PVEnZ.
+  if (a_mode == 11) {
+    cHyp.pve = 0.0;
+    cHyp.pge = 1.0;
+  }
+
+  // Calculate likelihood.
+  if (a_mode == 11) {
+    logpost -= 0.5 * to!double(ni_test) * mlog(yty);
+  } else {
+    logpost -= 0.5 * yty;
+  }
+
+  logpost += (to!double(cHyp.n_gamma) - 1.0) * cHyp.logp +
+             (to!double(ns_test) - to!double(cHyp.n_gamma)) * mlog(1 - exp(cHyp.logp));
+
+  return logpost;
+}
+
+double CalcPosterior(const DMatrix Xgamma, const DMatrix XtX,
+                      const DMatrix Xty, const double yty,
+                      const size_t s_size, DMatrix Xb,
+                      DMatrix beta, HYPBSLMM cHyp) {
+  double sigma_a2 = cHyp.h / ((1 - cHyp.h) * exp(cHyp.logp) * to!double(ns_test));
+  double logpost = 0.0;
+  double d, P_yy = yty, logdet_O = 0.0;
+
+  //gsl_matrix_const_view
+  DMatrix Xgamma_sub = get_sub_dmatrix(Xgamma, 0, 0, Xgamma.shape[0], s_size);
+  //gsl_matrix_const_view
+  DMatrix XtX_sub = get_sub_dmatrix(XtX, 0, 0, s_size, s_size);
+  //gsl_vector_const_view Xty_sub = gsl_vector_const_subvector(Xty, 0, s_size);
+
+  DMatrix Omega; // = gsl_matrix_alloc(s_size, s_size);
+  DMatrix M_temp; // = gsl_matrix_alloc(s_size, s_size);
+  DMatrix beta_hat; // = gsl_vector_alloc(s_size);
+  DMatrix Xty_temp; // = gsl_vector_alloc(s_size);
+
+  //gsl_vector_memcpy(Xty_temp, &Xty_sub.vector);
+
+  // Calculate Omega.
+  //gsl_matrix_memcpy(Omega, &XtX_sub.matrix);
+  Omega = multiply_dmatrix_num(Omega, sigma_a2);
+  //gsl_matrix_set_identity(M_temp);
+  Omega = add_dmatrix(Omega, M_temp);
+
+  // Calculate beta_hat.
+  logdet_O = CholeskySolve(Omega, Xty_temp, beta_hat);
+  gsl_vector_scale(beta_hat, sigma_a2);
+
+  d = vector_ddot(Xty_temp, beta_hat);
+  P_yy -= d;
+
+  // Sample tau.
+  double tau = 1.0;
+  if (a_mode == 11) {
+    tau = gsl_ran_gamma(gsl_r, to!double(ni_test) / 2.0, 2.0 / P_yy);
+  }
+
+  // Sample beta.
+  for (size_t i = 0; i < s_size; i++) {
+    d = gsl_ran_gaussian(gsl_r, 1);
+    beta.elements[i] = d;
+  }
+  //gsl_vector_view beta_sub = gsl_vector_subvector(beta, 0, s_size);
+  gsl_blas_dtrsv(CblasUpper, CblasNoTrans, CblasNonUnit, Omega, &beta_sub.vector);
+
+  // This computes inv(L^T(Omega)) %*% beta.
+  beta_sub = multiply_dmatrix_num(beta_sub, sqrt(sigma_a2 / tau));
+  beta_sub = add_dmatrix(beta_sub, beta_hat);
+  //gsl_blas_dgemv(CblasNoTrans, 1.0, &Xgamma_sub.matrix, &beta_sub.vector, 0.0, Xb);
+
+  // For quantitative traits, calculate pve and pge.
+  if (a_mode == 11) {
+    d = vector_ddot(Xb, Xb);
+    cHyp.pve = d / to!double(ni_test);
+    cHyp.pve /= cHyp.pve + 1.0 / tau;
+    cHyp.pge = 1.0;
+  }
+
+  logpost = -0.5 * logdet_O;
+  if (a_mode == 11) {
+    logpost -= 0.5 * to!double(ni_test) * mlog(P_yy);
+  } else {
+    logpost -= 0.5 * P_yy;
+  }
+
+  logpost +=
+      (to!double(cHyp.n_gamma) - 1.0) * cHyp.logp +
+      (to!double(ns_test) - to!double(cHyp.n_gamma)) * mlog(1.0 - exp(cHyp.logp));
+
+  return logpost;
+}
+
+
 // Calculate pve and pge, and calculate z_hat for case-control data.
 void CalcCC_PVEnZ(const DMatrix U, const DMatrix Utu, DMatrix z_hat, HYPBSLMM cHyp) {
   double d;
@@ -1069,4 +1169,18 @@ double ProposeGamma(const size_t[] rank_old, size_t[] rank_new, const double p_g
 
 bool comp_lr(pair2 a, pair2 b) {
   return (a.second > b.second);
+}
+
+// Below fits MCMC for rho=1.
+void CalcXtX(const DMatrix X, const DMatrix y,
+              const size_t s_size, DMatrix XtX, DMatrix Xty) {
+  DMatrix X_sub = get_sub_dmatrix(X, 0, 0, X.shape[0], s_size);
+  //gsl_matrix_view
+  DMatrix XtX_sub = get_sub_dmatrix(XtX, 0, 0, s_size, s_size);
+  //gsl_vector_view Xty_sub = gsl_vector_subvector(Xty, 0, s_size);
+
+  XtX_sub = matrix_mult(X_sub.T, X_sub.matrix);
+  Xty_sub = matrix_mult(X_sub.T, y);
+
+  return;
 }
