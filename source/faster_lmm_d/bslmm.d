@@ -10,6 +10,7 @@ module faster_lmm_d.bslmm;
 import core.stdc.stdlib : exit;
 
 import std.conv;
+import core.stdc.time;
 import std.exception;
 import std.file;
 import std.math;
@@ -28,15 +29,17 @@ import faster_lmm_d.gemma_lmm;
 import faster_lmm_d.gemma_param;
 import faster_lmm_d.helpers;
 import faster_lmm_d.optmatrix;
+import gsl.rng;
+import gsl.randist;
 
 struct pair{
-  double key;
-  double value;
+  double first;
+  double second;
 }
 
 struct pair2{
-  size_t key;
-  double value;
+  size_t first;
+  double second;
 }
 
 struct HYPBSLMM{
@@ -77,6 +80,12 @@ void MCMC(const DMatrix X, const DMatrix y) {
   double logPost_new, logPost_old;
   double logMHratio;
 
+  //define later
+  size_t w_pace, s_max, ns_test, randseed;
+  int a_mode;
+  double pheno_mean;
+  size_t[] mapRank2pos;
+
   Result_gamma = zeros_dmatrix(w_pace, s_max);
   if (a_mode == 13) {
     pheno_mean = 0.0;
@@ -92,7 +101,7 @@ void MCMC(const DMatrix X, const DMatrix y) {
 
   MatrixCalcLmLR(X, z, pos_loglr);
 
-  stable_sort(pos_loglr.begin(), pos_loglr.end(), comp_lr);
+  //stable_sort(pos_loglr.begin(), pos_loglr.end(), comp_lr);
   for (size_t i = 0; i < ns_test; ++i) {
     mapRank2pos[i] = pos_loglr[i].first;
   }
@@ -100,8 +109,8 @@ void MCMC(const DMatrix X, const DMatrix y) {
   // Calculate proposal distribution for gamma (unnormalized),
   // and set up gsl_r and gsl_t.
   gsl_rng_env_setup();
-  const gsl_rng_type *gslType;
-  gslType = gsl_rng_default;
+  const gsl_rng_type *gslType = gsl_rng_default;
+
   if (randseed < 0) {
     time_t rawtime;
     time(&rawtime);
@@ -110,13 +119,13 @@ void MCMC(const DMatrix X, const DMatrix y) {
     randseed =
         to!size_t(ptm.tm_hour % 24 * 3600 + ptm.tm_min * 60 + ptm.tm_sec);
   }
-  gsl_r = gsl_rng_alloc(gslType);
+  gsl_rng* gsl_r = gsl_rng_alloc(gslType);
   gsl_rng_set(gsl_r, randseed);
 
-  double *p_gamma = new double[ns_test];
+  double[] p_gamma = new double[ns_test];
   CalcPgamma(p_gamma);
 
-  gsl_t = gsl_ran_discrete_preproc(ns_test, p_gamma);
+  gsl_ran_discrete_t* gsl_t = gsl_ran_discrete_preproc(ns_test, p_gamma.ptr);
 
   // Initial parameters.
   InitialMCMC(X, z, rank_old, cHyp_old, pos_loglr);
@@ -598,7 +607,7 @@ void MCMC(const DMatrix U, const DMatrix UtX,
 
 // Make sure that both y and X are centered already.
 void MatrixCalcLmLR(const DMatrix X, const DMatrix y,
-                    pair2 pos_loglr) {
+                    pair2[] pos_loglr) {
   double yty, xty, xtx, log_lr;
   yty = vector_ddot(y, y);
 
