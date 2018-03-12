@@ -45,6 +45,8 @@ struct pair2{
 struct HYPBSLMM{
   int id;
   int n_gamma;
+  double h;
+  double pve, rho, pge, logp;
 }
 
 // If a_mode==13, then run probit model.
@@ -71,6 +73,10 @@ void MCMC(const DMatrix X, const DMatrix y) {
   DMatrix beta_new;   // = gsl_vector_alloc(s_max);
 
   double ztz = 0.0;
+
+  // define later
+  size_t w_step, s_step;
+
   //gsl_vector_memcpy(z, y);
 
   // For quantitative traits, y is centered already in
@@ -82,7 +88,7 @@ void MCMC(const DMatrix X, const DMatrix y) {
   double logMHratio;
 
   //define later
-  size_t w_pace, s_max, ns_test, randseed;
+  size_t w_pace, s_max, ns_test, randseed, ni_test;
   int a_mode;
   double pheno_mean;
   size_t[] mapRank2pos;
@@ -225,7 +231,7 @@ void MCMC(const DMatrix X, const DMatrix y) {
         rank_old.clear();
         if (rank_new.length != 0) {
           for (size_t i = 0; i < rank_new.length; ++i) {
-            rank_old.push_back(rank_new[i]);
+            rank_old ~= rank_new[i];
           }
 
           //gsl_matrix_view
@@ -265,12 +271,16 @@ void MCMC(const DMatrix X, const DMatrix y) {
       }
 
       // Sample mu and update z_hat.
-      gsl_vector_sub(z, z_hat);
+      z = subtract_dmatrix(z, z_hat);
       mean_z += CenterVector(z);
       mean_z += gsl_ran_gaussian(gsl_r, sqrt(1.0 / to!double(ni_test)));
 
       z_hat = add_dmatrix_num(z_hat, mean_z);
     }
+
+    // define
+    size_t w_step, r_pace;
+
 
     // Save data.
     if (t < w_step) {
@@ -283,8 +293,8 @@ void MCMC(const DMatrix X, const DMatrix y) {
             WriteResult(0, Result_hyp, Result_gamma, w_col);
           } else {
             WriteResult(1, Result_hyp, Result_gamma, w_col);
-            gsl_matrix_set_zero(Result_hyp);
-            gsl_matrix_set_zero(Result_gamma);
+            Result_hyp = zeros_dmatrix(Result_hyp.shape[0], Result_hyp.shape[1]);
+            Result_gamma = zeros_dmatrix(Result_gamma.shape[0], Result_gamma.shape[1]);
           }
         }
 
@@ -330,6 +340,11 @@ void MCMC(const DMatrix U, const DMatrix UtX,
 
   HYPBSLMM cHyp_old, cHyp_new;
 
+  // define later
+  size_t w_pace, s_max;
+  int a_mode;
+  double pheno_mean;
+
   DMatrix Result_hyp = gsl_matrix_alloc(w_pace, 6);
   DMatrix Result_gamma = zeros_dmatrix(w_pace, s_max);
 
@@ -348,6 +363,7 @@ void MCMC(const DMatrix U, const DMatrix UtX,
   DMatrix Utz; // = gsl_vector_alloc(ni_test);
 
   gsl_vector_memcpy(Utz, Uty);
+
 
   double logPost_new, logPost_old;
   double logMHratio;
@@ -1507,6 +1523,72 @@ void SetXgamma(const DMatrix X, const DMatrix X_old,
         }
       }
 
+    }
+  }
+
+  return;
+}
+
+void WriteResult(const int flag, const DMatrix Result_hyp,
+                  const DMatrix Result_gamma, const size_t w_col) {
+  string file_gamma, file_hyp;
+  file_gamma = path_out + "/" + file_out;
+  file_gamma += ".gamma.txt";
+  file_hyp = path_out + "/" + file_out;
+  file_hyp += ".hyp.txt";
+
+  ofstream outfile_gamma, outfile_hyp;
+
+  if (flag == 0) {
+    //outfile_gamma.open(file_gamma.c_str(), ofstream);
+    //outfile_hyp.open(file_hyp.c_str(), ofstream);
+    if (!outfile_gamma) {
+      writeln("error writing file: ", file_gamma);
+      return;
+    }
+    if (!outfile_hyp) {
+      writeln("error writing file: ", file_hyp);
+      return;
+    }
+
+    //outfile_hyp += "h \t pve \t rho \t pge \t pi \t n_gamma";
+
+    for (size_t i = 0; i < s_max; ++i) {
+      //outfile_gamma += "s" + i +"\t";
+    }
+    outfile_gamma << endl;
+  } else {
+    //outfile_gamma.open(file_gamma.c_str(), ofstream::app);
+    //outfile_hyp.open(file_hyp.c_str(), ofstream::app);
+    if (!outfile_gamma) {
+      writeln("error writing file: ", file_gamma);
+      return;
+    }
+    if (!outfile_hyp) {
+      writeln("error writing file: ", file_hyp);
+      return;
+    }
+
+    size_t w;
+    if (w_col == 0) {
+      w = w_pace;
+    } else {
+      w = w_col;
+    }
+
+    for (size_t i = 0; i < w; ++i) {
+      //outfile_hyp += scientific;
+      for (size_t j = 0; j < 4; ++j) {
+        //outfile_hyp += setprecision(6) , Result_hyp.accessor(i, j) + "\t";
+      }
+      //outfile_hyp += setprecision(6) << exp(Result_hyp.accessor(i, 4)) + "\t";
+      //outfile_hyp += to!int(Result_hyp.accessor(i, 5)) + "\t";
+    }
+
+    for (size_t i = 0; i < w; ++i) {
+      for (size_t j = 0; j < s_max; ++j) {
+        //outfile_gamma += to!int(Result_gamma.accessor(i, j)) + "\t";
+      }
     }
   }
 
