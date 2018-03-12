@@ -1184,3 +1184,228 @@ void CalcXtX(const DMatrix X, const DMatrix y,
 
   return;
 }
+
+void CalcPgamma(double p_gamma) {
+  double p, s = 0.0;
+  for (size_t i = 0; i < ns_test; ++i) {
+    p = 0.7 * gsl_ran_geometric_pdf(i + 1, 1.0 / geo_mean) +
+        0.3 / to!double(ns_test);
+    p_gamma[i] = p;
+    s += p;
+  }
+  for (size_t i = 0; i < ns_test; ++i) {
+    p = p_gamma[i];
+    p_gamma[i] = p / s;
+  }
+  return;
+}
+
+void SetXgamma(DMatrix Xgamma, const DMatrix X, size_t[] rank) {
+  size_t pos;
+  for (size_t i = 0; i < rank.length; ++i) {
+    pos = mapRank2pos[rank[i]];
+    //gsl_vector_view
+    DMatrix Xgamma_col = get_col(Xgamma, i);
+    //gsl_vector_const_view
+    DMatrix X_col = get_col(X, pos);
+    gsl_vector_memcpy(Xgamma_col, X_col);
+  }
+
+  return;
+}
+
+void SetXgamma(const DMatrix X, const DMatrix X_old,
+                const DMatrix XtX_old, const DMatrix Xty_old,
+                const DMatrix y, const size_t[] rank_old,
+                const size_t[] rank_new, DMatrix X_new,
+                DMatrix XtX_new, DMatrix Xty_new) {
+  double d;
+
+  // rank_old and rank_new are sorted already inside PorposeGamma
+  // calculate vectors rank_remove and rank_add.
+  // make sure that v_size is larger than repeat.
+  size_t v_size = 20;
+  size_t[] rank_remove = new size_t[v_size];
+  size_t[] rank_add = new size_t[v_size];
+  size_t[] rank_union = new size_t[s_max + v_size];
+  //vector<size_t>::iterator it;
+
+  it = set_difference(rank_old.begin(), rank_old.end(), rank_new.begin(),
+                      rank_new.end(), rank_remove.begin());
+  rank_remove.resize(it - rank_remove.begin());
+
+  it = set_difference(rank_new.begin(), rank_new.end(), rank_old.begin(),
+                      rank_old.end(), rank_add.begin());
+  rank_add.resize(it - rank_add.begin());
+
+  it = set_union(rank_new.begin(), rank_new.end(), rank_old.begin(),
+                 rank_old.end(), rank_union.begin());
+  rank_union.resize(it - rank_union.begin());
+
+  // Map rank_remove and rank_add.
+  pair2[] mapRank2in_remove, mapRank2in_add;
+  for (size_t i = 0; i < rank_remove.size(); i++) {
+    mapRank2in_remove[rank_remove[i]] = 1;
+  }
+  for (size_t i = 0; i < rank_add.size(); i++) {
+    mapRank2in_add[rank_add[i]] = 1;
+  }
+
+  // Obtain the subset of matrix/vector.
+  //gsl_matrix_const_view
+  DMatrix Xold_sub = get_sub_dmatrix(X_old, 0, 0, X_old.shape[0], rank_old.length);
+  //gsl_matrix_const_view
+  DMatrix XtXold_sub = get_sub_dmatrix(XtX_old, 0, 0, rank_old.size(), rank_old.length);
+  //gsl_vector_const_view
+  DMatrix Xtyold_sub = gsl_vector_const_subvector(Xty_old, 0, rank_old.length);
+
+  //gsl_matrix_view
+  DMatrix Xnew_sub = get_sub_dmatrix(X_new, 0, 0, X_new.shape[0], rank_new.length);
+  //gsl_matrix_view
+  DMatrix XtXnew_sub = get_sub_dmatrix(XtX_new, 0, 0, rank_new.length, rank_new.length);
+  //gsl_vector_view
+  DMatrix Xtynew_sub = gsl_vector_subvector(Xty_new, 0, rank_new.length);
+
+  // Get X_new and calculate XtX_new.
+  if (rank_remove.length == 0 && rank_add.length == 0) {
+    gsl_matrix_memcpy(&Xnew_sub.matrix, &Xold_sub.matrix);
+    gsl_matrix_memcpy(&XtXnew_sub.matrix, &XtXold_sub.matrix);
+    gsl_vector_memcpy(&Xtynew_sub.vector, &Xtyold_sub.vector);
+  } else {
+    size_t i_old, j_old, i_new, j_new, i_add, j_add, i_flag, j_flag;
+    if (rank_add.size() == 0) {
+      i_old = 0;
+      i_new = 0;
+      for (size_t i = 0; i < rank_union.size(); i++) {
+        if (mapRank2in_remove.count(rank_old[i_old]) != 0) {
+          i_old++;
+          continue;
+        }
+
+        //gsl_vector_view
+        DMatrix Xnew_col = get_col(X_new, i_new);
+        //gsl_vector_const_view
+        DMatrix Xcopy_col = get_col(X_old, i_old);
+        gsl_vector_memcpy(Xnew_col, Xcopy_col);
+
+        d = Xty_old.elements[i_old];
+        Xty_new.elements[i_new] = d;
+
+        j_old = i_old;
+        j_new = i_new;
+        for (size_t j = i; j < rank_union.size(); j++) {
+          if (mapRank2in_remove.count(rank_old[j_old]) != 0) {
+            j_old++;
+            continue;
+          }
+
+          d = XtX_old.accessor(i_old, j_old);
+
+          XtX_new.set(i_new, j_new, d);
+          if (i_new != j_new) {
+            XtX_new.set(j_new, i_new, d);
+          }
+
+          j_old++;
+          j_new++;
+        }
+        i_old++;
+        i_new++;
+      }
+    } else {
+      DMatrix X_add; // = gsl_matrix_alloc(X_old->size1, rank_add.size());
+      DMatrix XtX_aa; // = gsl_matrix_alloc(X_add->size2, X_add->size2);
+      DMatrix XtX_ao; // = gsl_matrix_alloc(X_add->size2, X_old->size2);
+      DMatrix Xty_add; // = gsl_vector_alloc(X_add->size2);
+
+      // Get X_add.
+      SetXgamma(X_add, X, rank_add);
+
+      // Somehow the lapack_dgemm does not work here.
+      XtX_aa = matrix_mult(X_add.T, X_add);
+      XtX_ao = matrix_mult(X_add.T, X_old);
+      Xty_add = matrix_mult(X_add.T, y);
+
+      // Save to X_new, XtX_new and Xty_new.
+      i_old = 0;
+      i_new = 0;
+      i_add = 0;
+      for (size_t i = 0; i < rank_union.size(); i++) {
+        if (mapRank2in_remove.count(rank_old[i_old]) != 0) {
+          i_old++;
+          continue;
+        }
+        if (mapRank2in_add.count(rank_new[i_new]) != 0) {
+          i_flag = 1;
+        } else {
+          i_flag = 0;
+        }
+
+        //gsl_vector_view
+        DMatrix Xnew_col = get_col(X_new, i_new);
+        if (i_flag == 1) {
+          //gsl_vector_view
+          DMatrix Xcopy_col = get_col(X_add, i_add);
+          //gsl_vector_memcpy(&Xnew_col.vector, &Xcopy_col.vector);
+        } else {
+          //gsl_vector_const_view
+          DMatrix Xcopy_col = get_col(X_old, i_old);
+          //gsl_vector_memcpy(&Xnew_col.vector, &Xcopy_col.vector);
+        }
+
+        if (i_flag == 1) {
+          d = Xty_add.elements[i_add];
+        } else {
+          d = Xty_old.elements[i_old];
+        }
+        Xty_new.elements[i_new] = d;
+
+        j_old = i_old;
+        j_new = i_new;
+        j_add = i_add;
+        for (size_t j = i; j < rank_union.length; j++) {
+          if (mapRank2in_remove.count(rank_old[j_old]) != 0) {
+            j_old++;
+            continue;
+          }
+          if (mapRank2in_add.count(rank_new[j_new]) != 0) {
+            j_flag = 1;
+          } else {
+            j_flag = 0;
+          }
+
+          if (i_flag == 1 && j_flag == 1) {
+            d = XtX_aa.accessor(i_add, j_add);
+          } else if (i_flag == 1) {
+            d = XtX_ao.accessor(i_add, j_old);
+          } else if (j_flag == 1) {
+            d = XtX_ao.accessor(j_add, i_old);
+          } else {
+            d = XtX_old.accessor(i_old, j_old);
+          }
+
+          XtX_new.set(i_new, j_new, d);
+          if (i_new != j_new) {
+            XtX_new.set(j_new, i_new, d);
+          }
+
+          j_new++;
+          if (j_flag == 1) {
+            j_add++;
+          } else {
+            j_old++;
+          }
+        }
+        i_new++;
+        if (i_flag == 1) {
+          i_add++;
+        } else {
+          i_old++;
+        }
+      }
+
+    }
+  }
+
+  return;
+}
