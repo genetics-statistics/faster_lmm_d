@@ -216,7 +216,7 @@ void MCMC(const DMatrix X, const DMatrix y) {
       }
       logMHratio += logPost_new - logPost_old;
 
-      if (logMHratio > 0 || log(gsl_rng_uniform(gsl_r)) < logMHratio) {
+      if (logMHratio > 0 || mlog(gsl_rng_uniform(gsl_r)) < logMHratio) {
         accept = 1;
         n_accept++;
       } else {
@@ -309,7 +309,7 @@ void MCMC(const DMatrix X, const DMatrix y) {
           pos = mapRank2pos[rank_old[i]] + 1;
           Result_hyp.set(w_col, i, pos);
 
-          beta_g[pos - 1].first += gsl_vector_get(beta_old, i);
+          beta_g[pos - 1].first += beta_old.elements[i];
           beta_g[pos - 1].second += 1.0;
         }
 
@@ -341,11 +341,11 @@ void MCMC(const DMatrix U, const DMatrix UtX,
   HYPBSLMM cHyp_old, cHyp_new;
 
   // define later
-  size_t w_pace, s_max;
+  size_t w_pace, s_max, ns_test, randseed;
   int a_mode;
   double pheno_mean;
 
-  DMatrix Result_hyp = gsl_matrix_alloc(w_pace, 6);
+  DMatrix Result_hyp; // = gsl_matrix_alloc(w_pace, 6);
   DMatrix Result_gamma = zeros_dmatrix(w_pace, s_max);
 
   DMatrix alpha_prime; // = gsl_vector_alloc(ni_test);
@@ -362,15 +362,15 @@ void MCMC(const DMatrix U, const DMatrix UtX,
   DMatrix z; // = gsl_vector_alloc(ni_test);
   DMatrix Utz; // = gsl_vector_alloc(ni_test);
 
-  gsl_vector_memcpy(Utz, Uty);
+  //gsl_vector_memcpy(Utz, Uty);
 
 
   double logPost_new, logPost_old;
   double logMHratio;
   double mean_z = 0.0;
 
-  gsl_vector_set_zero(Utu);
-  gsl_vector_set_zero(alpha_prime);
+  Utu = zeros_dmatrix(Utu.shape[0], Utu.shape[1]);
+  alpha_prime = zeros_dmatrix(alpha_prime.shape[0], alpha_prime.shape[1]);
   if (a_mode == 13) {
     pheno_mean = 0.0;
   }
@@ -383,9 +383,9 @@ void MCMC(const DMatrix U, const DMatrix UtX,
   size_t[] rank_new, rank_old;
   double[] beta_new, beta_old;
 
-  pair2 pos_loglr;
+  pair2[] pos_loglr;
 
-  MatrixCalcLR(U, UtX, Utz, K_eval, l_min, l_max, n_region, pos_loglr);
+  //MatrixCalcLR(U, UtX, Utz, K_eval, l_min, l_max, n_region, pos_loglr);
 
   stable_sort(pos_loglr.begin(), pos_loglr.end(), comp_lr);
   for (size_t i = 0; i < ns_test; ++i) {
@@ -404,7 +404,7 @@ void MCMC(const DMatrix U, const DMatrix UtX,
 
     randseed = to!size_t(ptm.tm_hour % 24 * 3600 + ptm.tm_min * 60 + ptm.tm_sec);
   }
-  gsl_r = gsl_rng_alloc(gslType);
+  gsl_rng* gsl_r = gsl_rng_alloc(gslType);
   gsl_rng_set(gsl_r, randseed);
 
   double *p_gamma = new double[ns_test];
