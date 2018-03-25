@@ -38,7 +38,7 @@ import gsl.randist;
 alias Tuple!(DMatrix, "cvt", int[], "indicator_cvt", int[], "indicator_idv", int, "n_cvt", size_t, "ni_test") Indicators_result ;
 alias Tuple!(DMatrix, "pheno", DMatrix, "indicator_pheno") Pheno_result;
 
-DMatrix kinship_from_gemma(string fn, string test_name = ""){
+DMatrix kinship_from_gemma(const string fn, const string test_name = ""){
   DMatrix X = read_matrix_from_file2(fn);
 
   DMatrix kinship = matrix_mult(X, X.T);
@@ -51,7 +51,7 @@ DMatrix kinship_from_gemma(string fn, string test_name = ""){
   return kinship_norm;
 }
 
-void check_kinship_from_gemma(string test_name, double[] top, double[] bottom){
+void check_kinship_from_gemma(const string test_name, const double[] top, const double[] bottom){
 
   writeln(top);
   enforce(modDiff(top[0], 0.335059 ) < 0.001);
@@ -67,18 +67,17 @@ void check_kinship_from_gemma(string test_name, double[] top, double[] bottom){
 }
 
 // similar to batch_run mode 21||22
-void generate_kinship(string geno_fn, string pheno_fn, bool test_nind= false){
+void generate_kinship(const string geno_fn, const string pheno_fn, const bool test_nind= false){
   writeln("in generate kinship");
   Read_files(geno_fn, pheno_fn);
-  //bimbam_kin(geno_fn, geno_fn);
   validate_kinship();
 }
 
-void Read_files(string geno_fn, string pheno_fn, string co_variate_fn = ""){
+void Read_files(const string geno_fn, const string pheno_fn, const string co_variate_fn = ""){
   double[] indicator_pheno;
   size_t[] p_column;
 
-  auto pheno = ReadFile_pheno(pheno_fn, indicator_pheno, p_column);
+  auto pheno = ReadFile_pheno(pheno_fn, p_column);
   check_pheno(pheno.pheno);
   check_indicator_pheno(pheno.indicator_pheno);
   auto indicators = process_cvt_phen(pheno.indicator_pheno);
@@ -94,14 +93,12 @@ void Read_files(string geno_fn, string pheno_fn, string co_variate_fn = ""){
   bimbam_kin(geno_fn, pheno_fn, W, indicator_snp);
 }
 
-Pheno_result ReadFile_pheno(string file_pheno, double[] indicator_pheno, size_t[] p_column){
+Pheno_result ReadFile_pheno(const string file_pheno, size_t[] p_column){
 
-  DMatrix pheno;
+  double[] pheno_elements;
+  double[] indicator_pheno;
 
   File input = File(file_pheno);
-
-  string id;
-  double p;
 
   double[] pheno_row;
   double[] ind_pheno_row;
@@ -129,9 +126,8 @@ Pheno_result ReadFile_pheno(string file_pheno, double[] indicator_pheno, size_t[
           ind_pheno_row[mapP2c[i + 1]] = 0;
           pheno_row[mapP2c[i + 1]] = -9;
         } else {
-          p = to!double(ch_ptr[i]);
           ind_pheno_row[mapP2c[i + 1]] = 1;
-          pheno_row[mapP2c[i + 1]] = p;
+          pheno_row[mapP2c[i + 1]] = to!double(ch_ptr[i]);
         }
       }
       i++;
@@ -139,21 +135,18 @@ Pheno_result ReadFile_pheno(string file_pheno, double[] indicator_pheno, size_t[
 
     indicator_pheno ~= ind_pheno_row;
     rows++;
-    pheno.elements ~= pheno_row;
+    pheno_elements ~= pheno_row;
   }
-  pheno.shape = [rows, pheno.elements.length/rows ];
-  return Pheno_result(pheno, DMatrix([rows, indicator_pheno.length/rows ],indicator_pheno));
+  return Pheno_result(DMatrix([rows, pheno_elements.length/rows ], pheno_elements),
+                      DMatrix([rows, indicator_pheno.length/rows ],indicator_pheno));
 }
 
 bool validate_kinship(){
   return true;
 }
 
-DMatrix bimbam_kin(string geno_fn, string pheno_fn, DMatrix W, int[] indicator_snp, size_t ni_total = 1940, bool test_nind= false){
-  //(const string file_geno, const set<string> ksnps,
-  //vector<int> &indicator_snp, const int k_mode,
-  //const int display_pace, gsl_matrix *matrix_kin,
-  //const bool test_nind) {
+DMatrix bimbam_kin(const string geno_fn, const string pheno_fn, const DMatrix W, const int[] indicator_snp,
+                   const size_t ni_total = 1940, const bool test_nind= false){
 
   writeln("in bimbam_kin");
   string filename = geno_fn;
@@ -203,7 +196,7 @@ DMatrix bimbam_kin(string geno_fn, string pheno_fn, DMatrix W, int[] indicator_s
 
     foreach(ref ele; geno_miss){ele = 0;}
 
-    for (size_t i = 0; i < ni_total; ++i) {
+    foreach(i; 0..ni_total) {
       auto digit = to!string(chr[i].strip());
       if (digit == "NA") {
         geno_miss[i] = 0;
@@ -218,19 +211,14 @@ DMatrix bimbam_kin(string geno_fn, string pheno_fn, DMatrix W, int[] indicator_s
     }
 
     geno_mean /= to!double(ni_total - n_miss);
-    geno_var += geno_mean * geno_mean * to!double(n_miss);
-    geno_var /= to!double(ni_total);
+    geno_var += (geno_mean * geno_mean * to!double(n_miss))/to!double(ni_total);
     geno_var -= geno_mean * geno_mean;
 
-    for (size_t i = 0; i < ni_total; ++i) {
-      if (geno_miss[i] == 0) {
-        geno[i] = geno_mean;
-      }
+    foreach (i; 0..ni_total) {
+      if (geno_miss[i] == 0) {geno[i] = geno_mean;}
     }
 
-    foreach(ref ele; geno){
-      ele -= geno_mean;
-    }
+    foreach(ref ele; geno){ ele -= geno_mean;}
 
     if (k_mode == 2 && geno_var != 0) {
       foreach(ref ele; geno){
@@ -299,7 +287,7 @@ struct SNPINFO{
 
 // Read bimbam mean genotype file, the first time, to obtain #SNPs for
 // analysis (ns_test) and total #SNP (ns_total).
-int[] ReadFile_geno(string geno_fn, ulong ni_total, DMatrix W, int[] indicator_idv){
+int[] ReadFile_geno(const string geno_fn, const ulong ni_total, const DMatrix W, const int[] indicator_idv){
 
   writeln("ReadFile_geno", geno_fn);
   int[] indicator_snp;
@@ -397,24 +385,18 @@ int[] ReadFile_geno(string geno_fn, ulong ni_total, DMatrix W, int[] indicator_i
       }
 
       geno = to!double(digit);
-      if (geno >= 0 && geno <= 0.5) {
-        n_0++;
-      }
-      if (geno > 0.5 && geno < 1.5) {
-        n_1++;
-      }
-      if (geno >= 1.5 && geno <= 2.0) {
-        n_2++;
-      }
+      if (geno >= 0   && geno <= 0.5){ n_0++; }
+      if (geno > 0.5  && geno <  1.5){ n_1++; }
+      if (geno >= 1.5 && geno <= 2.0){ n_2++; }
 
       genotype[c_idv] = geno;
+
       if (flag_poly == 0) {
         geno_old = geno;
         flag_poly = 2;
       }
-      if (flag_poly == 2 && geno != geno_old) {
-        flag_poly = 1;
-      }
+
+      if (flag_poly == 2 && geno != geno_old) { flag_poly = 1; }
 
       maf += geno;
 
@@ -559,7 +541,7 @@ double CalcHWE(const int n_hom1, const int n_hom2, const int n_ab) {
 }
 
 
-DMatrix CopyCvt(DMatrix cvt, int[] indicator_cvt, int[] indicator_idv, size_t n_cvt) {
+DMatrix CopyCvt(const DMatrix cvt, const int[] indicator_cvt, const int[] indicator_idv, const size_t n_cvt) {
   size_t ni_test = 1410;
   DMatrix W = zeros_dmatrix(ni_test, n_cvt); // ni_test missing
   size_t ci_test = 0;
@@ -579,7 +561,7 @@ DMatrix CopyCvt(DMatrix cvt, int[] indicator_cvt, int[] indicator_idv, size_t n_
 
 
 // Post-process phenotypes and covariates.
-Indicators_result process_cvt_phen( DMatrix indicator_pheno){
+Indicators_result process_cvt_phen(const DMatrix indicator_pheno){
 
   writeln(indicator_pheno.shape);
 
