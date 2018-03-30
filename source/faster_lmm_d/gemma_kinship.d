@@ -51,20 +51,6 @@ DMatrix kinship_from_gemma(const string fn, const string test_name = ""){
   return kinship_norm;
 }
 
-void check_kinship_from_gemma(const string test_name, const double[] top, const double[] bottom){
-
-  writeln(top);
-  enforce(modDiff(top[0], 0.335059 ) < 0.001);
-  enforce(modDiff(top[1], -0.0227226 ) < 0.001);
-  enforce(modDiff(top[2], 0.0103535 ) < 0.001);
-
-  writeln(bottom);
-  enforce(modDiff(bottom[0], 0.0039059 ) < 0.001);
-  enforce(modDiff(bottom[1], -0.0210802 ) < 0.001);
-  enforce(modDiff(bottom[2], 0.3881094925 ) < 0.001);
-
-  writeln("kinship tests pass successfully");
-}
 
 // similar to batch_run mode 21||22
 void generate_kinship(const string geno_fn, const string pheno_fn, const bool test_nind= false){
@@ -252,38 +238,6 @@ DMatrix bimbam_kin(const string geno_fn, const string pheno_fn, const DMatrix W,
   return matrix_kin;
 }
 
-
-struct SNPINFO{
-  double cM;
-  string chr;
-  double maf;
-  size_t n_nb;          // Number of neighbours on the right hand side.
-  size_t n_idv;         // Number of non-missing individuals.
-  size_t n_miss;
-  string a_minor;
-  string a_major;
-  string rs_number;
-  double missingness;
-  long   base_position;
-  size_t file_position; // SNP location in file.
-
-  this(string chr, string rs_number, double cM, long base_position, string a_minor,
-        string a_major, size_t n_miss, double missingness, double maf, size_t n_idv,
-        size_t n_nb, size_t file_position){
-    this.cM            = cM;
-    this.chr           = chr;
-    this.maf           = maf;
-    this.n_nb          = n_nb;
-    this.n_idv         = n_idv;
-    this.n_miss        = n_miss;
-    this.a_minor       = a_minor;
-    this.a_major       = a_major;
-    this.rs_number     = rs_number;
-    this.missingness   = missingness;
-    this.base_position = base_position;
-    this.file_position = file_position;
-  }
-}
 
 // Read bimbam mean genotype file, the first time, to obtain #SNPs for
 // analysis (ns_test) and total #SNP (ns_total).
@@ -692,7 +646,20 @@ Indicators_result process_cvt_phen(const DMatrix indicator_pheno){
   return Indicators_result(s_cvt, indicator_cvt, indicator_idv, 1, ni_test);
 }
 
+void check_kinship_from_gemma(const string test_name, const double[] top, const double[] bottom){
 
+  writeln(top);
+  enforce(modDiff(top[0], 0.335059 ) < 0.001);
+  enforce(modDiff(top[1], -0.0227226 ) < 0.001);
+  enforce(modDiff(top[2], 0.0103535 ) < 0.001);
+
+  writeln(bottom);
+  enforce(modDiff(bottom[0], 0.0039059 ) < 0.001);
+  enforce(modDiff(bottom[1], -0.0210802 ) < 0.001);
+  enforce(modDiff(bottom[2], 0.3881094925 ) < 0.001);
+
+  writeln("kinship tests pass successfully");
+}
 
 void check_indicator_snp(int[] indicator_idv){
   enforce(modDiff(to!double(indicator_idv[0]), 0 ) < 0.001);

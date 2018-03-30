@@ -9,6 +9,39 @@ module faster_lmm_d.gemma_param;
 
 import faster_lmm_d.dmatrix;
 
+
+struct SNPINFO{
+  double cM;
+  string chr;
+  double maf;
+  size_t n_nb;          // Number of neighbours on the right hand side.
+  size_t n_idv;         // Number of non-missing individuals.
+  size_t n_miss;
+  string a_minor;
+  string a_major;
+  string rs_number;
+  double missingness;
+  long   base_position;
+  size_t file_position; // SNP location in file.
+
+  this(string chr, string rs_number, double cM, long base_position, string a_minor,
+        string a_major, size_t n_miss, double missingness, double maf, size_t n_idv,
+        size_t n_nb, size_t file_position){
+    this.cM            = cM;
+    this.chr           = chr;
+    this.maf           = maf;
+    this.n_nb          = n_nb;
+    this.n_idv         = n_idv;
+    this.n_miss        = n_miss;
+    this.a_minor       = a_minor;
+    this.a_major       = a_major;
+    this.rs_number     = rs_number;
+    this.missingness   = missingness;
+    this.base_position = base_position;
+    this.file_position = file_position;
+  }
+}
+
 // Results for LMM.
 struct SUMSTAT {
   double beta;         // REML estimator for beta.
