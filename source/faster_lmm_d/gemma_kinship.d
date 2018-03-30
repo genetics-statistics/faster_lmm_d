@@ -76,7 +76,7 @@ void Read_files(const string geno_fn, const string pheno_fn, const string co_var
 
   int[] indicator_snp = ReadFile_geno(geno_fn, 1940, W, indicators.indicator_idv);
 
-  bimbam_kin(geno_fn, pheno_fn, W, indicator_snp);
+  //bimbam_kin(geno_fn, pheno_fn, W, indicator_snp);
 }
 
 Pheno_result ReadFile_pheno(const string file_pheno, size_t[] p_column){
@@ -241,9 +241,32 @@ DMatrix bimbam_kin(const string geno_fn, const string pheno_fn, const DMatrix W,
 
 // Read bimbam mean genotype file, the first time, to obtain #SNPs for
 // analysis (ns_test) and total #SNP (ns_total).
-int[] ReadFile_geno(const string geno_fn, const ulong ni_total, const DMatrix W, const int[] indicator_idv){
+int[] ReadFile_geno(const string geno_fn, const ulong ni_total, const DMatrix W,
+                    const int[] indicator_idv, const bool test_nind= false){
 
   writeln("ReadFile_geno", geno_fn);
+
+  int k_mode = 0;
+
+  double d, geno_mean, geno_var;
+
+  // setKSnp and/or LOCO support
+  //bool process_ksnps = ksnps.size();
+
+  DMatrix matrix_kin = zeros_dmatrix(ni_total, ni_total);
+
+  double[] geno_v = new double[ni_total];
+  double[] geno_miss = new double[ni_total];
+
+  // Xlarge contains inds x markers
+  size_t K_BATCH_SIZE = 20000;
+  const size_t msize = K_BATCH_SIZE;
+  DMatrix Xlarge = zeros_dmatrix(ni_total, msize);
+
+  // For every SNP read the genotype per individual
+  size_t t = 0;
+
+
   int[] indicator_snp;
 
   string[string] mapRS2chr;
@@ -251,7 +274,7 @@ int[] ReadFile_geno(const string geno_fn, const ulong ni_total, const DMatrix W,
 
   string[] setSnps;
 
-  size_t ns_test;
+  size_t ns_test = 0;
   SNPINFO[] snpInfo;
   const double maf_level = 0.01;
   const double miss_level = 0.05;
@@ -280,7 +303,6 @@ int[] ReadFile_geno(const string geno_fn, const ulong ni_total, const DMatrix W,
   foreach (element; indicator_idv) {
     ni_test += element;
   }
-  ns_test = 0;
 
   file_pos = 0;
   auto count_warnings = 0;
@@ -408,7 +430,74 @@ int[] ReadFile_geno(const string geno_fn, const ulong ni_total, const DMatrix W,
 
     indicator_snp ~= 1;
     ns_test++;
+
+
+    if (test_nind) {
+      if (chr_val.length != ni_total+3) {
+        writeln("Columns in geno file do not match # individuals");
+      }
+    }
+
+    // calc SNP stats
+    geno_mean = 0.0;
+    n_miss = 0;
+    geno_var = 0.0;
+
+    foreach(ref ele; geno_miss){ele = 0;}
+
+    foreach(i; 0..ni_total) {
+      auto digit = to!string(chr_val[i].strip());
+      if (digit == "NA") {
+        geno_miss[i] = 0;
+        n_miss++;
+      } else {
+        d = to!double(digit);
+        geno_v[i] = d;
+        geno_miss[i] = 1;
+        geno_mean += d;
+        geno_var += d * d;
+      }
+    }
+
+    geno_mean /= to!double(ni_total - n_miss);
+    geno_var += (geno_mean * geno_mean * to!double(n_miss))/to!double(ni_total);
+    geno_var -= geno_mean * geno_mean;
+
+    foreach (i; 0..ni_total) {
+      if (geno_miss[i] == 0) {geno_v[i] = geno_mean;}
+    }
+
+    foreach(ref ele; geno_v){ ele -= geno_mean;}
+
+    if (k_mode == 2 && geno_var != 0) {
+      foreach(ref ele; geno_v){
+        ele /= sqrt(geno_var);
+      }
+    }
+
+    // set the SNP column ns_test
+    set_col2(Xlarge, ns_test % msize, DMatrix([geno_v.length, 1], geno_v));
+
+    // compute kinship matrix and return in matrix_kin a SNP at a time
+    if (ns_test % msize == 0) {
+      matrix_kin = matrix_mult(Xlarge, Xlarge.T);
+      Xlarge = zeros_dmatrix(ni_total, msize);
+    }
+
+    t++;
   }
+
+  if (ns_test % msize != 0) {
+    matrix_kin = matrix_mult(Xlarge, Xlarge.T);
+  }
+
+  matrix_kin = divide_dmatrix_num(matrix_kin, ns_test);
+  matrix_kin = matrix_kin.T;
+
+
+  check_kinship_from_gemma("test_name", matrix_kin.elements[0..3], matrix_kin.elements[$-3..$]);
+
+  //return matrix_kin;
   return indicator_snp;
 }
 
