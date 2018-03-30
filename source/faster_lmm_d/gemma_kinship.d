@@ -343,7 +343,7 @@ int[] ReadFile_geno(const string geno_fn, const ulong ni_total, const DMatrix W,
     if (setSnps.length != 0 && setSnps.count(rs) == 0) {
       // if SNP in geno but not in -snps we add an missing value
       SNPINFO sInfo = SNPINFO("-9", rs, -9, -9, minor, major,
-                       0,    -9, -9, 0,  0,     file_pos);
+                                0,  -9, -9, 0, 0, file_pos);
       snpInfo ~= sInfo;
       indicator_snp ~= 0;
 
@@ -406,11 +406,11 @@ int[] ReadFile_geno(const string geno_fn, const ulong ni_total, const DMatrix W,
     maf /= 2.0 * to!double(ni_test - n_miss);
 
     snpInfo ~= SNPINFO(chr,    rs,
-                     cM,     b_pos,
-                     minor,  major,
-                     n_miss, to!double(n_miss) / to!double(ni_test),
-                     maf,    ni_test - n_miss,
-                     0,      file_pos);
+                       cM,     b_pos,
+                       minor,  major,
+                       n_miss, to!double(n_miss) / to!double(ni_test),
+                       maf,    ni_test - n_miss,
+                       0,      file_pos);
     file_pos++;
 
     if (to!double(n_miss) / to!double(ni_test) > miss_level) {
@@ -618,7 +618,8 @@ Indicators_result process_cvt_phen(const DMatrix indicator_pheno){
   if (ni_subsample != 0) {
     if (ni_test < ni_subsample) {
       writeln("error! number of subsamples is less than number of analyzed individuals. ");
-    } else {
+    }
+    else {
 
       // Set up random environment.
       size_t randseed = -1;
@@ -637,24 +638,16 @@ Indicators_result process_cvt_phen(const DMatrix indicator_pheno){
 
       // From ni_test, sub-sample ni_subsample.
       size_t[] a, b;
-      for (size_t i = 0; i < ni_subsample; i++) {
-        a ~= 0;
-      }
-      for (size_t i = 0; i < ni_test; i++) {
-        b ~= i;
-      }
+      foreach(i; 0..ni_subsample) { a ~= 0; }
+      foreach(i; 0..ni_test) { b ~= i; }
 
       gsl_ran_choose(gsl_r, cast(void *)(&a[0]), ni_subsample, cast(void *)(&b[0]), ni_test, size_t.sizeof);
 
       // Re-set indicator_idv and ni_test.
       size_t j = 0;
-      for (size_t i = 0; i < (indicator_idv).length; ++i) {
-        if (indicator_idv[i] == 0) {
-          continue;
-        }
-        if (a.canFind(j)){
-          indicator_idv[i] = 0;
-        }
+      foreach (ref indicator; indicator_idv) {
+        if (indicator == 0) { continue; }
+        if (a.canFind(j)){ indicator = 0; }
         j++;
       }
       ni_test = ni_subsample;
@@ -681,7 +674,7 @@ Indicators_result process_cvt_phen(const DMatrix indicator_pheno){
     double[] cvt_row;
     cvt_row ~= 1;
 
-    for (size_t i = 0; i < indicator_idv.length; ++i) {
+    foreach (i; indicator_idv) {
       indicator_cvt ~= 1;
       cvt ~= cvt_row;
     }
