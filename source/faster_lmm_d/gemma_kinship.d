@@ -267,9 +267,7 @@ int[] ReadFile_geno(const string geno_fn, const ulong ni_total, const DMatrix W,
   double[] genotype_miss = new double[W.shape[0]];
 
   // W refers to covariates
-  DMatrix WtW = matrix_mult(W.T, W);
-
-  DMatrix WtWi = inverse(WtW);
+  double WtWi= 1/vector_ddot(W, W);
 
   int c_idv = 0;
   int n_0, n_1, n_2, flag_poly;
@@ -398,11 +396,10 @@ int[] ReadFile_geno(const string geno_fn, const ulong ni_total, const DMatrix W,
       }
     }
 
-    DMatrix Wtx = matrix_mult(W.T, DMatrix([genotype.length, 1], genotype));
-    DMatrix WtWiWtx = matrix_mult(WtWi, Wtx);
+    double Wtx = vector_ddot(W.elements, genotype);
 
     v_x = vector_ddot(genotype, genotype);
-    v_w = vector_ddot(Wtx, WtWiWtx);
+    v_w = Wtx * Wtx * WtWi;
 
     if (W.shape[1] != 1 && v_w / v_x >= r2_level) {
       indicator_snp ~= 0;
