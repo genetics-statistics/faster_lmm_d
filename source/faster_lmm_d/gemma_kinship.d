@@ -74,7 +74,7 @@ void Read_files(const string geno_fn, const string pheno_fn, const string co_var
 
   check_covariates_W(W);
 
-  int[] indicator_snp = ReadFile_geno(geno_fn, 1940, W, indicators.indicator_idv);
+  DMatrix k = ReadFile_geno(geno_fn, 1940, W, indicators.indicator_idv);
 
   //bimbam_kin(geno_fn, pheno_fn, W, indicator_snp);
 }
@@ -241,13 +241,12 @@ DMatrix bimbam_kin(const string geno_fn, const string pheno_fn, const DMatrix W,
 
 // Read bimbam mean genotype file, the first time, to obtain #SNPs for
 // analysis (ns_test) and total #SNP (ns_total).
-int[] ReadFile_geno(const string geno_fn, const ulong ni_total, const DMatrix W,
+DMatrix ReadFile_geno(const string geno_fn, const ulong ni_total, const DMatrix W,
                     const int[] indicator_idv, const bool test_nind= false){
 
   writeln("ReadFile_geno", geno_fn);
 
   int k_mode = 0;
-
   double d, geno_mean, geno_var;
 
   // setKSnp and/or LOCO support
@@ -265,9 +264,6 @@ int[] ReadFile_geno(const string geno_fn, const ulong ni_total, const DMatrix W,
 
   // For every SNP read the genotype per individual
   size_t t = 0;
-
-
-  int[] indicator_snp;
 
   string[string] mapRS2chr;
   long[string] mapRS2bp, mapRS2cM;
@@ -319,7 +315,7 @@ int[] ReadFile_geno(const string geno_fn, const ulong ni_total, const DMatrix W,
       SNPINFO sInfo = SNPINFO("-9", rs, -9, -9, minor, major,
                                 0,  -9, -9, 0, 0, file_pos);
       snpInfo ~= sInfo;
-      indicator_snp ~= 0;
+      //indicator_snp ~= 0;
 
       file_pos++;
 
@@ -387,26 +383,11 @@ int[] ReadFile_geno(const string geno_fn, const ulong ni_total, const DMatrix W,
                        0,      file_pos);
     file_pos++;
 
-    if (to!double(n_miss) / to!double(ni_test) > miss_level) {
-      indicator_snp ~= 0;
-      continue;
-    }
-
-    if ((maf < maf_level || maf > (1.0 - maf_level)) && maf_level != -1) {
-      indicator_snp ~= 0;
-      continue;
-    }
-
-    if (flag_poly != 1) {
-      indicator_snp ~= 0;
-      continue;
-    }
-
+    if (to!double(n_miss) / to!double(ni_test) > miss_level) {continue;}
+    if ((maf < maf_level || maf > (1.0 - maf_level)) && maf_level != -1){continue;}
+    if (flag_poly != 1) {continue;}
     if (hwe_level != 0 && maf_level != -1) {
-      if (CalcHWE(n_0, n_2, n_1) < hwe_level) {
-        indicator_snp ~=0;
-        continue;
-      }
+      if (CalcHWE(n_0, n_2, n_1) < hwe_level) {continue;}
     }
 
     // Filter SNP if it is correlated with W unless W has
@@ -423,12 +404,8 @@ int[] ReadFile_geno(const string geno_fn, const ulong ni_total, const DMatrix W,
     v_x = vector_ddot(genotype, genotype);
     v_w = Wtx * Wtx * WtWi;
 
-    if (W.shape[1] != 1 && v_w / v_x >= r2_level) {
-      indicator_snp ~= 0;
-      continue;
-    }
+    if (W.shape[1] != 1 && v_w / v_x >= r2_level) { continue;}
 
-    indicator_snp ~= 1;
     ns_test++;
 
 
@@ -497,9 +474,8 @@ int[] ReadFile_geno(const string geno_fn, const ulong ni_total, const DMatrix W,
 
   check_kinship_from_gemma("test_name", matrix_kin.elements[0..3], matrix_kin.elements[$-3..$]);
 
-  //return matrix_kin;
-  return indicator_snp;
-}
+  return matrix_kin;
+ }
 
 double CalcHWE(const int n_hom1, const int n_hom2, const int n_ab) {
   if ((n_hom1 + n_hom2 + n_ab) == 0) {
