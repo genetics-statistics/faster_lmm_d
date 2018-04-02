@@ -258,7 +258,7 @@ DMatrix ReadFile_geno(const string geno_fn, const ulong ni_total, const DMatrix 
   double[] geno_miss = new double[ni_total];
 
   // Xlarge contains inds x markers
-  size_t K_BATCH_SIZE = 15000;
+  size_t K_BATCH_SIZE = 500;
   const size_t msize = K_BATCH_SIZE;
   DMatrix Xlarge = zeros_dmatrix(ni_total, msize);
 
@@ -455,7 +455,8 @@ DMatrix ReadFile_geno(const string geno_fn, const ulong ni_total, const DMatrix 
 
     // compute kinship matrix and return in matrix_kin a SNP at a time
     if (ns_test % msize == 0) {
-      matrix_kin = matrix_mult(Xlarge, Xlarge.T);
+      writeln("batch processed");
+      matrix_kin = add_dmatrix(matrix_kin, cpu_mat_mult(Xlarge, 0, Xlarge, 1));
       Xlarge = zeros_dmatrix(ni_total, msize);
     }
 
@@ -463,12 +464,11 @@ DMatrix ReadFile_geno(const string geno_fn, const ulong ni_total, const DMatrix 
   }
 
   if (ns_test % msize != 0) {
-    matrix_kin = cpu_mat_mult(Xlarge, 0, Xlarge, 1);
+    matrix_kin = add_dmatrix(matrix_kin, cpu_mat_mult(Xlarge, 0, Xlarge, 1));
   }
 
   matrix_kin = divide_dmatrix_num(matrix_kin, ns_test);
   matrix_kin = matrix_kin.T;
-
 
   check_kinship_from_gemma("test_name", matrix_kin.elements[0..3], matrix_kin.elements[$-3..$]);
 
