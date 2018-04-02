@@ -258,7 +258,7 @@ DMatrix ReadFile_geno(const string geno_fn, const ulong ni_total, const DMatrix 
   double[] geno_miss = new double[ni_total];
 
   // Xlarge contains inds x markers
-  size_t K_BATCH_SIZE = 20000;
+  size_t K_BATCH_SIZE = 15000;
   const size_t msize = K_BATCH_SIZE;
   DMatrix Xlarge = zeros_dmatrix(ni_total, msize);
 
@@ -315,8 +315,6 @@ DMatrix ReadFile_geno(const string geno_fn, const ulong ni_total, const DMatrix 
       SNPINFO sInfo = SNPINFO("-9", rs, -9, -9, minor, major,
                                 0,  -9, -9, 0, 0, file_pos);
       snpInfo ~= sInfo;
-      //indicator_snp ~= 0;
-
       file_pos++;
 
       continue;
@@ -392,8 +390,8 @@ DMatrix ReadFile_geno(const string geno_fn, const ulong ni_total, const DMatrix 
 
     // Filter SNP if it is correlated with W unless W has
     // only one column, of 1s.
-    for (size_t i = 0; i < genotype.length; ++i) {
-      if (genotype_miss[i] == 1) {
+    foreach (i, miss; genotype_miss) {
+      if (miss == 1) {
         geno = maf * 2.0;
         genotype[i] = geno;
       }
@@ -465,7 +463,7 @@ DMatrix ReadFile_geno(const string geno_fn, const ulong ni_total, const DMatrix 
   }
 
   if (ns_test % msize != 0) {
-    matrix_kin = matrix_mult(Xlarge, Xlarge.T);
+    matrix_kin = cpu_mat_mult(Xlarge, 0, Xlarge, 1);
   }
 
   matrix_kin = divide_dmatrix_num(matrix_kin, ns_test);
