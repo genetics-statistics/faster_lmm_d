@@ -10,6 +10,7 @@ module faster_lmm_d.gemma_kinship;
 import core.stdc.stdlib : exit;
 import core.stdc.time;
 
+import std.algorithm;
 import std.conv;
 import std.exception;
 import std.file;
@@ -249,6 +250,8 @@ DMatrix ReadFile_geno(const string geno_fn, const ulong ni_total, const DMatrix 
   int k_mode = 0;
   double d, geno_mean, geno_var;
 
+  DMatrix[] kinship_collect;
+
   // setKSnp and/or LOCO support
   //bool process_ksnps = ksnps.size();
 
@@ -258,9 +261,10 @@ DMatrix ReadFile_geno(const string geno_fn, const ulong ni_total, const DMatrix 
   double[] geno_miss = new double[ni_total];
 
   // Xlarge contains inds x markers
-  size_t K_BATCH_SIZE = 500;
+  size_t K_BATCH_SIZE = 1000;
   const size_t msize = K_BATCH_SIZE;
   DMatrix Xlarge = zeros_dmatrix(ni_total, msize);
+  auto task_pool = new TaskPool(totalCPUs);
 
   // For every SNP read the genotype per individual
   size_t t = 0;
@@ -453,15 +457,27 @@ DMatrix ReadFile_geno(const string geno_fn, const ulong ni_total, const DMatrix 
     // set the SNP column ns_test
     set_col2(Xlarge, ns_test % msize, DMatrix([geno_v.length, 1], geno_v));
 
+    void compute_mults(const DMatrix Xlarge){
+      kinship_collect ~= cpu_mat_mult(Xlarge, 0, Xlarge, 1);
+      writeln("batch processed");
+    }
+
     // compute kinship matrix and return in matrix_kin a SNP at a time
     if (ns_test % msize == 0) {
-      writeln("batch processed");
-      matrix_kin = add_dmatrix(matrix_kin, cpu_mat_mult(Xlarge, 0, Xlarge, 1));
+      auto taskk = task(&compute_mults, Xlarge);
+      task_pool.put(taskk);
       Xlarge = zeros_dmatrix(ni_total, msize);
     }
 
     t++;
   }
+
+  task_pool.finish(true);
+
+  if(kinship_collect.length > 0 ){
+    matrix_kin = taskPool.reduce!"a + b"(kinship_collect);
+  }
+
 
   if (ns_test % msize != 0) {
     matrix_kin = add_dmatrix(matrix_kin, cpu_mat_mult(Xlarge, 0, Xlarge, 1));
@@ -473,7 +489,9 @@ DMatrix ReadFile_geno(const string geno_fn, const ulong ni_total, const DMatrix 
   check_kinship_from_gemma("test_name", matrix_kin.elements[0..3], matrix_kin.elements[$-3..$]);
 
   return matrix_kin;
- }
+}
+
+
 
 double CalcHWE(const int n_hom1, const int n_hom2, const int n_ab) {
   if ((n_hom1 + n_hom2 + n_ab) == 0) {

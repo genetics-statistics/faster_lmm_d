@@ -38,6 +38,8 @@ struct DMatrix{
 
   const sum() { return reduce!"a + b"(0.0, elements); }
 
+  DMatrix opBinary(string s)(DMatrix second){if (s == "+") { return add_dmatrix(this, second); }}
+
   pragma(inline) const m_items cols() { return shape[1]; }
   pragma(inline) const m_items rows() { return shape[0]; }
   pragma(inline) const m_items size() { return rows() * cols(); }
