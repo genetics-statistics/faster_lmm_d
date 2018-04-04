@@ -38,7 +38,10 @@ struct DMatrix{
 
   const sum() { return reduce!"a + b"(0.0, elements); }
 
-  DMatrix opBinary(string s)(DMatrix second){if (s == "+") { return add_dmatrix(this, second); }}
+  pragma(inline) const DMatrix opBinary(string s : "+")(DMatrix other){ return add_dmatrix          (this, other); }
+  pragma(inline) const DMatrix opBinary(string s : "-")(DMatrix other){ return subtract_dmatrix     (this, other); }
+  pragma(inline) const DMatrix opBinary(string s : "*")(DMatrix other){ return slow_multiply_dmatrix(this, other); }
+  pragma(inline) const DMatrix opBinary(string s : "/")(DMatrix other){ return divide_dmatrix       (this, other); }
 
   pragma(inline) const m_items cols() { return shape[1]; }
   pragma(inline) const m_items rows() { return shape[0]; }
