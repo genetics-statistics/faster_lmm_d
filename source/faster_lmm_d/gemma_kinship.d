@@ -475,7 +475,7 @@ DMatrix ReadFile_geno(const string geno_fn, const ulong ni_total, const DMatrix 
     }else{
       if (ns_test % msize == 0) {
         writeln("batch processed");
-        matrix_kin = add_dmatrix(matrix_kin, cpu_mat_mult(Xlarge, 0, Xlarge, 1));
+        matrix_kin = matrix_kin + cpu_mat_mult(Xlarge, 0, Xlarge, 1);
         Xlarge = zeros_dmatrix(ni_total, msize);
       }
     }
@@ -618,9 +618,9 @@ Indicators_result process_cvt_phen(const DMatrix indicator_pheno){
   double[] cvt;
   int a_mode;
 
-  for (size_t i = 0; i < indicator_pheno.elements.length; i++) {
+  foreach(i ; 0..indicator_pheno.elements.length) {
     k = 1;
-    for (size_t j = 0; j < indicator_pheno.cols; j++) {
+    foreach(j; 0..indicator_pheno.cols) {
       if (indicator_pheno.accessor(i,j) == 0) {
         k = 0;
       }
@@ -628,33 +628,22 @@ Indicators_result process_cvt_phen(const DMatrix indicator_pheno){
     indicator_idv ~= k;
   }
 
-  // Remove individuals with missing covariates.
-  if ((indicator_cvt).length != 0) {
-    for (size_t i = 0; i < (indicator_idv).length; ++i) {
+  ni_test = 0;
+  foreach(i; 0..indicator_idv.length){
+    // Remove individuals with missing covariates.
+    if (indicator_cvt.length != 0) {
       indicator_idv[i] *= indicator_cvt[i];
     }
-  }
-
-  // Remove individuals with missing gxe variables.
-  if ((indicator_gxe).length != 0) {
-    for (size_t i = 0; i < (indicator_idv).length; ++i) {
+    // Remove individuals with missing gxe variables.
+    if (indicator_gxe.length != 0) {
       indicator_idv[i] *= indicator_gxe[i];
     }
-  }
-
-  // Remove individuals with missing residual weights.
-  if ((indicator_weight).length != 0) {
-    for (size_t  i = 0; i < (indicator_idv).length; ++i) {
+    // Remove individuals with missing residual weights.
+    if (indicator_weight.length != 0) {
       indicator_idv[i] *= indicator_weight[i];
     }
-  }
-
-  // Obtain ni_test.
-  ni_test = 0;
-  for (size_t  i = 0; i < (indicator_idv).length; ++i) {
-    if (indicator_idv[i] == 0) {
-      continue;
-    }
+    // Obtain ni_test.
+    if (indicator_idv[i] == 0){ continue; }
     ni_test++;
   }
 
