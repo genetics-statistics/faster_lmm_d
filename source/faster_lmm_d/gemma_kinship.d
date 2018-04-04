@@ -264,7 +264,10 @@ DMatrix ReadFile_geno(const string geno_fn, const ulong ni_total, const DMatrix 
   size_t K_BATCH_SIZE = 1000;
   const size_t msize = K_BATCH_SIZE;
   DMatrix Xlarge = zeros_dmatrix(ni_total, msize);
-  auto task_pool = new TaskPool(totalCPUs);
+
+  version(PARALLEL){
+    auto task_pool = new TaskPool(totalCPUs);
+  }
 
   // For every SNP read the genotype per individual
   size_t t = 0;
@@ -457,27 +460,37 @@ DMatrix ReadFile_geno(const string geno_fn, const ulong ni_total, const DMatrix 
     // set the SNP column ns_test
     set_col2(Xlarge, ns_test % msize, DMatrix([geno_v.length, 1], geno_v));
 
-    void compute_mults(const DMatrix Xlarge){
-      kinship_collect ~= cpu_mat_mult(Xlarge, 0, Xlarge, 1);
-      writeln("batch processed");
+    version(PARALLEL){
+      void compute_mults(const DMatrix Xlarge){
+        kinship_collect ~= cpu_mat_mult(Xlarge, 0, Xlarge, 1);
+        writeln("batch processed");
+      }
+
+      // compute kinship matrix and return in matrix_kin a SNP at a time
+      if (ns_test % msize == 0) {
+        auto taskk = task(&compute_mults, Xlarge);
+        task_pool.put(taskk);
+        Xlarge = zeros_dmatrix(ni_total, msize);
+      }
+    }else{
+      if (ns_test % msize == 0) {
+        writeln("batch processed");
+        matrix_kin = add_dmatrix(matrix_kin, cpu_mat_mult(Xlarge, 0, Xlarge, 1));
+        Xlarge = zeros_dmatrix(ni_total, msize);
+      }
     }
 
-    // compute kinship matrix and return in matrix_kin a SNP at a time
-    if (ns_test % msize == 0) {
-      auto taskk = task(&compute_mults, Xlarge);
-      task_pool.put(taskk);
-      Xlarge = zeros_dmatrix(ni_total, msize);
-    }
 
     t++;
   }
 
-  task_pool.finish(true);
+  version(PARALLEL){
+    task_pool.finish(true);
 
-  if(kinship_collect.length > 0 ){
-    matrix_kin = taskPool.reduce!"a + b"(kinship_collect);
+    if(kinship_collect.length > 0 ){
+      matrix_kin = taskPool.reduce!"a + b"(kinship_collect);
+    }
   }
-
 
   if (ns_test % msize != 0) {
     matrix_kin = add_dmatrix(matrix_kin, cpu_mat_mult(Xlarge, 0, Xlarge, 1));
