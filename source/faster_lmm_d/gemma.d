@@ -76,6 +76,8 @@ DMatrix read_matrix_from_file2(string filename){
   return DMatrix([rows, elements.length/rows], elements);
 }
 
+// This code is for comparing output of GEMMA and PyLMM ports.
+
 void run_gemma(string option_kinship, string option_pheno, string option_covar, string option_geno){
 
   writeln("reading kinship " , option_kinship);
@@ -136,37 +138,22 @@ void run_gemma(string option_kinship, string option_pheno, string option_covar, 
     }
     count+=1;
   }
-  //writeln(output);
 
   DMatrix lol  = DMatrix([count, output.length/count ], output);
 
-  DMatrix G = lol.T;
+  DMatrix G = DMatrix([count, output.length/count ], output).T;
 
   writeln(G.shape);
   auto inds = G.cols();
   auto snps = G.rows();
 
-
-//  version(PARALLEL) {
-//    auto tsps = new TStat[snps];
-//    auto items = iota(0,snps).array;
-
-//    println("Parallel");
-//    foreach (ref snp; taskPool.parallel(items,100)) {
-//      tsps[snp] = lmm_association(snp, lmm, N, G, KveT);
-//      if((snp+1) % 1000 == 0){
-//        println(snp+1, " snps processed");
-//      }
-//    }
-//  } else {
-    TStat[] tsps;
-    foreach(snp; 0..snps) {
-      tsps ~= lmm_association(snp, lmm, N, G, KveT);
-      if((snp+1) % 1000 == 0){
-        println(snp+1, " snps processed");
-      }
+  TStat[] tsps;
+  foreach(snp; 0..snps) {
+    tsps ~= lmm_association(snp, lmm, N, G, KveT);
+    if((snp+1) % 1000 == 0){
+      println(snp+1, " snps processed");
     }
-//  }
+  }
 
   writeln(tsps);
 
