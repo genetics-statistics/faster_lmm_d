@@ -22,6 +22,7 @@ import faster_lmm_d.gemma;
 import faster_lmm_d.helpers : modDiff;
 import faster_lmm_d.kinship;
 import faster_lmm_d.memory;
+import faster_lmm_d.mvlmm;
 import faster_lmm_d.optmatrix;
 import faster_lmm_d.output;
 import faster_lmm_d.rqtlreader;
@@ -68,10 +69,12 @@ void main(string[] args)
   //ProfilerStart();
 
   string cmd, option_control, option_kinship, option_pheno, option_geno, option_covar, useBLAS, noBLAS, noCUDA, option_logging,
-        option_indicator_idv, option_indicator_snp, option_test_name, option_bfile;
+        option_indicator_idv, option_indicator_snp, option_test_name, option_bfile, option_mbfile, option_c;
   bool option_help = false;
   bool option_test_kinship = false;
   double option_maf = 0;
+  ulong option_lmm;
+  string option_n;
   ulong option_pheno_column = 0;
   ulong option_ni_test = 1;
   ulong option_ni_total;
@@ -89,7 +92,11 @@ void main(string[] args)
     "indicator_snp", &option_indicator_snp,
     "pheno-column", &option_pheno_column,
     "bfile", &option_bfile,
+    "mbfile", &option_mbfile,
+    "lmm", &option_lmm,
     "maf", &option_maf,
+    "n", &option_n,
+    "c", &option_c,
     "geno", &option_geno,
     "covar", &option_covar,
     "blas", &useBLAS,
@@ -152,11 +159,14 @@ void main(string[] args)
 
   if(option_kinship != ""){
     writeln("Running via GEMMA");
-    //run_gemma(option_kinship, option_pheno, option_covar, option_geno);
+    //run_gemma(option_kinship, option_pheno, option_covar, option_geno); // compare pylmm and GEMMA
 
     if (cmd == "gk"){
       //kinship_from_gemma(option_geno, "mousehs_1940");
       generate_kinship(option_geno, option_pheno);
+    }
+    else if(cmd == "mvlmm"){
+      mvlmm_run();
     }
     else{
       batch_run(option_kinship, option_pheno, option_covar, option_geno, option_indicator_idv,

@@ -42,6 +42,9 @@ struct MPHSUMSTAT {
   double[] v_Vbeta; // Estimator for Vbeta, right half.
 };
 
+void mvlmm_run(){
+  writeln("In MVLMM!");
+}
 
 void analyze_bimbam_mvlmm(const DMatrix U, const DMatrix eval,
                           const DMatrix UtW, const DMatrix UtY, string file_geno) {
