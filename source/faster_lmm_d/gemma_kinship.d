@@ -26,6 +26,7 @@ import std.experimental.logger;
 import std.string;
 
 import faster_lmm_d.dmatrix;
+import faster_lmm_d.gemma_io;
 import faster_lmm_d.gemma_lmm;
 import faster_lmm_d.gemma_param;
 import faster_lmm_d.helpers;
@@ -504,88 +505,6 @@ DMatrix ReadFile_geno(const string geno_fn, const ulong ni_total, const DMatrix 
   return matrix_kin;
 }
 
-
-
-double CalcHWE(const int n_hom1, const int n_hom2, const int n_ab) {
-  if ((n_hom1 + n_hom2 + n_ab) == 0) {
-    return 1;
-  }
-
-  // "AA" is the rare allele.
-  int n_aa = n_hom1 < n_hom2 ? n_hom1 : n_hom2;
-  int n_bb = n_hom1 < n_hom2 ? n_hom2 : n_hom1;
-
-  int rare_copies = 2 * n_aa + n_ab;
-  int genotypes = n_ab + n_bb + n_aa;
-
-  double[] het_probs = new double[rare_copies + 1];
-  //if (het_probs == )
-    //writeln("Internal error: SNP-HWE: Unable to allocate array");
-
-  int i;
-  for (i = 0; i <= rare_copies; i++)
-    het_probs[i] = 0.0;
-
-  // Start at midpoint.
-  // XZ modified to add (long int)
-  int mid = (to!int(rare_copies) * (2 * to!int(genotypes) - to!int(rare_copies))) / (2 * to!int(genotypes));
-
-  // Check to ensure that midpoint and rare alleles have same
-  // parity.
-  if ((rare_copies & 1) ^ (mid & 1))
-    mid++;
-
-  int curr_hets = mid;
-  int curr_homr = (rare_copies - mid) / 2;
-  int curr_homc = genotypes - curr_hets - curr_homr;
-
-  het_probs[mid] = 1.0;
-  double sum = het_probs[mid];
-  for (curr_hets = mid; curr_hets > 1; curr_hets -= 2) {
-    het_probs[curr_hets - 2] = het_probs[curr_hets] * curr_hets *
-                               (curr_hets - 1.0) /
-                               (4.0 * (curr_homr + 1.0) * (curr_homc + 1.0));
-    sum += het_probs[curr_hets - 2];
-
-    // Two fewer heterozygotes for next iteration; add one
-    // rare, one common homozygote.
-    curr_homr++;
-    curr_homc++;
-  }
-
-  curr_hets = mid;
-  curr_homr = (rare_copies - mid) / 2;
-  curr_homc = genotypes - curr_hets - curr_homr;
-  for (curr_hets = mid; curr_hets <= rare_copies - 2; curr_hets += 2) {
-    het_probs[curr_hets + 2] = het_probs[curr_hets] * 4.0 * curr_homr *
-                               curr_homc /
-                               ((curr_hets + 2.0) * (curr_hets + 1.0));
-    sum += het_probs[curr_hets + 2];
-
-    // Add 2 heterozygotes for next iteration; subtract
-    // one rare, one common homozygote.
-    curr_homr--;
-    curr_homc--;
-  }
-
-  for (i = 0; i <= rare_copies; i++)
-    het_probs[i] /= sum;
-
-  double p_hwe = 0.0;
-
-  // p-value calculation for p_hwe.
-  for (i = 0; i <= rare_copies; i++) {
-    if (het_probs[i] > het_probs[n_ab])
-      continue;
-    p_hwe += het_probs[i];
-  }
-
-  p_hwe = p_hwe > 1.0 ? 1.0 : p_hwe;
-
-  return p_hwe;
-}
-
-
 DMatrix CopyCvt(const DMatrix cvt, const int[] indicator_cvt, const int[] indicator_idv, const size_t n_cvt) {
   size_t ni_test = 1410;
   DMatrix W = zeros_dmatrix(ni_test, n_cvt); // ni_test missing
@@ -603,7 +522,6 @@ DMatrix CopyCvt(const DMatrix cvt, const int[] indicator_cvt, const int[] indica
 
   return W;
 }
-
 
 // Post-process phenotypes and covariates.
 Indicators_result process_cvt_phen(const DMatrix indicator_pheno){
