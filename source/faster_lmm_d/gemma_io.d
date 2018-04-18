@@ -297,6 +297,69 @@ void readfile_bed(const string file_bed, const string[] setSnps,
   //return true;
 }
 
+// Read .fam file (ignored with -p phenotypes switch)
+bool readfile_fam(const string file_fam, int[][] indicator_pheno, double[][] pheno, 
+                  size_t[size_t] mapID2num, const size_t[] p_column) {
+  writeln("in readfile_fam");
+  //indicator_pheno.;
+  //pheno.clear();
+  //mapID2num.clear();
+
+  File infile = File(file_fam);
+
+  size_t id;
+  int c = 0;
+  double p;
+
+  double[] pheno_row;
+  int[] ind_pheno_row;
+
+  size_t p_max; // = max_element(p_column.begin(), p_column.end());
+  size_t[size_t] mapP2c; // size_t, size_t
+  for (size_t i = 0; i < p_column.length; i++) {
+    mapP2c[p_column[i]] = i;
+    pheno_row ~= -9;
+    ind_pheno_row ~= 0;
+  }
+
+  foreach (line; infile.byLine) {
+    auto ch_ptr = line.split("\t")[3..$];
+    id = to!size_t(ch_ptr[0]);
+
+    // need to correct; make jumps in the order of 3, 5, 1
+    size_t i = 0;
+    while (i < p_max) {
+      if (true) { //mapP2c.count(i + 1) != 0
+        writeln(ch_ptr,"Problem reading FAM file (phenotypes out of range)");
+
+        if (ch_ptr[5] == "NA") {
+          ind_pheno_row[mapP2c[i + 1]] = 0;
+          pheno_row[mapP2c[i + 1]] = -9;
+        } else {
+          p = to!double(ch_ptr[5]);
+
+          if (p == -9) {
+            ind_pheno_row[mapP2c[i + 1]] = 0;
+            pheno_row[mapP2c[i + 1]] = -9;
+          } else {
+            ind_pheno_row[mapP2c[i + 1]] = 1;
+            pheno_row[mapP2c[i + 1]] = p;
+          }
+        }
+      }
+      i++;
+    }
+
+    indicator_pheno ~= ind_pheno_row;
+    pheno ~= pheno_row;
+
+    mapID2num[id] = c;
+    c++;
+  }
+
+  return true;
+}
+
 double CalcHWE(const int n_hom1, const int n_hom2, const int n_ab) {
   if ((n_hom1 + n_hom2 + n_ab) == 0) {
     return 1;
