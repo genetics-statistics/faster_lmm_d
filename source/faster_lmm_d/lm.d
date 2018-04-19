@@ -21,6 +21,7 @@ alias mlog = std.math.log;
 import std.process;
 import std.range;
 import std.stdio;
+alias fwrite = std.stdio.write;
 import std.typecons;
 import std.experimental.logger;
 import std.string;
@@ -34,49 +35,51 @@ import faster_lmm_d.optmatrix;
 import gsl.permutation;
 import gsl.rng;
 import gsl.randist;
+import gsl.cdf;
 
 void lm_write_files() {
-  string file_str;
-  file_str = path_out + "/" + file_out;
-  file_str += ".assoc.txt";
+  // define later
+  string path_out = "";
+  string file_out = "";
+  string file_gene;
+  SUMSTAT[] sumStat;
+  SNPINFO[] snpInfo;
+  int a_mode;
+  size_t ni_test;
 
-  //ofstream outfile(file_str.c_str(), ofstream::out);
-  if (!outfile) {
-    cout << "error writing file: " << file_str.c_str() << endl;
-    return;
-  }
+  string file_str = path_out ~ "/" ~ file_out ~ ".assoc.txt";
 
   if (file_gene != "") {
-    write("geneID\t");
+    fwrite("geneID\t");
 
     if (a_mode == 51) {
-      write("beta\tse\tp_wald\n");
+      fwrite("beta\tse\tp_wald\n");
     } else if (a_mode == 52) {
-      write("p_lrt\n");
+      fwrite("p_lrt\n");
     } else if (a_mode == 53) {
-      write("beta\tse\tp_score\n");
+      fwrite("beta\tse\tp_score\n");
     } else if (a_mode == 54) {
-      write("beta\tse\tp_wald\tp_lrt\tp_score\n");
+      fwrite("beta\tse\tp_wald\tp_lrt\tp_score\n");
     } else {
     }
 
     for (size_t t = 0; t < sumStat.length; ++t) {
-      write(snpInfo[t].rs_number, "\t");
+      fwrite(snpInfo[t].rs_number, "\t");
 
       if (a_mode == 51) {
-        write(sumStat[t].beta, "\t", sumStat[t].se, "\t", sumStat[t].p_wald, "\n");
+        fwrite(sumStat[t].beta, "\t", sumStat[t].se, "\t", sumStat[t].p_wald, "\n");
       } else if (a_mode == 52) {
-        write(sumStat[t].p_lrt, "\n");
+        fwrite(sumStat[t].p_lrt, "\n");
       } else if (a_mode == 53) {
-        write(sumStat[t].beta, "\t", sumStat[t].se, "\t", sumStat[t].p_score, "\n");
+        fwrite(sumStat[t].beta, "\t", sumStat[t].se, "\t", sumStat[t].p_score, "\n");
       } else if (a_mode == 54) {
-        write(sumStat[t].beta, "\t", sumStat[t].se, "\t", sumStat[t].p_wald, "\t",
+        fwrite(sumStat[t].beta, "\t", sumStat[t].se, "\t", sumStat[t].p_wald, "\t",
               sumStat[t].p_lrt, "\t", sumStat[t].p_score);
       } else {
       }
     }
   } else {
-    write("chr",
+    fwrite("chr",
           "\t",
           "rs",
           "\t",
@@ -94,23 +97,23 @@ void lm_write_files() {
           "\t");
 
     if (a_mode == 51) {
-      write("beta",
+      fwrite("beta",
             "\t",
             "se",
             "\t",
             "p_wald", 
             "\n");
     } else if (a_mode == 52) {
-      write("p_lrt", "\n");
+      fwrite("p_lrt", "\n");
     } else if (a_mode == 53) {
-      write("beta",
+      fwrite("beta",
             "\t",
             "se",
             "\t",
             "p_score",
             "\n");
     } else if (a_mode == 54) {
-      write("beta",
+      fwrite("beta",
             "\t",
             "se",
             "\t",
@@ -128,19 +131,19 @@ void lm_write_files() {
         continue;
       }
 
-      write(snpInfo[i].chr, "\t", snpInfo[i].rs_number, "\t", 
+      fwrite(snpInfo[i].chr, "\t", snpInfo[i].rs_number, "\t", 
             snpInfo[i].base_position, "\t", snpInfo[i].n_miss, "\t",
             ni_test - snpInfo[i].n_miss, "\t", snpInfo[i].a_minor, "\t",
             snpInfo[i].a_major, "\t", snpInfo[i].maf,"\t");
 
       if (a_mode == 51) {
-        write(sumStat[t].beta, "\t", sumStat[t].se, "\t", sumStat[t].p_wald, "\n");
+        fwrite(sumStat[t].beta, "\t", sumStat[t].se, "\t", sumStat[t].p_wald, "\n");
       } else if (a_mode == 52) {
-        write(sumStat[t].p_lrt, "\n");
+        fwrite(sumStat[t].p_lrt, "\n");
       } else if (a_mode == 53) {
-        write(sumStat[t].beta, "\t", sumStat[t].se, "\t", sumStat[t].p_score, "\n");
+        fwrite(sumStat[t].beta, "\t", sumStat[t].se, "\t", sumStat[t].p_score, "\n");
       } else if (a_mode == 54) {
-        write(sumStat[t].beta, "\t", sumStat[t].se, "\t", sumStat[t].p_wald, "\t",
+        fwrite(sumStat[t].beta, "\t", sumStat[t].se, "\t", sumStat[t].p_wald, "\t",
               sumStat[t].p_lrt, "\t", sumStat[t].p_score, "\n");
       } else {
       }
@@ -198,7 +201,7 @@ void LmCalcP(const size_t test_mode, const double yPwy, const double xPwy,
 
   p_wald = gsl_cdf_fdist_Q(beta * beta / (se_wald * se_wald), 1.0, df);
   p_score = gsl_cdf_fdist_Q(beta * beta / (se_score * se_score), 1.0, df);
-  p_lrt = gsl_cdf_chisq_Q(to!double(n_size) * (log(yPwy) - log(yPxy)), 1);
+  p_lrt = gsl_cdf_chisq_Q(to!double(n_size) * (mlog(yPwy) - mlog(yPxy)), 1);
 
   if (test_mode == 3) {
     se = se_score;
@@ -210,6 +213,9 @@ void LmCalcP(const size_t test_mode, const double yPwy, const double xPwy,
 }
 
 void lm_analyze_gene(const DMatrix W, const DMatrix x) {
+
+  SUMSTAT[] sumStat;
+
   writeln("entering lm_analyze_gene");
   File infile = File(file_gene);
 
@@ -236,33 +242,30 @@ void lm_analyze_gene(const DMatrix W, const DMatrix x) {
   CalcvPv(WtWi, Wtx, x, xPwx);
 
   // Header.
-  getline(infile, line);
+  infile.readLine();
 
   for (size_t t = 0; t < ng_total; t++) {
-    getline(infile, line);
+    line = infile.readLine();
    
-    ch_ptr = strtok_safe((char *)line.c_str(), " , \t");
-    rs = ch_ptr;
+    ch_ptr = line.split("\t");
+    rs = ch_ptr[0];
 
     c_phen = 0;
     for (size_t i = 0; i < indicator_idv.size(); ++i) {
-      ch_ptr = strtok_safe(NULL, " , \t");
       if (indicator_idv[i] == 0) {
         continue;
       }
 
-      d = atof(ch_ptr);
-      gsl_vector_set(y, c_phen, d);
+      d = to!double(ch_ptr[1]);
+      y.elements[c_phen] = d;
 
       c_phen++;
     }
 
     // Calculate statistics.
-    time_start = clock();
-
-    gsl_blas_dgemv(CblasTrans, 1.0, W, y, 0.0, Wty);
+    DMatrix Wty = matrix_mult(W.T, y);
     CalcvPv(WtWi, Wtx, Wty, x, y, xPwy, yPwy);
-    LmCalcP(a_mode - 50, yPwy, xPwy, xPwx, df, W->size1, beta, se, p_wald,
+    LmCalcP(a_mode - 50, yPwy, xPwy, xPwx, df, W.shape[0], beta, se, p_wald,
             p_lrt, p_score);
 
     // Store summary data.
@@ -276,11 +279,18 @@ void lm_analyze_gene(const DMatrix W, const DMatrix x) {
 }
 
 void lm_analyze_bimbam(const DMatrix W, const DMatrix y) {
+  
+  string file_geno;
+  int a_mode;
+  size_t ni_test;
+  int[] indicator_idv, indicator_snp;
+  SUMSTAT[] sumStat;
+  SNPINFO[] snpInfo;
+
   writeln("entering lm_analyze_bimbam");
   File infile = File(file_geno);
 
   string line;
-  char *ch_ptr;
 
   double beta = 0, se = 0, p_wald = 0, p_lrt = 0, p_score = 0;
   int n_miss, c_phen;
@@ -303,31 +313,28 @@ void lm_analyze_bimbam(const DMatrix W, const DMatrix y) {
 
   // Start reading genotypes and analyze.
   for (size_t t = 0; t < indicator_snp.length; ++t) {
-    getline(infile, line);
+    line = infile.readLine();
    
     if (indicator_snp[t] == 0) {
       continue;
     }
 
-    ch_ptr = strtok_safe((char *)line.c_str(), " , \t");
-    ch_ptr = strtok_safe(NULL, " , \t");
-    ch_ptr = strtok_safe(NULL, " , \t");
+    auto ch_ptr = line.split("\t")[3..$];
 
     x_mean = 0.0;
     c_phen = 0;
     n_miss = 0;
-    gsl_vector_set_zero(x_miss);
+    x_miss = zeros_dmatrix(1, W.shape[0]);
     for (size_t i = 0; i < ni_total; ++i) {
-      ch_ptr = strtok_safe(NULL, " , \t");
       if (indicator_idv[i] == 0) {
         continue;
       }
 
-      if (strcmp(ch_ptr, "NA") == 0) {
+      if (ch_ptr[0] == "NA") {
         x_miss.elements[c_phen] = 0.0;
         n_miss++;
       } else {
-        geno = atof(ch_ptr);
+        geno = to!double(ch_ptr[0]);
 
         x.elements[c_phen] = geno;
         x_miss.elements[c_phen] = 1.0;
@@ -349,7 +356,7 @@ void lm_analyze_bimbam(const DMatrix W, const DMatrix y) {
 
     DMatrix Wtx = matrix_mult(W.T, x);
     CalcvPv(WtWi, Wty, Wtx, y, x, xPwy, xPwx);
-    LmCalcP(a_mode - 50, yPwy, xPwy, xPwx, df, W->size1, beta, se, p_wald, p_lrt, p_score);
+    LmCalcP(a_mode - 50, yPwy, xPwy, xPwx, df, W.shape[0], beta, se, p_wald, p_lrt, p_score);
 
     // Store summary data.
     SUMSTAT SNPs = SUMSTAT(beta, se, 0.0, 0.0, p_wald, p_lrt, p_score, -0.0);
@@ -362,12 +369,19 @@ void lm_analyze_bimbam(const DMatrix W, const DMatrix y) {
 }
 
 void lm_analyze_plink(const DMatrix W, const DMatrix y) {
+  
+  string file_bfile;
+  size_t ni_total, ni_test;
+  SUMSTAT[] sumStat;
+  SNPINFO[] snpInfo;
+
   writeln("entering lm_analyze_plink");
-  string file_bed = file_bfile + ".bed";
+
+  string file_bed = file_bfile ~ ".bed";
   File infile = File(file_bed);
 
   char ch[1];
-  bitset<8> b;
+  int[] b;
 
   double beta = 0, se = 0, p_wald = 0, p_lrt = 0, p_score = 0;
   int n_bit, n_miss, ci_total, ci_test;
@@ -389,9 +403,9 @@ void lm_analyze_plink(const DMatrix W, const DMatrix y) {
 
   // Calculate n_bit and c, the number of bit for each SNP.
   if (ni_total % 4 == 0) {
-    n_bit = ni_total / 4;
+    n_bit = to!int(ni_total) / 4;
   } else {
-    n_bit = ni_total / 4 + 1;
+    n_bit = to!int(ni_total) / 4 + 1;
   }
 
   // Print the first three magic numbers.
