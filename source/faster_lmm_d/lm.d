@@ -44,6 +44,7 @@ void lm_write_files() {
   string file_gene;
   SUMSTAT[] sumStat;
   SNPINFO[] snpInfo;
+  int[] indicator_snp;
   int a_mode;
   size_t ni_test;
 
@@ -93,7 +94,7 @@ void lm_write_files() {
           "\t",
           "allele0",
           "\t",
-          "af"
+          "af",
           "\t");
 
     if (a_mode == 51) {
@@ -213,14 +214,17 @@ void LmCalcP(const size_t test_mode, const double yPwy, const double xPwy,
 }
 
 void lm_analyze_gene(const DMatrix W, const DMatrix x) {
-
+  string file_gene;
+  int a_mode;
+  size_t ni_test, ng_total;
+  int[] indicator_idv, indicator_snp;
   SUMSTAT[] sumStat;
+  SNPINFO[] snpInfo;
 
   writeln("entering lm_analyze_gene");
   File infile = File(file_gene);
 
   string line;
-  char *ch_ptr;
 
   double beta = 0, se = 0, p_wald = 0, p_lrt = 0, p_score = 0;
   int c_phen;
@@ -242,16 +246,16 @@ void lm_analyze_gene(const DMatrix W, const DMatrix x) {
   CalcvPv(WtWi, Wtx, x, xPwx);
 
   // Header.
-  infile.readLine();
+  infile.readln();
 
   for (size_t t = 0; t < ng_total; t++) {
-    line = infile.readLine();
+    line = infile.readln();
    
-    ch_ptr = line.split("\t");
+    auto ch_ptr = line.split("\t");
     rs = ch_ptr[0];
 
     c_phen = 0;
-    for (size_t i = 0; i < indicator_idv.size(); ++i) {
+    for (size_t i = 0; i < indicator_idv.length; ++i) {
       if (indicator_idv[i] == 0) {
         continue;
       }
@@ -282,7 +286,7 @@ void lm_analyze_bimbam(const DMatrix W, const DMatrix y) {
   
   string file_geno;
   int a_mode;
-  size_t ni_test;
+  size_t ni_test, ni_total;
   int[] indicator_idv, indicator_snp;
   SUMSTAT[] sumStat;
   SNPINFO[] snpInfo;
@@ -313,7 +317,7 @@ void lm_analyze_bimbam(const DMatrix W, const DMatrix y) {
 
   // Start reading genotypes and analyze.
   for (size_t t = 0; t < indicator_snp.length; ++t) {
-    line = infile.readLine();
+    line = infile.readln();
    
     if (indicator_snp[t] == 0) {
       continue;
@@ -372,6 +376,8 @@ void lm_analyze_plink(const DMatrix W, const DMatrix y) {
   
   string file_bfile;
   size_t ni_total, ni_test;
+  int a_mode;
+  int[] indicator_snp, indicator_idv;
   SUMSTAT[] sumStat;
   SNPINFO[] snpInfo;
 
@@ -380,7 +386,7 @@ void lm_analyze_plink(const DMatrix W, const DMatrix y) {
   string file_bed = file_bfile ~ ".bed";
   File infile = File(file_bed);
 
-  char ch[1];
+  char ch;
   int[] b;
 
   double beta = 0, se = 0, p_wald = 0, p_lrt = 0, p_score = 0;
@@ -410,8 +416,8 @@ void lm_analyze_plink(const DMatrix W, const DMatrix y) {
 
   // Print the first three magic numbers.
   for (int i = 0; i < 3; ++i) {
-    infile.read(ch, 1);
-    b = ch[0];
+    //infile.read(ch, 1);  // TODO: FIXME
+    //b = ch;
   }
 
   for(size_t t = 0; t < snpInfo.length; ++t) {
@@ -420,7 +426,7 @@ void lm_analyze_plink(const DMatrix W, const DMatrix y) {
     }
 
     // n_bit, and 3 is the number of magic numbers.
-    infile.seekg(t * n_bit + 3);
+    infile.seek(t * n_bit + 3);
 
     // Read genotypes.
     x_mean = 0.0;
@@ -428,8 +434,8 @@ void lm_analyze_plink(const DMatrix W, const DMatrix y) {
     ci_total = 0;
     ci_test = 0;
     for (int i = 0; i < n_bit; ++i) {
-      infile.read(ch, 1);
-      b = ch[0];
+      //infile.read(ch, 1);
+      //b = ch;  // TODO: FIXME
 
       // Minor allele homozygous: 2.0; major: 0.0;
       for (size_t j = 0; j < 4; ++j) {
@@ -475,10 +481,9 @@ void lm_analyze_plink(const DMatrix W, const DMatrix y) {
 
     // Calculate statistics.
 
-    gsl_blas_dgemv(CblasTrans, 1.0, W, x, 0.0, Wtx);
+    DMatrix Wtx = matrix_mult(W.T, x);
     CalcvPv(WtWi, Wty, Wtx, y, x, xPwy, xPwx);
-    LmCalcP(a_mode - 50, yPwy, xPwy, xPwx, df, W.shape[0], beta, se, p_wald,
-            p_lrt, p_score);
+    LmCalcP(a_mode - 50, yPwy, xPwy, xPwx, df, W.shape[0], beta, se, p_wald, p_lrt, p_score);
 
     // store summary data
     SUMSTAT SNPs = SUMSTAT(beta, se, 0.0, 0.0, p_wald, p_lrt, p_score, -0.0);

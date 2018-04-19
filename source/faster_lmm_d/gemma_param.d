@@ -54,10 +54,12 @@ struct SUMSTAT {
   double beta;         // REML estimator for beta.
   double se;           // SE for beta.
   double lambda_remle; // REML estimator for lambda.
+  double lambda_mle;   // MLE estimator for lambda.
   double p_wald;       // p value from a Wald test.
   string indicator;
   double p_lrt;
   double p_score;
+  double logl_H1; 
 
   this(double beta, double se, double lambda_remle, double p_wald, string indicator){
     this.beta = beta;
@@ -65,6 +67,17 @@ struct SUMSTAT {
     this.lambda_remle = lambda_remle;
     this.p_wald = p_wald;
     this.indicator = indicator;
+  }
+
+  this(double beta, double se, double lambda_remle, double lambda_mle, double p_wald, double p_lrt, double p_score, double logl_H1){
+    this.beta = beta;
+    this.se = se;
+    this.lambda_remle = lambda_remle;
+    this.lambda_mle = lambda_mle;
+    this.p_wald = p_wald;
+    this.p_lrt = p_lrt;
+    this.p_score = p_score;
+    this.logl_H1 = logl_H1;
   }
 };
 
