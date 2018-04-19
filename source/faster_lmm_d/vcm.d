@@ -36,6 +36,7 @@ import gsl.permutation;
 import gsl.rng;
 import gsl.randist;
 import gsl.cdf;
+import gsl.errno;
 
 class VC_PARAM {
   const DMatrix K;
@@ -53,6 +54,7 @@ class VC_PARAM {
 void vc_WriteFile_qs(const DMatrix s_vec, const DMatrix q_vec,
                       const DMatrix qvar_vec, const DMatrix S_mat,
                       const DMatrix Svar_mat) {
+  string path_out, file_out;
   string file_str = path_out ~ "/" ~ file_out ~ ".qvec.txt";
 
   File outfile_q = File(file_str);
@@ -88,9 +90,10 @@ void vc_WriteFile_qs(const DMatrix s_vec, const DMatrix q_vec,
 }
 
 void UpdateParam(const DMatrix log_sigma2, VC_PARAM p) {
-  size_t n1 = p.K.shape[0], n_vc = log_sigma2.size - 1, n_cvt = p.W.shape[1];
+  // To init
+  DMatrix K_temp;
 
-  gsl_matrix *WtHiWiWtHi = gsl_matrix_alloc(n_cvt, n1);
+  size_t n1 = p.K.shape[0], n_vc = log_sigma2.size - 1, n_cvt = p.W.shape[1];
 
   double sigma2;
 
@@ -111,7 +114,7 @@ void UpdateParam(const DMatrix log_sigma2, VC_PARAM p) {
     } else {
       sigma2 = exp(log_sigma2.elements[i]);
     }
-    K_temp = K_temp * sigma2;
+    K_temp = multiply_dmatrix_num(K_temp, sigma2);
     p.P = p.P + K_temp;
   }
 
@@ -154,12 +157,12 @@ void UpdateParam(const DMatrix log_sigma2, VC_PARAM p) {
     // only happen when eigenlib_dgemv was used above.
     for (size_t j = 0; j < p.KPy_mat.shape[0]; j++) {
       d = p.KPy_mat.accessor(j, i);
-      if (isnan(d)) {
+      if (isNaN(d)) {
         p.KPy_mat.set(j, i, 0);
         writeln("nan appears in ", i, " ", j);
       }
-      d = p.PKPy_mat.get(j, i);
-      if (isnan(d)) {
+      d = p.PKPy_mat.accessor(j, i);
+      if (isNaN(d)) {
         p.PKPy_mat.set(j, i, 0);
         writeln("nan appears in ", i, " ", j);
       }
@@ -178,7 +181,7 @@ int LogRL_dev1(const DMatrix log_sigma2, void* params, DMatrix dev1) {
   double tr, d;
 
   // Update parameters.
-  UpdateParam(log_sigma2, p);
+  //UpdateParam(log_sigma2, p);
 
   // Calculate dev1=-0.5*trace(PK_i)+0.5*yPKPy.
   for (size_t i = 0; i < n_vc + 1; i++) {
@@ -223,11 +226,11 @@ int LogRL_dev2(const DMatrix log_sigma2, void* params, DMatrix dev2) {
   double d, sigma2_i, sigma2_j;
 
   // Update parameters.
-  UpdateParam(log_sigma2, p);
+  //UpdateParam(log_sigma2, p);
 
   // Calculate dev2 = 0.5(yPKPKPy).
   for (size_t i = 0; i < n_vc + 1; i++) {
-    DMatrix KPy_i = gsl_matrix_column(p.KPy_mat, i);
+    DMatrix KPy_i = get_col(p.KPy_mat, i);
     if (p.noconstrain) {
       sigma2_i = log_sigma2.elements[i];
     } else {
@@ -266,13 +269,13 @@ int LogRL_dev12(const DMatrix log_sigma2, void* params, DMatrix dev1, DMatrix de
   double tr, d, sigma2_i, sigma2_j;
 
   // Update parameters.
-  UpdateParam(log_sigma2, p);
+  //UpdateParam(log_sigma2, p);
 
   for (size_t i = 0; i < n_vc + 1; i++) {
     if (i == n_vc) {
       tr = 0;
       for (size_t l = 0; l < n1; l++) {
-        tr += gsl_matrix_get(p.P, l, l);
+        tr += p.P.accessor(l, l);
       }
     } else {
       tr = 0;
