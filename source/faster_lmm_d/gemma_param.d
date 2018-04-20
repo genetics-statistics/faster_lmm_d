@@ -143,6 +143,33 @@ struct mapRS{
   void clear(){}
 }
 
+// Header class.
+struct HEADER {
+  size_t rs_col;
+  size_t chr_col;
+  size_t pos_col;
+  size_t cm_col;
+  size_t a1_col;
+  size_t a0_col;
+  size_t z_col;
+  size_t beta_col;
+  size_t sebeta_col;
+  size_t chisq_col;
+  size_t p_col;
+  size_t n_col;
+  size_t nmis_col;
+  size_t nobs_col;
+  size_t ncase_col;
+  size_t ncontrol_col;
+  size_t af_col;
+  size_t var_col;
+  size_t ws_col;
+  size_t cor_col;
+  size_t coln; // Number of columns.
+  size_t[] catc_col;  //set<size_t>
+  size_t[] catd_col;  //set<size_t>
+}
+
 void check_data() {
 
   int a_mode, n_vc, d_pace, DEFAULT_PACE;
