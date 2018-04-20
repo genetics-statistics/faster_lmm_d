@@ -1887,13 +1887,13 @@ void CalcVChe(const DMatrix K, const DMatrix W,
   }
   write("\n");
   
-  cout << "pve = ";
+  write("pve = ");
   for (size_t i = 0; i < n_vc; i++) {
     write(v_pve[i], " ");
   }
   write("\n");
 
-  cout << "se(pve) = ";
+  write("se(pve) = ");
   for (size_t i = 0; i < n_vc; i++) {
     write(v_se_pve[i], " ");
   }
@@ -1903,6 +1903,1129 @@ void CalcVChe(const DMatrix K, const DMatrix W,
     writeln("total pve = ", pve_total);
     writeln("se(total pve) = ", se_pve_total);
   }
+
+  return;
+}
+
+// REML for log(sigma2) based on the AI algorithm.
+void CalcVCreml(bool noconstrain, const DMatrix K, const DMatrix W,
+                    const DMatrix y) {
+  size_t n1 = K.shape[0], n2 = K.shape[1];
+  size_t n_vc = n2 / n1;
+  DMatrix log_sigma2; // = gsl_vector_alloc(n_vc + 1);
+  double d, s;
+
+  // Set up params.
+  DMatrix P; // = gsl_matrix_alloc(n1, n1);
+  DMatrix Py; // = gsl_vector_alloc(n1);
+  DMatrix KPy_mat; // = gsl_matrix_alloc(n1, n_vc + 1);
+  DMatrix PKPy_mat; // = gsl_matrix_alloc(n1, n_vc + 1);
+  DMatrix dev1; // = gsl_vector_alloc(n_vc + 1);
+  DMatrix dev2; // = gsl_matrix_alloc(n_vc + 1, n_vc + 1);
+  DMatrix Hessian; // = gsl_matrix_alloc(n_vc + 1, n_vc + 1);
+  VC_PARAM params = VC_PARAM(K, W, y, P, Py, KPy_mat, PKPy_mat, Hessian, noconstrain);
+
+  // Initialize sigma2/log_sigma2.
+  CalcVChe(K, W, y);
+
+  s = vector_ddot(y, y);
+  s /= to!double(n1);
+  for (size_t i = 0; i < n_vc + 1; i++) {
+    if (noconstrain) {
+      d = v_sigma2[i];
+    } else {
+      if (v_sigma2[i] <= 0) {
+        d = mlog(0.1);
+      } else {
+        d = mlog(v_sigma2[i]);
+      }
+    }
+    log_sigma2.elements[i] = d;
+  }
+
+  writeln("iteration " , 0);
+  write("sigma2 = ");
+  for (size_t i = 0; i < n_vc + 1; i++) {
+    if (noconstrain) {
+      write(log_sigma2.elements[i], " ");
+    } else {
+      write(exp(log_sigma2.elements[i]), " ");
+    }
+  }
+  write("\n");
+
+  // Set up fdf.
+  gsl_multiroot_function_fdf FDF;
+  FDF.n = n_vc + 1;
+  FDF.params = &params;
+  FDF.f = &LogRL_dev1;
+  FDF.df = &LogRL_dev2;
+  FDF.fdf = &LogRL_dev12;
+
+  // Set up solver.
+  int status;
+  int iter = 0, max_iter = 100;
+
+  const gsl_multiroot_fdfsolver_type *T_fdf;
+  gsl_multiroot_fdfsolver *s_fdf;
+  T_fdf = gsl_multiroot_fdfsolver_hybridsj;
+  s_fdf = gsl_multiroot_fdfsolver_alloc(T_fdf, n_vc + 1);
+
+  gsl_multiroot_fdfsolver_set(s_fdf, &FDF, log_sigma2);
+
+  do {
+    iter++;
+    status = gsl_multiroot_fdfsolver_iterate(s_fdf);
+
+    if (status)
+      break;
+
+    writeln("iteration ", iter);
+    write("sigma2 = ");
+    for (size_t i = 0; i < n_vc + 1; i++) {
+      if (noconstrain) {
+        write(s_fdf.x.elements[i], " ");
+      } else {
+        write(exp(s_fdf.x.elements[i]), " ");
+      }
+    }
+    write("\n");
+    status = gsl_multiroot_test_residual(s_fdf->f, 1e-3);
+  } while (status == GSL_CONTINUE && iter < max_iter);
+
+  // Obtain Hessian and Hessian inverse.
+  int sig = LogRL_dev12(s_fdf->x, &params, dev1, dev2);
+
+  gsl_permutation *pmt = gsl_permutation_alloc(n_vc + 1);
+
+  Hessian = dev2.inverse();
+
+  // Save sigma2 and se_sigma2.
+  v_sigma2 = [];
+  v_se_sigma2 = [];
+  for (size_t i = 0; i < n_vc + 1; i++) {
+    if (noconstrain) {
+      d = s_fdf.x.elements[i];
+    } else {
+      d = exp(s_fdf.x.elements[i]);
+    }
+    v_sigma2 ~= d;
+
+    if (noconstrain) {
+      d = -1.0 * Hessian.accessor(i, i);
+    } else {
+      d = -1.0 * d * d * Hessian.accessor(i, i);
+    }
+    v_se_sigma2 ~= sqrt(d);
+  }
+
+  s = 0;
+  for (size_t i = 0; i < n_vc; i++) {
+    s += v_traceG[i] * v_sigma2[i];
+  }
+  s += v_sigma2[n_vc];
+
+  // Compute pve.
+  v_pve.clear();
+  pve_total = 0;
+  for (size_t i = 0; i < n_vc; i++) {
+    d = v_traceG[i] * v_sigma2[i] / s;
+    v_pve ~= d;
+    pve_total += d;
+  }
+
+  // Compute se_pve; k=n_vc+1: total.
+  double d1, d2;
+  v_se_pve = [];
+  se_pve_total = 0;
+  for (size_t k = 0; k < n_vc + 1; k++) {
+    d = 0;
+    for (size_t i = 0; i < n_vc + 1; i++) {
+      if (noconstrain) {
+        d1 = s_fdf.x.elements[i];
+        d1 = 1;
+      } else {
+        d1 = exp(s_fdf.x.elements[i]);
+      }
+
+      if (k < n_vc) {
+        if (i == k) {
+          d1 *= v_traceG[k] * (s - v_sigma2[k] * v_traceG[k]) / (s * s);
+        } else if (i == n_vc) {
+          d1 *= -1 * v_traceG[k] * v_sigma2[k] / (s * s);
+        } else {
+          d1 *= -1 * v_traceG[i] * v_traceG[k] * v_sigma2[k] / (s * s);
+        }
+      } else {
+        if (i == k) {
+          d1 *= -1 * (s - v_sigma2[n_vc]) / (s * s);
+        } else {
+          d1 *= v_traceG[i] * v_sigma2[n_vc] / (s * s);
+        }
+      }
+
+      for (size_t j = 0; j < n_vc + 1; j++) {
+        if (noconstrain) {
+          d2 = s_fdf.x.elements[j];
+          d2 = 1;
+        } else {
+          d2 = exp(s_fdf.x.elements[j]);
+        }
+
+        if (k < n_vc) {
+          if (j == k) {
+            d2 *= v_traceG[k] * (s - v_sigma2[k] * v_traceG[k]) / (s * s);
+          } else if (j == n_vc) {
+            d2 *= -1 * v_traceG[k] * v_sigma2[k] / (s * s);
+          } else {
+            d2 *= -1 * v_traceG[j] * v_traceG[k] * v_sigma2[k] / (s * s);
+          }
+        } else {
+          if (j == k) {
+            d2 *= -1 * (s - v_sigma2[n_vc]) / (s * s);
+          } else {
+            d2 *= v_traceG[j] * v_sigma2[n_vc] / (s * s);
+          }
+        }
+
+        d += -1.0 * d1 * d2 * Hessian.accessor(i, j);
+      }
+    }
+
+    if (k < n_vc) {
+      v_se_pve ~= sqrt(d);
+    } else {
+      se_pve_total = sqrt(d);
+    }
+  }
+
+  gsl_multiroot_fdfsolver_free(s_fdf);
+
+  return;
+}
+
+// Ks are not scaled.
+void CalcVCacl(const DMatrix K, const DMatrix W,
+                   const DMatrix y) {
+  size_t n1 = K.shape[0], n2 = K.shape[1];
+  size_t n_vc = n2 / n1;
+
+  double d, y2_sum, tau_inv;
+
+  // New matrices/vectors.
+  DMatrix K_scale; // = gsl_matrix_alloc(n1, n2);
+  DMatrix y_scale; // = gsl_vector_alloc(n1);
+  DMatrix y2; // = gsl_vector_alloc(n1);
+  DMatrix n1_vec; // = gsl_vector_alloc(n1);
+  DMatrix Ay; // = gsl_matrix_alloc(n1, n_vc);
+  DMatrix K2; // = gsl_matrix_alloc(n1, n_vc * n_vc);
+  DMatrix K_tmp; // = gsl_matrix_alloc(n1, n1);
+  DMatrix V_mat; // = gsl_matrix_alloc(n1, n1);
+
+  // Old matrices/vectors.
+  DMatrix pve; // = gsl_vector_alloc(n_vc);
+  DMatrix se_pve; // = gsl_vector_alloc(n_vc);
+  DMatrix q_vec; // = gsl_vector_alloc(n_vc);
+  DMatrix S1; // = gsl_matrix_alloc(n_vc, n_vc);
+  DMatrix S2; // = gsl_matrix_alloc(n_vc, n_vc);
+  DMatrix S_mat; // = gsl_matrix_alloc(n_vc, n_vc);
+  DMatrix Si_mat; // = gsl_matrix_alloc(n_vc, n_vc);
+  DMatrix J_mat; // = gsl_matrix_alloc(n_vc, n_vc);
+  DMatrix Var_mat; // = gsl_matrix_alloc(n_vc, n_vc);
+
+  int sig;
+  gsl_permutation *pmt = gsl_permutation_alloc(n_vc);
+
+  // Center and scale K by W, and standardize K further so that all
+  // diagonal elements are 1
+  for (size_t i = 0; i < n_vc; i++) {
+    //gsl_matrix_view
+    DMatrix Kscale_sub = get_sub_dmatrix(K_scale, 0, n1 * i, n1, n1);
+    //gsl_matrix_const_view 
+    K_sub = get_sub_dmatrix(K, 0, n1 * i, n1, n1);
+    //gsl_matrix_memcpy(&Kscale_sub.matrix, &K_sub.matrix);
+
+    CenterMatrix(Kscale_sub, W);
+    StandardizeMatrix(Kscale_sub.matrix);
+  }
+
+  // Center y by W, and standardize it to have variance 1 (t(y)%*%y/n=1)
+  //gsl_vector_memcpy(y_scale, y);
+  CenterVector(y_scale, W);
+
+  // Compute y^2 and sum(y^2), which is also the variance of y*n1.
+  //gsl_vector_memcpy(y2, y_scale);
+  y2 = multiply_dmatrix_num(y2, y_scale);
+
+  y2_sum = 0;
+  for (size_t i = 0; i < y2.size; i++) {
+    y2_sum += y2.elements[i];
+  }
+
+  // Compute the n_vc size q vector.
+  for (size_t i = 0; i < n_vc; i++) {
+    //gsl_matrix_const_view 
+    DMatrix Kscale_sub = get_sub_dmatrix(K_scale, 0, n1 * i, n1, n1);
+
+    n1_vec = matrix_mult(Kscale_sub, y_scale);
+
+    d = vector_ddot(n1_vec, y_scale);
+    q_vec.elements[i] = d - y2_sum;
+  }
+
+  // Compute the n_vc by n_vc S1 and S2 matrix (and eventually
+  // S=S1-\tau^{-1}S2).
+  for (size_t i = 0; i < n_vc; i++) {
+    //gsl_matrix_const_view Kscale_
+    DMatrix sub1 = get_sub_dmatrix(K_scale, 0, n1 * i, n1, n1);
+
+    for (size_t j = i; j < n_vc; j++) {
+      DMatrix Kscale_sub2 = get_sub_dmatrix(K_scale, 0, n1 * j, n1, n1);
+
+      //gsl_matrix_memcpy(K_tmp, &Kscale_sub1.matrix);
+      K_tmp *= K_tmp, Kscale_sub2;
+
+      n1_vec = zeros_dmatrix(n1_vec.shape[0], n1_vec.shape[1]);
+      for (size_t t = 0; t < K_tmp.shape[0]; t++) {
+        DMatrix Ktmp_col = get_col(K_tmp, t);
+        n1_vec += Ktmp_col;
+      }
+      n1_vec = add_dmatrix_num(n1_vec, -1.0);
+
+      // Compute S1.
+      d = vector_ddot(n1_vec, y2);
+      S1.set(i, j, 2 * d);
+      if (i != j) {
+        S1.set(j, i, 2 * d);
+      }
+
+      // Compute S2.
+      d = 0;
+      for (size_t t = 0; t < n1_vec.size; t++) {
+        d += n1_vec.elements[t];
+      }
+      S2.set(i, j, d);
+      if (i != j) {
+        S2.set(j, i, d);
+      }
+
+      // Save information to compute J.
+      DMatrix K2col1 = get_col(K2, n_vc * i + j);
+      DMatrix K2col2 = get_col(K2, n_vc * j + i);
+
+      //gsl_vector_memcpy(&K2col1.vector, n1_vec);
+      if (i != j) {
+        //gsl_vector_memcpy(&K2col2.vector, n1_vec);
+      }
+    }
+  }
+
+  // Iterate to solve tau and h's.
+  size_t it = 0;
+  double s = 1;
+  while (abs(s) > 1e-3 && it < 100) {
+
+    // Update tau_inv.
+    d = vector_ddot(q_vec, pve);
+    if (it > 0) {
+      s = y2_sum / to!double(n1) - d / (to!double(n1) * (to!double(n1) - 1)) - tau_inv;
+    }
+    tau_inv = y2_sum / to!double(n1) - d / (to!double(n1) * (to!double(n1) - 1));
+    if (it > 0) {
+      s /= tau_inv;
+    }
+
+    // Update S.
+    gsl_matrix_memcpy(S_mat, S2);
+    gsl_matrix_scale(S_mat, -1 * tau_inv);
+    gsl_matrix_add(S_mat, S1);
+
+    // Update h=S^{-1}q.
+    Si_mat = S_mat.inverse());
+    pve = matrix_mult(Si_mat, q_vec);
+
+    it++;
+  }
+
+  // Compute V matrix and A matrix (K_scale is destroyed, so need to
+  // compute V first).
+  gsl_matrix_set_zero(V_mat);
+  for (size_t i = 0; i < n_vc; i++) {
+    DMatrix Kscale_sub = get_sub_dmatrix(K_scale, 0, n1 * i, n1, n1);
+
+    // Compute V.
+    //gsl_matrix_memcpy(K_tmp, &Kscale_sub.matrix);
+    K_tmp = multiply_dmatrix_num(K_tmp, pve.elements[i]);
+    V_mat += K_tmp;
+
+    // Compute A; the corresponding Kscale is destroyed.
+    //gsl_matrix_const_view
+    DMatrix K2_sub = get_sub_dmatrix(K2, 0, n_vc * i, n1, n_vc);
+    n1_vec = matrix_mult(K2_sub, pve);
+
+    for (size_t t = 0; t < n1; t++) {
+      K_scale.set(t, n1 * i + t, gsl_vector_get(n1_vec, t));
+    }
+
+    // Compute Ay.
+    //gsl_vector_view
+    DMatrix Ay_col = get_col(Ay, i);
+    Ay_col= matrix_mult(Kscale_sub, y_scale);
+  }
+  V_mat = multiply_dmatrix_num(V_mat, tau_inv);
+
+  // Compute J matrix.
+  for (size_t i = 0; i < n_vc; i++) {
+    //gsl_vector_view
+    DMatrix Ay_col1 = gsl_matrix_column(Ay, i);
+    n1_vec = matrix_mult(V_mat, Ay_col1);
+
+    for (size_t j = i; j < n_vc; j++) {
+      //gsl_vector_view
+      DMatrix Ay_col2 = get_col(Ay, j);
+
+      d = vector_ddot(Ay_col2 n1_vec);
+      J_mat.set(i, j, 2.0 * d);
+      if (i != j) {
+        J_mat.set(j, i, 2.0 * d);
+      }
+    }
+  }
+
+  // Compute H^{-1}JH^{-1} as V(\hat h), where H=S2*tau_inv; this is
+  // stored in Var_mat.
+  //gsl_matrix_memcpy(S_mat, S2);
+  S_mat = multiply_dmatrix_num(S_mat, tau_inv);
+
+  Si_mat = S_mat.inverse();
+
+  S_mat = matrix_mult(Si_mat, J_mat);
+  Var_mat = matrix_mult(S_mat, Si_mat);
+
+  // Compute variance for tau_inv.
+  n1_vec = matrix_mult(V_mat, y_scale);
+  d = vector_ddot(y_scale, n1_vec);
+  // auto se_tau_inv = sqrt(2 * d) / (double)n1;  UNUSED
+
+  // Transform pve back to the original scale and save data.
+  v_pve = [];
+  v_se_pve = [];
+  v_sigma2 = [];
+  v_se_sigma2 = [];
+
+  pve_total = 0, se_pve_total = 0;
+  for (size_t i = 0; i < n_vc; i++) {
+    d = pve.elements[i];
+    pve_total += d;
+
+    v_pve ~= d;
+    v_sigma2 ~= d * tau_inv / v_traceG[i];
+
+    d = sqrt(Var_mat.accessor(i, i));
+    v_se_pve ~= d;
+    v_se_sigma2 ~= d * tau_inv / v_traceG[i];
+
+    for (size_t j = 0; j < n_vc; j++) {
+      se_pve_total += Var_mat.accessor(i, j);
+    }
+  }
+  v_sigma2 ~= (1 - pve_total) * tau_inv;
+  v_se_sigma2. ~= sqrt(se_pve_total) * tau_inv;
+  se_pve_total = sqrt(se_pve_total);
+
+  write("sigma2 = ");
+  for (size_t i = 0; i < n_vc + 1; i++) {
+    write(v_sigma2[i], " ");
+  }
+  write("\n");
+
+   write("se(sigma2) = ");
+  for (size_t i = 0; i < n_vc + 1; i++) {
+    write(v_se_sigma2[i], " ");
+  }
+  write("\n");
+
+  write("pve = ");
+  for (size_t i = 0; i < n_vc; i++) {
+    write(v_pve[i], " ");
+  }
+  write("\n");
+
+   write("se(pve) = ");
+  for (size_t i = 0; i < n_vc; i++) {
+    write((v_se_pve[i], " ");
+  }
+  write("\n");
+
+  if (n_vc > 1) {
+    writeln("total pve = ", pve_total);
+    writeln("se(total pve) = ", se_pve_total);
+  }
+
+  gsl_permutation_free(pmt);
+
+  return;
+}
+
+
+
+// Read bimbam mean genotype file and compute XWz.
+bool BimbamXwz(const string file_geno, const int display_pace,
+               int[] indicator_idv, int[] indicator_snp,
+               const size_t[] vec_cat, const DMatrix w,
+               const DMatrix z, size_t ns_test, DMatrix XWz) {
+  debug_msg("entering BimbamXwz");
+  File infile = File(file_geno);
+
+  string line;
+  char *ch_ptr;
+
+  size_t n_miss;
+  double d, geno_mean, geno_var;
+
+  size_t ni_test = XWz.shape[0];
+  DMatrix geno; // = gsl_vector_alloc(ni_test);
+  DMatrix geno_miss; // = gsl_vector_alloc(ni_test);
+
+  wz = w * z;
+
+  for (size_t t = 0; t < indicator_snp.length ++t) {
+    safeGetline(infile, line).eof();
+
+    if (indicator_snp[t] == 0) {
+      continue;
+    }
+
+    ch_ptr = strtok_safe((char *)line.c_str(), " , \t");
+    ch_ptr = strtok_safe(NULL, " , \t");
+    ch_ptr = strtok_safe(NULL, " , \t");
+
+    geno_mean = 0.0;
+    n_miss = 0;
+    geno_var = 0.0;
+    gsl_vector_set_all(geno_miss, 0);
+
+    size_t j = 0;
+    for (size_t i = 0; i < indicator_idv.size(); ++i) {
+      if (indicator_idv[i] == 0) {
+        continue;
+      }
+      ch_ptr = strtok_safe(NULL, " , \t");
+      if (strcmp(ch_ptr, "NA") == 0) {
+        gsl_vector_set(geno_miss, i, 0);
+        n_miss++;
+      } else {
+        d = atof(ch_ptr);
+        gsl_vector_set(geno, j, d);
+        gsl_vector_set(geno_miss, j, 1);
+        geno_mean += d;
+        geno_var += d * d;
+      }
+      j++;
+    }
+
+    geno_mean /= to!double(ni_test - n_miss);
+    geno_var += geno_mean * geno_mean * to!double(n_miss);
+    geno_var /= to!double(ni_test);
+    geno_var -= geno_mean * geno_mean;
+
+    for (size_t i = 0; i < ni_test; ++i) {
+      if (geno_miss.elements[i] == 0) {
+        geno.elements[i] = geno_mean;
+      }
+    }
+
+    geno = add_dmatrix_num(geno, -1.0 * geno_mean);
+
+    //gsl_vector_view
+    DMatrix XWz_col = get_col(XWz, vec_cat[ns_test]);
+    d = wz.elements[ns_test];
+    //gsl_blas_daxpy(d / sqrt(geno_var), geno, &XWz_col.vector);
+
+    ns_test++;
+  }
+
+  return true;
+}
+
+// Read PLINK bed file and compute XWz.
+bool PlinkXwz(const string file_bed, const int display_pace,
+              int[] indicator_idv, int[] indicator_snp,
+              const size_t[] vec_cat, const DMatrix w,
+              const DMatrix z, size_t ns_test, DMatrix XWz) {
+  writeln("entering PlinkXwz");
+  File infile = File(file_bed);
+
+  char ch[1];
+  bitset<8> b;
+
+  size_t n_miss, ci_total, ci_test;
+  double d, geno_mean, geno_var;
+
+  size_t ni_test = XWz->size1;
+  size_t ni_total = indicator_idv.size();
+  DMatrix geno; // = gsl_vector_alloc(ni_test);
+  DMatrix wz; // = gsl_vector_alloc(w->size);
+  wz = w * z;
+
+  int n_bit;
+
+  // Calculate n_bit and c, the number of bit for each snp.
+  if (ni_total % 4 == 0) {
+    n_bit = ni_total / 4;
+  } else {
+    n_bit = ni_total / 4 + 1;
+  }
+
+  // Print the first three magic numbers.
+  for (int i = 0; i < 3; ++i) {
+    //infile.read(ch, 1);
+    //b = ch[0];
+  }
+
+  for (size_t t = 0; t < indicator_snp.size(); ++t) {
+    if (indicator_snp[t] == 0) {
+      continue;
+    }
+
+    // n_bit, and 3 is the number of magic numbers.
+    infile.seek(t * n_bit + 3);
+
+    // Read genotypes.
+    geno_mean = 0.0;
+    n_miss = 0;
+    ci_total = 0;
+    geno_var = 0.0;
+    ci_test = 0;
+    for (int i = 0; i < n_bit; ++i) {
+      //infile.read(ch, 1);
+      //b = ch[0];
+
+      // Minor allele homozygous: 2.0; major: 0.0.
+      for (size_t j = 0; j < 4; ++j) {
+        if ((i == (n_bit - 1)) && ci_total == ni_total) {
+          break;
+        }
+        if (indicator_idv[ci_total] == 0) {
+          ci_total++;
+          continue;
+        }
+
+        if (b[2 * j] == 0) {
+          if (b[2 * j + 1] == 0) {
+            gsl_vector_set(geno, ci_test, 2.0);
+            geno_mean += 2.0;
+            geno_var += 4.0;
+          } else {
+            gsl_vector_set(geno, ci_test, 1.0);
+            geno_mean += 1.0;
+            geno_var += 1.0;
+          }
+        } else {
+          if (b[2 * j + 1] == 1) {
+            gsl_vector_set(geno, ci_test, 0.0);
+          } else {
+            gsl_vector_set(geno, ci_test, -9.0);
+            n_miss++;
+          }
+        }
+
+        ci_test++;
+        ci_total++;
+      }
+    }
+
+    geno_mean /= to!double(ni_test - n_miss);
+    geno_var += geno_mean * geno_mean * to!double(n_miss);
+    geno_var /= to!double(ni_test);
+    geno_var -= geno_mean * geno_mean;
+
+    for (size_t i = 0; i < ni_test; ++i) {
+      d = gsl_vector_get(geno, i);
+      if (d == -9.0) {
+        geno.elements[i] = geno_mean;
+      }
+    }
+
+    geno = add_dmatrix_num(geno, -1.0 * geno_mean);
+
+    gsl_vector_view XWz_col = gsl_matrix_column(XWz, vec_cat[ns_test]);
+    d = gsl_vector_get(wz, ns_test);
+    //gsl_blas_daxpy(d / sqrt(geno_var), geno, &XWz_col.vector);
+
+    ns_test++;
+  }
+
+  return true;
+}
+
+// Read multiple genotype files and compute XWz.
+bool MFILEXwz(const size_t mfile_mode, const string file_mfile,
+              const int display_pace, int[] indicator_idv,
+              int[][] mindicator_snp,
+              const size_t[] vec_cat, const DMatrix w,
+              const DMatrix z, DMatrix XWz) {
+  debug_msg("entering");
+  XWz =zeros_dmatrix(XWz.shape[0], XWz.shape[1]);
+
+  File infile = File(file_mfile);
+
+  string file_name;
+  size_t l = 0, ns_test = 0;
+
+  while (!safeGetline(infile, file_name).eof()) {
+    if (mfile_mode == 1) {
+      file_name ~= ".bed";
+      PlinkXwz(file_name, display_pace, indicator_idv, mindicator_snp[l],
+               vec_cat, w, z, ns_test, XWz);
+    } else {
+      BimbamXwz(file_name, display_pace, indicator_idv, mindicator_snp[l],
+                vec_cat, w, z, ns_test, XWz);
+    }
+
+    l++;
+  }
+
+  return true;
+}
+
+// Read bimbam mean genotype file and compute X_i^TX_jWz.
+bool BimbamXtXwz(const string file_geno, const int display_pace,
+                 int[] indicator_idv, int[] indicator_snp,
+                 const DMatrix XWz, size_t ns_test, DMatrix XtXWz) {
+  writeln("entering BimbamXwz");
+  File infile =  File(file_geno);
+
+  string line;
+  char *ch_ptr;
+
+  size_t n_miss;
+  double d, geno_mean, geno_var;
+
+  size_t ni_test = XWz->size1;
+  gsl_vector *geno = gsl_vector_alloc(ni_test);
+  gsl_vector *geno_miss = gsl_vector_alloc(ni_test);
+
+  for (size_t t = 0; t < indicator_snp.size(); ++t) {
+    safeGetline(infile, line).eof();
+    if (indicator_snp[t] == 0) {
+      continue;
+    }
+
+    ch_ptr = strtok_safe((char *)line.c_str(), " , \t");
+    ch_ptr = strtok_safe(NULL, " , \t");
+    ch_ptr = strtok_safe(NULL, " , \t");
+
+    geno_mean = 0.0;
+    n_miss = 0;
+    geno_var = 0.0;
+    //gsl_vector_set_all(geno_miss, 0);
+    geno_miss = zeros_dmatrix(geno_miss.shape[0], geno_miss.shape[1]);
+
+    size_t j = 0;
+    for (size_t i = 0; i < indicator_idv.length; ++i) {
+      if (indicator_idv[i] == 0) {
+        continue;
+      }
+      ch_ptr = strtok_safe(NULL, " , \t");
+      if (strcmp(ch_ptr, "NA") == 0) {
+        gsl_vector_set(geno_miss, i, 0);
+        n_miss++;
+      } else {
+        d = atof(ch_ptr);
+        geno.elements[j] =  d;
+        geno_miss.elements[j] = 1;
+        geno_mean += d;
+        geno_var += d * d;
+      }
+      j++;
+    }
+
+    geno_mean /= to!double(ni_test - n_miss);
+    geno_var += geno_mean * geno_mean * to!double(n_miss);
+    geno_var /= to!double(ni_test);
+    geno_var -= geno_mean * geno_mean;
+
+    for (size_t i = 0; i < ni_test; ++i) {
+      if (geno_miss.elements[i] == 0) {
+        geno.elements[i] = geno_mean;
+      }
+    }
+
+    geno = add_dmatrix_num(geno, -1.0 * geno_mean);
+
+    for (size_t i = 0; i < XWz->size2; i++) {
+      //gsl_vector_const_view
+      DMatrix XWz_col = get_col(XWz, i);
+      d = vector_ddot(geno, XWz_col);
+      XtXWz.set(ns_test, i, d / sqrt(geno_var));
+    }
+
+    ns_test++;
+  }
+
+  return true;
+}
+
+// Read PLINK bed file and compute XWz.
+bool PlinkXtXwz(const string file_bed, const int display_pace,
+                int[] indicator_idv, int[] indicator_snp,
+                const DMatrix XWz, size_t ns_test, DMatrix XtXWz) {
+  debug_msg("entering");
+  File infile = File(file_bed);
+
+  //char ch[1];
+  //bitset<8> b;
+
+  size_t n_miss, ci_total, ci_test;
+  double d, geno_mean, geno_var;
+
+  size_t ni_test = XWz.shape[0];
+  size_t ni_total = indicator_idv.size();
+  DMatrix geno; // = gsl_vector_alloc(ni_test);
+
+  int n_bit;
+
+  // Calculate n_bit and c, the number of bit for each snp.
+  if (ni_total % 4 == 0) {
+    n_bit = ni_total / 4;
+  } else {
+    n_bit = ni_total / 4 + 1;
+  }
+
+  // Print the first three magic numbers.
+  for (int i = 0; i < 3; ++i) {
+    //infile.read(ch, 1);
+    //b = ch[0];
+  }
+
+  for (size_t t = 0; t < indicator_snp.size(); ++t) {
+    if (indicator_snp[t] == 0) {
+      continue;
+    }
+
+    // n_bit, and 3 is the number of magic numbers.
+    infile.seek(t * n_bit + 3);
+
+    // Read genotypes.
+    geno_mean = 0.0;
+    n_miss = 0;
+    ci_total = 0;
+    geno_var = 0.0;
+    ci_test = 0;
+    for (int i = 0; i < n_bit; ++i) {
+      //infile.read(ch, 1);
+      //b = ch[0];
+
+      // Minor allele homozygous: 2.0; major: 0.0;
+      for (size_t j = 0; j < 4; ++j) {
+        if ((i == (n_bit - 1)) && ci_total == ni_total) {
+          break;
+        }
+        if (indicator_idv[ci_total] == 0) {
+          ci_total++;
+          continue;
+        }
+
+        if (b[2 * j] == 0) {
+          if (b[2 * j + 1] == 0) {
+            gsl_vector_set(geno, ci_test, 2.0);
+            geno_mean += 2.0;
+            geno_var += 4.0;
+          } else {
+            gsl_vector_set(geno, ci_test, 1.0);
+            geno_mean += 1.0;
+            geno_var += 1.0;
+          }
+        } else {
+          if (b[2 * j + 1] == 1) {
+            gsl_vector_set(geno, ci_test, 0.0);
+          } else {
+            gsl_vector_set(geno, ci_test, -9.0);
+            n_miss++;
+          }
+        }
+
+        ci_test++;
+        ci_total++;
+      }
+    }
+
+    geno_mean /= to!double(ni_test - n_miss);
+    geno_var += geno_mean * geno_mean * to!double(n_miss);
+    geno_var /= to!double(ni_test);
+    geno_var -= geno_mean * geno_mean;
+
+    for (size_t i = 0; i < ni_test; ++i) {
+      d = geno.elements[i];
+      if (d == -9.0) {
+        geno.elements[i] = geno_mean;
+      }
+    }
+
+    geno = add_dmatrix_num(geno, -1.0 * geno_mean);
+
+    for (size_t i = 0; i < XWz->size2; i++) {
+      //gsl_vector_const_view
+      DMatrix XWz_col = get_col(XWz, i);
+      d = vector_ddot(geno, XWz_col);
+      XtXWz.set(ns_test, i, d / sqrt(geno_var));
+    }
+
+    ns_test++;
+  }
+
+  return true;
+}
+
+// Read multiple genotype files and compute XWz.
+bool MFILEXtXwz(const size_t mfile_mode, const string file_mfile,
+                const int display_pace, int[] indicator_idv,
+                int[][] mindicator_snp, const DMatrix XWz,
+                DMatrix XtXWz) {
+  writeln("entering MFILEXwz");
+  XtXWz = zeros_dmatrix(XtXWz.shape[0], XtXWz.shape[1]);
+
+  File infile = File(file_mfile);
+
+  string file_name;
+  size_t l = 0, ns_test = 0;
+
+  while (!safeGetline(infile, file_name).eof()) {
+    if (mfile_mode == 1) {
+      file_name ~= ".bed";
+      PlinkXtXwz(file_name, display_pace, indicator_idv, mindicator_snp[l], XWz, ns_test, XtXWz);
+    } else {
+      BimbamXtXwz(file_name, display_pace, indicator_idv, mindicator_snp[l], XWz, ns_test, XtXWz);
+    }
+
+    l++;
+  }
+
+  return true;
+}
+
+// Compute confidence intervals from summary statistics.
+void CalcCIss(const DMatrix Xz, const DMatrix XWz,
+              const DMatrix XtXWz, const DMatrix S_mat,
+              const DMatrix Svar_mat, const DMatrix w,
+              const DMatrix z, const DMatrix s_vec,
+              const size_t[] &vec_cat, const double[] v_pve,
+              double[] v_se_pve, double pve_total, double se_pve_total,
+              double[] v_sigma2, double[] v_se_sigma2,
+              double[] v_enrich, double[] v_se_enrich) {
+  size_t n_vc = XWz.shape[1], ns_test = w.size, ni_test = XWz.shape[0];
+
+  // Set up matrices.
+  DMatrix w_pve; // = gsl_vector_alloc(ns_test);
+  DMatrix wz; // = gsl_vector_alloc(ns_test);
+  DMatrix zwz; // = gsl_vector_alloc(n_vc);
+  DMatrix zz; // = gsl_vector_alloc(n_vc);
+  DMatrix Xz_pve; // = gsl_vector_alloc(ni_test);
+  DMatrix WXtXWz; // = gsl_vector_alloc(ns_test);
+
+  DMatrix Si_mat; // = gsl_matrix_alloc(n_vc, n_vc);
+  DMatrix Var_mat; // = gsl_matrix_alloc(n_vc, n_vc);
+  DMatrix tmp_mat; // = gsl_matrix_alloc(n_vc, n_vc);
+  DMatrix tmp_mat1; // = gsl_matrix_alloc(n_vc, n_vc);
+  DMatrix VarEnrich_mat; // = gsl_matrix_alloc(n_vc, n_vc);
+  DMatrix qvar_mat; // = gsl_matrix_alloc(n_vc, n_vc);
+
+  double d, s0, s1, s, s_pve, s_snp;
+
+  // Compute wz and zwz.
+  //gsl_vector_memcpy(wz, z);
+  wz *=  w;
+
+  zwz = zeros_dmatrix(zwz.shape[0], zwz.shape[1]);
+  zz = zeros_dmatrix(zz.shape[0], zz.shape[1]);
+  for (size_t i = 0; i < w->size; i++) {
+    d = wz.elements[i] * z.elements[i];
+    d += zwz.elements[vec_cat[i]];
+    zwz.elements[vec_cat[i]] = d;
+
+    d = z.elements[i] * z.elements[i];
+    d += zz.elements[vec_cat[i]];
+    zz.elements[vec_cat[i]] = d;
+  }
+
+  // Compute wz, ve and Xz_pve.
+  Xz_pve = zeros_dmatrix(Xz_pve.shape[0], Xz_pve.shape[1]);
+  s_pve = 0;
+  s_snp = 0;
+  for (size_t i = 0; i < n_vc; i++) {
+    s_pve += v_pve[i];
+    s_snp += s_vec.elements[i];
+
+    //gsl_vector_const_view
+    DMatrix Xz_col = get_col(Xz, i);
+    // NOTE : TODO
+    //gsl_blas_daxpy(v_pve[i] / gsl_vector_get(s_vec, i), &Xz_col.vector, Xz_pve);
+  }
+
+  // Set up wpve vector.
+  for (size_t i = 0; i < w.size; i++) {
+    d = v_pve[vec_cat[i]] / s_vec.elements[vec_cat[i]];
+    w_pve.set[i] = d;
+  }
+
+  // Compute Vq (in qvar_mat).
+  s0 = 1 - s_pve;
+  for (size_t i = 0; i < n_vc; i++) {
+    s0 += zz.elements[i] * v_pve[i] / s_vec.elements[i];
+  }
+
+  for (size_t i = 0; i < n_vc; i++) {
+    s1 = s0;
+    s1 -= zwz.elements[i] * (1 - s_pve) / s_vec.elements[i];
+
+    //gsl_vector_const_view
+    DMatrix XWz_col1 = get_col(XWz, i);
+    //gsl_vector_const_view
+    DMatrix XtXWz_col1 = get_col(XtXWz, i);
+
+    //gsl_vector_memcpy(WXtXWz, &XtXWz_col1.vector);
+    WXtXWz *= w_pve;
+
+    d = vector_ddot(Xz_pve, XWz_col1);
+    s1 -= d / gsl_vector_get(s_vec, i);
+
+    for (size_t j = 0; j < n_vc; j++) {
+      s = s1;
+
+      s -= zwz.elements[j] * (1 - s_pve) / s_vec.elements[j];
+
+      //gsl_vector_const_view
+      DMatrix XWz_col2 = get_col(XWz, j);
+      //gsl_vector_const_view
+      DMatrix XtXWz_col2 = get_col(XtXWz, j);
+
+      d = vector_ddot(WXtXWz, XtXWz_col2);
+      s += d / (s_vec.elements[i] * s_vec.elements[j]);
+
+      gsl_blas_ddot(&XWz_col1.vector, &XWz_col2.vector, &d);
+      s += d / (gsl_vector_get(s_vec, i) * gsl_vector_get(s_vec, j)) *
+           (1 - s_pve);
+
+      d = vector_ddot(Xz_pve, XWz_col2);
+      s -= d / s_vec.elements[j];
+
+      qvar_mat.set(i, j, s);
+    }
+  }
+
+  d = to!double(ni_test - 1);
+  q_var = multiply_dmatrix_num(qvar_mat, 2.0 / (d * d * d));
+
+  // Calculate S^{-1}.
+  //gsl_matrix_memcpy(tmp_mat, S_mat);
+  Si_mat = tmp_mat.inverse();
+
+  // Calculate variance for the estimates.
+  for (size_t i = 0; i < n_vc; i++) {
+    for (size_t j = i; j < n_vc; j++) {
+      d = Svar_mat.accessor(i, j);
+      d *= v_pve[i] * v_pve[j];
+
+      d += qvar_mat.accessor(i, j);
+      Var_mat.set(i, j, d);
+      if (i != j) {
+        Var_mat.set(j, i, d);
+      }
+    }
+  }
+
+  tmp_mat = matrix_mult(Si_mat, Var_mat);
+  Var_mat = matrix_mult(tmp_mat, Si_mat);
+
+  // Compute sigma2 per snp, enrich.
+  v_sigma2 = [];
+  v_enrich = [];
+  for (size_t i = 0; i < n_vc; i++) {
+    v_sigma2 ~= v_pve[i] / s_vec.elements[i];
+    v_enrich ~= v_pve[i] / (s_vec.elements[i] * s_snp / s_pve);
+  }
+
+  // Compute se_pve, se_sigma2.
+  for (size_t i = 0; i < n_vc; i++) {
+    d = sqrt(Var_mat.accessor(i, i));
+    v_se_pve ~= d;
+    v_se_sigma2 ~= d / s_vec.elements[i];
+  }
+
+  // Compute pve_total, se_pve_total.
+  pve_total = 0;
+  for (size_t i = 0; i < n_vc; i++) {
+    pve_total += v_pve[i];
+  }
+
+  se_pve_total = 0;
+  for (size_t i = 0; i < n_vc; i++) {
+    for (size_t j = 0; j < n_vc; j++) {
+      se_pve_total += Var_mat.accessor(i, j);
+    }
+  }
+  se_pve_total = sqrt(se_pve_total);
+
+  // Compute se_enrich.
+  //gsl_matrix_set_identity(tmp_mat);
+  tmp_mat = identity_dmatrix(temp_mat.shape[0], temp_mat.shape[1]);
+
+  double d1;
+  for (size_t i = 0; i < n_vc; i++) {
+    d = v_pve[i] / s_pve;
+    d1 = gsl_vector_get(s_vec, i);
+    for (size_t j = 0; j < n_vc; j++) {
+      if (i == j) {
+        tmp_mat.set(i, j, (1 - d) / d1 * s_snp / s_pve);
+      } else {
+        tmp_mat.set(i, j, -1 * d / d1 * s_snp / s_pve);
+      }
+    }
+  }
+  tmp_mat1 = matrix_mult(tmp_mat, Var_mat);
+  VarEnrich_mat = matrix_mult(tmp_mat1, tmp_mat.T);
+
+  for (size_t i = 0; i < n_vc; i++) {
+    d = sqrt(VarEnrich_mat.accessor(i, i));
+    v_se_enrich ~= d;
+  }
+
+  write("pve = ");
+  for (size_t i = 0; i < n_vc; i++) {
+    write(v_pve[i], " ");
+  }
+  write("\n");
+
+  write("se(pve) = ");
+  for (size_t i = 0; i < n_vc; i++) {
+    write(v_se_pve[i], " ");
+  }
+  write("\n");
+
+  write("sigma2 per snp = ");
+  for (size_t i = 0; i < n_vc; i++) {
+    write(v_sigma2[i], " ");
+  }
+  write("\n");
+
+  write("se(sigma2 per snp) = ");
+  for (size_t i = 0; i < n_vc; i++) {
+    write(v_se_sigma2[i], " ");
+  }
+  write("\n");
+
+  write("enrichment = ");
+  for (size_t i = 0; i < n_vc; i++) {
+    write(v_enrich[i], " ");
+  }
+  write("\n");
+
+  write("se(enrichment) = ");
+  for (size_t i = 0; i < n_vc; i++) {
+    write(v_se_enrich[i], " ");
+  }
+  write("\n");
 
   return;
 }
