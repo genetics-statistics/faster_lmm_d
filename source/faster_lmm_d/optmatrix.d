@@ -348,6 +348,19 @@ DMatrix inverse(const DMatrix input) {
   return DMatrix(input.shape, res.arr);
 }
 
+// calculate variance of a vector
+double VectorVar(const DMatrix v) {
+  double d, m = 0.0, m2 = 0.0;
+  for (size_t i = 0; i < v.size; ++i) {
+    d = v.elements[i];
+    m += d;
+    m2 += d * d;
+  }
+  m /= to!double(v.size);
+  m2 /= to!double(v.size);
+  return m2 - m * m;
+}
+
 // Center the matrix G.
 void CenterMatrix(DMatrix G) {
   double d;
@@ -363,7 +376,7 @@ void CenterMatrix(DMatrix G) {
 }
 
 // Center the matrix G.
-void CenterMatrix(DMatrix G, const DMatrix w) {
+void CenterMatrixVec(DMatrix G, const DMatrix w) {
   double d, wtw;
 
   wtw = vector_ddot(w, w);
@@ -378,7 +391,7 @@ void CenterMatrix(DMatrix G, const DMatrix w) {
 }
 
 // Center the matrix G.
-void CenterMatrix(DMatrix G, const DMatrix W) {
+void CenterMatrixMat(DMatrix G, const DMatrix W) {
   DMatrix WtW = matrix_mult(W.T, W);
 
   DMatrix WtWi = WtW.inverse();
@@ -397,6 +410,70 @@ void CenterMatrix(DMatrix G, const DMatrix W) {
   Gtmp = matrix_mult(GW, WtWiWt);
 
   G = G + Gtmp;
+
+  return;
+}
+
+// Scale the matrix G such that the mean diagonal = 1.
+double ScaleMatrix(DMatrix G) {
+  double d = 0.0;
+
+  for (size_t i = 0; i < G.shape[0]; ++i) {
+    d += G.accessor(i, i);
+  }
+  d /= to!double(G.shape[0]);
+
+  if (d != 0) {
+    multiply_dmatrix_num(G, 1.0 / d);
+  }
+
+  return d;
+}
+
+// Center the vector y.
+double CenterVector(DMatrix y) {
+  double d = 0.0;
+
+  for (size_t i = 0; i < y.size; ++i) {
+    d += y.elements[i];
+  }
+  d /= to!double(y.size);
+
+  y = add_dmatrix_num(y, -1.0 * d);
+
+  return d;
+}
+
+// Center the vector y.
+void CenterVector(DMatrix y, const DMatrix W) {
+  DMatrix WtW = matrix_mult(W.T, W);
+  DMatrix Wty = matrix_mult(W.T, y);
+
+  int sig;
+  //gsl_permutation *pmt = gsl_permutation_alloc(W->size2);
+  //LUDecomp(WtW, pmt, &sig);
+  //LUSolve(WtW, pmt, Wty, WtWiWty);
+
+  //gsl_blas_dgemv(CblasNoTrans, -1.0, W, WtWiWty, 1.0, y);
+
+  return;
+}
+
+// "Standardize" vector y to have mean 0 and y^ty/n=1.
+void StandardizeVector(DMatrix y) {
+  double d = 0.0, m = 0.0, v = 0.0;
+
+  for (size_t i = 0; i < y.size; ++i) {
+    d = y.elements[i];
+    m += d;
+    v += d * d;
+  }
+  m /= to!double(y.size);
+  v /= to!double(y.size);
+  v -= m * m;
+
+  y = add_dmatrix_num(y, -1.0 * m);
+  y = multiply_dmatrix_num(y, 1.0 / sqrt(v));
 
   return;
 }

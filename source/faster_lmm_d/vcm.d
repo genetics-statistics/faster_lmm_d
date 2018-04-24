@@ -38,7 +38,7 @@ import gsl.randist;
 import gsl.cdf;
 import gsl.errno;
 
-class VC_PARAM {
+struct VC_PARAM {
   const DMatrix K;
   const DMatrix W;
   const DMatrix y;
@@ -48,6 +48,18 @@ class VC_PARAM {
   DMatrix PKPy_mat;
   DMatrix Hessian;
   bool noconstrain;
+
+  this(DMatrix K, DMatrix W, DMatrix y, DMatrix P, DMatrix Py, DMatrix KPy_mat, DMatrix PKPy_mat, DMatrix Hessian, bool noconstrain){
+    this.K = K;
+    this.W = W;
+    this.y = y;
+    this.P = P;
+    this.Py = Py;
+    this.KPy_mat = KPy_mat;
+    this.PKPy_mat = PKPy_mat;
+    this.Hessian = Hessian;
+    this.noconstrain = noconstrain;
+  }
 };
 
 
@@ -822,7 +834,7 @@ void ReadFile_beta(const bool flag_priorscale, const string file_beta,
          (rs in mapRS2var)) &&   // NOTE: check if key exists
         mapRS2in.count(rs) != 0 &&
         (mapRS2cat.length == 0 || mapRS2cat.count(rs) != 0)) {
-      if (mapRS2in.at(rs) > 1) {
+      if (mapRS2in[rs] > 1) {
         writeln("error! more than one snp has the same id ", rs, " in beta file?");
         break;
       }
@@ -831,7 +843,7 @@ void ReadFile_beta(const bool flag_priorscale, const string file_beta,
         if (header.af_col != 0) {
           var_x = 2.0 * af * (1.0 - af);
         } else {
-          var_x = mapRS2var.at(rs);
+          var_x = mapRS2var[rs];
         }
       }
 
@@ -844,9 +856,9 @@ void ReadFile_beta(const bool flag_priorscale, const string file_beta,
       mapRS2nsamp[rs] = n_total;
 
       if (mapRS2cat.length != 0) {
-        vec_q[mapRS2cat.at(rs)] += (zsquare - 1.0) * var_x / to!double(n_total);
-        vec_s[mapRS2cat.at(rs)] += var_x;
-        vec_qvar[mapRS2cat.at(rs)] += var_x * var_x / to!double(n_total * n_total);
+        vec_q[mapRS2cat[rs]] += (zsquare - 1.0) * var_x / to!double(n_total);
+        vec_s[mapRS2cat[rs]] += var_x;
+        vec_qvar[mapRS2cat[rs]] += var_x * var_x / to!double(n_total * n_total);
       } else {
         vec_q[0] += (zsquare - 1.0) * var_x / to!double(n_total);
         vec_s[0] += var_x;
@@ -1163,7 +1175,7 @@ void ReadFile_beta(const bool flag_priorscale, const string file_beta,
          mapRS2var.count(rs) != 0) &&
         mapRS2in.count(rs) != 0 &&
         (mapRS2cat.length == 0 || mapRS2cat.count(rs) != 0)) {
-      if (mapRS2in.at(rs) > 1) {
+      if (mapRS2in[rs] > 1) {
         writeln("error! more than one snp has the same id ", rs, " in beta file?");
         break;
       }
@@ -1172,7 +1184,7 @@ void ReadFile_beta(const bool flag_priorscale, const string file_beta,
         if (header.af_col != 0) {
           var_x = 2.0 * af * (1.0 - af);
         } else {
-          var_x = mapRS2var.at(rs);
+          var_x = mapRS2var[rs];
         }
       }
 
@@ -1185,9 +1197,9 @@ void ReadFile_beta(const bool flag_priorscale, const string file_beta,
       mapRS2nsamp[rs] = n_total;
 
       if (mapRS2cat.length != 0) {
-        vec_q[mapRS2cat.at(rs)] += (zsquare - 1.0) * var_x / to!double(n_total);
-        vec_s[mapRS2cat.at(rs)] += var_x;
-        vec_qvar[mapRS2cat.at(rs)] +=
+        vec_q[mapRS2cat[rs]] += (zsquare - 1.0) * var_x / to!double(n_total);
+        vec_s[mapRS2cat[rs]] += var_x;
+        vec_qvar[mapRS2cat[rs]] +=
             var_x * var_x / to!double(n_total * n_total);
       } else {
         vec_q[0] += (zsquare - 1.0) * var_x / to!double(n_total);
@@ -1279,7 +1291,7 @@ void ReadFile_cor(const string file_cor, const string[] vec_rs,
     auto chrs = line.split("\t");
     size_t i = 0;
     //for (size_t i = 0; i < header.coln - 1; i++) {
-    foreach(ch_ptr; chrs){
+    foreach(ch_ptr; chrs){  // wrong 
       enforce(ch_ptr);
       if (header.rs_col != 0 && header.rs_col == i + 1) {
         rs = to!string(ch_ptr);
@@ -1326,18 +1338,18 @@ void ReadFile_cor(const string file_cor, const string[] vec_rs,
     rs1 = rs;
 
     if ((mapRS2cat.length == 0 || mapRS2cat.count(rs1) != 0) &&
-        mapRS2in.count(rs1) != 0 && mapRS2in.at(rs1) == 2) {
-      var1 = mapRS2var.at(rs1);
-      nsamp1 = mapRS2nsamp.at(rs1);
+        mapRS2in.count(rs1) != 0 && mapRS2in[rs1] == 2) {
+      var1 = mapRS2var[rs1];
+      nsamp1 = mapRS2nsamp[rs1];
       d2 = var1 * var1;
 
-      if (mapRS2cat.size() != 0) {
-        mat_S[mapRS2cat.at(rs1)][mapRS2cat.at(rs1)] +=
+      if (mapRS2cat.length != 0) {
+        mat_S[mapRS2cat[rs1]][mapRS2cat[rs1]] +=
             (1 - 1.0 / to!double(vec_n[ns_total])) * d2;
-        mat_Svar[mapRS2cat.at(rs1)][mapRS2cat.at(rs1)] +=
+        mat_Svar[mapRS2cat[rs1]][mapRS2cat[rs1]] +=
             d2 * d2 / to!double(vec_n[ns_total] * vec_n[ns_total]);
         if (crt == 1) {
-          mat3d_Sbin[mapRS2cat.at(rs1)][mapRS2cat.at(rs1)][0] +=
+          mat3d_Sbin[mapRS2cat[rs1]][mapRS2cat[rs1]][0] +=
               (1 - 1.0 / to!double(vec_n[ns_total])) * d2;
         }
       } else {
@@ -1349,11 +1361,14 @@ void ReadFile_cor(const string file_cor, const string[] vec_rs,
       }
 
       n_nb = 0;
-      while (ch_ptr != NULL) {
-        type = ch_ptr;
-        if (type.compare("NA") != 0 && type.compare("na") != 0 &&
-            type.compare("nan") != 0 && type.compare("-nan") != 0) {
-          cor = to!double(ch_ptr);
+      // check
+      foreach(body_line; infile.byLine) {
+        auto ch_ptr = body_line.split("\t");
+        type = to!string(ch_ptr[0]);
+        // check
+        if (type != "NA" && type != "na" &&
+            type != "nan" && type != "-nan") {
+          cor = to!double(ch_ptr[0]);
           rs2 = vec_rs[ns_total + n_nb + 1];
           d_pos2 = vec_bp[ns_total + n_nb + 1];
           d_cm2 = vec_cm[ns_total + n_nb + 1];
@@ -1361,9 +1376,9 @@ void ReadFile_cor(const string file_cor, const string[] vec_rs,
           d_cm = abs(d_cm2 - d_cm1);
 
           if ((mapRS2cat.length == 0 || mapRS2cat.count(rs2) != 0) &&
-              mapRS2in.count(rs2) != 0 && mapRS2in.at(rs2) == 2) {
-            var2 = mapRS2var.at(rs2);
-            nsamp2 = mapRS2nsamp.at(rs2);
+              mapRS2in.count(rs2) != 0 && mapRS2in[rs2] == 2) {
+            var2 = mapRS2var[rs2];
+            nsamp2 = mapRS2nsamp[rs2];
             d1 = cor * cor -
                  1.0 / to!double(min(vec_n[ns_total], vec_n[ns_total + n_nb + 1]));
             d2 = var1 * var2;
@@ -1385,21 +1400,21 @@ void ReadFile_cor(const string file_cor, const string[] vec_rs,
             }
 
             if (mapRS2cat.length != 0) {
-              if (mapRS2cat.at(rs1) == mapRS2cat.at(rs2)) {
-                vec_qvar[mapRS2cat.at(rs1)] += 2 * d3 * d2;
-                mat_S[mapRS2cat.at(rs1)][mapRS2cat.at(rs2)] += 2 * d1 * d2;
-                mat_Svar[mapRS2cat.at(rs1)][mapRS2cat.at(rs2)] +=
+              if (mapRS2cat[rs1] == mapRS2cat[rs2]) {
+                vec_qvar[mapRS2cat[rs1]] += 2 * d3 * d2;
+                mat_S[mapRS2cat[rs1]][mapRS2cat[rs2]] += 2 * d1 * d2;
+                mat_Svar[mapRS2cat[rs1]][mapRS2cat[rs2]] +=
                     2 * d2 * d2 / to!double(n12 * n12);
                 if (crt == 1) {
-                  mat3d_Sbin[mapRS2cat.at(rs1)][mapRS2cat.at(rs2)][bin] +=
+                  mat3d_Sbin[mapRS2cat[rs1]][mapRS2cat[rs2]][bin] +=
                       2 * d1 * d2;
                 }
               } else {
-                mat_S[mapRS2cat.at(rs1)][mapRS2cat.at(rs2)] += d1 * d2;
-                mat_Svar[mapRS2cat.at(rs1)][mapRS2cat.at(rs2)] +=
+                mat_S[mapRS2cat[rs1]][mapRS2cat[rs2]] += d1 * d2;
+                mat_Svar[mapRS2cat[rs1]][mapRS2cat[rs2]] +=
                     d2 * d2 / to!double(n12 * n12);
                 if (crt == 1) {
-                  mat3d_Sbin[mapRS2cat.at(rs1)][mapRS2cat.at(rs2)][bin] +=
+                  mat3d_Sbin[mapRS2cat[rs1]][mapRS2cat[rs2]][bin] +=
                       d1 * d2;
                 }
               }
@@ -1416,7 +1431,7 @@ void ReadFile_cor(const string file_cor, const string[] vec_rs,
           }
         }
 
-        ch_ptr = strtok(NULL, " , \t");
+        //ch_ptr = strtok(NULL, " , \t");
         n_nb++;
       }
       ni_total = max(ni_total, n_total);
@@ -1524,7 +1539,6 @@ void CalcVCss(const DMatrix Vq, const DMatrix S_mat,
               double[] v_enrich, double[] v_se_enrich) {
   size_t n_vc = S_mat.shape[0];
 
-  DMatrix Si_mat; // = gsl_matrix_alloc(n_vc, n_vc);
   DMatrix Var_mat; // = gsl_matrix_alloc(n_vc, n_vc);
   DMatrix tmp_mat1; // = gsl_matrix_alloc(n_vc, n_vc);
   DMatrix VarEnrich_mat; // = gsl_matrix_alloc(n_vc, n_vc);
@@ -1542,14 +1556,16 @@ void CalcVCss(const DMatrix Vq, const DMatrix S_mat,
   // Calculate S^{-1}q.
   DMatrix Si_mat = S_mat.inverse();
 
-  // Calculate sigma2snp and pve.
-  pve = matrix_mult(Si_mat, q_vec);
+  // Calculate sigma2snp and pve
+  // todo
+  DMatrix pve = matrix_mult(Si_mat, q_vec);
   DMatrix sigma2persnp; //gsl_vector_memcpy(sigma2persnp, pve);
   sigma2persnp = divide_dmatrix(sigma2persnp, s_vec);
+  DMatrix sigma2snp;
 
   // Get qvar_mat.
   //gsl_matrix_memcpy(qvar_mat, Vq);
-  qvar_mat = slow_matrix_multiply(qvar_mat, 1.0 / (df * df));
+  qvar_mat = multiply_dmatrix_num(qvar_mat, 1.0 / (df * df));
 
   // Calculate variance for these estimates.
   for (size_t i = 0; i < n_vc; i++) {
@@ -1566,7 +1582,7 @@ void CalcVCss(const DMatrix Vq, const DMatrix S_mat,
   }
 
   DMatrix tmp_mat = matrix_mult(Si_mat, Var_mat);
-  DMatrix Var_mat = matrix_mult(tmp_mat, Si_mat);
+  Var_mat = matrix_mult(tmp_mat, Si_mat);
 
   for (size_t i = 0; i < n_vc; i++) {
     d = sqrt(Var_mat.accessor(i, i));
@@ -1596,7 +1612,7 @@ void CalcVCss(const DMatrix Vq, const DMatrix S_mat,
   enrich = multiply_dmatrix_num(sigma2snp, s_snp / s_pve);
 
   //gsl_matrix_set_identity(tmp_mat);
-  DMatrix tmp_mat = ones_dmatrix(tmp_mat.shape[0], tmp_mat.shape[1]);
+  tmp_mat = ones_dmatrix(tmp_mat.shape[0], tmp_mat.shape[1]);
 
   double d1;
   for (size_t i = 0; i < n_vc; i++) {
@@ -1709,6 +1725,9 @@ void CalcVChe(const DMatrix K, const DMatrix W,
   DMatrix Si_mat; // = gsl_matrix_alloc(n_vc, n_vc);
   DMatrix Var_mat; // = gsl_matrix_alloc(n_vc, n_vc);
 
+  // cHECK : q_var
+  DMatrix q_var;
+
   // Center and scale K by W.
   for (size_t i = 0; i < n_vc; i++) {
     //gsl_matrix_view
@@ -1717,8 +1736,8 @@ void CalcVChe(const DMatrix K, const DMatrix W,
     DMatrix K_sub =  get_sub_dmatrix(K, 0, n1 * i, n1, n1);
     //gsl_matrix_memcpy(Kscale_sub, K_sub);
 
-    CenterMatrix(&Kscale_sub.matrix, W);
-    d = ScaleMatrix(&Kscale_sub.matrix);
+    CenterMatrixMat(Kscale_sub, W);
+    d = ScaleMatrix(Kscale_sub);
     traceG_new ~= d;
   }
 
@@ -1800,6 +1819,7 @@ void CalcVChe(const DMatrix K, const DMatrix W,
   pve = matrix_mult(Si_mat, q_vec);
 
   // Compute q_var (*n^4).
+  // todo : check
   qvar_mat = zeros_dmatrix(q_var.shape[0], q_var.shape[1]);
   s = 1;
   for (size_t i = 0; i < n_vc; i++) {
@@ -1808,14 +1828,14 @@ void CalcVChe(const DMatrix K, const DMatrix W,
     DMatrix yKrKKry_sub = get_sub_dmatrix(yKrKKry, 0, i * n_vc, n_vc, n_vc);
     //gsl_matrix_memcpy(tmp_mat, &yKrKKry_sub.matrix);
     tmp_mat = multiply_dmatrix_num(tmp_mat, d);
-    qvar_mat += tmp_mat;
+    qvar_mat = qvar_mat + tmp_mat;
     s -= d;
   }
   //gsl_matrix_view 
   DMatrix yKrKKry_sub = get_sub_dmatrix(yKrKKry, 0, n_vc * n_vc, n_vc, n_vc);
   //gsl_matrix_memcpy(tmp_mat, &yKrKKry_sub.matrix);
   tmp_mat = multiply_dmatrix_num(tmp_mat, s);
-  qvar_mat += tmp_mat;
+  qvar_mat = qvar_mat + tmp_mat;
 
   qvar_mat = multiply_dmatrix_num(qvar_mat, 2.0);
 
@@ -1824,10 +1844,15 @@ void CalcVChe(const DMatrix K, const DMatrix W,
   Var_mat = matrix_mult(tmp_mat, Si_mat);
 
   // Transform pve back to the original scale and save data.
-  v_pve = [];
-  v_se_pve = [];
-  v_sigma2 = [];
-  v_se_sigma2 = [];
+  // TODO
+  double[] v_pve = [];
+  double[] v_se_pve = [];
+  double[] v_sigma2 = [];
+  double[] v_se_sigma2 = [];
+
+  double pve_total, se_pve_total;
+  double[] v_traceG;
+
 
   s = 1.0, v = 0, pve_total = 0, se_pve_total = 0;
   for (size_t i = 0; i < n_vc; i++) {
@@ -1837,13 +1862,13 @@ void CalcVChe(const DMatrix K, const DMatrix W,
     s -= d;
     pve_total += d * (var_y_new / traceG_new[i]) * (v_traceG[i] / var_y);
 
-    d = sqrt(Var_mat.get(i, i));
+    d = sqrt(Var_mat.accessor(i, i));
     v_se_sigma2 ~= d * var_y_new / traceG_new[i];
     v_se_pve ~= d * (var_y_new / traceG_new[i]) * (v_traceG[i] / var_y);
 
     for (size_t j = 0; j < n_vc; j++) {
-      v += Var_mat.get(i, j);
-      se_pve_total += Var_mat.get(i, j) *
+      v += Var_mat.accessor(i, j);
+      se_pve_total += Var_mat.accessor(i, j) *
                       (var_y_new / traceG_new[i]) * (v_traceG[i] / var_y) *
                       (var_y_new / traceG_new[j]) * (v_traceG[j] / var_y);
     }
@@ -1858,7 +1883,7 @@ void CalcVChe(const DMatrix K, const DMatrix W,
   }
   write("\n");
 
-  cout << "se(sigma2) = ";
+  write("se(sigma2) = ");
   for (size_t i = 0; i < n_vc + 1; i++) {
     write(v_se_sigma2[i], " ");
   }
@@ -1901,6 +1926,10 @@ void CalcVCreml(bool noconstrain, const DMatrix K, const DMatrix W,
   DMatrix dev2; // = gsl_matrix_alloc(n_vc + 1, n_vc + 1);
   DMatrix Hessian; // = gsl_matrix_alloc(n_vc + 1, n_vc + 1);
   VC_PARAM params = VC_PARAM(K, W, y, P, Py, KPy_mat, PKPy_mat, Hessian, noconstrain);
+
+  // TODO: Initialize
+
+  double[] v_sigma2;
 
   // Initialize sigma2/log_sigma2.
   CalcVChe(K, W, y);
