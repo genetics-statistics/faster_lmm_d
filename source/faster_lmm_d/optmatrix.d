@@ -348,6 +348,59 @@ DMatrix inverse(const DMatrix input) {
   return DMatrix(input.shape, res.arr);
 }
 
+// Center the matrix G.
+void CenterMatrix(DMatrix G) {
+  double d;
+  DMatrix w = ones_dmatrix(1, G.shape[0]);
+
+  DMatrix Gw = matrix_mult(G, w);
+  //gsl_blas_dsyr2(CblasUpper, -1.0 / (double)G->size1, Gw, w, G);
+  d = vector_ddot(w, Gw);
+  //gsl_blas_dsyr(CblasUpper, d / ((double)G->size1 * (double)G->size1), w, G);
+
+  DMatrix GT = G.T;
+  return;
+}
+
+// Center the matrix G.
+void CenterMatrix(DMatrix G, const DMatrix w) {
+  double d, wtw;
+
+  wtw = vector_ddot(w, w);
+  DMatrix Gw = matrix_mult(G, w);
+  //gsl_blas_dsyr2(CblasUpper, -1.0 / wtw, Gw, w, G);
+  d = vector_ddot(w, Gw);
+  //gsl_blas_dsyr(CblasUpper, d / (wtw * wtw), w, G);
+
+  DMatrix GT = G.T;
+
+  return;
+}
+
+// Center the matrix G.
+void CenterMatrix(DMatrix G, const DMatrix W) {
+  DMatrix WtW = matrix_mult(W.T, W);
+
+  DMatrix WtWi = WtW.inverse();
+
+  DMatrix WtWiWt = matrix_mult(WtWi, W.T);
+  DMatrix GW = matrix_mult(G, W);
+  DMatrix Gtmp = matrix_mult(GW, WtWiWt);
+
+  G = G - Gtmp;
+  Gtmp = Gtmp.T;
+  G = G - Gtmp;
+
+  DMatrix WtGW = matrix_mult(W.T, GW);
+  // GW is destroyed.
+  GW = matrix_mult(WtWiWt.T, WtGW);
+  Gtmp = matrix_mult(GW, WtWiWt);
+
+  G = G + Gtmp;
+
+  return;
+}
+
 import std.conv;
 
 unittest{
