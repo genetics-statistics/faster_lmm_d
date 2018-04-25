@@ -414,6 +414,30 @@ void CenterMatrixMat(DMatrix G, const DMatrix W) {
   return;
 }
 
+// "Standardize" the matrix G such that all diagonal elements = 1.
+void StandardizeMatrix(DMatrix G) {
+  double d = 0.0;
+  double[] vec_d;
+
+  for (size_t i = 0; i < G.shape[0]; ++i) {
+    vec_d ~= G.accessor(i, i);
+  }
+  for (size_t i = 0; i < G.shape[0]; ++i) {
+    for (size_t j = i; j < G.shape[1]; ++j) {
+      if (j == i) {
+        G.set(i, j, 1);
+      } else {
+        d = G.accessor(i, j);
+        d /= sqrt(vec_d[i] * vec_d[j]);
+        G.set(i, j, d);
+        G.set(j, i, d);
+      }
+    }
+  }
+
+  return;
+}
+
 // Scale the matrix G such that the mean diagonal = 1.
 double ScaleMatrix(DMatrix G) {
   double d = 0.0;

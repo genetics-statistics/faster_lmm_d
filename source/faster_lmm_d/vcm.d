@@ -37,6 +37,7 @@ import gsl.rng;
 import gsl.randist;
 import gsl.cdf;
 import gsl.errno;
+import gsl.multiroots;
 
 struct VC_PARAM {
   const DMatrix K;
@@ -830,10 +831,8 @@ void ReadFile_beta(const bool flag_priorscale, const string file_beta,
     }
 
     // If the snp is also present in cor file, then do calculations.
-    if ((header.var_col != 0 || header.af_col != 0 ||
-         (rs in mapRS2var)) &&   // NOTE: check if key exists
-        mapRS2in.count(rs) != 0 &&
-        (mapRS2cat.length == 0 || mapRS2cat.count(rs) != 0)) {
+    if ((header.var_col != 0 || header.af_col != 0 || (rs in mapRS2var)) &&   // NOTE: check if key exists
+        (rs in mapRS2in) && (mapRS2cat.length == 0 || (rs in mapRS2cat))) {
       if (mapRS2in[rs] > 1) {
         writeln("error! more than one snp has the same id ", rs, " in beta file?");
         break;
@@ -996,7 +995,7 @@ void ReadFile_cor(const string file_cor, const string[] setSnps,
 
     // Record mapRS2in and mapRS2var.
     if (setSnps.length == 0 || setSnps.count(rs) != 0) {
-      if (mapRS2in.count(rs) == 0) {
+      if (!(rs in mapRS2in)) {
         mapRS2in[rs] = 1;
 
         if (header.var_col != 0) {
@@ -1171,10 +1170,8 @@ void ReadFile_beta(const bool flag_priorscale, const string file_beta,
     }
 
     // If the snp is also present in cor file, then do calculations.
-    if ((header.var_col != 0 || header.af_col != 0 ||
-         mapRS2var.count(rs) != 0) &&
-        mapRS2in.count(rs) != 0 &&
-        (mapRS2cat.length == 0 || mapRS2cat.count(rs) != 0)) {
+    if ((header.var_col != 0 || header.af_col != 0 || (rs in mapRS2var)) &&
+        (rs in mapRS2in) && (mapRS2cat.length == 0 || (rs in mapRS2cat))) {
       if (mapRS2in[rs] > 1) {
         writeln("error! more than one snp has the same id ", rs, " in beta file?");
         break;
@@ -1337,8 +1334,8 @@ void ReadFile_cor(const string file_cor, const string[] vec_rs,
 
     rs1 = rs;
 
-    if ((mapRS2cat.length == 0 || mapRS2cat.count(rs1) != 0) &&
-        mapRS2in.count(rs1) != 0 && mapRS2in[rs1] == 2) {
+    if ((mapRS2cat.length == 0 || (rs1 in mapRS2cat)) &&
+        (rs1 in mapRS2in) && mapRS2in[rs1] == 2) {
       var1 = mapRS2var[rs1];
       nsamp1 = mapRS2nsamp[rs1];
       d2 = var1 * var1;
@@ -1375,8 +1372,8 @@ void ReadFile_cor(const string file_cor, const string[] vec_rs,
           d_pos = abs(d_pos2 - d_pos1);
           d_cm = abs(d_cm2 - d_cm1);
 
-          if ((mapRS2cat.length == 0 || mapRS2cat.count(rs2) != 0) &&
-              mapRS2in.count(rs2) != 0 && mapRS2in[rs2] == 2) {
+          if ((mapRS2cat.length == 0 || (rs2 in mapRS2cat)) &&
+              (rs2 in mapRS2in) && mapRS2in[rs2] == 2) {
             var2 = mapRS2var[rs2];
             nsamp2 = mapRS2nsamp[rs2];
             d1 = cor * cor -
@@ -1722,7 +1719,6 @@ void CalcVChe(const DMatrix K, const DMatrix W,
   DMatrix qvar_mat; // = gsl_matrix_alloc(n_vc, n_vc);
   DMatrix tmp_mat; // = gsl_matrix_alloc(n_vc, n_vc);
   DMatrix S_mat; // = gsl_matrix_alloc(n_vc, n_vc);
-  DMatrix Si_mat; // = gsl_matrix_alloc(n_vc, n_vc);
   DMatrix Var_mat; // = gsl_matrix_alloc(n_vc, n_vc);
 
   // cHECK : q_var
@@ -1925,7 +1921,7 @@ void CalcVCreml(bool noconstrain, const DMatrix K, const DMatrix W,
   DMatrix dev1; // = gsl_vector_alloc(n_vc + 1);
   DMatrix dev2; // = gsl_matrix_alloc(n_vc + 1, n_vc + 1);
   DMatrix Hessian; // = gsl_matrix_alloc(n_vc + 1, n_vc + 1);
-  VC_PARAM params = VC_PARAM(K, W, y, P, Py, KPy_mat, PKPy_mat, Hessian, noconstrain);
+  VC_PARAM params; // TODO: = VC_PARAM(K, W, y, P, Py, KPy_mat, PKPy_mat, Hessian, noconstrain);
 
   // TODO: Initialize
 
@@ -2008,7 +2004,8 @@ void CalcVCreml(bool noconstrain, const DMatrix K, const DMatrix W,
 
   // Save sigma2 and se_sigma2.
   v_sigma2 = [];
-  v_se_sigma2 = [];
+  double[] v_se_sigma2 = [];
+
   for (size_t i = 0; i < n_vc + 1; i++) {
     if (noconstrain) {
       d = s_fdf.x.elements[i];
@@ -2025,6 +2022,9 @@ void CalcVCreml(bool noconstrain, const DMatrix K, const DMatrix W,
     v_se_sigma2 ~= sqrt(d);
   }
 
+  // todo:
+  double[] v_traceG = [];
+
   s = 0;
   for (size_t i = 0; i < n_vc; i++) {
     s += v_traceG[i] * v_sigma2[i];
@@ -2032,8 +2032,9 @@ void CalcVCreml(bool noconstrain, const DMatrix K, const DMatrix W,
   s += v_sigma2[n_vc];
 
   // Compute pve.
-  v_pve.clear();
-  pve_total = 0;
+  double[] v_pve = [];  // TODO: init
+  double pve_total = 0;
+  double[] v_se_pve, se_pve_total;
   for (size_t i = 0; i < n_vc; i++) {
     d = v_traceG[i] * v_sigma2[i] / s;
     v_pve ~= d;
@@ -2148,11 +2149,11 @@ void CalcVCacl(const DMatrix K, const DMatrix W,
     //gsl_matrix_view
     DMatrix Kscale_sub = get_sub_dmatrix(K_scale, 0, n1 * i, n1, n1);
     //gsl_matrix_const_view 
-    K_sub = get_sub_dmatrix(K, 0, n1 * i, n1, n1);
+    DMatrix K_sub = get_sub_dmatrix(K, 0, n1 * i, n1, n1);
     //gsl_matrix_memcpy(&Kscale_sub.matrix, &K_sub.matrix);
 
-    CenterMatrix(Kscale_sub, W);
-    StandardizeMatrix(Kscale_sub.matrix);
+    CenterMatrixMat(Kscale_sub, W);
+    StandardizeMatrix(Kscale_sub);
   }
 
   // Center y by W, and standardize it to have variance 1 (t(y)%*%y/n=1)
@@ -2161,7 +2162,7 @@ void CalcVCacl(const DMatrix K, const DMatrix W,
 
   // Compute y^2 and sum(y^2), which is also the variance of y*n1.
   //gsl_vector_memcpy(y2, y_scale);
-  y2 = multiply_dmatrix_num(y2, y_scale);
+  y2 = y2 * y_scale;
 
   y2_sum = 0;
   for (size_t i = 0; i < y2.size; i++) {
@@ -2189,12 +2190,12 @@ void CalcVCacl(const DMatrix K, const DMatrix W,
       DMatrix Kscale_sub2 = get_sub_dmatrix(K_scale, 0, n1 * j, n1, n1);
 
       //gsl_matrix_memcpy(K_tmp, &Kscale_sub1.matrix);
-      K_tmp *= K_tmp, Kscale_sub2;
+      K_tmp = K_tmp * Kscale_sub2;
 
       n1_vec = zeros_dmatrix(n1_vec.shape[0], n1_vec.shape[1]);
       for (size_t t = 0; t < K_tmp.shape[0]; t++) {
         DMatrix Ktmp_col = get_col(K_tmp, t);
-        n1_vec += Ktmp_col;
+        n1_vec = n1_vec + Ktmp_col;
       }
       n1_vec = add_dmatrix_num(n1_vec, -1.0);
 
@@ -2242,9 +2243,9 @@ void CalcVCacl(const DMatrix K, const DMatrix W,
     }
 
     // Update S.
-    gsl_matrix_memcpy(S_mat, S2);
-    gsl_matrix_scale(S_mat, -1 * tau_inv);
-    gsl_matrix_add(S_mat, S1);
+    //gsl_matrix_memcpy(S_mat, S2);
+    S_mat = multiply_dmatrix_num(S_mat, -1 * tau_inv);
+    S_mat = S_mat + S1;
 
     // Update h=S^{-1}q.
     Si_mat = S_mat.inverse();
@@ -2255,14 +2256,14 @@ void CalcVCacl(const DMatrix K, const DMatrix W,
 
   // Compute V matrix and A matrix (K_scale is destroyed, so need to
   // compute V first).
-  gsl_matrix_set_zero(V_mat);
+  V_mat = zeros_dmatrix(V_mat.shape[0], V_mat.shape[1]);
   for (size_t i = 0; i < n_vc; i++) {
     DMatrix Kscale_sub = get_sub_dmatrix(K_scale, 0, n1 * i, n1, n1);
 
     // Compute V.
     //gsl_matrix_memcpy(K_tmp, &Kscale_sub.matrix);
     K_tmp = multiply_dmatrix_num(K_tmp, pve.elements[i]);
-    V_mat += K_tmp;
+    V_mat = V_mat + K_tmp;
 
     // Compute A; the corresponding Kscale is destroyed.
     //gsl_matrix_const_view
@@ -2314,12 +2315,15 @@ void CalcVCacl(const DMatrix K, const DMatrix W,
   // auto se_tau_inv = sqrt(2 * d) / (double)n1;  UNUSED
 
   // Transform pve back to the original scale and save data.
-  v_pve = [];
-  v_se_pve = [];
-  v_sigma2 = [];
-  v_se_sigma2 = [];
+  double[] v_pve = [];
+  double[] v_se_pve = [];
+  double[] v_sigma2 = [];
+  double[] v_se_sigma2 = [];
 
-  pve_total = 0, se_pve_total = 0;
+  // TODO
+  double[] v_traceG;
+
+  double pve_total = 0, se_pve_total = 0;
   for (size_t i = 0; i < n_vc; i++) {
     d = pve.elements[i];
     pve_total += d;
@@ -2380,12 +2384,10 @@ bool BimbamXwz(const string file_geno, const int display_pace,
                int[] indicator_idv, int[] indicator_snp,
                const size_t[] vec_cat, const DMatrix w,
                const DMatrix z, size_t ns_test, DMatrix XWz) {
-  debug_msg("entering BimbamXwz");
+  writeln("entering BimbamXwz");
   File infile = File(file_geno);
 
   string line;
-  char *ch_ptr;
-
   size_t n_miss;
   double d, geno_mean, geno_var;
 
@@ -2393,7 +2395,7 @@ bool BimbamXwz(const string file_geno, const int display_pace,
   DMatrix geno; // = gsl_vector_alloc(ni_test);
   DMatrix geno_miss; // = gsl_vector_alloc(ni_test);
 
-  wz = w * z;
+  DMatrix wz = slow_multiply_dmatrix(w, z);
 
   for (size_t t = 0; t < indicator_snp.length; ++t) {
     line = infile.readln();
@@ -2402,7 +2404,7 @@ bool BimbamXwz(const string file_geno, const int display_pace,
       continue;
     }
 
-    ch_ptr = ch_ptr = line.split(" , \t")[3..$];  // CHECK
+    auto ch_ptr = line.split("\t")[3..$];  // CHECK
 
     geno_mean = 0.0;
     n_miss = 0;
@@ -2410,16 +2412,15 @@ bool BimbamXwz(const string file_geno, const int display_pace,
     geno_miss = zeros_dmatrix(geno_miss.shape[0], geno_miss.shape[0]);
 
     size_t j = 0;
-    for (size_t i = 0; i < indicator_idv.size(); ++i) {
+    for (size_t i = 0; i < indicator_idv.length; ++i) {
       if (indicator_idv[i] == 0) {
         continue;
       }
-      ch_ptr = strtok_safe(NULL, " , \t");
-      if (strcmp(ch_ptr, "NA") == 0) {
+      if (ch_ptr[0] == "NA") {
         geno_miss.elements[i] = 0;
         n_miss++;
       } else {
-        d = atof(ch_ptr);
+        d = to!double(ch_ptr[0]);
         geno.elements[j] = d;
         geno_miss.elements[j] = 1;
         geno_mean += d;
@@ -2467,10 +2468,9 @@ bool PlinkXwz(const string file_bed, const int display_pace,
   double d, geno_mean, geno_var;
 
   size_t ni_test = XWz.shape[0];
-  size_t ni_total = indicator_idv.size();
+  size_t ni_total = indicator_idv.length;
   DMatrix geno; // = gsl_vector_alloc(ni_test);
-  DMatrix wz; // = gsl_vector_alloc(w->size);
-  wz = w * z;
+  DMatrix wz = slow_multiply_dmatrix(w, z);
 
   int n_bit;
 
@@ -2487,7 +2487,7 @@ bool PlinkXwz(const string file_bed, const int display_pace,
     //b = ch[0];
   }
 
-  for (size_t t = 0; t < indicator_snp.size(); ++t) {
+  for (size_t t = 0; t < indicator_snp.length; ++t) {
     if (indicator_snp[t] == 0) {
       continue;
     }
@@ -2614,7 +2614,7 @@ bool BimbamXtXwz(const string file_geno, const int display_pace,
       continue;
     }
 
-    ch_ptr = line.split(" , \t")[3..$];
+    auto ch_ptr = line.split("\t")[3..$];
 
     geno_mean = 0.0;
     n_miss = 0;
@@ -2699,7 +2699,7 @@ bool PlinkXtXwz(const string file_bed, const int display_pace,
     //b = ch[0];
   }
 
-  for (size_t t = 0; t < indicator_snp.size(); ++t) {
+  for (size_t t = 0; t < indicator_snp.length; ++t) {
     if (indicator_snp[t] == 0) {
       continue;
     }
