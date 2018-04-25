@@ -209,6 +209,19 @@ DMatrix divide_dmatrix_num(const DMatrix input, const double factor) {
   return DMatrix(input.shape, elements);
 }
 
+DMatrix identity_dmatrix(const ulong rows, const ulong cols) {
+  assert(rows == cols);
+  double[] elements = new double[rows * cols];
+  for(auto i = 0; i < rows*cols; i++) {
+    elements[i] = 0;
+  }
+
+  for(auto i = 0; i < rows; i++){
+    elements[i * i] = 1;
+  }
+  return DMatrix([rows, cols], elements);
+}
+
 DMatrix zeros_dmatrix(const ulong rows, const ulong cols) {
   double[] elements = new double[rows * cols];
   for(auto i = 0; i < rows*cols; i++) {

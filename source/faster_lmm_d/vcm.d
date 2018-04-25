@@ -1960,20 +1960,19 @@ void CalcVCreml(bool noconstrain, const DMatrix K, const DMatrix W,
   gsl_multiroot_function_fdf FDF;
   FDF.n = n_vc + 1;
   FDF.params = &params;
-  FDF.f = &LogRL_dev1;
-  FDF.df = &LogRL_dev2;
-  FDF.fdf = &LogRL_dev12;
+  //FDF.f = &LogRL_dev1;
+  //FDF.df = &LogRL_dev2;
+  //FDF.fdf = &LogRL_dev12;
 
   // Set up solver.
   int status;
   int iter = 0, max_iter = 100;
 
-  const gsl_multiroot_fdfsolver_type *T_fdf;
-  gsl_multiroot_fdfsolver *s_fdf;
-  T_fdf = gsl_multiroot_fdfsolver_hybridsj;
-  s_fdf = gsl_multiroot_fdfsolver_alloc(T_fdf, n_vc + 1);
+  const gsl_multiroot_fdfsolver_type *T_fdf =  gsl_multiroot_fdfsolver_hybridsj;
+  gsl_multiroot_fdfsolver *s_fdf; // = gsl_multiroot_fdfsolver_alloc(T_fdf, n_vc + 1);
+  // TODO : GSL VECTOR
 
-  gsl_multiroot_fdfsolver_set(s_fdf, &FDF, log_sigma2);
+  //gsl_multiroot_fdfsolver_set(s_fdf, &FDF, log_sigma2);
 
   do {
     iter++;
@@ -1986,9 +1985,9 @@ void CalcVCreml(bool noconstrain, const DMatrix K, const DMatrix W,
     write("sigma2 = ");
     for (size_t i = 0; i < n_vc + 1; i++) {
       if (noconstrain) {
-        write(s_fdf.x.elements[i], " ");
+        //write(s_fdf.x.elements[i], " ");
       } else {
-        write(exp(s_fdf.x.elements[i]), " ");
+        //write(exp(s_fdf.x.elements[i]), " ");
       }
     }
     write("\n");
@@ -1996,7 +1995,7 @@ void CalcVCreml(bool noconstrain, const DMatrix K, const DMatrix W,
   } while (status == GSL_CONTINUE && iter < max_iter);
 
   // Obtain Hessian and Hessian inverse.
-  int sig = LogRL_dev12(s_fdf.x, &params, dev1, dev2);
+  //int sig = LogRL_dev12(s_fdf.x, &params, dev1, dev2);
 
   gsl_permutation *pmt = gsl_permutation_alloc(n_vc + 1);
 
@@ -2008,9 +2007,9 @@ void CalcVCreml(bool noconstrain, const DMatrix K, const DMatrix W,
 
   for (size_t i = 0; i < n_vc + 1; i++) {
     if (noconstrain) {
-      d = s_fdf.x.elements[i];
+      //d = s_fdf.x.elements[i];
     } else {
-      d = exp(s_fdf.x.elements[i]);
+      //d = exp(s_fdf.x.elements[i]);
     }
     v_sigma2 ~= d;
 
@@ -2034,7 +2033,8 @@ void CalcVCreml(bool noconstrain, const DMatrix K, const DMatrix W,
   // Compute pve.
   double[] v_pve = [];  // TODO: init
   double pve_total = 0;
-  double[] v_se_pve, se_pve_total;
+  double[] v_se_pve;
+  double se_pve_total;
   for (size_t i = 0; i < n_vc; i++) {
     d = v_traceG[i] * v_sigma2[i] / s;
     v_pve ~= d;
@@ -2049,10 +2049,10 @@ void CalcVCreml(bool noconstrain, const DMatrix K, const DMatrix W,
     d = 0;
     for (size_t i = 0; i < n_vc + 1; i++) {
       if (noconstrain) {
-        d1 = s_fdf.x.elements[i];
+        //d1 = s_fdf.x.elements[i];
         d1 = 1;
       } else {
-        d1 = exp(s_fdf.x.elements[i]);
+        //d1 = exp(s_fdf.x.elements[i]);
       }
 
       if (k < n_vc) {
@@ -2073,10 +2073,10 @@ void CalcVCreml(bool noconstrain, const DMatrix K, const DMatrix W,
 
       for (size_t j = 0; j < n_vc + 1; j++) {
         if (noconstrain) {
-          d2 = s_fdf.x.elements[j];
+          //d2 = s_fdf.x.elements[j];
           d2 = 1;
         } else {
-          d2 = exp(s_fdf.x.elements[j]);
+          //d2 = exp(s_fdf.x.elements[j]);
         }
 
         if (k < n_vc) {
@@ -2454,7 +2454,7 @@ bool BimbamXwz(const string file_geno, const int display_pace,
 }
 
 // Read PLINK bed file and compute XWz.
-bool PlinkXwz(const string file_bed, const int display_pace,
+void PlinkXwz(const string file_bed, const int display_pace, //TODO: check return type
               int[] indicator_idv, int[] indicator_snp,
               const size_t[] vec_cat, const DMatrix w,
               const DMatrix z, size_t ns_test, DMatrix XWz) {
@@ -2462,6 +2462,7 @@ bool PlinkXwz(const string file_bed, const int display_pace,
   File infile = File(file_bed);
 
   //char ch[1];
+  int[] b;
   //bitset<8> b;
 
   size_t n_miss, ci_total, ci_test;
@@ -2472,7 +2473,7 @@ bool PlinkXwz(const string file_bed, const int display_pace,
   DMatrix geno; // = gsl_vector_alloc(ni_test);
   DMatrix wz = slow_multiply_dmatrix(w, z);
 
-  int n_bit;
+  size_t n_bit;
 
   // Calculate n_bit and c, the number of bit for each snp.
   if (ni_total % 4 == 0) {
@@ -2561,7 +2562,7 @@ bool PlinkXwz(const string file_bed, const int display_pace,
     ns_test++;
   }
 
-  return true;
+  return;
 }
 
 // Read multiple genotype files and compute XWz.
@@ -2570,7 +2571,7 @@ bool MFILEXwz(const size_t mfile_mode, const string file_mfile,
               int[][] mindicator_snp,
               const size_t[] vec_cat, const DMatrix w,
               const DMatrix z, DMatrix XWz) {
-  debug_msg("entering");
+  writeln("entering MFILEXwz");
   XWz =zeros_dmatrix(XWz.shape[0], XWz.shape[1]);
 
   File infile = File(file_mfile);
@@ -2578,7 +2579,7 @@ bool MFILEXwz(const size_t mfile_mode, const string file_mfile,
   string file_name;
   size_t l = 0, ns_test = 0;
 
-  while (!safeGetline(infile, file_name).eof()) {
+  foreach (line; File(file_name).byLine) {  // TODO: !safeGetline(infile, file_name).eof()
     if (mfile_mode == 1) {
       file_name ~= ".bed";
       PlinkXwz(file_name, display_pace, indicator_idv, mindicator_snp[l],
@@ -2608,8 +2609,8 @@ bool BimbamXtXwz(const string file_geno, const int display_pace,
   DMatrix geno; // = gsl_vector_alloc(ni_test);
   DMatrix geno_miss; // = gsl_vector_alloc(ni_test);
 
-  for (size_t t = 0; t < indicator_snp.size(); ++t) {
-    line = infile.readln();
+  for (size_t t = 0; t < indicator_snp.length; ++t) {
+    auto line = infile.readln();
     if (indicator_snp[t] == 0) {
       continue;
     }
@@ -2627,12 +2628,11 @@ bool BimbamXtXwz(const string file_geno, const int display_pace,
       if (indicator_idv[i] == 0) {
         continue;
       }
-      ch_ptr = strtok_safe(NULL, " , \t");
-      if (strcmp(ch_ptr, "NA") == 0) {
+      if (ch_ptr[i] == "NA") {
         geno_miss.elements[i] = 0;
         n_miss++;
       } else {
-        d = atof(ch_ptr);
+        d = to!double(ch_ptr[i]);
         geno.elements[j] =  d;
         geno_miss.elements[j] = 1;
         geno_mean += d;
@@ -2668,23 +2668,24 @@ bool BimbamXtXwz(const string file_geno, const int display_pace,
 }
 
 // Read PLINK bed file and compute XWz.
-bool PlinkXtXwz(const string file_bed, const int display_pace,
+void PlinkXtXwz(const string file_bed, const int display_pace,  // check : return bool
                 int[] indicator_idv, int[] indicator_snp,
                 const DMatrix XWz, size_t ns_test, DMatrix XtXWz) {
-  debug_msg("entering");
+  writeln("entering PlinkXtXwz");
   File infile = File(file_bed);
 
   //char ch[1];
+  int[] b;
   //bitset<8> b;
 
   size_t n_miss, ci_total, ci_test;
   double d, geno_mean, geno_var;
 
   size_t ni_test = XWz.shape[0];
-  size_t ni_total = indicator_idv.size();
+  size_t ni_total = indicator_idv.length;
   DMatrix geno; // = gsl_vector_alloc(ni_test);
 
-  int n_bit;
+  size_t n_bit;
 
   // Calculate n_bit and c, the number of bit for each snp.
   if (ni_total % 4 == 0) {
@@ -2775,7 +2776,7 @@ bool PlinkXtXwz(const string file_bed, const int display_pace,
     ns_test++;
   }
 
-  return true;
+  return;
 }
 
 // Read multiple genotype files and compute XWz.
@@ -2791,7 +2792,7 @@ bool MFILEXtXwz(const size_t mfile_mode, const string file_mfile,
   string file_name;
   size_t l = 0, ns_test = 0;
 
-  while (!safeGetline(infile, file_name).eof()) {
+  foreach (line; File(file_name).byLine) {  // TODO : needs correction
     if (mfile_mode == 1) {
       file_name ~= ".bed";
       PlinkXtXwz(file_name, display_pace, indicator_idv, mindicator_snp[l], XWz, ns_test, XtXWz);
@@ -2831,11 +2832,13 @@ void CalcCIss(const DMatrix Xz, const DMatrix XWz,
   DMatrix VarEnrich_mat; // = gsl_matrix_alloc(n_vc, n_vc);
   DMatrix qvar_mat; // = gsl_matrix_alloc(n_vc, n_vc);
 
+  DMatrix q_var;
+
   double d, s0, s1, s, s_pve, s_snp;
 
   // Compute wz and zwz.
   //gsl_vector_memcpy(wz, z);
-  wz *=  w;
+  wz = slow_multiply_dmatrix(wz, w);
 
   zwz = zeros_dmatrix(zwz.shape[0], zwz.shape[1]);
   zz = zeros_dmatrix(zz.shape[0], zz.shape[1]);
@@ -2866,7 +2869,7 @@ void CalcCIss(const DMatrix Xz, const DMatrix XWz,
   // Set up wpve vector.
   for (size_t i = 0; i < w.size; i++) {
     d = v_pve[vec_cat[i]] / s_vec.elements[vec_cat[i]];
-    w_pve.set[i] = d;
+    w_pve.elements[i] = d;
   }
 
   // Compute Vq (in qvar_mat).
@@ -2885,7 +2888,7 @@ void CalcCIss(const DMatrix Xz, const DMatrix XWz,
     DMatrix XtXWz_col1 = get_col(XtXWz, i);
 
     //gsl_vector_memcpy(WXtXWz, &XtXWz_col1.vector);
-    WXtXWz *= w_pve;
+    WXtXWz = WXtXWz * w_pve;
 
     d = vector_ddot(Xz_pve, XWz_col1);
     s1 -= d / s_vec.elements[i];
@@ -2969,7 +2972,7 @@ void CalcCIss(const DMatrix Xz, const DMatrix XWz,
 
   // Compute se_enrich.
   //gsl_matrix_set_identity(tmp_mat);
-  tmp_mat = identity_dmatrix(temp_mat.shape[0], temp_mat.shape[1]);
+  tmp_mat = identity_dmatrix(tmp_mat.shape[0], tmp_mat.shape[1]);
 
   double d1;
   for (size_t i = 0; i < n_vc; i++) {
