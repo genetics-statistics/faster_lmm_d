@@ -29,8 +29,11 @@ import faster_lmm_d.gemma_lmm;
 import faster_lmm_d.gemma_param;
 import faster_lmm_d.helpers;
 import faster_lmm_d.optmatrix;
-import gsl.rng;
+
+import gsl.cdf;
+import gsl.permutation;
 import gsl.randist;
+import gsl.rng;
 
 struct pair{
   double first;
@@ -51,6 +54,8 @@ struct HYPBSLMM{
 
 // If a_mode==13, then run probit model.
 void MCMC(const DMatrix X, const DMatrix y) {
+
+  HYPBSLMM cHyp_initial; // todo
 
   HYPBSLMM cHyp_old, cHyp_new;
 
@@ -75,7 +80,7 @@ void MCMC(const DMatrix X, const DMatrix y) {
   double ztz = 0.0;
 
   // define later
-  size_t w_step, s_step;
+  size_t w_step, s_step, n_accept, n_mh;
 
   //gsl_vector_memcpy(z, y);
 
@@ -226,12 +231,12 @@ void MCMC(const DMatrix X, const DMatrix y) {
       if (accept == 1) {
         logPost_old = logPost_new;
         cHyp_old = cHyp_new;
-        gsl_vector_memcpy(Xb_old, Xb_new);
+        //gsl_vector_memcpy(Xb_old, Xb_new);
 
-        rank_old.clear();
+        rank_old = [];
         if (rank_new.length != 0) {
-          for (size_t i = 0; i < rank_new.length; ++i) {
-            rank_old ~= rank_new[i];
+          for (size_t k = 0; k < rank_new.length; ++k) {
+            rank_old ~= rank_new[k];
           }
 
           //gsl_matrix_view
@@ -279,7 +284,7 @@ void MCMC(const DMatrix X, const DMatrix y) {
     }
 
     // define
-    size_t w_step, r_pace;
+    size_t r_pace;
 
 
     // Save data.
@@ -328,7 +333,7 @@ void MCMC(const DMatrix X, const DMatrix y) {
 
   DMatrix alpha; // = gsl_vector_alloc(ns_test);
   alpha = zeros_dmatrix(alpha.shape[0], alpha.shape[1]);
-  WriteParam(beta_g, alpha, w);
+  //WriteParam(beta_g, alpha, w);
 
   return;
 }
@@ -341,9 +346,11 @@ void MCMC(const DMatrix U, const DMatrix UtX,
   HYPBSLMM cHyp_old, cHyp_new;
 
   // define later
-  size_t w_pace, s_max, ns_test, randseed;
+  HYPBSLMM cHyp_initial;
+  size_t w_pace, r_pace, s_max, ns_test, randseed, n_accept, ni_test, n_mh;
   int a_mode;
   double pheno_mean;
+  size_t[] mapRank2pos;
 
   DMatrix Result_hyp; // = gsl_matrix_alloc(w_pace, 6);
   DMatrix Result_gamma = zeros_dmatrix(w_pace, s_max);
@@ -377,7 +384,7 @@ void MCMC(const DMatrix U, const DMatrix UtX,
 
   pair[] beta_g;
   for (size_t i = 0; i < ns_test; i++) {
-    beta_g ~= (make_pair(0.0, 0.0));
+    beta_g ~= pair(0.0, 0.0);
   }
 
   size_t[] rank_new, rank_old;
@@ -387,7 +394,7 @@ void MCMC(const DMatrix U, const DMatrix UtX,
 
   //MatrixCalcLR(U, UtX, Utz, K_eval, l_min, l_max, n_region, pos_loglr);
 
-  stable_sort(pos_loglr.begin(), pos_loglr.end(), comp_lr);
+  //stable_sort(pos_loglr.begin(), pos_loglr.end(), comp_lr);
   for (size_t i = 0; i < ns_test; ++i) {
     mapRank2pos[i] = pos_loglr[i].first;
   }
@@ -395,8 +402,7 @@ void MCMC(const DMatrix U, const DMatrix UtX,
   // Calculate proposal distribution for gamma (unnormalized),
   // and set up gsl_r and gsl_t.
   gsl_rng_env_setup();
-  const gsl_rng_type *gslType;
-  gslType = gsl_rng_default;
+  const gsl_rng_type *gslType = gsl_rng_default;
   if (randseed < 0) {
     time_t rawtime;
     time(&rawtime);
@@ -407,10 +413,10 @@ void MCMC(const DMatrix U, const DMatrix UtX,
   gsl_rng* gsl_r = gsl_rng_alloc(gslType);
   gsl_rng_set(gsl_r, randseed);
 
-  double *p_gamma = new double[ns_test];
+  double[] p_gamma = new double[ns_test];
   CalcPgamma(p_gamma);
 
-  gsl_t = gsl_ran_discrete_preproc(ns_test, p_gamma);
+  //gsl_t = gsl_ran_discrete_preproc(ns_test, p_gamma);
 
   // Initial parameters.
   InitialMCMC(UtX, Utz, rank_old, cHyp_old, pos_loglr);
@@ -432,7 +438,7 @@ void MCMC(const DMatrix U, const DMatrix UtX,
 
     beta_old = [];
     for (size_t i = 0; i < beta.size; ++i) {
-      beta_old.push_back(gsl_vector_get(beta, i));
+      beta_old ~= beta.elements[i];
     }
   }
 
@@ -445,6 +451,10 @@ void MCMC(const DMatrix U, const DMatrix UtX,
     }
   }
 
+  //TODO:
+  size_t w_step, s_step;
+  //size_t[string] mapRank2pos;
+
   // Start MCMC.
   int accept;
   size_t total_step = w_step + s_step;
@@ -452,8 +462,6 @@ void MCMC(const DMatrix U, const DMatrix UtX,
   size_t repeat = 0;
 
   for (size_t t = 0; t < total_step; ++t) {
-    if (t % d_pace == 0 || t == total_step - 1) {
-    }
 
     if (a_mode == 13) {
       SampleZ(y, z_hat, z);
@@ -464,9 +472,9 @@ void MCMC(const DMatrix U, const DMatrix UtX,
       // First proposal.
       if (cHyp_old.n_gamma == 0 || cHyp_old.rho == 0) {
         logPost_old = CalcPosterior(Utz, K_eval, Utu_old, alpha_old, cHyp_old);
-        beta_old.clear();
+        beta_old = [];
         for (size_t i = 0; i < cHyp_old.n_gamma; ++i) {
-          beta_old.push_back(0);
+          beta_old ~= 0;
         }
       } else {
         DMatrix UtXgamma; // = gsl_matrix_alloc(ni_test, cHyp_old.n_gamma);
@@ -498,9 +506,9 @@ void MCMC(const DMatrix U, const DMatrix UtX,
 
       if (cHyp_new.n_gamma == 0 || cHyp_new.rho == 0) {
         logPost_new = CalcPosterior(Utz, K_eval, Utu_new, alpha_new, cHyp_new);
-        beta_new.clear();
-        for (size_t i = 0; i < cHyp_new.n_gamma; ++i) {
-          beta_new.push_back(0);
+        beta_new = [];
+        for (size_t k = 0; k < cHyp_new.n_gamma; ++k) {
+          beta_new ~= 0;
         }
       } else {
         DMatrix UtXgamma; // = gsl_matrix_alloc(ni_test, cHyp_new.n_gamma);
@@ -509,14 +517,14 @@ void MCMC(const DMatrix U, const DMatrix UtX,
         logPost_new = CalcPosterior(UtXgamma, Utz, K_eval, UtXb_new, Utu_new,
                                     alpha_new, beta, cHyp_new);
         beta_new = [];
-        for (size_t i = 0; i < beta.size; ++i) {
-          beta_new ~= beta.elements[i];
+        for (size_t k = 0; k < beta.size; ++k) {
+          beta_new ~= beta.elements[k];
         }
       }
 
       logMHratio += logPost_new - logPost_old;
 
-      if (logMHratio > 0 || log(gsl_rng_uniform(gsl_r)) < logMHratio) {
+      if (logMHratio > 0 || mlog(gsl_rng_uniform(gsl_r)) < logMHratio) {
         accept = 1;
         n_accept++;
       } else {
@@ -528,15 +536,15 @@ void MCMC(const DMatrix U, const DMatrix UtX,
         rank_old = [];
         beta_old = [];
         if (rank_new.length != 0) {
-          for (size_t i = 0; i < rank_new.length; ++i) {
-            rank_old ~= rank_new[i];
-            beta_old ~= beta_new[i];
+          for (size_t k = 0; k < rank_new.length; ++k) {
+            rank_old ~= rank_new[k];
+            beta_old ~= beta_new[k];
           }
         }
         cHyp_old = cHyp_new;
-        gsl_vector_memcpy(alpha_old, alpha_new);
-        gsl_vector_memcpy(UtXb_old, UtXb_new);
-        gsl_vector_memcpy(Utu_old, Utu_new);
+        //gsl_vector_memcpy(alpha_old, alpha_new);
+        //gsl_vector_memcpy(UtXb_old, UtXb_new);
+        //gsl_vector_memcpy(Utu_old, Utu_new);
       } else {
         cHyp_new = cHyp_old;
       }
@@ -551,7 +559,7 @@ void MCMC(const DMatrix U, const DMatrix UtX,
       }
 
       // Sample mu and update z_hat.
-      gsl_vector_sub(z, z_hat);
+      z = subtract_dmatrix(z, z_hat);
       mean_z += CenterVector(z);
       mean_z += gsl_ran_gaussian(gsl_r, sqrt(1.0 / to!double(ni_test)));
       z_hat = add_dmatrix_num(z_hat, mean_z);
@@ -613,11 +621,10 @@ void MCMC(const DMatrix U, const DMatrix UtX,
   }
 
   //DMatrix alpha = matrix_mult(CblasTrans, 1.0 / (double)ns_test, UtX, alpha_prime, 0.0, alpha);
-  WriteParam(beta_g, alpha, w);
+  //WriteParam(beta_g, alpha, w);
 
   alpha_prime = matrix_mult(U, Utu);
-  WriteBV(alpha_prime);
-
+  //WriteBV(alpha_prime);
 
   return;
 }
@@ -634,7 +641,7 @@ void MatrixCalcLmLR(const DMatrix X, const DMatrix y,
     xtx = vector_ddot(X_col, X_col);
     xty = vector_ddot(X_col, y);
 
-    log_lr = 0.5 * to!double(y.size )* (log(yty) - log(yty - xty * xty / xtx));
+    log_lr = 0.5 * to!double(y.size )* (mlog(yty) - mlog(yty - xty * xty / xtx));
     pos_loglr ~= pair2(i, log_lr);
   }
 
@@ -650,7 +657,7 @@ double CenterVector(DMatrix y) {
   }
   d /= to!double(y.size);
 
-  sub_dmatrix_num(y, d);
+  y = add_dmatrix_num(y, -d);
 
   return d;
 }
@@ -666,8 +673,8 @@ void CenterVector(DMatrix y, const DMatrix W) {
 
   int sig;
   gsl_permutation *pmt = gsl_permutation_alloc(W.shape[1]);
-  LUDecomp(WtW, pmt, &sig);
-  LUSolve(WtW, pmt, Wty, WtWiWty);
+  //LUDecomp(WtW, pmt, &sig);
+  //LUSolve(WtW, pmt, Wty, WtWiWty);
 
   // note -1
   //gsl_blas_dgemv(CblasNoTrans, -1.0, W, WtWiWty, 1.0, y);
@@ -678,6 +685,11 @@ void CenterVector(DMatrix y, const DMatrix W) {
 void InitialMCMC(const DMatrix UtX, const DMatrix Uty,
                   size_t[] rank, HYPBSLMM cHyp,
                   pair2[] pos_loglr) {
+  //TODO
+  size_t ns_test;
+  double h_min, h_max, rho_min, rho_max, logp_min, logp_max, trace_G, pve_null;
+  int s_min, s_max;
+
   double q_genome = gsl_cdf_chisq_Qinv(0.05 / to!double(ns_test), 1);
 
   cHyp.n_gamma = 0;
@@ -694,7 +706,7 @@ void InitialMCMC(const DMatrix UtX, const DMatrix Uty,
     cHyp.n_gamma = s_max;
   }
   if (cHyp.n_gamma < s_min) {
-    cHyp.n_gamma = s_min;
+    cHyp.n_gamma = s_min;  // check
   }
 
   rank = [];
@@ -760,6 +772,11 @@ void InitialMCMC(const DMatrix UtX, const DMatrix Uty,
 double CalcPosterior(const DMatrix Uty, const DMatrix K_eval,
                       DMatrix Utu, DMatrix alpha_prime, HYPBSLMM cHyp) {
 
+  // TODO
+  int a_mode;
+  double trace_G;
+  size_t ni_test, ns_test;
+
   double sigma_b2 = cHyp.h * (1.0 - cHyp.rho) / (trace_G * (1 - cHyp.h));
 
   DMatrix Utu_rand; // = gsl_vector_alloc(Uty.size);
@@ -777,13 +794,13 @@ double CalcPosterior(const DMatrix Uty, const DMatrix K_eval,
     uy = Uty.elements[i];
     Hi_yy += d * uy * uy;
 
-    Utu_rand.elements[i] =gsl_ran_gaussian(gsl_r, 1) * sqrt(ds);
+    //Utu_rand.elements[i] =gsl_ran_gaussian(gsl_r, 1) * sqrt(ds);
   }
 
   // Sample tau.
   double tau = 1.0;
   if (a_mode == 11) {
-    tau = gsl_ran_gamma(gsl_r, to!double(ni_test) / 2.0, 2.0 / Hi_yy);
+    //tau = gsl_ran_gamma(gsl_r, to!double(ni_test) / 2.0, 2.0 / Hi_yy);
   }
 
   // Sample alpha.
@@ -794,6 +811,7 @@ double CalcPosterior(const DMatrix Uty, const DMatrix K_eval,
   // Sample u.
   //gsl_vector_memcpy(Utu, alpha_prime);
   Utu  = slow_multiply_dmatrix(Utu, K_eval);
+
   if (a_mode == 11) {
     Utu_rand = multiply_dmatrix_num(Utu_rand, sqrt(1.0 / tau));
   }
@@ -826,7 +844,10 @@ double CalcPosterior(const DMatrix UtXgamma, const DMatrix Uty,
                             const DMatrix K_eval, DMatrix UtXb,
                             DMatrix Utu, DMatrix alpha_prime,
                             DMatrix beta, HYPBSLMM cHyp) {
-  clock_t time_start;
+  // TODO
+  size_t ns_test, ni_test;
+  double trace_G;
+  int a_mode;
 
   double sigma_a2 = cHyp.h * cHyp.rho /
                     (trace_G * (1 - cHyp.h) * exp(cHyp.logp) * to!double(ns_test));
@@ -859,7 +880,7 @@ double CalcPosterior(const DMatrix UtXgamma, const DMatrix Uty,
     P_yy += d * uy * uy;
     UtXgamma_row = multiply_dmatrix_num(UtXgamma_row, d);
 
-    Utu_rand.elements[i] = gsl_ran_gaussian(gsl_r, 1) * sqrt(ds);
+    //Utu_rand.elements[i] = gsl_ran_gaussian(gsl_r, 1) * sqrt(ds);
   }
 
   // Calculate Omega.
@@ -870,9 +891,9 @@ double CalcPosterior(const DMatrix UtXgamma, const DMatrix Uty,
   // Calculate beta_hat.
   XtHiy = matrix_mult(UtXgamma_eval.T, Uty);
 
-  logdet_O = CholeskySolve(Omega, XtHiy, beta_hat);
+  //logdet_O = CholeskySolve(Omega, XtHiy, beta_hat);
 
-  gsl_vector_scale(beta_hat, sigma_a2);
+  beta_hat = multiply_dmatrix_num(beta_hat, sigma_a2);
 
   d = vector_ddot(XtHiy, beta_hat);
   P_yy -= d;
@@ -880,20 +901,20 @@ double CalcPosterior(const DMatrix UtXgamma, const DMatrix Uty,
   // Sample tau.
   double tau = 1.0;
   if (a_mode == 11) {
-    tau = gsl_ran_gamma(gsl_r,  to!double(ni_test) / 2.0, 2.0 / P_yy);
+    //tau = gsl_ran_gamma(gsl_r,  to!double(ni_test) / 2.0, 2.0 / P_yy);
   }
 
   // Sample beta.
   for (size_t i = 0; i < beta.size; i++) {
-    d = gsl_ran_gaussian(gsl_r, 1);
+    //d = gsl_ran_gaussian(gsl_r, 1);
     beta.elements[i] = d;
   }
-  gsl_blas_dtrsv(CblasUpper, CblasNoTrans, CblasNonUnit, Omega, beta);
+  //gsl_blas_dtrsv(CblasUpper, CblasNoTrans, CblasNonUnit, Omega, beta);
 
   // This computes inv(L^T(Omega)) %*% beta.
-  gsl_vector_scale(beta, sqrt(sigma_a2 / tau));
-  gsl_vector_add(beta, beta_hat);
-  gsl_blas_dgemv(CblasNoTrans, 1.0, UtXgamma, beta, 0.0, UtXb);
+  beta = multiply_dmatrix_num(beta, sqrt(sigma_a2 / tau));
+  beta = add_dmatrix(beta, beta_hat);
+  UtXb = matrix_mult(UtXgamma, beta);
 
   // Sample alpha.
   //gsl_vector_memcpy(alpha_prime, Uty);
@@ -934,12 +955,16 @@ double CalcPosterior(const DMatrix UtXgamma, const DMatrix Uty,
   }
   logpost +=
       (to!double(cHyp.n_gamma) - 1.0) * cHyp.logp +
-      (to!double(ns_test) - to!double(cHyp.n_gamma)) * log(1.0 - exp(cHyp.logp));
+      (to!double(ns_test) - to!double(cHyp.n_gamma)) * mlog(1.0 - exp(cHyp.logp));
 
   return logpost;
 }
 
 double CalcPosterior(const double yty, HYPBSLMM cHyp) {
+  // TODO
+  int a_mode;
+  size_t ni_test, ns_test;
+
   double logpost = 0.0;
 
   // For quantitative traits, calculate pve and pge.
@@ -966,6 +991,11 @@ double CalcPosterior(const DMatrix Xgamma, const DMatrix XtX,
                       const DMatrix Xty, const double yty,
                       const size_t s_size, DMatrix Xb,
                       DMatrix beta, HYPBSLMM cHyp) {
+  // TODO
+  size_t ni_test, ns_test;
+  int a_mode;
+  DMatrix beta_sub;
+
   double sigma_a2 = cHyp.h / ((1 - cHyp.h) * exp(cHyp.logp) * to!double(ns_test));
   double logpost = 0.0;
   double d, P_yy = yty, logdet_O = 0.0;
@@ -990,8 +1020,8 @@ double CalcPosterior(const DMatrix Xgamma, const DMatrix XtX,
   Omega = add_dmatrix(Omega, M_temp);
 
   // Calculate beta_hat.
-  logdet_O = CholeskySolve(Omega, Xty_temp, beta_hat);
-  gsl_vector_scale(beta_hat, sigma_a2);
+  //logdet_O = CholeskySolve(Omega, Xty_temp, beta_hat);
+  beta_hat = multiply_dmatrix_num(beta_hat, sigma_a2);
 
   d = vector_ddot(Xty_temp, beta_hat);
   P_yy -= d;
@@ -999,16 +1029,16 @@ double CalcPosterior(const DMatrix Xgamma, const DMatrix XtX,
   // Sample tau.
   double tau = 1.0;
   if (a_mode == 11) {
-    tau = gsl_ran_gamma(gsl_r, to!double(ni_test) / 2.0, 2.0 / P_yy);
+    //tau = gsl_ran_gamma(gsl_r, to!double(ni_test) / 2.0, 2.0 / P_yy);
   }
 
   // Sample beta.
   for (size_t i = 0; i < s_size; i++) {
-    d = gsl_ran_gaussian(gsl_r, 1);
+    //d = gsl_ran_gaussian(gsl_r, 1);
     beta.elements[i] = d;
   }
   //gsl_vector_view beta_sub = gsl_vector_subvector(beta, 0, s_size);
-  gsl_blas_dtrsv(CblasUpper, CblasNoTrans, CblasNonUnit, Omega, &beta_sub.vector);
+  //gsl_blas_dtrsv(CblasUpper, CblasNoTrans, CblasNonUnit, Omega, &beta_sub.vector);
 
   // This computes inv(L^T(Omega)) %*% beta.
   beta_sub = multiply_dmatrix_num(beta_sub, sqrt(sigma_a2 / tau));
@@ -1047,13 +1077,14 @@ void CalcCC_PVEnZ(DMatrix z_hat, HYPBSLMM cHyp) {
 
 // Calculate pve and pge, and calculate z_hat for case-control data.
 void CalcCC_PVEnZ(const DMatrix Xb, DMatrix z_hat, HYPBSLMM cHyp) {
+  size_t ni_test;
 
   double d = vector_ddot(Xb, Xb);
   cHyp.pve = d / to!double(ni_test);
   cHyp.pve /= cHyp.pve + 1.0;
   cHyp.pge = 1.0;
 
-  gsl_vector_memcpy(z_hat, Xb);
+  //gsl_vector_memcpy(z_hat, Xb);
 
   return;
 }
@@ -1061,6 +1092,7 @@ void CalcCC_PVEnZ(const DMatrix Xb, DMatrix z_hat, HYPBSLMM cHyp) {
 
 // Calculate pve and pge, and calculate z_hat for case-control data.
 void CalcCC_PVEnZ(const DMatrix U, const DMatrix Utu, DMatrix z_hat, HYPBSLMM cHyp) {
+  size_t ni_test;
   double d;
 
   d = vector_ddot(Utu, Utu);
@@ -1078,13 +1110,15 @@ void CalcCC_PVEnZ(const DMatrix U, const DMatrix Utu, DMatrix z_hat, HYPBSLMM cH
 void CalcCC_PVEnZ(const DMatrix U, const DMatrix UtXb,
                          const DMatrix Utu, DMatrix z_hat,
                          HYPBSLMM cHyp) {
+  size_t ni_test;
+
   double d;
   DMatrix UtXbU; // = gsl_vector_alloc(Utu->size);
 
   d = vector_ddot(UtXb, UtXb);
   cHyp.pge = d / to!double(ni_test);
 
-  gsl_blas_ddot(Utu, Utu, &d);
+  d = vector_ddot(Utu, Utu);
   cHyp.pve = cHyp.pge + d / to!double(ni_test);
 
   //gsl_vector_memcpy(UtXbU, Utu);
@@ -1113,11 +1147,11 @@ void SampleZ(const DMatrix y, const DMatrix z_hat, DMatrix z) {
 
       // Control, right truncated.
       do {
-        z_rand = d2 + gsl_ran_gaussian(gsl_r, 1.0);
+        //z_rand = d2 + gsl_ran_gaussian(gsl_r, 1.0);
       } while (z_rand > 0.0);
     } else {
       do {
-        z_rand = d2 + gsl_ran_gaussian(gsl_r, 1.0);
+        //z_rand = d2 + gsl_ran_gaussian(gsl_r, 1.0);
       } while (z_rand < 0.0);
     }
 
@@ -1129,13 +1163,15 @@ void SampleZ(const DMatrix y, const DMatrix z_hat, DMatrix z) {
 
 double ProposeHnRho(const HYPBSLMM cHyp_old, HYPBSLMM cHyp_new, const size_t repeat) {
 
+  double h_min, h_max, h_scale, rho_min, rho_max, rho_scale;
+
   double h = cHyp_old.h, rho = cHyp_old.rho;
 
   double d_h = (h_max - h_min) * h_scale,
          d_rho = (rho_max - rho_min) * rho_scale;
 
   for (size_t i = 0; i < repeat; ++i) {
-    h = h + (gsl_rng_uniform(gsl_r) - 0.5) * d_h;
+    //h = h + (gsl_rng_uniform(gsl_r) - 0.5) * d_h;
     if (h < h_min) {
       h = 2 * h_min - h;
     }
@@ -1143,7 +1179,7 @@ double ProposeHnRho(const HYPBSLMM cHyp_old, HYPBSLMM cHyp_new, const size_t rep
       h = 2 * h_max - h;
     }
 
-    rho = rho + (gsl_rng_uniform(gsl_r) - 0.5) * d_rho;
+    //rho = rho + (gsl_rng_uniform(gsl_r) - 0.5) * d_rho;
     if (rho < rho_min) {
       rho = 2 * rho_min - rho;
     }
@@ -1157,13 +1193,15 @@ double ProposeHnRho(const HYPBSLMM cHyp_old, HYPBSLMM cHyp_new, const size_t rep
 }
 
 double ProposePi(const HYPBSLMM cHyp_old, HYPBSLMM cHyp_new, const size_t repeat) {
+  double logp_max, logp_min, logp_scale;
+
   double logp_old = cHyp_old.logp, logp_new = cHyp_old.logp;
   double log_ratio = 0.0;
 
   double d_logp = min(0.1, (logp_max - logp_min) * logp_scale);
 
   for (size_t i = 0; i < repeat; ++i) {
-    logp_new = logp_old + (gsl_rng_uniform(gsl_r) - 0.5) * d_logp;
+    //logp_new = logp_old + (gsl_rng_uniform(gsl_r) - 0.5) * d_logp;
     if (logp_new < logp_min) {
       logp_new = 2 * logp_min - logp_new;
     }
@@ -1180,13 +1218,14 @@ double ProposePi(const HYPBSLMM cHyp_old, HYPBSLMM cHyp_new, const size_t repeat
 
 bool comp_vec(size_t a, size_t b) { return (a < b); }
 
-double ProposeGamma(const size_t[] rank_old, size_t[] rank_new, const double p_gamma,
+double ProposeGamma(const size_t[] rank_old, size_t[] rank_new, const double[] p_gamma,
                            const HYPBSLMM cHyp_old, HYPBSLMM cHyp_new, const size_t repeat) {
   size_t[int] mapRank2in;
   size_t r;
   double unif, logp = 0.0;
   int flag_gamma;
   size_t r_add, r_remove, col_id;
+  size_t s_max, s_min, ns_test;
 
   rank_new = [];
   if (cHyp_old.n_gamma != rank_old.length) {
@@ -1197,13 +1236,13 @@ double ProposeGamma(const size_t[] rank_old, size_t[] rank_new, const double p_g
     for (size_t i = 0; i < rank_old.length; ++i) {
       r = rank_old[i];
       rank_new ~= r;
-      mapRank2in[r] = 1;
+      //mapRank2in[r] = 1;
     }
   }
   cHyp_new.n_gamma = cHyp_old.n_gamma;
 
   for (size_t i = 0; i < repeat; ++i) {
-    unif = gsl_rng_uniform(gsl_r);
+    //unif = gsl_rng_uniform(gsl_r);
 
     if (unif < 0.40 && cHyp_new.n_gamma < s_max) {
       flag_gamma = 1;
@@ -1219,51 +1258,51 @@ double ProposeGamma(const size_t[] rank_old, size_t[] rank_new, const double p_g
     if (flag_gamma == 1) {
 
       // Add a SNP.
-      do {
-        r_add = gsl_ran_discrete(gsl_r, gsl_t);
-      } while (mapRank2in.count(r_add) != 0);
+      //do {
+      //  r_add = gsl_ran_discrete(gsl_r, gsl_t);
+      //} while (mapRank2in.count(r_add) != 0);
 
       double prob_total = 1.0;
-      for (size_t i = 0; i < cHyp_new.n_gamma; ++i) {
-        r = rank_new[i];
+      for (size_t k = 0; k < cHyp_new.n_gamma; ++k) {
+        r = rank_new[k];
         prob_total -= p_gamma[r];
       }
 
-      mapRank2in[r_add] = 1;
+      //mapRank2in[r_add] = 1;
       rank_new ~= r_add;
       cHyp_new.n_gamma++;
       logp += -mlog(p_gamma[r_add] / prob_total) - mlog(to!double(cHyp_new.n_gamma));
     } else if (flag_gamma == 2) {
 
       // Delete a SNP.
-      col_id = gsl_rng_uniform_int(gsl_r, cHyp_new.n_gamma);
+      //col_id = gsl_rng_uniform_int(gsl_r, cHyp_new.n_gamma);
       r_remove = rank_new[col_id];
 
       double prob_total = 1.0;
-      for (size_t i = 0; i < cHyp_new.n_gamma; ++i) {
-        r = rank_new[i];
+      for (size_t k = 0; k < cHyp_new.n_gamma; ++k) {
+        r = rank_new[k];
         prob_total -= p_gamma[r];
       }
       prob_total += p_gamma[r_remove];
 
-      mapRank2in.erase(r_remove);
-      rank_new.erase(rank_new.begin() + col_id);
+      //mapRank2in.erase(r_remove);
+      //rank_new.erase(rank_new.begin() + col_id);
       logp += mlog(p_gamma[r_remove] / prob_total) + mlog(to!double(cHyp_new.n_gamma));
       cHyp_new.n_gamma--;
     } else if (flag_gamma == 3) {
 
       // Switch a SNP.
-      col_id = gsl_rng_uniform_int(gsl_r, cHyp_new.n_gamma);
+      //col_id = gsl_rng_uniform_int(gsl_r, cHyp_new.n_gamma);
       r_remove = rank_new[col_id];
 
       // Be careful with the proposal.
-      do {
-        r_add = gsl_ran_discrete(gsl_r, gsl_t);
-      } while (mapRank2in.count(r_add) != 0);
+      //do {
+        //r_add = gsl_ran_discrete(gsl_r, gsl_t);
+      //} while (r_add in mapRank2in);
 
       double prob_total = 1.0;
-      for (size_t i = 0; i < cHyp_new.n_gamma; ++i) {
-        r = rank_new[i];
+      for (size_t k = 0; k < cHyp_new.n_gamma; ++k) {
+        r = rank_new[k];
         prob_total -= p_gamma[r];
       }
 
@@ -1271,18 +1310,18 @@ double ProposeGamma(const size_t[] rank_old, size_t[] rank_new, const double p_g
                   (prob_total + p_gamma[r_remove] - p_gamma[r_add]));
       logp -= mlog(p_gamma[r_add] / prob_total);
 
-      mapRank2in.erase(r_remove);
-      mapRank2in[r_add] = 1;
-      rank_new.erase(rank_new.begin() + col_id);
+      //mapRank2in.erase(r_remove);
+      //mapRank2in[r_add] = 1;
+      //rank_new.erase(rank_new.begin() + col_id);
       rank_new ~= r_add;
     } else {
       logp += 0;
     } // Do not change.
   }
 
-  stable_sort(rank_new.begin(), rank_new.end(), comp_vec);
+  //stable_sort(rank_new.begin(), rank_new.end(), comp_vec);
 
-  mapRank2in = [];
+  //mapRank2in = [];
   return logp;
 }
 
@@ -1296,18 +1335,22 @@ void CalcXtX(const DMatrix X, const DMatrix y,
   DMatrix X_sub = get_sub_dmatrix(X, 0, 0, X.shape[0], s_size);
   //gsl_matrix_view
   DMatrix XtX_sub = get_sub_dmatrix(XtX, 0, 0, s_size, s_size);
-  //gsl_vector_view Xty_sub = gsl_vector_subvector(Xty, 0, s_size);
+  //gsl_vector_view
+  DMatrix Xty_sub; // = gsl_vector_subvector(Xty, 0, s_size);
 
-  XtX_sub = matrix_mult(X_sub.T, X_sub.matrix);
+  XtX_sub = matrix_mult(X_sub.T, X_sub);
   Xty_sub = matrix_mult(X_sub.T, y);
 
   return;
 }
 
 void CalcPgamma(double[] p_gamma) {
+  size_t ns_test;
+  double geo_mean;
+
   double p, s = 0.0;
   for (size_t i = 0; i < ns_test; ++i) {
-    p = 0.7 * gsl_ran_geometric_pdf(i + 1, 1.0 / geo_mean) +
+    p = 0.7 * gsl_ran_geometric_pdf(to!uint(i + 1), 1.0 / geo_mean) +
         0.3 / to!double(ns_test);
     p_gamma[i] = p;
     s += p;
@@ -1320,6 +1363,7 @@ void CalcPgamma(double[] p_gamma) {
 }
 
 void SetXgamma(DMatrix Xgamma, const DMatrix X, size_t[] rank) {
+  size_t[] mapRank2pos;
   size_t pos;
   for (size_t i = 0; i < rank.length; ++i) {
     pos = mapRank2pos[rank[i]];
@@ -1327,7 +1371,7 @@ void SetXgamma(DMatrix Xgamma, const DMatrix X, size_t[] rank) {
     DMatrix Xgamma_col = get_col(Xgamma, i);
     //gsl_vector_const_view
     DMatrix X_col = get_col(X, pos);
-    gsl_vector_memcpy(Xgamma_col, X_col);
+    //gsl_vector_memcpy(Xgamma_col, X_col);
   }
 
   return;
@@ -1339,6 +1383,7 @@ void SetXgamma(const DMatrix X, const DMatrix X_old,
                 const size_t[] rank_new, DMatrix X_new,
                 DMatrix XtX_new, DMatrix Xty_new) {
   double d;
+  size_t s_max;
 
   // rank_old and rank_new are sorted already inside PorposeGamma
   // calculate vectors rank_remove and rank_add.
@@ -1349,25 +1394,25 @@ void SetXgamma(const DMatrix X, const DMatrix X_old,
   size_t[] rank_union = new size_t[s_max + v_size];
   //vector<size_t>::iterator it;
 
-  it = set_difference(rank_old.begin(), rank_old.end(), rank_new.begin(),
-                      rank_new.end(), rank_remove.begin());
-  rank_remove.resize(it - rank_remove.begin());
+  //it = set_difference(rank_old.begin(), rank_old.end(), rank_new.begin(),
+  //                    rank_new.end(), rank_remove.begin());
+  //rank_remove.resize(it - rank_remove.begin());
 
-  it = set_difference(rank_new.begin(), rank_new.end(), rank_old.begin(),
-                      rank_old.end(), rank_add.begin());
-  rank_add.resize(it - rank_add.begin());
+  //it = set_difference(rank_new.begin(), rank_new.end(), rank_old.begin(),
+  //                    rank_old.end(), rank_add.begin());
+  //rank_add.resize(it - rank_add.begin());
 
-  it = set_union(rank_new.begin(), rank_new.end(), rank_old.begin(),
-                 rank_old.end(), rank_union.begin());
-  rank_union.resize(it - rank_union.begin());
+  //it = set_union(rank_new.begin(), rank_new.end(), rank_old.begin(),
+  //               rank_old.end(), rank_union.begin());
+  //rank_union.resize(it - rank_union.begin());
 
   // Map rank_remove and rank_add.
   pair2[] mapRank2in_remove, mapRank2in_add;
   for (size_t i = 0; i < rank_remove.length; i++) {
-    mapRank2in_remove[rank_remove[i]] = 1;
+    //mapRank2in_remove[rank_remove[i]] = 1;
   }
   for (size_t i = 0; i < rank_add.length; i++) {
-    mapRank2in_add[rank_add[i]] = 1;
+    //mapRank2in_add[rank_add[i]] = 1;
   }
 
   // Obtain the subset of matrix/vector.
@@ -1376,36 +1421,36 @@ void SetXgamma(const DMatrix X, const DMatrix X_old,
   //gsl_matrix_const_view
   DMatrix XtXold_sub = get_sub_dmatrix(XtX_old, 0, 0, rank_old.length, rank_old.length);
   //gsl_vector_const_view
-  DMatrix Xtyold_sub = gsl_vector_const_subvector(Xty_old, 0, rank_old.length);
+  DMatrix Xtyold_sub; // = gsl_vector_const_subvector(Xty_old, 0, rank_old.length);
 
   //gsl_matrix_view
   DMatrix Xnew_sub = get_sub_dmatrix(X_new, 0, 0, X_new.shape[0], rank_new.length);
   //gsl_matrix_view
   DMatrix XtXnew_sub = get_sub_dmatrix(XtX_new, 0, 0, rank_new.length, rank_new.length);
   //gsl_vector_view
-  DMatrix Xtynew_sub = gsl_vector_subvector(Xty_new, 0, rank_new.length);
+  DMatrix Xtynew_sub; // = gsl_vector_subvector(Xty_new, 0, rank_new.length);
 
   // Get X_new and calculate XtX_new.
   if (rank_remove.length == 0 && rank_add.length == 0) {
-    gsl_matrix_memcpy(&Xnew_sub.matrix, &Xold_sub.matrix);
-    gsl_matrix_memcpy(&XtXnew_sub.matrix, &XtXold_sub.matrix);
-    gsl_vector_memcpy(&Xtynew_sub.vector, &Xtyold_sub.vector);
+    //gsl_matrix_memcpy(Xnew_sub, Xold_sub);
+    //gsl_matrix_memcpy(XtXnew_sub, XtXold_sub);
+    //gsl_vector_memcpy(Xtynew_sub, Xtyold_sub);
   } else {
     size_t i_old, j_old, i_new, j_new, i_add, j_add, i_flag, j_flag;
     if (rank_add.length == 0) {
       i_old = 0;
       i_new = 0;
       for (size_t i = 0; i < rank_union.length; i++) {
-        if (mapRank2in_remove.count(rank_old[i_old]) != 0) {
-          i_old++;
-          continue;
-        }
+        //if (mapRank2in_remove.count(rank_old[i_old]) != 0) {
+        //  i_old++;
+        //  continue;
+        //}
 
         //gsl_vector_view
         DMatrix Xnew_col = get_col(X_new, i_new);
         //gsl_vector_const_view
         DMatrix Xcopy_col = get_col(X_old, i_old);
-        gsl_vector_memcpy(Xnew_col, Xcopy_col);
+        //gsl_vector_memcpy(Xnew_col, Xcopy_col);
 
         d = Xty_old.elements[i_old];
         Xty_new.elements[i_new] = d;
@@ -1413,10 +1458,10 @@ void SetXgamma(const DMatrix X, const DMatrix X_old,
         j_old = i_old;
         j_new = i_new;
         for (size_t j = i; j < rank_union.length; j++) {
-          if (mapRank2in_remove.count(rank_old[j_old]) != 0) {
-            j_old++;
-            continue;
-          }
+          //if (mapRank2in_remove.count(rank_old[j_old]) != 0) {
+          //  j_old++;
+          //  continue;
+          //}
 
           d = XtX_old.accessor(i_old, j_old);
 
@@ -1450,15 +1495,15 @@ void SetXgamma(const DMatrix X, const DMatrix X_old,
       i_new = 0;
       i_add = 0;
       for (size_t i = 0; i < rank_union.length; i++) {
-        if (mapRank2in_remove.count(rank_old[i_old]) != 0) {
-          i_old++;
-          continue;
-        }
-        if (mapRank2in_add.count(rank_new[i_new]) != 0) {
-          i_flag = 1;
-        } else {
-          i_flag = 0;
-        }
+        //if (mapRank2in_remove(rank_old[i_old]) != 0) {
+        //  i_old++;
+        //  continue;
+        //}
+        //if (mapRank2in_add.count(rank_new[i_new]) != 0) {
+        //  i_flag = 1;
+        //} else {
+        //  i_flag = 0;
+        //}
 
         //gsl_vector_view
         DMatrix Xnew_col = get_col(X_new, i_new);
@@ -1483,15 +1528,15 @@ void SetXgamma(const DMatrix X, const DMatrix X_old,
         j_new = i_new;
         j_add = i_add;
         for (size_t j = i; j < rank_union.length; j++) {
-          if (mapRank2in_remove.count(rank_old[j_old]) != 0) {
-            j_old++;
-            continue;
-          }
-          if (mapRank2in_add.count(rank_new[j_new]) != 0) {
-            j_flag = 1;
-          } else {
-            j_flag = 0;
-          }
+          //if (mapRank2in_remove.count(rank_old[j_old]) != 0) {
+          //  j_old++;
+          //  continue;
+          //}
+          //if (mapRank2in_add.count(rank_new[j_new]) != 0) {
+          //  j_flag = 1;
+          //} else {
+          //  j_flag = 0;
+          //}
 
           if (i_flag == 1 && j_flag == 1) {
             d = XtX_aa.accessor(i_add, j_add);
@@ -1529,24 +1574,50 @@ void SetXgamma(const DMatrix X, const DMatrix X_old,
   return;
 }
 
+
+double CalcPveLM(const DMatrix UtXgamma, const DMatrix Uty,
+                        const double sigma_a2) {
+  double pve, var_y;
+
+  DMatrix Omega; // = identity_matrix(UtXgamma.shape[1], UtXgamma.shape[1]);
+  DMatrix Xty; // = gsl_vector_alloc(UtXgamma->size2);
+  DMatrix OiXty; // = gsl_vector_alloc(UtXgamma->size2);
+
+  Omega = multiply_dmatrix_num(Omega, 1.0 / sigma_a2);
+
+  Omega = matrix_mult(UtXgamma.T, UtXgamma);
+  Xty = matrix_mult(UtXgamma.T, Uty);
+
+  //CholeskySolve(Omega, Xty, OiXty);
+
+  pve = vector_ddot(Xty, OiXty);
+  var_y = vector_ddot(Uty, Uty);
+
+  pve /= var_y;
+
+  return pve;
+}
+
 void WriteResult(const int flag, const DMatrix Result_hyp,
                   const DMatrix Result_gamma, const size_t w_col) {
-  string file_gamma, file_hyp;
-  file_gamma = path_out + "/" + file_out;
-  file_gamma += ".gamma.txt";
-  file_hyp = path_out + "/" + file_out;
-  file_hyp += ".hyp.txt";
 
-  ofstream outfile_gamma, outfile_hyp;
+  size_t s_max, w_pace;
+  string file_gamma, file_hyp, path_out, file_out;
+  file_gamma = path_out ~ "/" ~ file_out;
+  file_gamma ~= ".gamma.txt";
+  file_hyp = path_out ~ "/" ~ file_out;
+  file_hyp ~= ".hyp.txt";
+
+  string outfile_gamma, outfile_hyp;
 
   if (flag == 0) {
     //outfile_gamma.open(file_gamma.c_str(), ofstream);
     //outfile_hyp.open(file_hyp.c_str(), ofstream);
-    if (!outfile_gamma) {
+    if (outfile_gamma == "") {
       writeln("error writing file: ", file_gamma);
       return;
     }
-    if (!outfile_hyp) {
+    if (outfile_hyp == "") {
       writeln("error writing file: ", file_hyp);
       return;
     }
@@ -1556,15 +1627,15 @@ void WriteResult(const int flag, const DMatrix Result_hyp,
     for (size_t i = 0; i < s_max; ++i) {
       //outfile_gamma += "s" + i +"\t";
     }
-    outfile_gamma << endl;
+    //outfile_gamma << endl;
   } else {
     //outfile_gamma.open(file_gamma.c_str(), ofstream::app);
     //outfile_hyp.open(file_hyp.c_str(), ofstream::app);
-    if (!outfile_gamma) {
+    if (outfile_gamma == "") {
       writeln("error writing file: ", file_gamma);
       return;
     }
-    if (!outfile_hyp) {
+    if (outfile_hyp == "") {
       writeln("error writing file: ", file_hyp);
       return;
     }
