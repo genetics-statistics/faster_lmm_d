@@ -1,0 +1,30 @@
+language: d
+
+addons:
+  apt:
+    packages:
+      - libopenblas-dev 
+      - libgsl0-dev
+      - liblapacke-dev
+      - nvidia-cuda-dev
+      - google-perftools
+      - libgoogle-perftools-dev
+      - graphviz
+
+
+branches:
+  only:
+  - master
+
+d:
+  - ldc-1.6.0
+
+
+install:
+  - dub --compiler=ldc2
+  - make -j8
+
+before_script:
+  - make -j8
+
+script: ./travis-ci.sh
