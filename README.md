@@ -1,5 +1,7 @@
 # Faster_lmm_d
 
+[![Build Status](https://travis-ci.org/prasunanand/faster_lmm_d.svg?branch=master)](https://travis-ci.org/prasunanand/faster_lmm_d)
+
 A faster lmm for GWAS. It has multi-core and GPU support.
 
 NOTICE: this software is under active development. YMMV.
