@@ -6,6 +6,7 @@ addons:
       - libopenblas-dev 
       - libgsl0-dev
       - liblapacke-dev
+      - liblapacke-dev
       - nvidia-cuda-dev
       - google-perftools
       - libgoogle-perftools-dev
