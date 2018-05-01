@@ -68,7 +68,7 @@ void main(string[] args)
 {
   //ProfilerStart();
 
-  string cmd, option_control, option_kinship, option_pheno, option_geno, option_covar, useBLAS, noBLAS, noCUDA, option_logging,
+  string cmd, option_anno, option_control, option_kinship, option_pheno, option_geno, option_covar, useBLAS, noBLAS, noCUDA, option_logging,
         option_indicator_idv, option_indicator_snp, option_test_name, option_bfile, option_mbfile, option_c;
   bool option_help = false;
   bool option_test_kinship = false;
@@ -85,6 +85,7 @@ void main(string[] args)
 
   getopt(
     args,
+    "anno", &option_anno,
     "control", &option_control,
     "kinship", &option_kinship,
     "pheno", &option_pheno,
@@ -163,7 +164,7 @@ void main(string[] args)
 
     if (cmd == "gk"){
       //kinship_from_gemma(option_geno, "mousehs_1940");
-      generate_kinship(option_geno, option_pheno);
+      generate_kinship(option_geno, option_pheno, option_test_name);
     }
     else if(cmd == "mvlmm"){
       mvlmm_run();

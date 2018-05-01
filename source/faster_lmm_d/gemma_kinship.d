@@ -55,28 +55,36 @@ DMatrix kinship_from_gemma(const string fn, const string test_name = ""){
 
 
 // similar to batch_run mode 21||22
-void generate_kinship(const string geno_fn, const string pheno_fn, const bool test_nind= false){
+void generate_kinship(const string geno_fn, const string pheno_fn, const string test_name = "", const bool test_nind= false){
   writeln("in generate kinship");
-  Read_files(geno_fn, pheno_fn);
+  Read_files(geno_fn, pheno_fn, test_name);
   validate_kinship();
 }
 
-void Read_files(const string geno_fn, const string pheno_fn, const string co_variate_fn = ""){
+void Read_files(const string geno_fn, const string pheno_fn,  const string test_name = "", const string co_variate_fn = ""){
   double[] indicator_pheno;
   size_t[] p_column;
 
   auto pheno = ReadFile_pheno(pheno_fn, p_column);
-  check_pheno(pheno.pheno);
-  check_indicator_pheno(pheno.indicator_pheno);
+
+  if(test_name == "hs1940_kinship"){
+    check_pheno(pheno.pheno);
+    check_indicator_pheno(pheno.indicator_pheno);
+  }
+
   auto indicators = process_cvt_phen(pheno.indicator_pheno);
 
   size_t ni_test = indicators.ni_test;
 
   DMatrix W = CopyCvt(indicators.cvt, indicators.indicator_cvt, indicators.indicator_idv, indicators.n_cvt);
 
-  check_covariates_W(W);
+  size_t ni_total = indicators.indicator_idv.length;
 
-  DMatrix k = ReadFile_geno(geno_fn, 1940, W, indicators.indicator_idv);
+  if(test_name == "hs1940_kinship"){
+    check_covariates_W(W);
+  }
+
+  DMatrix k = ReadFile_geno(geno_fn, ni_total, W, indicators.indicator_idv);
 
   //bimbam_kin(geno_fn, pheno_fn, W, indicator_snp);
 }
@@ -524,7 +532,7 @@ DMatrix CopyCvt(const DMatrix cvt, const int[] indicator_cvt, const int[] indica
 }
 
 // Post-process phenotypes and covariates.
-Indicators_result process_cvt_phen(const DMatrix indicator_pheno){
+Indicators_result process_cvt_phen(const DMatrix indicator_pheno, const string test_name = ""){
 
   writeln(indicator_pheno.shape);
 
@@ -637,9 +645,11 @@ Indicators_result process_cvt_phen(const DMatrix indicator_pheno){
   writeln("done process_cvt_phen");
   writeln(ni_test);
 
-  check_indicator_cvt(cvt);
-  check_cvt_matrix(s_cvt);
-  check_indicator_idv(indicator_idv);
+  if(test_name == "hs1940_kinship"){ 
+    check_indicator_cvt(cvt);
+    check_cvt_matrix(s_cvt);
+    check_indicator_idv(indicator_idv);
+  }
 
   return Indicators_result(s_cvt, indicator_cvt, indicator_idv, 1, ni_test);
 }
