@@ -140,6 +140,10 @@ the `main` function in `source/faster_lmm_d/app.d`.
 make run-gperf
 ```
 
+## Useful links:
+
+Poster on [Faster Linear Mixed Models (LMM) for online GWAS omics analysis​](https://github.com/prasunanand/resume/blob/master/CTC_2017_Poster_Faster_LMM_D.pdf) at Complex Trait Community Conference 2017, Memphis, Tennessee, USA.
+
 ## LICENSE
 
 This software is distributed under the [GPL3 license](https://www.gnu.org/copyleft/gpl.html).
