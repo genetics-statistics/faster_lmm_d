@@ -654,6 +654,332 @@ Indicators_result process_cvt_phen(const DMatrix indicator_pheno, const string t
   return Indicators_result(s_cvt, indicator_cvt, indicator_idv, 1, ni_test);
 }
 
+
+bool PlinkKin(const string file_bed, int[] indicator_snp,
+              const int k_mode, const int display_pace,
+              DMatrix matrix_kin) {
+  writeln("entered PlinkKin");
+
+  File infile = File(file_bed);
+
+  //char ch[1];
+  int[] b;
+
+  size_t n_miss, ci_total;
+  double d, geno_mean, geno_var;
+
+  size_t ni_total = matrix_kin.shape[0];
+  //gsl_vector *geno = gsl_vector_safe_alloc(ni_total);
+  DMatrix geno;
+
+  size_t ns_test = 0;
+  size_t n_bit;
+
+  // Create a large matrix.
+  size_t K_BATCH_SIZE = 20000;
+
+  const size_t msize = K_BATCH_SIZE;
+  DMatrix Xlarge = zeros_dmatrix(ni_total, msize);
+
+  // Calculate n_bit and c, the number of bit for each snp.
+  if (ni_total % 4 == 0) {
+    n_bit = ni_total / 4;
+  } else {
+    n_bit = ni_total / 4 + 1;
+  }
+
+  // print the first three magic numbers
+  for (int i = 0; i < 3; ++i) {
+    //infile.read(ch, 1);
+    //b = ch[0];
+  }
+
+  for (size_t t = 0; t < indicator_snp.length; ++t) {
+    if (indicator_snp[t] == 0) {
+      continue;
+    }
+
+    // n_bit, and 3 is the number of magic numbers.
+    infile.seek(t * n_bit + 3);
+
+    // Read genotypes.
+    geno_mean = 0.0;
+    n_miss = 0;
+    ci_total = 0;
+    geno_var = 0.0;
+    for (int i = 0; i < n_bit; ++i) {
+      //infile.read(ch, 1);
+      //b = ch[0];
+
+      // Minor allele homozygous: 2.0; major: 0.0.
+      for (size_t j = 0; j < 4; ++j) {
+        if ((i == (n_bit - 1)) && ci_total == ni_total) {
+          break;
+        }
+
+        if (b[2 * j] == 0) {
+          if (b[2 * j + 1] == 0) {
+            geno.elements[ci_total] = 2.0;
+            geno_mean += 2.0;
+            geno_var += 4.0;
+          } else {
+            geno.elements[ci_total] = 1.0;
+            geno_mean += 1.0;
+            geno_var += 1.0;
+          }
+        } else {
+          if (b[2 * j + 1] == 1) {
+            geno.elements[ci_total] = 0.0;
+          } else {
+            geno.elements[ci_total] = -9.0;
+            n_miss++;
+          }
+        }
+
+        ci_total++;
+      }
+    }
+
+    geno_mean /= to!double(ni_total - n_miss);
+    geno_var += geno_mean * geno_mean * to!double(n_miss);
+    geno_var /= to!double(ni_total);
+    geno_var -= geno_mean * geno_mean;
+
+    for (size_t i = 0; i < ni_total; ++i) {
+      d = geno.elements[i];
+      if (d == -9.0) {
+        geno.elements[i] = geno_mean;
+      }
+    }
+
+    geno = add_dmatrix_num(geno, -1.0 * geno_mean);
+
+    if (k_mode == 2 && geno_var != 0) {
+      geno = multiply_dmatrix_num(geno, 1.0 / sqrt(geno_var));
+    }
+    DMatrix Xlarge_col = get_col(Xlarge, ns_test % msize);
+    //gsl_vector_memcpy(&Xlarge_col.vector, geno);
+
+    ns_test++;
+
+    if (ns_test % msize == 0) {
+      matrix_kin = matrix_mult(Xlarge, Xlarge.T);
+      Xlarge = zeros_dmatrix(ni_total, msize);
+    }
+  }
+
+  if (ns_test % msize != 0) {
+    matrix_kin = matrix_mult(Xlarge, Xlarge.T);
+  }
+
+
+  matrix_kin = divide_dmatrix_num(matrix_kin, ns_test);
+  matrix_kin = matrix_kin.T;
+
+  return true;
+}
+
+bool PlinkKin(const string file_bed, const int display_pace,
+              const int[] indicator_idv,
+              const int[] indicator_snp,
+              const double[string] mapRS2weight,
+              const size_t[string] mapRS2cat,
+              const SNPINFO[] snpInfo, const DMatrix W,
+              DMatrix matrix_kin, DMatrix vector_ns) {
+  writeln("entered PlinkKin");
+
+  File infile = File(file_bed);
+
+  //char ch[1];
+  int[] b;
+
+  size_t n_miss, ci_total, ci_test;
+  double d, geno_mean, geno_var;
+
+  size_t ni_test = matrix_kin.shape[0];
+  size_t ni_total = indicator_idv.length;
+  DMatrix geno; // = gsl_vector_safe_alloc(ni_test);
+
+  gsl_permutation *pmt = gsl_permutation_alloc(W.shape[1]);
+
+  DMatrix WtW = matrix_mult(W.T, W);
+
+  DMatrix WtWi = WtW.inverse();
+
+  size_t ns_test = 0;
+  size_t n_bit;
+
+  size_t n_vc = matrix_kin.shape[1] / ni_test, i_vc;
+  string rs;
+  size_t[] ns_vec;
+  for (size_t i = 0; i < n_vc; i++) {
+    ns_vec ~= 0;
+  }
+
+  // Create a large matrix.
+  size_t K_BATCH_SIZE = 20_000;
+
+  const size_t msize = K_BATCH_SIZE;
+  DMatrix Xlarge = zeros_dmatrix(ni_test, msize * n_vc);
+
+  // Calculate n_bit and c, the number of bit for each SNP.
+  if (ni_total % 4 == 0) {
+    n_bit = ni_total / 4;
+  } else {
+    n_bit = ni_total / 4 + 1;
+  }
+
+  // Print the first three magic numbers.
+  for (int i = 0; i < 3; ++i) {
+    //infile.read(ch, 1);
+    //b = ch[0];
+  }
+
+  for (size_t t = 0; t < indicator_snp.length; ++t) {
+    if (indicator_snp[t] == 0) {
+      continue;
+    }
+
+    // n_bit, and 3 is the number of magic numbers
+    infile.seek(t * n_bit + 3);
+
+    rs = snpInfo[t].rs_number; // This line is new.
+
+    // Read genotypes.
+    geno_mean = 0.0;
+    n_miss = 0;
+    ci_total = 0;
+    geno_var = 0.0;
+    ci_test = 0;
+    for (int i = 0; i < n_bit; ++i) {
+      //infile.read(ch, 1);
+      //b = ch[0];
+
+      // Minor allele homozygous: 2.0; major: 0.0;
+      for (size_t j = 0; j < 4; ++j) {
+        if ((i == (n_bit - 1)) && ci_total == ni_total) {
+          break;
+        }
+        if (indicator_idv[ci_total] == 0) {
+          ci_total++;
+          continue;
+        }
+
+        if (b[2 * j] == 0) {
+          if (b[2 * j + 1] == 0) {
+            geno.elements[ci_test] = 2.0;
+            geno_mean += 2.0;
+            geno_var += 4.0;
+          } else {
+            geno.elements[ci_test] = 1.0;
+            geno_mean += 1.0;
+            geno_var += 1.0;
+          }
+        } else {
+          if (b[2 * j + 1] == 1) {
+            geno.elements[ci_test] = 0.0;
+          } else {
+            geno.elements[ci_test] = -9.0;
+            n_miss++;
+          }
+        }
+
+        ci_test++;
+        ci_total++;
+      }
+    }
+
+    geno_mean /= to!double(ni_test - n_miss);
+    geno_var += geno_mean * geno_mean * to!double(n_miss);
+    geno_var /= to!double(ni_test);
+    geno_var -= geno_mean * geno_mean;
+
+    for (size_t i = 0; i < ni_test; ++i) {
+      d = geno.elements[i];
+      if (d == -9.0) {
+        geno.elements[i] = geno_mean;
+      }
+    }
+
+    geno = add_dmatrix_num(geno, -1.0 * geno_mean);
+
+    DMatrix Wtx = matrix_mult(W.T, geno);
+    DMatrix WtWiWtx = matrix_mult(WtWi, Wtx);
+    // TODO
+    //gsl_blas_dgemv(CblasNoTrans, -1.0, W, WtWiWtx, 1.0, geno);
+    geno_var = vector_ddot(geno, geno);
+    geno_var /= to!double(ni_test);
+
+    if (geno_var != 0 &&
+        (mapRS2weight.length == 0 || (rs in mapRS2weight) )) {
+      if (mapRS2weight.length == 0) {
+        d = 1.0 / geno_var;
+      } else {
+        d = mapRS2weight[rs] / geno_var;
+      }
+
+      geno = multiply_dmatrix_num(geno, sqrt(d));
+      if (n_vc == 1 || mapRS2cat.length == 0) {
+        DMatrix Xlarge_col = get_col(Xlarge, ns_vec[0] % msize);
+        //gsl_vector_memcpy(&Xlarge_col.vector, geno);
+        ns_vec[0]++;
+
+        if (ns_vec[0] % msize == 0) {
+          matrix_kin = matrix_mult(Xlarge, Xlarge.T);
+          Xlarge = zeros_dmatrix(ni_test, msize * n_vc);
+        }
+      } else if (rs in mapRS2weight) {
+        i_vc = mapRS2cat[rs];
+
+        //gsl_vector_view 
+        DMatrix Xlarge_col = get_col(Xlarge, msize * i_vc + ns_vec[i_vc] % msize);
+        //gsl_vector_memcpy(&Xlarge_col.vector, geno);
+
+        ns_vec[i_vc]++;
+
+        if (ns_vec[i_vc] % msize == 0) {
+          //gsl_matrix_view 
+          DMatrix X_sub = get_sub_dmatrix(Xlarge, 0, msize * i_vc, ni_test, msize);
+          //gsl_matrix_view
+          DMatrix kin_sub = get_sub_dmatrix( matrix_kin, 0, ni_test * i_vc, ni_test, ni_test);
+          kin_sub = matrix_mult(X_sub, X_sub.T);
+
+          X_sub = zeros_dmatrix(X_sub.shape[0], X_sub.shape[1]);
+        }
+      }
+    }
+    ns_test++;
+  }
+
+  for (size_t k = 0; k < n_vc; k++) {
+    if (ns_vec[k] % msize != 0) {
+      //gsl_matrix_view
+      DMatrix X_sub = get_sub_dmatrix(Xlarge, 0, msize * k, ni_test, msize);
+      //gsl_matrix_view
+      DMatrix kin_sub = get_sub_dmatrix(matrix_kin, 0, ni_test * k, ni_test, ni_test);
+      kin_sub = matrix_mult(X_sub, X_sub.T);
+    }
+  }
+
+  for (size_t t = 0; t < n_vc; t++) {
+    vector_ns.elements[t] = ns_vec[t];
+
+    for (size_t i = 0; i < ni_test; ++i) {
+      for (size_t j = 0; j <= i; ++j) {
+        d = matrix_kin.accessor(j, i + ni_test * t);
+        d /= to!double(ns_vec[t]);
+        matrix_kin.set(i, j + ni_test * t, d);
+        matrix_kin.set(j, i + ni_test * t, d);
+      }
+    }
+  }
+
+  gsl_permutation_free(pmt);
+
+  return true;
+}
+
+
 void check_kinship_from_gemma(const string test_name, const double[] top, const double[] bottom){
 
   writeln(top);

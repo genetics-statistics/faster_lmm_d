@@ -68,16 +68,20 @@ void main(string[] args)
 {
   //ProfilerStart();
 
-  string cmd, option_anno, option_control, option_kinship, option_pheno, option_geno, option_covar, useBLAS, noBLAS, noCUDA, option_logging,
+  string cmd, option_anno, option_control, option_kinship, option_pheno, option_snps, option_geno, option_covar, useBLAS, noBLAS, noCUDA, option_logging,
         option_indicator_idv, option_indicator_snp, option_test_name, option_bfile, option_mbfile, option_c;
   bool option_help = false;
   bool option_test_kinship = false;
   double option_maf = 0;
+  ulong option_gk = 0;
+  ulong option_lm;
   ulong option_lmm;
   string option_n;
+  ulong option_loco;
   ulong option_pheno_column = 0;
   ulong option_ni_test = 1;
   ulong option_ni_total;
+  size_t option_nind;
   ulong option_ni_ph = 1;
 
   globalLogLevel(LogLevel.warning); //default
@@ -89,12 +93,16 @@ void main(string[] args)
     "control", &option_control,
     "kinship", &option_kinship,
     "pheno", &option_pheno,
+    "snps", &option_snps,
+    "loco", &option_loco,
     "indicator_idv", &option_indicator_idv,
     "indicator_snp", &option_indicator_snp,
     "pheno-column", &option_pheno_column,
     "bfile", &option_bfile,
     "mbfile", &option_mbfile,
+    "lm", &option_lm,
     "lmm", &option_lmm,
+    "gk", &option_gk,
     "maf", &option_maf,
     "n", &option_n,
     "c", &option_c,
@@ -108,6 +116,7 @@ void main(string[] args)
     "test-kinship", &option_test_kinship,
     "test-name", &option_test_name,
     "ni_test", &option_ni_test,
+    "nind", &option_nind,
     "ni_total", &option_ni_total,
     "ni_ph", &option_ni_ph,
     "help", &option_help

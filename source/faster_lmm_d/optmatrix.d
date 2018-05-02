@@ -591,7 +591,6 @@ unittest{
 
   DMatrix a1 = DMatrix([1,2], [3,3]);
   DMatrix b1 = DMatrix([2,1], [3,3]);
-  writeln(matrix_mult(a1, b1));
   assert(matrix_mult(a1, b1) == DMatrix([1,1],[18]));
 
 
