@@ -61,6 +61,16 @@ void generate_kinship(const string geno_fn, const string pheno_fn, const string 
   validate_kinship();
 }
 
+void generate_kinship_plink(const string file_bed, const string test_name = ""){
+  writeln("in generate_kinship_plink");
+  DMatrix matrix_kin;
+  ulong[] p_column;
+  int[][] indicator_pheno;
+  double[][] pheno;
+  ulong[ulong] mapId2num;
+  readfile_fam(file_bed, indicator_pheno, pheno, mapId2num, p_column);
+}
+
 void Read_files(const string geno_fn, const string pheno_fn,  const string test_name = "", const string co_variate_fn = ""){
   double[] indicator_pheno;
   size_t[] p_column;
@@ -660,7 +670,7 @@ bool PlinkKin(const string file_bed, int[] indicator_snp,
               DMatrix matrix_kin) {
   writeln("entered PlinkKin");
 
-  File infile = File(file_bed);
+  File infile = File(file_bed ~ ".bed");
 
   //char ch[1];
   int[] b;

@@ -28,12 +28,481 @@ import std.string;
 import faster_lmm_d.dmatrix;
 import faster_lmm_d.gemma_lmm;
 import faster_lmm_d.gemma_param;
+import faster_lmm_d.gemma_kinship;
 import faster_lmm_d.helpers;
 import faster_lmm_d.optmatrix;
 
 import gsl.permutation;
 import gsl.rng;
 import gsl.randist;
+
+// Read files: obtain ns_total, ng_total, ns_test, ni_test.
+void read_all_files() {
+  string file_mcat, file_cat, file_wcat, file_wsnp, file_mk, file_epm, 
+         file_bfile, file_snps, file_geno, file_pheno, file_ksnps, file_ebv, 
+         file_gxe, file_weight, file_cvt, file_anno, file_log, file_mbfile,
+         file_mgeno, file_gene, file_read;
+  size_t[string] mapRS2cat, mapRS2wcat, mapID2num, mapRS2bp;
+  double[string] mapRS2wsnp, mapRS2cM;
+  string[string] mapRS2chr;
+  string[] setSnps;
+  string[] setKSnps;
+  size_t n_vc, n_cvt, ns_total, ns_test, ni_max, ni_test;
+  double[][] indicator_pheno;
+  int[] indicator_cvt, indicator_idv, indicator_snp, indicator_gxe,
+        mindicator_snp, indicator_read, indicator_bv, indicator_weight;
+  size_t[] p_column;
+  string file_str;
+  double[][] cvt;
+  double pheno;
+  double[] vec_bv, vec_read;
+  SNPINFO[] snpInfo, msnpInfo;
+  double maf_level, miss_level, hwe_level, r2_level;
+
+  // Read cat file.
+  if (file_mcat != "") {
+    if (ReadFile_mcat(file_mcat, mapRS2cat, n_vc) == false) {
+      error = true;
+    }
+  } else if (file_cat != "") {
+    if (ReadFile_cat(file_cat, mapRS2cat, n_vc) == false) {
+      error = true;
+    }
+  }
+
+  // Read snp weight files.
+  if(file_wcat != "") {
+    if (ReadFile_wsnp(file_wcat, n_vc, mapRS2wcat) == false) {
+      error = true;
+    }
+  }
+  if (file_wsnp != "") {
+    if (ReadFile_wsnp(file_wsnp, mapRS2wsnp) == false) {
+      error = true;
+    }
+  }
+
+  // Count number of kinship files.
+  if (file_mk != "") {
+    if (CountFileLines(file_mk, n_vc) == false) {
+      error = true;
+    }
+  }
+
+  // Read SNP set.
+  if (file_snps != "") {
+    if (ReadFile_snps(file_snps, setSnps) == false) {
+      error = true;
+    }
+  } else {
+    setSnps = [];
+  }
+
+  // Read KSNP set.
+  if (file_ksnps != "") {
+    if (ReadFile_snps(file_ksnps, setKSnps) == false) {
+      error = true;
+    }
+  } else {
+    setKSnps = [];
+  }
+
+  // For prediction.
+  if (file_epm != "") {
+    //if (ReadFile_est(file_epm, est_column, mapRS2est) == false) {
+    //  error = true;
+    //}
+    if (file_bfile != "") {
+      file_str = file_bfile ~ ".bim";
+      if (readfile_bim(file_str, snpInfo) == false) {
+        error = true;
+      }
+      file_str = file_bfile ~ ".fam";
+      //if (readfile_fam(file_str, indicator_pheno, pheno, mapID2num, p_column) ==
+      //    false) {
+      //  error = true;
+      //}
+    }
+
+    if (file_geno != "") {
+      //if (ReadFile_pheno(file_pheno, indicator_pheno, pheno, p_column) == false) {
+      //  error = true;
+      //}
+
+      if (CountFileLines(file_geno, ns_total) == false) {
+        error = true;
+      }
+    }
+
+    if (file_ebv != "") {
+      if (ReadFile_column(file_ebv, indicator_bv, vec_bv, 1) == false) {
+        error = true;
+      }
+    }
+
+    if (file_log != "") {
+      if (ReadFile_log(file_log, pheno_mean) == false) {
+        error = true;
+      }
+    }
+
+    // Convert indicator_pheno to indicator_idv.
+    int k = 1;
+    for (size_t i = 0; i < indicator_pheno.length; i++) {
+      k = 1;
+      for (size_t j = 0; j < indicator_pheno[i].length; j++) {
+        if (indicator_pheno[i][j] == 0) {
+          k = 0;
+        }
+      }
+      indicator_idv ~= k;
+    }
+
+    ns_test = 0;
+
+    return;
+  }
+
+  // Read covariates before the genotype files.
+  if (file_cvt != "") {
+    if (readfile_cvt(file_cvt, indicator_cvt, cvt, n_cvt) == false) {
+      error = true;
+    }
+    if (indicator_cvt.length == 0) {
+      n_cvt = 1;
+    }
+  } else {
+    n_cvt = 1;
+  }
+  trim_individuals(indicator_cvt, ni_max);
+
+  if (file_gxe != "") {
+    if (ReadFile_column(file_gxe, indicator_gxe, gxe, 1) == false) {
+      error = true;
+    }
+  }
+  if (file_weight != "") {
+    if (ReadFile_column(file_weight, indicator_weight, weight, 1) == false) {
+      error = true;
+    }
+  }
+
+  trim_individuals(indicator_idv, ni_max);
+
+  // Read genotype and phenotype file for PLINK format.
+  if (!file_bfile.empty()) {
+    file_str = file_bfile ~ ".bim";
+    snpInfo = [];
+    if (readfile_bim(file_str, snpInfo) == false) {
+      error = true;
+    }
+
+    // If both fam file and pheno files are used, use
+    // phenotypes inside the pheno file.
+    if (file_pheno != "") {
+
+      // Phenotype file before genotype file.
+      //if (ReadFile_pheno(file_pheno, indicator_pheno, pheno, p_column) == false) {
+      //  error = true;
+      //}
+    } else {
+      file_str = file_bfile ~ ".fam";
+      if (readfile_fam(file_str, indicator_pheno, pheno, mapID2num, p_column) == false) {
+        error = true;
+      }
+    }
+
+    // Post-process covariates and phenotypes, obtain
+    // ni_test, save all useful covariates.
+    process_cvt_phen();
+
+    // Obtain covariate matrix.
+    DMatrix W1;
+    CopyCvt(W1);
+
+    file_str = file_bfile ~ ".bed";
+    if (ReadFile_bed(file_str, setSnps, W1, indicator_idv, indicator_snp,
+                     snpInfo, maf_level, miss_level, hwe_level, r2_level,
+                     ns_test) == false) {
+      error = true;
+    }
+    ns_total = indicator_snp.length;
+  }
+
+  // Read genotype and phenotype file for BIMBAM format.
+  if (file_geno != "") {
+
+    // Annotation file before genotype file.
+    if (file_anno != "") {
+      if (ReadFile_anno(file_anno, mapRS2chr, mapRS2bp, mapRS2cM) == false) {
+        error = true;
+      }
+    }
+
+    // Phenotype file before genotype file.
+    if (ReadFile_pheno(file_pheno, indicator_pheno, pheno, p_column) == false) {
+      error = true;
+    }
+
+    // Post-process covariates and phenotypes, obtain
+    // ni_test, save all useful covariates.
+    process_cvt_phen();
+
+    // Obtain covariate matrix.
+    DMatrix W2; // = gsl_matrix_safe_alloc(ni_test, n_cvt);
+    CopyCvt(W2);
+
+    trim_individuals(indicator_idv, ni_max);
+    trim_individuals(indicator_cvt, ni_max);
+    //if (ReadFile_geno(file_geno, setSnps, W2, indicator_idv, indicator_snp,
+    //                  maf_level, miss_level, hwe_level, r2_level, mapRS2chr,
+    //                  mapRS2bp, mapRS2cM, snpInfo, ns_test) == false) {
+    //  error = true;
+    //}
+
+    ns_total = indicator_snp.length;
+  }
+
+  // Read genotype file for multiple PLINK files.
+  if (!file_mbfile.empty()) {
+    File infile = File(file_mbfile);
+
+    size_t t = 0, ns_test_tmp = 0;
+    DMatrix W3;
+    foreach(file_name; infile.byLine){
+      file_str = to!string(file_name) ~ ".bim";
+
+      if (readfile_bim(file_str, snpInfo) == false) {
+        error = true;
+      }
+
+      if (t == 0) {
+
+        // If both fam file and pheno files are used, use
+        // phenotypes inside the pheno file.
+        if (!file_pheno.empty()) {
+
+          // Phenotype file before genotype file.
+          //if (ReadFile_pheno(file_pheno, indicator_pheno, pheno, p_column) == false) {
+          //  error = true;
+          //}
+        } else {
+          file_str = to!string(file_name) ~ ".fam";
+          //if (readfile_fam(file_str, indicator_pheno, pheno, mapID2num, p_column) == false) {
+          //  error = true;
+          //}
+        }
+
+        // Post-process covariates and phenotypes, obtain
+        // ni_test, save all useful covariates.
+        DMatrix mock;
+        process_cvt_phen(mock);
+
+        // Obtain covariate matrix.
+        //W3 = gsl_matrix_safe_alloc(ni_test, n_cvt);
+        //CopyCvt(W3);
+      }
+
+      file_str = to!string(file_name) ~ ".bed";
+      //if (ReadFile_bed(file_str, setSnps, W3, indicator_idv, indicator_snp,
+      //                 snpInfo, maf_level, miss_level, hwe_level, r2_level,
+      //                 ns_test_tmp) == false) {
+      //  error = true;
+      //}
+      mindicator_snp ~= indicator_snp;
+      msnpInfo ~= snpInfo;
+      ns_test += ns_test_tmp;
+      ns_total += indicator_snp.length;
+
+      t++;
+    }
+
+  }
+
+  // Read genotype and phenotype file for multiple BIMBAM files.
+  if (file_mgeno != "") {
+
+    // Annotation file before genotype file.
+    if (file_anno != "") {
+      if (ReadFile_anno(file_anno, mapRS2chr, mapRS2bp, mapRS2cM) == false) {
+        error = true;
+      }
+    }
+
+    // Phenotype file before genotype file.
+    //if (ReadFile_pheno(file_pheno, indicator_pheno, pheno, p_column) == false) {
+    //  error = true;
+    //}
+
+    // Post-process covariates and phenotypes, obtain ni_test,
+    // save all useful covariates.
+    DMatrix mock;
+    process_cvt_phen(mock);
+
+    // Obtain covariate matrix.
+    DMatrix W4;// = gsl_matrix_safe_alloc(ni_test, n_cvt);
+    //CopyCvt(W4);
+
+    File infile = File(file_mgeno);
+    //if (!infile) {
+    //  writeln("error! fail to open mgeno file: ", file_mgeno);
+    //  error = true;
+    //  return;
+    //}
+
+    size_t ns_test_tmp;
+    foreach(file_name; infile.byLine) {
+      //if (ReadFile_geno(file_name, setSnps, W4, indicator_idv, indicator_snp,
+      //                  maf_level, miss_level, hwe_level, r2_level, mapRS2chr,
+      //                  mapRS2bp, mapRS2cM, snpInfo, ns_test_tmp) == false) {
+      //  error = true;
+      //}
+
+      mindicator_snp ~= indicator_snp;
+      msnpInfo ~= snpInfo;
+      ns_test += ns_test_tmp;
+      ns_total += indicator_snp.length;
+    }
+
+  }
+
+  if (file_gene != "") {
+    //if (ReadFile_pheno(file_pheno, indicator_pheno, pheno, p_column) == false) {
+    //  error = true;
+    //}
+
+    // Convert indicator_pheno to indicator_idv.
+    int k = 1;
+    for (size_t i = 0; i < indicator_pheno.length; i++) {
+      k = 1;
+      for (size_t j = 0; j < indicator_pheno[i].length; j++) {
+        if (indicator_pheno[i][j] == 0) {
+          k = 0;
+        }
+      }
+      indicator_idv ~= k;
+    }
+
+    // Post-process covariates and phenotypes, obtain
+    // ni_test, save all useful covariates.
+    DMatrix mock;
+    process_cvt_phen(mock);
+
+    // Obtain covariate matrix.
+    // gsl_matrix *W5 = gsl_matrix_alloc(ni_test, n_cvt);
+    // CopyCvt(W5);
+
+    //if (ReadFile_gene(file_gene, vec_read, snpInfo, ng_total) == false) {
+    //  error = true;
+    //}
+  }
+
+  // Read is after gene file.
+  if (file_read != "") {
+    if (ReadFile_column(file_read, indicator_read, vec_read, 1) == false) {
+      error = true;
+    }
+
+    ni_test = 0;
+    for (size_t i = 0; i < indicator_idv.length; ++i) {
+      indicator_idv[i] *= indicator_read[i];
+      ni_test += indicator_idv[i];
+    }
+
+    if (ni_test == 0) {
+      writeln("error! number of analyzed individuals equals 0. ");
+      error = true;
+      return;
+    }
+  }
+
+  // For ridge prediction, read phenotype only.
+  if (file_geno == "" && file_gene == "" && file_pheno != "") {
+    //if (ReadFile_pheno(file_pheno, indicator_pheno, pheno, p_column) == false) {
+    //  error = true;
+    //}
+
+    // Post-process covariates and phenotypes, obtain
+    // ni_test, save all useful covariates.
+    DMatrix mock;
+    process_cvt_phen(mock);
+  }
+
+  // Compute setKSnps when -loco is passed in
+  //if (!loco.empty()) {
+  //  LOCO_set_Snps(setKSnps, setGWASnps, mapRS2chr, loco);
+  //}
+  return;
+}
+
+// Read SNP file. A single column of SNP names.
+bool ReadFile_snps(const string file_snps, string[] setSnps) {
+  writeln("entered ReadFile_snps");
+  setSnps = [];
+
+  File infile = File(file_snps);
+
+  foreach(line; infile.byLine) {
+    //string[] ch_ptr = line.split("\t");
+    //setSnps ~= ch_ptr;
+  }
+
+  return true;
+}
+
+// Trim #individuals to size which is used to write tests that run faster
+//
+// Note it actually trims the number of functional individuals
+// (indicator_idv[x] == 1). This should match indicator_cvt etc. If
+// this gives problems with certain sets we can simply trim to size.
+
+void trim_individuals(int[] idvs, size_t ni_max) {
+  if (ni_max > 0) {
+    size_t count = 0;
+    foreach(ind; idvs) {
+      if (ind){
+        count++;
+      }
+      if (count >= ni_max){
+        break;
+      }
+    }
+    if (count != idvs.length) {
+      writeln("**** TEST MODE: trim individuals from ", idvs.length, " to ", count);
+      //idvs.resize(count);
+    }
+  }
+}
+
+// Read var file, store mapRS2wsnp.
+bool ReadFile_wsnp(const string file_wsnp, double[string] mapRS2weight) {
+  writeln("entered ReadFile_wsnp");
+  //mapRS2weight = [];
+
+  File infile = File(file_wsnp);
+
+  string rs;
+  double weight;
+
+  foreach(line; infile.byLine){
+    auto ch_ptr = line.split("\t");
+    rs = to!string(ch_ptr[0]);
+    weight = to!double(ch_ptr[1]);
+    mapRS2weight[rs] = weight;
+  }
+
+  return true;
+}
+
+bool ReadFile_wsnp(const string file_wcat, const size_t n_vc, size_t[string] mapRS2wvector) {
+  writeln("entered ReadFile_wsnp");
+  writeln("TODO");
+  return true;
+}
+
+bool CountFileLines(const string file_input, size_t n_lines) {
+  return true;
+}
 
 
 bool readfile_cvt(const string file_cvt, int[] indicator_cvt,
@@ -90,6 +559,59 @@ bool readfile_cvt(const string file_cvt, int[] indicator_cvt,
 
   return true;
 }
+
+// Read bimbam annotation file which consists of rows of SNP, POS and CHR
+bool ReadFile_anno(const string file_anno, string[string] mapRS2chr,
+                   size_t[string] mapRS2bp, double[string] mapRS2cM) {
+  writeln("ReadFile_anno");
+  //mapRS2chr = [];
+  //mapRS2bp = [];
+
+  File infile = File(file_anno);
+  //if (!infile) {
+  //  writeln("error opening annotation file: ", file_anno);
+  //  return false;
+  //}
+
+  foreach(line; infile.byLine) {
+    auto ch_ptr = line.split("\t");
+    //enforce_str(ch_ptr, line + " Bad RS format");
+    const string rs = to!string(ch_ptr[0]);
+    //enforce_str(rs != "", line + " Bad RS format");
+
+    //enforce_str(ch_ptr[1], line + " Bad format");
+    long b_pos;
+    if (ch_ptr[1] == "NA"){
+      b_pos = -9;
+    } else {
+      b_pos = to!long(ch_ptr[1]);
+    }
+    //enforce_str(b_pos, line + " Bad pos format (is zero)");
+
+    string chr;
+    if (ch_ptr[2] == "NULL" || ch_ptr[2] == "NA") { // TODO
+      chr = "-9";
+    } else {
+      chr = ch_ptr[2];
+      //enforce_str(chr != "", line + " Bad chr format");
+    }
+
+    double cM;
+    if (ch_ptr[3] == "NULL" || ch_ptr[2] == "NA") { // TODO
+      cM = -9;
+    } else {
+      cM = to!double(ch_ptr[3]);
+      //enforce_str(b_pos, line + "Bad cM format (is zero)");
+    }
+
+    mapRS2chr[rs] = chr;
+    mapRS2bp[rs] = b_pos;
+    mapRS2cM[rs] = cM;
+  }
+
+  return true;
+}
+
 
 // Read .bim file.
 bool readfile_bim(const string file_bim, SNPINFO[] snpInfo) {
@@ -297,6 +819,37 @@ void readfile_bed(const string file_bed, const string[] setSnps,
   //return true;
 }
 
+// Read 1 column of phenotype.
+bool ReadFile_column(const string file_pheno, int[] indicator_idv,
+                     double[] pheno, const int p_column) {
+  writeln("entered ReadFile_column");
+  indicator_idv = [];
+  pheno = [];
+
+  File infile = File(file_pheno);
+
+  string id;
+  double p;
+  foreach (line; infile.byLine) {
+    auto ch_ptr = line.split("\t");
+    //for (int i = 0; i < (p_column - 1); ++i) {
+    //  ch_ptr = strtok(NULL, " , \t");
+    //}
+    //enforce_msg(ch_ptr,"Problem reading PHENO column");
+    if (ch_ptr == "NA") {
+      indicator_idv ~= 0;
+      pheno ~= -9;
+    } else {
+      // Pheno is different from pimass2.
+      p = to!double(ch_ptr);
+      indicator_idv ~= 1;
+      pheno ~= p;
+    }
+  }
+
+  return true;
+}
+
 // Read .fam file (ignored with -p phenotypes switch)
 bool readfile_fam(const string file_fam, int[][] indicator_pheno, double[][] pheno, 
                   size_t[size_t] mapID2num, const size_t[] p_column) {
@@ -305,7 +858,7 @@ bool readfile_fam(const string file_fam, int[][] indicator_pheno, double[][] phe
   //pheno.clear();
   //mapID2num.clear();
 
-  File infile = File(file_fam);
+  File infile = File(file_fam ~ ".fam");
 
   size_t id;
   int c = 0;
@@ -323,6 +876,7 @@ bool readfile_fam(const string file_fam, int[][] indicator_pheno, double[][] phe
   }
 
   foreach (line; infile.byLine) {
+    writeln(line);
     auto ch_ptr = line.split("\t")[3..$];
     id = to!size_t(ch_ptr[0]);
 
@@ -355,6 +909,227 @@ bool readfile_fam(const string file_fam, int[][] indicator_pheno, double[][] phe
 
     mapID2num[id] = c;
     c++;
+  }
+
+  return true;
+}
+
+
+// Read category file, record mapRS2 in the category file does not
+// contain a null category so if a snp has 0 for all categories, then
+// it is not included in the analysis.
+bool ReadFile_cat(const string file_cat, size_t[string]  mapRS2cat, size_t n_vc) {
+  writeln("entered ReadFile_cat");
+  mapRS2cat = [];
+
+  File infile = File(file_cat);
+
+  string rs, chr, a1, a0, pos, cm;
+  size_t i_cat;
+
+  // Read header.
+  HEADER header;
+  string = infile.readln();
+  ReadHeader_io(line, header);
+
+  // Use the header to count the number of categories.
+  n_vc = header.coln;
+  if (header.rs_col != 0) {
+    n_vc--;
+  }
+  if (header.chr_col != 0) {
+    n_vc--;
+  }
+  if (header.pos_col != 0) {
+    n_vc--;
+  }
+  if (header.cm_col != 0) {
+    n_vc--;
+  }
+  if (header.a1_col != 0) {
+    n_vc--;
+  }
+  if (header.a0_col != 0) {
+    n_vc--;
+  }
+
+  // Read the following lines to record mapRS2cat.
+  foreach(line; infile.byLine) {
+    i_cat = 0;
+    ch_ptrs = line.split("\t");
+    foreach (ch_ptr; ch_ptrs) {
+      enforce(ch_ptr);
+      if (header.rs_col != 0 && header.rs_col == i + 1) {
+        rs = ch_ptr;
+      } else if (header.chr_col != 0 && header.chr_col == i + 1) {
+        chr = ch_ptr;
+      } else if (header.pos_col != 0 && header.pos_col == i + 1) {
+        pos = ch_ptr;
+      } else if (header.cm_col != 0 && header.cm_col == i + 1) {
+        cm = ch_ptr;
+      } else if (header.a1_col != 0 && header.a1_col == i + 1) {
+        a1 = ch_ptr;
+      } else if (header.a0_col != 0 && header.a0_col == i + 1) {
+        a0 = ch_ptr;
+      } else if (to!int(ch_ptr) == 1 || to!int(ch_ptr) == 0) {
+        if (i_cat == 0) {
+          if (header.rs_col == 0) {
+            rs = chr + ":" + pos;
+          }
+        }
+
+        if (to!int(ch_ptr) == 1 && !(rs in mapRS2cat)) {
+          mapRS2cat[rs] = i_cat;
+        }
+        i_cat++;
+      } else {
+      }
+    }
+  }
+
+  return true;
+}
+
+void ReadHeader_io(string line, HEADER header){
+  return ;
+}
+
+// Read category files.
+// Read both continuous and discrete category file, record mapRS2catc.
+// TODO : need DMatrix with int dtype
+void ReadFile_BSLMM_cat(const string file_cat, const string[] vec_rs,
+                  DMatrix Ac, DMatrix Ad, DMatrix dlevel,
+                  size_t kc, size_t kd) {
+  writeln("entered ReadFile_BSLMM_cat");
+  File infile = File(file_cat);
+
+  string rs, chr, a1, a0, pos, cm;
+
+  // Read header.
+  HEADER header;
+  safeGetline(infile, line).eof();
+  ReadHeader_io(line, header);
+
+  // Use the header to determine the number of categories.
+  kc = header.catc_col.length;
+  kd = header.catd_col.length;
+
+  // set up storage and mapper
+  //map<string, vector<double>> mapRS2catc;
+  //map<string, vector<int>> mapRS2catd;
+  double[] catc;
+  int[] catd;
+
+  // Read the following lines to record mapRS2cat.
+  foreach(line; infile.byLine) {
+    auto ch_ptr = line.split("\t");
+
+    if (header.rs_col == 0) {
+      rs = chr ~ ":" ~ pos;
+    }
+
+    catc = [];
+    catd = [];
+
+    for (size_t i = 0; i < header.coln; i++) {
+      enforce(ch_ptr);
+      if (header.rs_col != 0 && header.rs_col == i + 1) {
+        rs = ch_ptr[i];
+      } else if (header.chr_col != 0 && header.chr_col == i + 1) {
+        chr = ch_ptr[i];
+      } else if (header.pos_col != 0 && header.pos_col == i + 1) {
+        pos = ch_ptr[i];
+      } else if (header.cm_col != 0 && header.cm_col == i + 1) {
+        cm = ch_ptr[i];
+      } else if (header.a1_col != 0 && header.a1_col == i + 1) {
+        a1 = ch_ptr[i];
+      } else if (header.a0_col != 0 && header.a0_col == i + 1) {
+        a0 = ch_ptr[i];
+      } else if (header.catc_col.length != 0 && header.catc_col.count(i + 1) != 0) {
+        catc ~= to!double(ch_ptr[i]);
+      } else if (header.catd_col.length != 0 && header.catd_col.count(i + 1) != 0) {
+        catd ~= to!int(ch_ptr[i]);
+      } else {
+      }
+
+      //ch_ptr = strtok(NULL, " , \t");
+    }
+
+    if ((rs in mapRS2catc) && kc > 0) {
+      mapRS2catc[rs] = catc;
+    }
+    if ((rs in mapRS2catd) && kd > 0) {
+      mapRS2catd[rs] = catd;
+    }
+  }
+
+  // Load into Ad and Ac.
+  if (kc > 0) {
+    //Ac = gsl_matrix_alloc(vec_rs.size(), kc);
+    for (size_t i = 0; i < vec_rs.size(); i++) {
+      if (vec_rs[i] in mapRS2catc) {
+        for (size_t j = 0; j < kc; j++) {
+          Ac.set(i, j, mapRS2catc[vec_rs[i]][j]);
+        }
+      } else {
+        for (size_t j = 0; j < kc; j++) {
+          Ac.set(i, j, 0);
+        }
+      }
+    }
+  }
+
+  if (kd > 0) {
+    //Ad = gsl_matrix_int_alloc(vec_rs.size(), kd);
+
+    for (size_t i = 0; i < vec_rs.length; i++) {
+      if (vec_rs[i] in mapRS2catd) {
+        for (size_t j = 0; j < kd; j++) {
+          Ad.set(i, j, mapRS2catd[vec_rs[i]][j]);
+        }
+      } else {
+        for (size_t j = 0; j < kd; j++) {
+          Ad.set(i, j, 0);
+        }
+      }
+    }
+
+    //dlevel = gsl_vector_int_alloc(kd);
+    int[int] rcd;
+    int val;
+    for (size_t j = 0; j < kd; j++) {
+      rcd = [];
+      for (size_t i = 0; i < Ad.shape[0]; i++) {
+        val = Ad.accessor(i, j);
+        rcd[val] = 1;
+      }
+      dlevel.elements[j] = rcd.length;
+    }
+  }
+
+  return;
+}
+
+bool ReadFile_mcat(const string file_mcat, size_t[string] mapRS2cat, size_t n_vc) {
+  writeln("entered ReadFile_mcat");
+  mapRS2cat = [];
+
+  File infile = File(file_mcat);
+
+  string file_name;
+  size_t[string] mapRS2cat_tmp;
+  size_t n_vc_tmp, t = 0;
+
+  foreach (file_name; infile.byLine) {
+    mapRS2cat_tmp = [];
+    ReadFile_cat(file_name, mapRS2cat_tmp, n_vc_tmp);
+    //mapRS2cat.insert(mapRS2cat_tmp.begin(), mapRS2cat_tmp.end());
+    if (t == 0) {
+      n_vc = n_vc_tmp;
+    } else {
+      n_vc = max(n_vc, n_vc_tmp);
+    }
+    t++;
   }
 
   return true;

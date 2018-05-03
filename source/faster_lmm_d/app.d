@@ -173,7 +173,12 @@ void main(string[] args)
 
     if (cmd == "gk"){
       //kinship_from_gemma(option_geno, "mousehs_1940");
-      generate_kinship(option_geno, option_pheno, option_test_name);
+      if(option_bfile == ""){
+        generate_kinship(option_geno, option_pheno, option_test_name);
+      }
+      else{
+        generate_kinship_plink(option_bfile, option_test_name);
+      }
     }
     else if(cmd == "mvlmm"){
       mvlmm_run();
