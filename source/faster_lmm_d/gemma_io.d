@@ -42,20 +42,22 @@ void read_all_files() {
          file_bfile, file_snps, file_geno, file_pheno, file_ksnps, file_ebv, 
          file_gxe, file_weight, file_cvt, file_anno, file_log, file_mbfile,
          file_mgeno, file_gene, file_read;
-  size_t[string] mapRS2cat, mapRS2wcat, mapID2num, mapRS2bp;
+  size_t[string] mapRS2cat, mapRS2wcat, mapRS2bp;
+  size_t[size_t] mapID2num;
   double[string] mapRS2wsnp, mapRS2cM;
   string[string] mapRS2chr;
   string[] setSnps;
   string[] setKSnps;
   size_t n_vc, n_cvt, ns_total, ns_test, ni_max, ni_test;
-  double[][] indicator_pheno;
+  int[][] indicator_pheno;
   int[] indicator_cvt, indicator_idv, indicator_snp, indicator_gxe,
         mindicator_snp, indicator_read, indicator_bv, indicator_weight;
   size_t[] p_column;
   string file_str;
   double[][] cvt;
-  double pheno;
-  double[] vec_bv, vec_read;
+  double[][] pheno;
+  double pheno_mean;
+  double[] vec_bv, vec_read, gxe, weight;
   SNPINFO[] snpInfo, msnpInfo;
   double maf_level, miss_level, hwe_level, r2_level;
 
@@ -214,18 +216,18 @@ void read_all_files() {
 
     // Post-process covariates and phenotypes, obtain
     // ni_test, save all useful covariates.
-    process_cvt_phen();
+    //process_cvt_phen();
 
     // Obtain covariate matrix.
     DMatrix W1;
-    CopyCvt(W1);
+    //CopyCvt(W1);
 
     file_str = file_bfile ~ ".bed";
-    if (ReadFile_bed(file_str, setSnps, W1, indicator_idv, indicator_snp,
-                     snpInfo, maf_level, miss_level, hwe_level, r2_level,
-                     ns_test) == false) {
-      error = true;
-    }
+    //if (readfile_bed(file_str, setSnps, W1, indicator_idv, indicator_snp,
+    //                 snpInfo, maf_level, miss_level, hwe_level, r2_level,
+    //                 ns_test) == false) {
+    //  error = true;
+    //}
     ns_total = indicator_snp.length;
   }
 
@@ -240,17 +242,17 @@ void read_all_files() {
     }
 
     // Phenotype file before genotype file.
-    if (ReadFile_pheno(file_pheno, indicator_pheno, pheno, p_column) == false) {
-      error = true;
-    }
+    //if (ReadFile_pheno(file_pheno, indicator_pheno, pheno, p_column) == false) {
+    //  error = true;
+    //}
 
     // Post-process covariates and phenotypes, obtain
     // ni_test, save all useful covariates.
-    process_cvt_phen();
+    //process_cvt_phen();
 
     // Obtain covariate matrix.
     DMatrix W2; // = gsl_matrix_safe_alloc(ni_test, n_cvt);
-    CopyCvt(W2);
+    //CopyCvt(W2);
 
     trim_individuals(indicator_idv, ni_max);
     trim_individuals(indicator_cvt, ni_max);
@@ -304,7 +306,7 @@ void read_all_files() {
       }
 
       file_str = to!string(file_name) ~ ".bed";
-      //if (ReadFile_bed(file_str, setSnps, W3, indicator_idv, indicator_snp,
+      //if (readfile_bed(file_str, setSnps, W3, indicator_idv, indicator_snp,
       //                 snpInfo, maf_level, miss_level, hwe_level, r2_level,
       //                 ns_test_tmp) == false) {
       //  error = true;
@@ -592,7 +594,7 @@ bool ReadFile_anno(const string file_anno, string[string] mapRS2chr,
     if (ch_ptr[2] == "NULL" || ch_ptr[2] == "NA") { // TODO
       chr = "-9";
     } else {
-      chr = ch_ptr[2];
+      chr = to!string(ch_ptr[2]);
       //enforce_str(chr != "", line + " Bad chr format");
     }
 
@@ -832,16 +834,12 @@ bool ReadFile_column(const string file_pheno, int[] indicator_idv,
   double p;
   foreach (line; infile.byLine) {
     auto ch_ptr = line.split("\t");
-    //for (int i = 0; i < (p_column - 1); ++i) {
-    //  ch_ptr = strtok(NULL, " , \t");
-    //}
-    //enforce_msg(ch_ptr,"Problem reading PHENO column");
-    if (ch_ptr == "NA") {
+    if (ch_ptr[p_column -1] == "NA") {  // Note: It may be p_column
       indicator_idv ~= 0;
       pheno ~= -9;
     } else {
       // Pheno is different from pimass2.
-      p = to!double(ch_ptr);
+      p = to!double(ch_ptr[p_column -1]);
       indicator_idv ~= 1;
       pheno ~= p;
     }
@@ -920,7 +918,7 @@ bool readfile_fam(const string file_fam, int[][] indicator_pheno, double[][] phe
 // it is not included in the analysis.
 bool ReadFile_cat(const string file_cat, size_t[string]  mapRS2cat, size_t n_vc) {
   writeln("entered ReadFile_cat");
-  mapRS2cat = [];
+  //mapRS2cat = [];
 
   File infile = File(file_cat);
 
@@ -929,8 +927,8 @@ bool ReadFile_cat(const string file_cat, size_t[string]  mapRS2cat, size_t n_vc)
 
   // Read header.
   HEADER header;
-  string = infile.readln();
-  ReadHeader_io(line, header);
+  string header_line = infile.readln();
+  ReadHeader_io(header_line, header);
 
   // Use the header to count the number of categories.
   n_vc = header.coln;
@@ -956,25 +954,25 @@ bool ReadFile_cat(const string file_cat, size_t[string]  mapRS2cat, size_t n_vc)
   // Read the following lines to record mapRS2cat.
   foreach(line; infile.byLine) {
     i_cat = 0;
-    ch_ptrs = line.split("\t");
-    foreach (ch_ptr; ch_ptrs) {
+    auto ch_ptrs = line.split("\t");
+    foreach (i, ch_ptr; ch_ptrs) {
       enforce(ch_ptr);
       if (header.rs_col != 0 && header.rs_col == i + 1) {
-        rs = ch_ptr;
+        rs = to!string(ch_ptr);
       } else if (header.chr_col != 0 && header.chr_col == i + 1) {
-        chr = ch_ptr;
+        chr = to!string(ch_ptr);
       } else if (header.pos_col != 0 && header.pos_col == i + 1) {
-        pos = ch_ptr;
+        pos = to!string(ch_ptr);
       } else if (header.cm_col != 0 && header.cm_col == i + 1) {
-        cm = ch_ptr;
+        cm = to!string(ch_ptr);
       } else if (header.a1_col != 0 && header.a1_col == i + 1) {
-        a1 = ch_ptr;
+        a1 = to!string(ch_ptr);
       } else if (header.a0_col != 0 && header.a0_col == i + 1) {
-        a0 = ch_ptr;
+        a0 = to!string(ch_ptr);
       } else if (to!int(ch_ptr) == 1 || to!int(ch_ptr) == 0) {
         if (i_cat == 0) {
           if (header.rs_col == 0) {
-            rs = chr + ":" + pos;
+            rs = chr ~ ":" ~ pos;
           }
         }
 
@@ -1007,8 +1005,8 @@ void ReadFile_BSLMM_cat(const string file_cat, const string[] vec_rs,
 
   // Read header.
   HEADER header;
-  safeGetline(infile, line).eof();
-  ReadHeader_io(line, header);
+  string header_line = infile.readln;
+  ReadHeader_io(header_line, header);
 
   // Use the header to determine the number of categories.
   kc = header.catc_col.length;
@@ -1032,19 +1030,19 @@ void ReadFile_BSLMM_cat(const string file_cat, const string[] vec_rs,
     catd = [];
 
     for (size_t i = 0; i < header.coln; i++) {
-      enforce(ch_ptr);
+      //enforce(ch_ptr);
       if (header.rs_col != 0 && header.rs_col == i + 1) {
-        rs = ch_ptr[i];
+        rs = to!string(ch_ptr[i]);
       } else if (header.chr_col != 0 && header.chr_col == i + 1) {
-        chr = ch_ptr[i];
+        chr = to!string(ch_ptr[i]);
       } else if (header.pos_col != 0 && header.pos_col == i + 1) {
-        pos = ch_ptr[i];
+        pos = to!string(ch_ptr[i]);
       } else if (header.cm_col != 0 && header.cm_col == i + 1) {
-        cm = ch_ptr[i];
+        cm = to!string(ch_ptr[i]);
       } else if (header.a1_col != 0 && header.a1_col == i + 1) {
-        a1 = ch_ptr[i];
+        a1 = to!string(ch_ptr[i]);
       } else if (header.a0_col != 0 && header.a0_col == i + 1) {
-        a0 = ch_ptr[i];
+        a0 = to!string(ch_ptr[i]);
       } else if (header.catc_col.length != 0 && header.catc_col.count(i + 1) != 0) {
         catc ~= to!double(ch_ptr[i]);
       } else if (header.catd_col.length != 0 && header.catd_col.count(i + 1) != 0) {
@@ -1055,27 +1053,27 @@ void ReadFile_BSLMM_cat(const string file_cat, const string[] vec_rs,
       //ch_ptr = strtok(NULL, " , \t");
     }
 
-    if ((rs in mapRS2catc) && kc > 0) {
-      mapRS2catc[rs] = catc;
-    }
-    if ((rs in mapRS2catd) && kd > 0) {
-      mapRS2catd[rs] = catd;
-    }
+    //if ((rs in mapRS2catc) && kc > 0) {
+    //  mapRS2catc[rs] = catc;
+    //}
+    //if ((rs in mapRS2catd) && kd > 0) {
+    //  mapRS2catd[rs] = catd;
+    //}
   }
 
   // Load into Ad and Ac.
   if (kc > 0) {
     //Ac = gsl_matrix_alloc(vec_rs.size(), kc);
-    for (size_t i = 0; i < vec_rs.size(); i++) {
-      if (vec_rs[i] in mapRS2catc) {
-        for (size_t j = 0; j < kc; j++) {
-          Ac.set(i, j, mapRS2catc[vec_rs[i]][j]);
-        }
-      } else {
-        for (size_t j = 0; j < kc; j++) {
-          Ac.set(i, j, 0);
-        }
-      }
+    for (size_t i = 0; i < vec_rs.length; i++) {
+      //if (vec_rs[i] in mapRS2catc) {
+      //  for (size_t j = 0; j < kc; j++) {
+      //    Ac.set(i, j, mapRS2catc[vec_rs[i]][j]);
+      //  }
+      //} else {
+      //  for (size_t j = 0; j < kc; j++) {
+      //    Ac.set(i, j, 0);
+      //  }
+      //}
     }
   }
 
@@ -1083,24 +1081,24 @@ void ReadFile_BSLMM_cat(const string file_cat, const string[] vec_rs,
     //Ad = gsl_matrix_int_alloc(vec_rs.size(), kd);
 
     for (size_t i = 0; i < vec_rs.length; i++) {
-      if (vec_rs[i] in mapRS2catd) {
-        for (size_t j = 0; j < kd; j++) {
-          Ad.set(i, j, mapRS2catd[vec_rs[i]][j]);
-        }
-      } else {
-        for (size_t j = 0; j < kd; j++) {
-          Ad.set(i, j, 0);
-        }
-      }
+      //if (vec_rs[i] in mapRS2catd) {
+      //  for (size_t j = 0; j < kd; j++) {
+      //    Ad.set(i, j, mapRS2catd[vec_rs[i]][j]);
+      //  }
+      //} else {
+      //  for (size_t j = 0; j < kd; j++) {
+      //    Ad.set(i, j, 0);
+      //  }
+      //}
     }
 
     //dlevel = gsl_vector_int_alloc(kd);
     int[int] rcd;
     int val;
     for (size_t j = 0; j < kd; j++) {
-      rcd = [];
+      //rcd = [];
       for (size_t i = 0; i < Ad.shape[0]; i++) {
-        val = Ad.accessor(i, j);
+        val = to!int(Ad.accessor(i, j));
         rcd[val] = 1;
       }
       dlevel.elements[j] = rcd.length;
@@ -1112,17 +1110,16 @@ void ReadFile_BSLMM_cat(const string file_cat, const string[] vec_rs,
 
 bool ReadFile_mcat(const string file_mcat, size_t[string] mapRS2cat, size_t n_vc) {
   writeln("entered ReadFile_mcat");
-  mapRS2cat = [];
+  //mapRS2cat = [];
 
   File infile = File(file_mcat);
 
-  string file_name;
   size_t[string] mapRS2cat_tmp;
   size_t n_vc_tmp, t = 0;
 
   foreach (file_name; infile.byLine) {
-    mapRS2cat_tmp = [];
-    ReadFile_cat(file_name, mapRS2cat_tmp, n_vc_tmp);
+    //mapRS2cat_tmp = [];
+    //ReadFile_cat(file_name, mapRS2cat_tmp, n_vc_tmp);
     //mapRS2cat.insert(mapRS2cat_tmp.begin(), mapRS2cat_tmp.end());
     if (t == 0) {
       n_vc = n_vc_tmp;
@@ -1130,6 +1127,33 @@ bool ReadFile_mcat(const string file_mcat, size_t[string] mapRS2cat, size_t n_vc
       n_vc = max(n_vc, n_vc_tmp);
     }
     t++;
+  }
+
+  return true;
+}
+
+// Read log file.
+bool ReadFile_log(const string file_log, double pheno_mean) {
+  writeln("entered ReadFile_log");
+  File infile = File(file_log);
+
+  size_t flag = 0;
+
+  foreach(line; infile.byLine){
+    auto ch_ptr = line.split("\t");
+
+    if (ch_ptr[1] != "NULL" && ch_ptr[1] == "estimated"){
+      if (ch_ptr[2] != "NULL" && ch_ptr[2] == "mean"){
+        if (ch_ptr[3] != "NULL" && ch_ptr[3] == "=") {
+          pheno_mean = to!double(ch_ptr[4]);
+          flag = 1;
+        }
+      }
+    }
+
+    if (flag == 1) {
+      break;
+    }
   }
 
   return true;
