@@ -63,12 +63,25 @@ void generate_kinship(const string geno_fn, const string pheno_fn, const string 
 
 void generate_kinship_plink(const string file_bed, const string test_name = ""){
   writeln("in generate_kinship_plink");
-  DMatrix matrix_kin;
-  ulong[] p_column;
-  int[][] indicator_pheno;
-  double[][] pheno;
-  ulong[ulong] mapId2num;
-  readfile_fam(file_bed, indicator_pheno, pheno, mapId2num, p_column);
+  size_t[] p_column;
+  // pheno
+  auto pheno = readfile_fam(file_bed, p_column);
+
+  auto indicators = process_cvt_phen(pheno.indicator_pheno);
+
+  size_t ni_test = indicators.ni_test;
+  DMatrix W = CopyCvt(indicators.cvt, indicators.indicator_cvt, indicators.indicator_idv, indicators.n_cvt, ni_test);
+  string[] setSnps;
+  SNPINFO[] snpInfo;
+  double maf_level, miss_level, hwe_level, r2_level;
+  size_t ns_test;
+  //geno
+  int[] indicator_snp = readfile_bed(file_bed ~ ".bed", setSnps, W, indicators.indicator_idv, snpInfo,
+                  maf_level, miss_level, hwe_level, r2_level, ns_test);
+
+  size_t ni_total = indicators.indicator_idv.length;
+
+  DMatrix matrix_kin = plink_kin(file_bed, indicator_snp, 1, ni_total);
 }
 
 void Read_files(const string geno_fn, const string pheno_fn,  const string test_name = "", const string co_variate_fn = ""){
@@ -86,7 +99,7 @@ void Read_files(const string geno_fn, const string pheno_fn,  const string test_
 
   size_t ni_test = indicators.ni_test;
 
-  DMatrix W = CopyCvt(indicators.cvt, indicators.indicator_cvt, indicators.indicator_idv, indicators.n_cvt);
+  DMatrix W = CopyCvt(indicators.cvt, indicators.indicator_cvt, indicators.indicator_idv, indicators.n_cvt, ni_test);
 
   size_t ni_total = indicators.indicator_idv.length;
 
@@ -523,8 +536,7 @@ DMatrix ReadFile_geno(const string geno_fn, const ulong ni_total, const DMatrix 
   return matrix_kin;
 }
 
-DMatrix CopyCvt(const DMatrix cvt, const int[] indicator_cvt, const int[] indicator_idv, const size_t n_cvt) {
-  size_t ni_test = 1410;
+DMatrix CopyCvt(const DMatrix cvt, const int[] indicator_cvt, const int[] indicator_idv, const size_t n_cvt, const size_t ni_test) {
   DMatrix W = zeros_dmatrix(ni_test, n_cvt); // ni_test missing
   size_t ci_test = 0;
 
@@ -665,22 +677,16 @@ Indicators_result process_cvt_phen(const DMatrix indicator_pheno, const string t
 }
 
 
-bool PlinkKin(const string file_bed, int[] indicator_snp,
-              const int k_mode, const int display_pace,
-              DMatrix matrix_kin) {
+DMatrix plink_kin(const string file_bed, int[] indicator_snp, const int k_mode, size_t ni_total) {
   writeln("entered PlinkKin");
 
   File infile = File(file_bed ~ ".bed");
 
-  //char ch[1];
-  int[] b;
-
   size_t n_miss, ci_total;
   double d, geno_mean, geno_var;
 
-  size_t ni_total = matrix_kin.shape[0];
-  //gsl_vector *geno = gsl_vector_safe_alloc(ni_total);
-  DMatrix geno;
+  DMatrix matrix_kin = zeros_dmatrix(ni_total, ni_total);
+  DMatrix geno = zeros_dmatrix(1, ni_total);
 
   size_t ns_test = 0;
   size_t n_bit;
@@ -700,8 +706,7 @@ bool PlinkKin(const string file_bed, int[] indicator_snp,
 
   // print the first three magic numbers
   for (int i = 0; i < 3; ++i) {
-    //infile.read(ch, 1);
-    //b = ch[0];
+    auto b = infile.rawRead(new char[8]);
   }
 
   for (size_t t = 0; t < indicator_snp.length; ++t) {
@@ -718,8 +723,7 @@ bool PlinkKin(const string file_bed, int[] indicator_snp,
     ci_total = 0;
     geno_var = 0.0;
     for (int i = 0; i < n_bit; ++i) {
-      //infile.read(ch, 1);
-      //b = ch[0];
+      auto b = infile.rawRead(new char[8]);
 
       // Minor allele homozygous: 2.0; major: 0.0.
       for (size_t j = 0; j < 4; ++j) {
@@ -786,10 +790,10 @@ bool PlinkKin(const string file_bed, int[] indicator_snp,
   matrix_kin = divide_dmatrix_num(matrix_kin, ns_test);
   matrix_kin = matrix_kin.T;
 
-  return true;
+  return matrix_kin;
 }
 
-bool PlinkKin(const string file_bed, const int display_pace,
+bool plink_kin(const string file_bed,
               const int[] indicator_idv,
               const int[] indicator_snp,
               const double[string] mapRS2weight,
@@ -809,8 +813,6 @@ bool PlinkKin(const string file_bed, const int display_pace,
   size_t ni_test = matrix_kin.shape[0];
   size_t ni_total = indicator_idv.length;
   DMatrix geno; // = gsl_vector_safe_alloc(ni_test);
-
-  gsl_permutation *pmt = gsl_permutation_alloc(W.shape[1]);
 
   DMatrix WtW = matrix_mult(W.T, W);
 
@@ -983,8 +985,6 @@ bool PlinkKin(const string file_bed, const int display_pace,
       }
     }
   }
-
-  gsl_permutation_free(pmt);
 
   return true;
 }

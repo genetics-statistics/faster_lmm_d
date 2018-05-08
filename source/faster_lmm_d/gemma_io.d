@@ -209,9 +209,9 @@ void read_all_files() {
       //}
     } else {
       file_str = file_bfile ~ ".fam";
-      if (readfile_fam(file_str, indicator_pheno, pheno, mapID2num, p_column) == false) {
-        error = true;
-      }
+      //if (readfile_fam(file_str, p_column) == false) {
+      //  error = true;
+      //}
     }
 
     // Post-process covariates and phenotypes, obtain
@@ -646,38 +646,38 @@ bool readfile_bim(const string file_bim, SNPINFO[] snpInfo) {
 }
 
 // Read bed file, the first time.
-void readfile_bed(const string file_bed, const string[] setSnps,
-                  const DMatrix W, int[] indicator_idv,
-                  int[] indicator_snp, SNPINFO[] snpInfo,
+int[] readfile_bed(const string file_bed, const string[] setSnps,
+                  const DMatrix W, int[] indicator_idv, SNPINFO[] snpInfo,
                   const double maf_level, const double miss_level,
                   const double hwe_level, const double r2_level,
                   size_t ns_test) {
   writeln("entered readfile_bed");
-  indicator_snp = [];
+  int[] indicator_snp = [];
+  writeln("booyakasha");
   size_t ns_total = snpInfo.length;
+  ns_total = 200;
 
   File infile = File(file_bed);
 
-  DMatrix genotype; // = gsl_vector_safe_alloc(W->size1);
-  DMatrix genotype_miss; // = gsl_vector_safe_alloc(W->size1);
-
-  gsl_permutation *pmt = gsl_permutation_alloc(W.shape[1]);
+  DMatrix genotype = zeros_dmatrix(1, W.shape[0]);
+  DMatrix genotype_miss;
+  genotype_miss.shape = [1, W.shape[0]];
 
   DMatrix WtW = matrix_mult(W.T, W);
   int sig;
   DMatrix WtWi = WtW.inverse;
-
   double v_x, v_w, geno;
   size_t c_idv = 0;
 
-  char ch;
-  int[] b;
+  //int[] b;
 
   size_t ni_total = indicator_idv.length;
+  writeln("ni_total", ni_total);
   size_t ni_test = 0;
   for (size_t i = 0; i < ni_total; ++i) {
     ni_test += indicator_idv[i];
   }
+  writeln("ni_test", ni_test);
   ns_test = 0;
 
   // Calculate n_bit and c, the number of bit for each snp.
@@ -689,10 +689,11 @@ void readfile_bed(const string file_bed, const string[] setSnps,
   }
 
   // Ignore the first three magic numbers.
+  int num;
   for (int i = 0; i < 3; ++i) {
     // FIXME
-    //infile.read(ch, 1);
-    //b = ch;
+    auto ch = infile.rawRead(new char[8]);
+    writeln(to!int(num));
   }
 
   double maf;
@@ -725,8 +726,7 @@ void readfile_bed(const string file_bed, const string[] setSnps,
     genotype_miss = zeros_dmatrix(genotype_miss.shape[0], genotype_miss.shape[1]);
     for (size_t i = 0; i < n_bit; ++i) {
       // fixme
-      //infile.read(ch, 1);
-      //b = ch[0];
+      auto b = infile.rawRead(new char[8]);
 
       // Minor allele homozygous: 2.0; major: 0.0;
       for (size_t j = 0; j < 4; ++j) {
@@ -764,12 +764,12 @@ void readfile_bed(const string file_bed, const string[] setSnps,
     }
     maf /= 2.0 * to!double(ni_test - n_miss);
 
-    snpInfo[t].n_miss = n_miss;
-    snpInfo[t].missingness = to!double(n_miss) / to!double(ni_test);
-    snpInfo[t].maf = maf;
-    snpInfo[t].n_idv = ni_test - n_miss;
-    snpInfo[t].n_nb = 0;
-    snpInfo[t].file_position = t;
+    //snpInfo[t].n_miss = n_miss;
+    //snpInfo[t].missingness = to!double(n_miss) / to!double(ni_test);
+    //snpInfo[t].maf = maf;
+    //snpInfo[t].n_idv = ni_test - n_miss;
+    //snpInfo[t].n_nb = 0;
+    //snpInfo[t].file_position = t;
 
     if (to!double(n_miss) / to!double(ni_test) > miss_level) {
       indicator_snp ~= 0;
@@ -816,9 +816,7 @@ void readfile_bed(const string file_bed, const string[] setSnps,
     ns_test++;
   }
 
-  gsl_permutation_free(pmt);
-
-  //return true;
+  return indicator_snp;
 }
 
 // Read 1 column of phenotype.
@@ -849,12 +847,8 @@ bool ReadFile_column(const string file_pheno, int[] indicator_idv,
 }
 
 // Read .fam file (ignored with -p phenotypes switch)
-bool readfile_fam(const string file_fam, int[][] indicator_pheno, double[][] pheno, 
-                  size_t[size_t] mapID2num, const size_t[] p_column) {
+Pheno_result readfile_fam(const string file_fam, size_t[] p_column) {
   writeln("in readfile_fam");
-  //indicator_pheno.;
-  //pheno.clear();
-  //mapID2num.clear();
 
   File infile = File(file_fam ~ ".fam");
 
@@ -863,9 +857,14 @@ bool readfile_fam(const string file_fam, int[][] indicator_pheno, double[][] phe
   double p;
 
   double[] pheno_row;
-  int[] ind_pheno_row;
+  double[] ind_pheno_row;
+  double[] pheno_elements;
+  double[] indicator_pheno;
+  size_t[size_t] mapID2num;
 
-  size_t p_max; // = max_element(p_column.begin(), p_column.end());
+  p_column = [1]; // modify it later for multiple elements in p_column
+  size_t p_max = p_column.reduce!(max);
+
   size_t[size_t] mapP2c; // size_t, size_t
   for (size_t i = 0; i < p_column.length; i++) {
     mapP2c[p_column[i]] = i;
@@ -873,16 +872,17 @@ bool readfile_fam(const string file_fam, int[][] indicator_pheno, double[][] phe
     ind_pheno_row ~= 0;
   }
 
+  int rows = 0;
+
   foreach (line; infile.byLine) {
-    writeln(line);
-    auto ch_ptr = line.split("\t")[3..$];
+    auto ch_ptr = line.split(" ");
     id = to!size_t(ch_ptr[0]);
 
     // need to correct; make jumps in the order of 3, 5, 1
     size_t i = 0;
     while (i < p_max) {
-      if (true) { //mapP2c.count(i + 1) != 0
-        writeln(ch_ptr,"Problem reading FAM file (phenotypes out of range)");
+      if((i+1) in mapP2c) {
+        enforce(ch_ptr,"Problem reading FAM file (phenotypes out of range)");
 
         if (ch_ptr[5] == "NA") {
           ind_pheno_row[mapP2c[i + 1]] = 0;
@@ -903,13 +903,17 @@ bool readfile_fam(const string file_fam, int[][] indicator_pheno, double[][] phe
     }
 
     indicator_pheno ~= ind_pheno_row;
-    pheno ~= pheno_row;
+    rows++;
+    pheno_elements ~= pheno_row;
 
     mapID2num[id] = c;
     c++;
   }
 
-  return true;
+  writeln(pheno_elements);
+
+  return Pheno_result(DMatrix([rows, pheno_elements.length/rows ], pheno_elements),
+                      DMatrix([rows, indicator_pheno.length/rows ],indicator_pheno));
 }
 
 
