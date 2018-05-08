@@ -112,8 +112,8 @@ void Read_files(const string geno_fn, const string pheno_fn,  const string test_
   //bimbam_kin(geno_fn, pheno_fn, W, indicator_snp);
 }
 
-Pheno_result ReadFile_pheno(const string file_pheno, size_t[] p_column){
-
+Pheno_result ReadFile_pheno(const string file_pheno, size_t[] p_column = [1]){
+  writeln("entered ReadFile_pheno");
   double[] pheno_elements;
   double[] indicator_pheno;
 
@@ -121,8 +121,6 @@ Pheno_result ReadFile_pheno(const string file_pheno, size_t[] p_column){
 
   double[] pheno_row;
   double[] ind_pheno_row;
-
-  p_column = [1]; // modify it later for multiple elements in p_column
 
   size_t p_max = p_column.reduce!(max);
 
@@ -137,7 +135,7 @@ Pheno_result ReadFile_pheno(const string file_pheno, size_t[] p_column){
   int rows = 0;
 
   foreach (line ; input.byLine) {
-    auto ch_ptr = to!string(line).split("\t");
+    auto ch_ptr = to!string(line).split();
     size_t i = 0;
     while (i < p_max) {
       if((i+1) in mapP2c){

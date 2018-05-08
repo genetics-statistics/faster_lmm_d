@@ -181,7 +181,7 @@ void main(string[] args)
       }
     }
     else if(cmd == "mvlmm"){
-      mvlmm_run();
+      mvlmm_run(option_kinship, option_pheno, option_covar, option_geno);
     }
     else{
       batch_run(option_kinship, option_pheno, option_covar, option_geno, option_indicator_idv,

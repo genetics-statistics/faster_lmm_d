@@ -23,9 +23,12 @@ import std.experimental.logger;
 import std.string;
 
 import faster_lmm_d.dmatrix;
+import faster_lmm_d.gemma;
+import faster_lmm_d.gemma_kinship;
 import faster_lmm_d.gemma_lmm;
 import faster_lmm_d.gemma_param;
 import faster_lmm_d.helpers;
+import faster_lmm_d.kinship;
 import faster_lmm_d.optmatrix;
 
 import gsl.permutation;
@@ -42,8 +45,31 @@ struct MPHSUMSTAT {
   double[] v_Vbeta; // Estimator for Vbeta, right half.
 };
 
-void mvlmm_run(){
+void mvlmm_run(string option_kinship, string option_pheno, string option_covar, string option_geno){
   writeln("In MVLMM!");
+
+  // Read Files.
+
+  writeln("reading pheno " , option_pheno);
+  auto Y = ReadFile_pheno(option_pheno, [1,2,3,15]);
+  writeln(Y.pheno);
+
+  writeln("reading covar " , option_covar);
+  DMatrix covar_matrix = (option_covar != "" ? read_covariate_matrix_from_file(option_covar) : ones_dmatrix(Y.pheno.shape[0], Y.pheno.shape[1]));
+  //DMatrix covar_matrix = ones_dmatrix(Y.shape[0], Y.shape[1]);
+  writeln(covar_matrix);
+
+  writeln("reading kinship " , option_kinship);
+  DMatrix G = read_covariate_matrix_from_file(option_kinship);
+  writeln(G);
+
+  auto k = kvakve(G);
+  DMatrix eval = k.kva;
+  DMatrix U = k.kve;
+
+  writeln(eval);
+  writeln("====================");
+  writeln(U);
 }
 
 void analyze_bimbam_mvlmm(const DMatrix U, const DMatrix eval,
@@ -1961,7 +1987,7 @@ double PCRT(const size_t mode, const size_t d_size, const double p_value,
 
 void analyze_plink(const DMatrix U, const DMatrix eval,
                    const DMatrix UtW, const DMatrix UtY, string file_bed) {
-  writeln("entering");
+  writeln("entering analyze_plink");
 
   MPHSUMSTAT[] sumStat;
 

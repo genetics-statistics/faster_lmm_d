@@ -60,6 +60,22 @@ DMatrix read_matrix_from_file(string filename){
   return DMatrix([rows, elements.length/rows], elements);
 }
 
+DMatrix read_covariate_matrix_from_file(string filename){
+  File infile = File(filename);
+
+  size_t cols;
+  size_t rows = 0;
+  double[] elements;
+  foreach(line; infile.byLine){
+    rows++;
+    auto items = line.split();
+    foreach(item; items){
+      elements ~= ((item == "NA" || item == "") ? 0 : to!double(item)) ;
+    }
+  }
+  return DMatrix([rows, elements.length/rows], elements);
+}
+
 DMatrix read_matrix_from_file2(string filename){
   string input = to!string(std.file.read(filename));
 
