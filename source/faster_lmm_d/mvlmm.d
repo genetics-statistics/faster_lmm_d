@@ -45,7 +45,7 @@ struct MPHSUMSTAT {
   double[] v_Vbeta; // Estimator for Vbeta, right half.
 };
 
-void mvlmm_run(string option_kinship, string option_pheno, string option_covar, string option_geno){
+void mvlmm_run(string option_kinship, string option_pheno, string option_covar, string option_geno, string option_bfile){
   writeln("In MVLMM!");
 
   // Read Files.
@@ -70,6 +70,26 @@ void mvlmm_run(string option_kinship, string option_pheno, string option_covar, 
   writeln(eval);
   writeln("====================");
   writeln(U);
+
+  DMatrix UtW = matrix_mult(U.T, covar_matrix);
+  writeln("UtW.shape =>", UtW.shape);
+  DMatrix Uty = matrix_mult(U.T, Y.pheno);
+  writeln("UtY.shape =>", Uty.shape);
+  Param cPar;
+  double trace_G = sum(eval.elements)/eval.elements.length;
+  writeln("trace_G =>", trace_G);
+  cPar.a_mode = 1;
+
+  auto indicators = process_cvt_phen(Y.indicator_pheno);
+
+  size_t ni_test = indicators.ni_test;
+  writeln(ni_test);
+
+  DMatrix W = CopyCvt(indicators.cvt, indicators.indicator_cvt, indicators.indicator_idv, indicators.n_cvt, ni_test);
+
+  size_t ni_total = indicators.indicator_idv.length;
+
+  analyze_plink(U, eval, UtW, Uty, option_bfile);
 }
 
 void analyze_bimbam_mvlmm(const DMatrix U, const DMatrix eval,
@@ -500,6 +520,8 @@ void MphInitial(const size_t em_iter, const double em_prec,
                 const double l_min, const double l_max, const size_t n_region,
                 DMatrix V_g, DMatrix V_e, DMatrix B) {
 
+  writeln("entered MphInitial");
+
   V_g = zeros_dmatrix(V_g.shape[0], V_g.shape[1]);
   V_e = zeros_dmatrix(V_e.shape[0], V_e.shape[1]);
   B   = zeros_dmatrix(B.shape[0], B.shape[1]);
@@ -535,30 +557,30 @@ void MphInitial(const size_t em_iter, const double em_prec,
 
     // First obtain good initial values.
     // Large matrices for EM.
-    DMatrix U_hat; // = gsl_matrix_alloc(2, n_size);
-    DMatrix E_hat; // = gsl_matrix_alloc(2, n_size);
-    DMatrix OmegaU; // = gsl_matrix_alloc(2, n_size);
-    DMatrix OmegaE; // = gsl_matrix_alloc(2, n_size);
-    DMatrix UltVehiY; // = gsl_matrix_alloc(2, n_size);
-    DMatrix UltVehiBX; // = gsl_matrix_alloc(2, n_size);
-    DMatrix UltVehiU; // = gsl_matrix_alloc(2, n_size);
-    DMatrix UltVehiE; // = gsl_matrix_alloc(2, n_size);
+    DMatrix U_hat = zeros_dmatrix(2, n_size);
+    DMatrix E_hat = zeros_dmatrix(2, n_size);
+    DMatrix OmegaU = zeros_dmatrix(2, n_size);
+    DMatrix OmegaE = zeros_dmatrix(2, n_size);
+    DMatrix UltVehiY = zeros_dmatrix(2, n_size);
+    DMatrix UltVehiBX = zeros_dmatrix(2, n_size);
+    DMatrix UltVehiU = zeros_dmatrix(2, n_size);
+    DMatrix UltVehiE = zeros_dmatrix(2, n_size);
 
     // Large matrices for NR. Each dxd block is H_k^{-1}.
-    DMatrix Hi_all; // = gsl_matrix_alloc(2, 2 * n_size);
+    DMatrix Hi_all = zeros_dmatrix(2, 2 * n_size);
 
     // Each column is H_k^{-1}y_k.
-    DMatrix Hiy_all; // = gsl_matrix_alloc(2, n_size);
+    DMatrix Hiy_all = zeros_dmatrix(2, n_size);
 
     // Each dcxdc block is x_k\otimes H_k^{-1}.
-    DMatrix xHi_all; // = gsl_matrix_alloc(2 * c_size, 2 * n_size);
-    DMatrix Hessian; // = gsl_matrix_alloc(6, 6);
+    DMatrix xHi_all = zeros_dmatrix(2 * c_size, 2 * n_size);
+    DMatrix Hessian = zeros_dmatrix(6, 6);
 
     // 2 by n matrix of Y.
-    DMatrix Y_sub; // = gsl_matrix_alloc(2, n_size);
-    DMatrix Vg_sub; // = gsl_matrix_alloc(2, 2);
-    DMatrix Ve_sub; // = gsl_matrix_alloc(2, 2);
-    DMatrix B_sub; // = gsl_matrix_alloc(2, c_size);
+    DMatrix Y_sub = zeros_dmatrix(2, n_size);
+    DMatrix Vg_sub = zeros_dmatrix(2, 2);
+    DMatrix Ve_sub = zeros_dmatrix(2, 2);
+    DMatrix B_sub = zeros_dmatrix(2, c_size);
 
     for (size_t i = 0; i < d_size; i++) {
       //gsl_vector_view
@@ -598,12 +620,12 @@ void MphInitial(const size_t em_iter, const double em_prec,
   }
 
   // Calculate B hat using GSL estimate.
-  DMatrix UltVehiY; // = gsl_matrix_alloc(d_size, n_size);
+  DMatrix UltVehiY = zeros_dmatrix(d_size, n_size);
 
   DMatrix D_l; // = gsl_vector_alloc(d_size);
-  DMatrix UltVeh; // = gsl_matrix_alloc(d_size, d_size);
-  DMatrix UltVehi; // = gsl_matrix_alloc(d_size, d_size);
-  DMatrix Qi; // = gsl_matrix_alloc(d_size * c_size, d_size * c_size);
+  DMatrix UltVeh = zeros_dmatrix(d_size, d_size);
+  DMatrix UltVehi = zeros_dmatrix(d_size, d_size);
+  DMatrix Qi = zeros_dmatrix(d_size * c_size, d_size * c_size);
   DMatrix XHiy; // = gsl_vector_alloc(d_size * c_size);
   DMatrix beta; // = gsl_vector_alloc(d_size * c_size);
 
@@ -678,6 +700,8 @@ double MphEM(const char func_name, const size_t max_iter, const double max_prec,
              DMatrix OmegaE, DMatrix UltVehiY, DMatrix UltVehiBX,
              DMatrix UltVehiU, DMatrix UltVehiE, DMatrix V_g,
              DMatrix V_e, DMatrix B) {
+  writeln("entered MphEM");
+  
   if (func_name != 'R' && func_name != 'L' && func_name != 'r' && func_name != 'l') {
     writeln("func_name only takes 'R' or 'L': 'R' for log-restricted likelihood, 'L' for log-likelihood.");
     return 0.0;
@@ -1991,12 +2015,12 @@ void analyze_plink(const DMatrix U, const DMatrix eval,
 
   MPHSUMSTAT[] sumStat;
 
-  auto pipe = pipeShell("gunzip -c " ~ file_bed);
-  File input = pipe.stdout;
+  writeln("bed file =>", file_bed);
+  File infile = File(file_bed ~ ".bed");
 
-  char[] ch;
+  //char[] ch;
   //bitset<8> b;
-  int[] b = new int[8];
+  //int[] b = new int[8];
 
   double logl_H0 = 0.0, logl_H1 = 0.0, p_wald = 0, p_lrt = 0, p_score = 0;
   double crt_a, crt_b, crt_c;
@@ -2013,37 +2037,37 @@ void analyze_plink(const DMatrix U, const DMatrix eval,
   // Create a large matrix.
   size_t msize = LMM_BATCH_SIZE;
   DMatrix Xlarge = zeros_dmatrix(U.shape[0], msize);
-  DMatrix UtXlarge; // = gsl_matrix_alloc(U->size1, msize);
+  DMatrix UtXlarge = zeros_dmatrix(U.shape[0], msize);
 
   // Large matrices for EM.
-  DMatrix U_hat; // = gsl_matrix_alloc(d_size, n_size);
-  DMatrix E_hat; // = gsl_matrix_alloc(d_size, n_size);
-  DMatrix OmegaU; // = gsl_matrix_alloc(d_size, n_size);
-  DMatrix OmegaE; // = gsl_matrix_alloc(d_size, n_size);
-  DMatrix UltVehiY; // = gsl_matrix_alloc(d_size, n_size);
-  DMatrix UltVehiBX; // = gsl_matrix_alloc(d_size, n_size);
-  DMatrix UltVehiU; // = gsl_matrix_alloc(d_size, n_size);
-  DMatrix UltVehiE; // = gsl_matrix_alloc(d_size, n_size);
+  DMatrix U_hat = zeros_dmatrix(d_size, n_size);
+  DMatrix E_hat = zeros_dmatrix(d_size, n_size);
+  DMatrix OmegaU = zeros_dmatrix(d_size, n_size);
+  DMatrix OmegaE = zeros_dmatrix(d_size, n_size);
+  DMatrix UltVehiY = zeros_dmatrix(d_size, n_size);
+  DMatrix UltVehiBX = zeros_dmatrix(d_size, n_size);
+  DMatrix UltVehiU = zeros_dmatrix(d_size, n_size);
+  DMatrix UltVehiE = zeros_dmatrix(d_size, n_size);
 
   // Large matrices for NR.
   // Each dxd block is H_k^{-1}.
-  DMatrix Hi_all; // = gsl_matrix_alloc(d_size, d_size * n_size);
+  DMatrix Hi_all = zeros_dmatrix(d_size, d_size * n_size);
 
   // Each column is H_k^{-1}y_k.
-  DMatrix Hiy_all; // = gsl_matrix_alloc(d_size, n_size);
+  DMatrix Hiy_all = zeros_dmatrix(d_size, n_size);
 
   // Each dcxdc block is x_k\otimes H_k^{-1}.
-  DMatrix xHi_all; // = gsl_matrix_alloc(dc_size, d_size * n_size);
+  DMatrix xHi_all = zeros_dmatrix(dc_size, d_size * n_size);
 
-  DMatrix Hessian; // = gsl_matrix_alloc(v_size * 2, v_size * 2);
+  DMatrix Hessian = zeros_dmatrix(v_size * 2, v_size * 2);
 
   DMatrix x; // = gsl_vector_alloc(n_size);
 
-  DMatrix Y; // = gsl_matrix_alloc(d_size, n_size);
-  DMatrix X; // = gsl_matrix_alloc(c_size + 1, n_size);
-  DMatrix V_g; // = gsl_matrix_alloc(d_size, d_size);
-  DMatrix V_e; // = gsl_matrix_alloc(d_size, d_size);
-  DMatrix B; // = gsl_matrix_alloc(d_size, c_size + 1);
+  DMatrix Y = zeros_dmatrix(d_size, n_size);
+  DMatrix X = zeros_dmatrix(c_size + 1, n_size);
+  DMatrix V_g = zeros_dmatrix(d_size, d_size);
+  DMatrix V_e = zeros_dmatrix(d_size, d_size);
+  DMatrix B = zeros_dmatrix(d_size, c_size + 1);
   DMatrix beta; // = gsl_vector_alloc(d_size);
   DMatrix Vbeta; // = gsl_matrix_alloc(d_size, d_size);
 
@@ -2251,8 +2275,8 @@ void analyze_plink(const DMatrix U, const DMatrix eval,
 
   // Print the first three magic numbers.
   for (int i = 0; i < 3; ++i) {
-    //infile.read(ch, 1);
-    b ~= to!int(ch[0]);  // check
+    auto ch = infile.rawRead(new char[8]);
+    writeln(to!int(ch));
   }
 
   size_t csnp = 0, t_last = 0;
@@ -2268,7 +2292,7 @@ void analyze_plink(const DMatrix U, const DMatrix eval,
     }
 
     // n_bit, and 3 is the number of magic numbers.
-    //infile.seekg(t * n_bit + 3);
+    infile.seek(t * n_bit + 3);
 
     // read genotypes
     x_mean = 0.0;
@@ -2276,8 +2300,8 @@ void analyze_plink(const DMatrix U, const DMatrix eval,
     ci_total = 0;
     ci_test = 0;
     for (int i = 0; i < n_bit; ++i) {
-      //infile.read(ch, 1);
-      b ~= to!int(ch[0]);  // check
+      auto b = infile.rawRead(new char[8]);
+      //b ~= to!int(ch[0]);  // check
 
       // Minor allele homozygous: 2.0; major: 0.0;
       for (size_t j = 0; j < 4; ++j) {

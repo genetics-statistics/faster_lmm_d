@@ -86,7 +86,7 @@ void generate_kinship_plink(const string file_bed, const string test_name = ""){
 
 void Read_files(const string geno_fn, const string pheno_fn,  const string test_name = "", const string co_variate_fn = ""){
   double[] indicator_pheno;
-  size_t[] p_column;
+  size_t[] p_column = [1];
 
   auto pheno = ReadFile_pheno(pheno_fn, p_column);
 
@@ -121,6 +121,8 @@ Pheno_result ReadFile_pheno(const string file_pheno, size_t[] p_column = [1]){
 
   double[] pheno_row;
   double[] ind_pheno_row;
+
+  writeln(p_column);
 
   size_t p_max = p_column.reduce!(max);
 
@@ -564,7 +566,7 @@ Indicators_result process_cvt_phen(const DMatrix indicator_pheno, const string t
   double[] cvt;
   int a_mode;
 
-  foreach(i ; 0..indicator_pheno.elements.length) {
+  foreach(i ; 0..indicator_pheno.rows) {
     k = 1;
     foreach(j; 0..indicator_pheno.cols) {
       if (indicator_pheno.accessor(i,j) == 0) {
@@ -573,6 +575,8 @@ Indicators_result process_cvt_phen(const DMatrix indicator_pheno, const string t
     }
     indicator_idv ~= k;
   }
+
+  writeln("at line 577");
 
   ni_test = 0;
   foreach(i; 0..indicator_idv.length){

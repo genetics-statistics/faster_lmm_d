@@ -693,7 +693,7 @@ int[] readfile_bed(const string file_bed, const string[] setSnps,
   for (int i = 0; i < 3; ++i) {
     // FIXME
     auto ch = infile.rawRead(new char[8]);
-    writeln(to!int(num));
+    writeln(to!int(ch));
   }
 
   double maf;
