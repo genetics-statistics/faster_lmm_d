@@ -553,6 +553,66 @@ DMatrix CopyCvt(const DMatrix cvt, const int[] indicator_cvt, const int[] indica
   return W;
 }
 
+void CheckCvt() {
+  int[] indicator_cvt, indicator_idv;
+  double[][] cvt;
+  size_t n_cvt, ni_test;
+
+  if (indicator_cvt.length == 0) {
+    return;
+  }
+
+  size_t ci_test = 0;
+
+  DMatrix W = zeros_dmatrix(ni_test, n_cvt);
+
+  for (size_t i = 0; i < indicator_idv.length; ++i) {
+    if (indicator_idv[i] == 0 || indicator_cvt[i] == 0) {
+      continue;
+    }
+    for (size_t j = 0; j < n_cvt; ++j) {
+      W.set(ci_test, j, (cvt)[i][j]);
+    }
+    ci_test++;
+  }
+
+  size_t flag_ipt = 0;
+  double v_min, v_max;
+  size_t[] set_remove;
+
+  // Check if any columns is an intercept.
+  for (size_t i = 0; i < W.shape[1]; i++) {
+    //gsl_vector_view
+    DMatrix w_col = get_col(W, i);
+    //gsl_vector_minmax(&w_col.vector, &v_min, &v_max);
+    if (v_min == v_max) {
+      flag_ipt = 1;
+      //set_remove.insert(i);
+    }
+  }
+
+  // Add an intercept term if needed.
+  if (n_cvt == set_remove.length) {
+    indicator_cvt = [];
+    n_cvt = 1;
+  } else if (flag_ipt == 0) {
+    writeln("no intercept term is found in the cvt file. a column of 1s is added.");
+
+    for (size_t i = 0; i < indicator_idv.length; ++i) {
+      if (indicator_idv[i] == 0 || indicator_cvt[i] == 0) {
+        continue;
+      }
+      cvt[i] ~= 1.0;
+    }
+
+    n_cvt++;
+  } else {
+  }
+
+  return;
+}
+
+
 // Post-process phenotypes and covariates.
 Indicators_result process_cvt_phen(const DMatrix indicator_pheno, const string test_name = ""){
 
