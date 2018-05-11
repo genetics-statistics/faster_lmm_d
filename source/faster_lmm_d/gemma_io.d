@@ -36,6 +36,8 @@ import gsl.permutation;
 import gsl.rng;
 import gsl.randist;
 
+alias Tuple!(int[], "indicator_snp", SNPINFO[], "snpInfo") Geno_result;
+
 // Read files: obtain ns_total, ng_total, ns_test, ni_test.
 void read_all_files() {
   string file_mcat, file_cat, file_wcat, file_wsnp, file_mk, file_epm, 
@@ -564,7 +566,7 @@ bool readfile_cvt(const string file_cvt, int[] indicator_cvt,
 
 // Read bimbam mean genotype file, the first time, to obtain #SNPs for
 // analysis (ns_test) and total #SNP (ns_total).
-int[] ReadFile_geno1(const string geno_fn, const ulong ni_total, const DMatrix W, const int[] indicator_idv){
+Geno_result ReadFile_geno1(const string geno_fn, const ulong ni_total, const DMatrix W, const int[] indicator_idv){
 
   writeln("ReadFile_geno", geno_fn);
   int[] indicator_snp;
@@ -732,7 +734,7 @@ int[] ReadFile_geno1(const string geno_fn, const ulong ni_total, const DMatrix W
     indicator_snp ~= 1;
     ns_test++;
   }
-  return indicator_snp;
+  return Geno_result(indicator_snp, snpInfo);
 }
 
 

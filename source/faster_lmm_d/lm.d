@@ -61,10 +61,14 @@ void lm_run(string option_kinship, string option_pheno, string option_covar, str
 
   DMatrix W = CopyCvt(indicators.cvt, indicators.indicator_cvt, indicators.indicator_idv, indicators.n_cvt, ni_test);
 
-  int[] indicator_snp = ReadFile_geno1(option_geno, ni_total, W, indicators.indicator_idv);
+  auto geno_result = ReadFile_geno1(option_geno, ni_total, W, indicators.indicator_idv);
+  int[] indicator_snp = geno_result.indicator_snp;
+  SNPINFO[] snpInfo = geno_result.snpInfo;
 
   size_t n_ph = 1;
   string option_gene;
+
+  SUMSTAT[] sumStat;
 
   // set covariates matrix W and phenotype matrix Y
   // an intercept should be included in W,
@@ -81,24 +85,18 @@ void lm_run(string option_kinship, string option_pheno, string option_covar, str
     } else if (option_bfile != "") {
       lm_analyze_plink(option_geno, W, Y_col);
     } else {
-      lm_analyze_bimbam(option_geno, W, Y_col, indicators.indicator_idv, indicator_snp, ni_test, ni_total);
+      sumStat = lm_analyze_bimbam(option_geno, W, Y_col, indicators.indicator_idv, indicator_snp, ni_test, ni_total);
     }
 
-    lm_write_files();
+    lm_write_files(sumStat, option_geno, snpInfo, indicator_snp, ni_test);
   }
 }
 
-void lm_write_files() {
+void lm_write_files(SUMSTAT[] sumStat, const string file_gene, SNPINFO[] snpInfo, int[] indicator_snp, size_t ni_test) {
   // define later
   string path_out = "";
   string file_out = "";
-  string file_gene;
-  SUMSTAT[] sumStat;
-  SNPINFO[] snpInfo;
-  int[] indicator_snp;
-  int a_mode;
-  size_t ni_test;
-
+  int a_mode = 51;
   string file_str = path_out ~ "/" ~ file_out ~ ".assoc.txt";
 
   if (file_gene != "") {
@@ -328,7 +326,7 @@ void lm_analyze_gene(const string file_gene, const DMatrix W, const DMatrix x) {
   return;
 }
 
-void lm_analyze_bimbam(const string file_geno, const DMatrix W, const DMatrix y, int[] indicator_idv, int[] indicator_snp, size_t ni_test, size_t ni_total) {
+SUMSTAT[] lm_analyze_bimbam(const string file_geno, const DMatrix W, const DMatrix y, int[] indicator_idv, int[] indicator_snp, size_t ni_test, size_t ni_total) {
 
   writeln("entered lm_analyze_bimbam");
   
@@ -349,7 +347,7 @@ void lm_analyze_bimbam(const string file_geno, const DMatrix W, const DMatrix y,
   double yPwy, xPwy, xPwx;
   double df = to!double(W.shape[0]) - to!double(W.shape[1]) - 1.0;
 
-  DMatrix x = zeros_dmatrix(1, ni_total);
+  DMatrix x = zeros_dmatrix(ni_total, 1);
   DMatrix x_miss = zeros_dmatrix(1, ni_total);
 
   DMatrix WtW = matrix_mult(W.T, W);
@@ -371,7 +369,6 @@ void lm_analyze_bimbam(const string file_geno, const DMatrix W, const DMatrix y,
     }
 
     auto ch_ptr = to!string(line).split(",")[3..$];
-    writeln(ch_ptr);
 
     x_mean = 0.0;
     c_phen = 0;
@@ -405,7 +402,6 @@ void lm_analyze_bimbam(const string file_geno, const DMatrix W, const DMatrix y,
     }
 
     // Calculate statistics.
-
     DMatrix Wtx = matrix_mult(W.T, x);
 
     CalcvPv(WtWi, Wty, Wtx, y, x, xPwy, xPwx);
@@ -417,9 +413,7 @@ void lm_analyze_bimbam(const string file_geno, const DMatrix W, const DMatrix y,
     t++;
   }
 
-  writeln(sumStat);
-
-  return;
+  return sumStat;
 }
 
 void lm_analyze_plink(const string file_bfile, const DMatrix W, const DMatrix y) {
