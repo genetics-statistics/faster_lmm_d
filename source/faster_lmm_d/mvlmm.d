@@ -116,7 +116,6 @@ void analyze_bimbam_mvlmm(const DMatrix U, const DMatrix eval,
   size_t msize = LMM_BATCH_SIZE;
   DMatrix Xlarge = zeros_dmatrix(U.shape[0], msize);
   DMatrix UtXlarge; // = gsl_matrix_alloc(U.shape[0], msize);
-  //gsl_matrix_set_zero(Xlarge);
 
   // Large matrices for EM.
   DMatrix U_hat;    //= gsl_matrix_alloc(d_size, n_size);
@@ -532,17 +531,25 @@ void MphInitial(const size_t em_iter, const double em_prec,
 
   // Initialize the diagonal elements of Vg and Ve using univariate
   // LMM and REML estimates.
-  DMatrix Xt; //= gsl_matrix_alloc(n_size, c_size);
-  DMatrix beta_temp; // = gsl_vector_alloc(c_size);
-  DMatrix se_beta_temp; // = gsl_vector_alloc(c_size);
+  DMatrix Xt = zeros_dmatrix(n_size, c_size);
+  DMatrix beta_temp = zeros_dmatrix(1, c_size);
+  DMatrix se_beta_temp = zeros_dmatrix(1, c_size);
+
+  writeln(n_size, " ", c_size);
 
   Xt = X.T;
 
+  writeln("X", X.shape);
+  writeln("Y", Y.shape);
+
   for (size_t i = 0; i < d_size; i++) {
     //gsl_vector_const_view
-    DMatrix Y_row = get_row(Y, i);
+    DMatrix Y_row = get_col(Y, i);
+    writeln(X);
     auto res = calc_lambda('R', eval, Xt, Y_row, l_min, l_max, n_region);
-    lambda = res. lambda;
+    lambda = res.lambda;
+    writeln(lambda);
+    exit(0);
     logl = res.logf;
 
     auto vgvebeta = CalcLmmVgVeBeta(eval, Xt, Y_row, lambda);
@@ -597,7 +604,6 @@ void MphInitial(const size_t em_iter, const double em_prec,
         Y_sub2 = Y_2;
 
         Vg_sub = zeros_dmatrix(Vg_sub.shape[0], Vg_sub.shape[1]);
-        //gsl_matrix_set_zero(Ve_sub);
         Ve_sub = zeros_dmatrix(Ve_sub.shape[0], Ve_sub.shape[1]);
         Vg_sub.set(0, 0, V_g.accessor(i, i));
         Ve_sub.set(0, 0, V_e.accessor(i, i));
@@ -626,8 +632,8 @@ void MphInitial(const size_t em_iter, const double em_prec,
   DMatrix UltVeh = zeros_dmatrix(d_size, d_size);
   DMatrix UltVehi = zeros_dmatrix(d_size, d_size);
   DMatrix Qi = zeros_dmatrix(d_size * c_size, d_size * c_size);
-  DMatrix XHiy; // = gsl_vector_alloc(d_size * c_size);
-  DMatrix beta; // = gsl_vector_alloc(d_size * c_size);
+  DMatrix XHiy = zeros_dmatrix(1, d_size * c_size);
+  DMatrix beta = zeros_dmatrix(1, d_size * c_size);
 
   XHiy = zeros_dmatrix(XHiy.shape[0], XHiy.shape[1]);
 
@@ -667,12 +673,10 @@ void MphInitial(const size_t em_iter, const double em_prec,
     //gsl_vector_view
     DMatrix B_col = get_col(B, i);
     //gsl_vector_view
-    DMatrix beta_sub;// = gsl_vector_subvector(beta, i * d_size, d_size);
+    DMatrix beta_sub = get_subvector_dmatrix(beta, i * d_size, d_size);
     B_col = matrix_mult(UltVeh.T, beta_sub);
     B_col = matrix_mult(beta_sub, UltVeh);
   }
-
-  // Free memory.
 
   return;
 }
@@ -701,7 +705,7 @@ double MphEM(const char func_name, const size_t max_iter, const double max_prec,
              DMatrix UltVehiU, DMatrix UltVehiE, DMatrix V_g,
              DMatrix V_e, DMatrix B) {
   writeln("entered MphEM");
-  
+
   if (func_name != 'R' && func_name != 'L' && func_name != 'r' && func_name != 'l') {
     writeln("func_name only takes 'R' or 'L': 'R' for log-restricted likelihood, 'L' for log-likelihood.");
     return 0.0;
@@ -793,8 +797,7 @@ double MphEM(const char func_name, const size_t max_iter, const double max_prec,
     B = matrix_mult(UltVeh, UltVehiB);
 
     // Calculate Sigma_uu and Sigma_ee.
-    CalcSigma(func_name, eval, D_l, X, OmegaU, OmegaE, UltVeh, Qi, Sigma_uu,
-              Sigma_ee);
+    CalcSigma(func_name, eval, D_l, X, OmegaU, OmegaE, UltVeh, Qi, Sigma_uu, Sigma_ee);
 
     // Update V_g and V_e.
     UpdateV(eval, U_hat, E_hat, Sigma_uu, Sigma_ee, V_g, V_e);
@@ -2085,6 +2088,7 @@ void analyze_plink(const DMatrix U, const DMatrix eval,
   DMatrix xHi_all_sub = get_sub_dmatrix(xHi_all, 0, 0, d_size * c_size, d_size * n_size);
 
   //gsl_matrix_transpose_memcpy(Y, UtY);
+  //Y = > Uty
   //gsl_matrix_transpose_memcpyX_sub, UtW);
 
   //gsl_vector_view
@@ -2122,7 +2126,7 @@ void analyze_plink(const DMatrix U, const DMatrix eval,
   size_t ni_test, ni_total;
   int[] snpInfo;
 
-  MphInitial(em_iter, em_prec, nr_iter, nr_prec, eval, X_sub, Y, l_min,
+  MphInitial(em_iter, em_prec, nr_iter, nr_prec, eval, UtW.T, UtY, l_min,
              l_max, n_region, V_g, V_e, B_sub);
 
   logl_H0 = MphEM('R', em_iter, em_prec, eval, X_sub, Y, U_hat, E_hat,
@@ -2584,12 +2588,10 @@ void UpdateL_B(const DMatrix X, const DMatrix XXti,
                DMatrix UltVehiBX, DMatrix UltVehiB) {
   size_t c_size = X.shape[0], d_size = UltVehiY.shape[0];
 
-  DMatrix YUX; // = gsl_matrix_alloc(d_size, c_size);
-
   //gsl_matrix_memcpy(UltVehiBX, UltVehiY);
-  //gsl_matrix_sub(UltVehiBX, UltVehiU);
+  UltVehiBX = subtract_dmatrix(UltVehiBX, UltVehiU);
 
-  YUX = matrix_mult(UltVehiBX, X.T);
+  DMatrix YUX = matrix_mult(UltVehiBX, X.T);
   UltVehiB = matrix_mult(YUX, XXti);
 
   return;

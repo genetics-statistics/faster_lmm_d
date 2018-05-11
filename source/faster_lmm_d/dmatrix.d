@@ -423,6 +423,12 @@ DMatrix matrix_join(DMatrix ul, DMatrix ur, DMatrix dl, DMatrix dr){
   return result;
 }
 
+DMatrix get_subvector_dmatrix(const DMatrix H, const size_t offset, const size_t n){
+  double[] elements = H.elements.dup;
+  return DMatrix([1, n], elements[offset..(offset+n)]);
+}
+
+
 DMatrix get_sub_dmatrix(const DMatrix H, const size_t a, const size_t b, const size_t n1, const size_t n2){
   size_t index = 0, cols = H.cols;
   double[] elements = new double[n1*n2];

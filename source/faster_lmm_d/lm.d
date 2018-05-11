@@ -27,6 +27,9 @@ import std.experimental.logger;
 import std.string;
 
 import faster_lmm_d.dmatrix;
+import faster_lmm_d.gemma;
+import faster_lmm_d.gemma_io;
+import faster_lmm_d.gemma_kinship;
 import faster_lmm_d.gemma_lmm;
 import faster_lmm_d.gemma_param;
 import faster_lmm_d.helpers;
@@ -36,6 +39,54 @@ import gsl.permutation;
 import gsl.rng;
 import gsl.randist;
 import gsl.cdf;
+
+void lm_run(string option_kinship, string option_pheno, string option_covar, string option_geno, string option_bfile){
+  writeln("entered lm_run");
+
+  writeln("reading pheno " , option_pheno);
+  auto pheno = ReadFile_pheno(option_pheno, [1]);
+  DMatrix Y = pheno.pheno;
+  writeln(Y);
+
+  writeln("reading covar " , option_covar);
+  DMatrix covar_matrix = (option_covar != "" ? read_covariate_matrix_from_file(option_covar) : ones_dmatrix(pheno.pheno.shape[0], pheno.pheno.shape[1]));
+  //DMatrix covar_matrix = ones_dmatrix(Y.shape[0], Y.shape[1]);
+  writeln(covar_matrix);
+
+  auto indicators = process_cvt_phen(pheno.indicator_pheno);
+
+  size_t ni_test = indicators.ni_test;
+  writeln(ni_test);
+  size_t ni_total = indicators.indicator_idv.length;
+
+  DMatrix W = CopyCvt(indicators.cvt, indicators.indicator_cvt, indicators.indicator_idv, indicators.n_cvt, ni_test);
+
+  int[] indicator_snp = ReadFile_geno1(option_geno, ni_total, W, indicators.indicator_idv);
+
+  size_t n_ph = 1;
+  string option_gene;
+
+  // set covariates matrix W and phenotype matrix Y
+  // an intercept should be included in W,
+  //CopyCvtPhen(W, Y, 0);
+
+  // Fit LM or mvLM
+  if (n_ph == 1) {
+    //Lm.CopyFromParam(cPar);
+
+    DMatrix Y_col = get_col(Y, 0);
+
+    if (option_gene != "") {
+      lm_analyze_gene(option_geno, W, Y_col); // y is the predictor, not the phenotype
+    } else if (option_bfile != "") {
+      lm_analyze_plink(option_geno, W, Y_col);
+    } else {
+      lm_analyze_bimbam(option_geno, W, Y_col, indicators.indicator_idv, indicator_snp, ni_test, ni_total);
+    }
+
+    lm_write_files();
+  }
+}
 
 void lm_write_files() {
   // define later
@@ -157,7 +208,7 @@ void lm_write_files() {
 
 void CalcvPv(const DMatrix WtWi, const DMatrix Wty,
              const DMatrix Wtx, const DMatrix y, const DMatrix x,
-             double xPwy, double xPwx) {
+             ref double xPwy, ref double xPwx) {
   size_t c_size = Wty.size;
   double d;
 
@@ -174,8 +225,7 @@ void CalcvPv(const DMatrix WtWi, const DMatrix Wty,
   return;
 }
 
-void CalcvPv(const DMatrix WtWi, const DMatrix Wty, const DMatrix y,
-             double yPwy) {
+void CalcvPv(const DMatrix WtWi, const DMatrix Wty, const DMatrix y, ref double yPwy) {
   size_t c_size = Wty.size;
   double d;
 
@@ -191,8 +241,8 @@ void CalcvPv(const DMatrix WtWi, const DMatrix Wty, const DMatrix y,
 // Calculate p-values and beta/se in a linear model.
 void LmCalcP(const size_t test_mode, const double yPwy, const double xPwy,
              const double xPwx, const double df, const size_t n_size,
-             double beta, double se, double p_wald, double p_lrt,
-             double p_score) {
+             ref double beta, ref double se, ref double p_wald, ref double p_lrt,
+             ref double p_score) {
   double yPxy = yPwy - xPwy * xPwy / xPwx;
   double se_wald, se_score;
 
@@ -213,8 +263,8 @@ void LmCalcP(const size_t test_mode, const double yPwy, const double xPwy,
   return;
 }
 
-void lm_analyze_gene(const DMatrix W, const DMatrix x) {
-  string file_gene;
+void lm_analyze_gene(const string file_gene, const DMatrix W, const DMatrix x) {
+  writeln("entered lm_analyze_gene");
   int a_mode;
   size_t ni_test, ng_total;
   int[] indicator_idv, indicator_snp;
@@ -236,8 +286,6 @@ void lm_analyze_gene(const DMatrix W, const DMatrix x) {
   double df = to!double(W.shape[0]) - to!double(W.shape[1]) - 1.0;
 
   DMatrix y; // = gsl_vector_alloc(W,shape[0]);
-
-  gsl_permutation *pmt = gsl_permutation_alloc(W.shape[1]);
 
   DMatrix WtW = matrix_mult(W.T, W);
   DMatrix WtWi = WtW.inverse();
@@ -277,25 +325,22 @@ void lm_analyze_gene(const DMatrix W, const DMatrix x) {
     sumStat ~= SNPs;
   }
 
-  gsl_permutation_free(pmt);
-
   return;
 }
 
-void lm_analyze_bimbam(const DMatrix W, const DMatrix y) {
+void lm_analyze_bimbam(const string file_geno, const DMatrix W, const DMatrix y, int[] indicator_idv, int[] indicator_snp, size_t ni_test, size_t ni_total) {
+
+  writeln("entered lm_analyze_bimbam");
   
-  string file_geno;
-  int a_mode;
-  size_t ni_test, ni_total;
-  int[] indicator_idv, indicator_snp;
   SUMSTAT[] sumStat;
   SNPINFO[] snpInfo;
 
-  writeln("entering lm_analyze_bimbam");
-  File infile = File(file_geno);
+  writeln(file_geno);
 
-  string line;
+  auto pipe = pipeShell("gunzip -c " ~ file_geno);
+  File input = pipe.stdout;
 
+  int a_mode = 0;
   double beta = 0, se = 0, p_wald = 0, p_lrt = 0, p_score = 0;
   int n_miss, c_phen;
   double geno, x_mean;
@@ -304,26 +349,29 @@ void lm_analyze_bimbam(const DMatrix W, const DMatrix y) {
   double yPwy, xPwy, xPwx;
   double df = to!double(W.shape[0]) - to!double(W.shape[1]) - 1.0;
 
-  DMatrix x; // = gsl_vector_alloc(W->size1);
-  DMatrix x_miss; // = gsl_vector_alloc(W->size1);
-
-  gsl_permutation *pmt = gsl_permutation_alloc(W.shape[1]);
+  DMatrix x = zeros_dmatrix(1, ni_total);
+  DMatrix x_miss = zeros_dmatrix(1, ni_total);
 
   DMatrix WtW = matrix_mult(W.T, W);
   DMatrix WtWi = WtW.inverse();
+
+  writeln(WtWi);
 
   DMatrix Wty = matrix_mult(W.T, y);
   CalcvPv(WtWi, Wty, y, yPwy);
 
   // Start reading genotypes and analyze.
-  for (size_t t = 0; t < indicator_snp.length; ++t) {
-    line = infile.readln();
+  int t = 0;
+  foreach (line; input.byLine) {
+    //line = input.readln();
    
     if (indicator_snp[t] == 0) {
+      t++;
       continue;
     }
 
-    auto ch_ptr = line.split("\t")[3..$];
+    auto ch_ptr = to!string(line).split(",")[3..$];
+    writeln(ch_ptr);
 
     x_mean = 0.0;
     c_phen = 0;
@@ -338,7 +386,7 @@ void lm_analyze_bimbam(const DMatrix W, const DMatrix y) {
         x_miss.elements[c_phen] = 0.0;
         n_miss++;
       } else {
-        geno = to!double(ch_ptr[0]);
+        geno = to!double(ch_ptr[i].strip());
 
         x.elements[c_phen] = geno;
         x_miss.elements[c_phen] = 1.0;
@@ -359,29 +407,30 @@ void lm_analyze_bimbam(const DMatrix W, const DMatrix y) {
     // Calculate statistics.
 
     DMatrix Wtx = matrix_mult(W.T, x);
+
     CalcvPv(WtWi, Wty, Wtx, y, x, xPwy, xPwx);
     LmCalcP(a_mode - 50, yPwy, xPwy, xPwx, df, W.shape[0], beta, se, p_wald, p_lrt, p_score);
 
     // Store summary data.
     SUMSTAT SNPs = SUMSTAT(beta, se, 0.0, 0.0, p_wald, p_lrt, p_score, -0.0);
     sumStat ~= SNPs;
+    t++;
   }
 
-  gsl_permutation_free(pmt);
+  writeln(sumStat);
 
   return;
 }
 
-void lm_analyze_plink(const DMatrix W, const DMatrix y) {
+void lm_analyze_plink(const string file_bfile, const DMatrix W, const DMatrix y) {
   
-  string file_bfile;
+  writeln("entered lm_analyze_plink");
+
   size_t ni_total, ni_test;
   int a_mode;
   int[] indicator_snp, indicator_idv;
   SUMSTAT[] sumStat;
   SNPINFO[] snpInfo;
-
-  writeln("entering lm_analyze_plink");
 
   string file_bed = file_bfile ~ ".bed";
   File infile = File(file_bed);

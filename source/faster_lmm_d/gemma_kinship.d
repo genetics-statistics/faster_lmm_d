@@ -527,7 +527,6 @@ DMatrix ReadFile_geno(const string geno_fn, const ulong ni_total, const DMatrix 
   if (ns_test % msize != 0) {
     matrix_kin = add_dmatrix(matrix_kin, cpu_mat_mult(Xlarge, 0, Xlarge, 1));
   }
-
   matrix_kin = divide_dmatrix_num(matrix_kin, ns_test);
   matrix_kin = matrix_kin.T;
 
@@ -584,7 +583,8 @@ void CheckCvt() {
   for (size_t i = 0; i < W.shape[1]; i++) {
     //gsl_vector_view
     DMatrix w_col = get_col(W, i);
-    //gsl_vector_minmax(&w_col.vector, &v_min, &v_max);
+    v_min = w_col.elements.minElement;
+    v_max = w_col.elements.maxElement;
     if (v_min == v_max) {
       flag_ipt = 1;
       //set_remove.insert(i);
