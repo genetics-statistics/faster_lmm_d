@@ -546,9 +546,6 @@ void MphInitial(const size_t em_iter, const double em_prec,
 
     auto vgvebeta = CalcLmmVgVeBeta(eval, Xt, Y_row, lambda);
 
-    writeln(vgvebeta);
-    exit(0);
-
     V_g.set(i, i, vgvebeta.vg);
     V_e.set(i, i, vgvebeta.ve);
   }

@@ -1077,8 +1077,7 @@ Mle_result CalcLmmVgVeBeta(const DMatrix eval, const DMatrix UtW, const DMatrix 
 
   writeln("in CalcLmmVgVeBeta");
   double vg, ve;
-  DMatrix beta = DMatrix([1,1] , [0]);
-  DMatrix se_beta = DMatrix([1,1] , [0]);
+  double[] se_beta;
   size_t n_cvt = UtW.shape[1], ni_test = UtW.shape[0];
   size_t n_index = (n_cvt + 2 + 1) * (n_cvt + 2) / 2;
 
@@ -1098,7 +1097,7 @@ Mle_result CalcLmmVgVeBeta(const DMatrix eval, const DMatrix UtW, const DMatrix 
   DMatrix WHiW = matrix_mult(HiW, UtW);
   DMatrix WHiy = matrix_mult(HiW, Uty);
 
-  beta.elements = WHiy.elements.dup;
+  double[] beta = WHiy.elements;
 
   auto m = to!int(WHiW.cols);
   assert(m>=1);
@@ -1111,7 +1110,7 @@ Mle_result CalcLmmVgVeBeta(const DMatrix eval, const DMatrix UtW, const DMatrix 
   int ldb = m;
 
   enforce(LAPACKE_dgesv( 101, n, n, WHiW.elements.ptr, lda, ipiv.ptr,
-                      beta.elements.ptr,  ldb ) == 0);
+                      beta.ptr,  ldb ) == 0);
 
   DMatrix Vbeta = inverse(WHiW);
 
@@ -1127,12 +1126,12 @@ Mle_result CalcLmmVgVeBeta(const DMatrix eval, const DMatrix UtW, const DMatrix 
   Vbeta = multiply_dmatrix_num(Vbeta, ve);
 
   foreach ( i; 0..Vbeta.shape[1]) {
-    se_beta.elements[i] = sqrt(accessor(Vbeta, i, i));
+    se_beta ~= sqrt(accessor(Vbeta, i, i));
   }
 
   writeln("out of CalcLmmVgVeBeta");
 
-  return Mle_result(vg, ve, beta, se_beta);
+  return Mle_result(vg, ve, DMatrix([1, beta.length], beta), DMatrix([1, se_beta.length], se_beta));
 }
 
 // Obtain REMLE estimate for PVE using lambda_remle.
