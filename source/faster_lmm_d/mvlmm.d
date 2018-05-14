@@ -24,6 +24,7 @@ import std.string;
 
 import faster_lmm_d.dmatrix;
 import faster_lmm_d.gemma;
+import faster_lmm_d.gemma_io;
 import faster_lmm_d.gemma_kinship;
 import faster_lmm_d.gemma_lmm;
 import faster_lmm_d.gemma_param;
@@ -52,35 +53,29 @@ void mvlmm_run(string option_kinship, string option_pheno, string option_covar, 
 
   writeln("reading pheno " , option_pheno);
   auto Y = ReadFile_pheno(option_pheno, [1,2,3,15]);
-  writeln(Y.pheno);
+  //writeln(Y.pheno);
 
+
+  int[] indicator_cvt;
+  size_t n_cvt;
   writeln("reading covar " , option_covar);
-  DMatrix covar_matrix = (option_covar != "" ? read_covariate_matrix_from_file(option_covar) : ones_dmatrix(Y.pheno.shape[0], Y.pheno.shape[1]));
-  //DMatrix covar_matrix = ones_dmatrix(Y.shape[0], Y.shape[1]);
-  writeln(covar_matrix);
+  double[][] cvt = readfile_cvt(option_covar, indicator_cvt, n_cvt);
+  writeln(cvt);
+
 
   writeln("reading kinship " , option_kinship);
   DMatrix G = read_covariate_matrix_from_file(option_kinship);
-  writeln(G);
 
   auto k = kvakve(G);
   DMatrix eval = k.kva;
   DMatrix U = k.kve;
 
-  writeln(eval);
-  writeln("====================");
-  writeln(U);
+  writeln(eval.shape);
+  writeln(U.shape);
 
-  DMatrix UtW = matrix_mult(U.T, covar_matrix);
-  writeln("UtW.shape =>", UtW.shape);
-  DMatrix Uty = matrix_mult(U.T, Y.pheno);
-  writeln("UtY.shape =>", Uty.shape);
-  Param cPar;
-  double trace_G = sum(eval.elements)/eval.elements.length;
-  writeln("trace_G =>", trace_G);
-  cPar.a_mode = 1;
+  auto indicators = process_cvt_phen(Y.indicator_pheno, cvt, indicator_cvt, n_cvt);
 
-  auto indicators = process_cvt_phen(Y.indicator_pheno);
+  //writeln(indicators.cvt);
 
   size_t ni_test = indicators.ni_test;
   writeln(ni_test);
@@ -88,6 +83,17 @@ void mvlmm_run(string option_kinship, string option_pheno, string option_covar, 
   DMatrix W = CopyCvt(indicators.cvt, indicators.indicator_cvt, indicators.indicator_idv, indicators.n_cvt, ni_test);
 
   size_t ni_total = indicators.indicator_idv.length;
+
+
+  DMatrix UtW = matrix_mult(U.T, indicators.cvt);
+  writeln("UtW.shape =>", UtW.shape);
+
+  DMatrix Uty = matrix_mult(U.T, Y.pheno);
+  writeln("UtY.shape =>", Uty.shape);
+  Param cPar;
+  double trace_G = sum(eval.elements)/eval.elements.length;
+  writeln("trace_G =>", trace_G);
+  cPar.a_mode = 1;
 
   analyze_plink(U, eval, UtW, Uty, option_bfile);
 }
@@ -141,11 +147,11 @@ void analyze_bimbam_mvlmm(const DMatrix U, const DMatrix eval,
   DMatrix x;    // = gsl_vector_alloc(n_size);
   DMatrix x_miss;   // = gsl_vector_alloc(n_size);
 
-  DMatrix Y;    //= gsl_matrix_alloc(d_size, n_size);
-  DMatrix X;    //= gsl_matrix_alloc(c_size + 1, n_size);
+  DMatrix Y = UtY.T;
+  DMatrix X = zeros_dmatrix(c_size + 1, n_size);
   DMatrix V_g;    //= gsl_matrix_alloc(d_size, d_size);
   DMatrix V_e;    //= gsl_matrix_alloc(d_size, d_size);
-  DMatrix B;    //= gsl_matrix_alloc(d_size, c_size + 1);
+  DMatrix B = zeros_dmatrix(d_size, c_size + 1);
   DMatrix beta;   // = gsl_vector_alloc(d_size);
   DMatrix Vbeta;    //= gsl_matrix_alloc(d_size, d_size);
 
@@ -155,24 +161,12 @@ void analyze_bimbam_mvlmm(const DMatrix U, const DMatrix eval,
   DMatrix B_null;   //= gsl_matrix_alloc(d_size, c_size + 1);
   DMatrix se_B_null;    //= gsl_matrix_alloc(d_size, c_size);
 
-  //gsl_matrix_view
-  DMatrix X_sub = get_sub_dmatrix(X, 0, 0, c_size, n_size);
-  //gsl_matrix_view
+  DMatrix X_sub = UtW.T;
+  X = set_sub_dmatrix(X, 0, 0, c_size, n_size, X_sub);
   DMatrix B_sub = get_sub_dmatrix(B, 0, 0, d_size, c_size);
-
   //gsl_matrix_view
   DMatrix xHi_all_sub = get_sub_dmatrix(xHi_all, 0, 0, d_size * c_size, d_size * n_size);
-
-  //gsl_matrix_transpose_memcpy(Y, UtY);
-
-  Y = UtY.T;
-
-  //gsl_matrix_transpose_memcpy(X_sub, UtW);
-  X_sub = UtW.T;
-
-  //gsl_vector_view
   DMatrix X_row = get_row(X, c_size);
-  //gsl_vector_set_zero(X_row);
 
   //gsl_vector_view
   DMatrix B_col = get_col(B, c_size);
@@ -204,7 +198,6 @@ void analyze_bimbam_mvlmm(const DMatrix U, const DMatrix eval,
   int[] indicator_idv;
   int a_mode;
   size_t ni_test, ni_total;
-
 
   MphInitial(em_iter, em_prec, nr_iter, nr_prec, eval, X_sub, Y, l_min, l_max, n_region, V_g, V_e, B_sub);
   logl_H0 = MphEM('R', em_iter, em_prec, eval, X_sub, Y, U_hat, E_hat, OmegaU,
@@ -544,15 +537,17 @@ void MphInitial(const size_t em_iter, const double em_prec,
 
   for (size_t i = 0; i < d_size; i++) {
     //gsl_vector_const_view
-    DMatrix Y_row = get_col(Y, i);
-    writeln(X);
+    DMatrix Y_row = get_row(Y, i);
     auto res = calc_lambda('R', eval, Xt, Y_row, l_min, l_max, n_region);
     lambda = res.lambda;
     writeln(lambda);
-    exit(0);
     logl = res.logf;
+    writeln(logl);
 
     auto vgvebeta = CalcLmmVgVeBeta(eval, Xt, Y_row, lambda);
+
+    writeln(vgvebeta);
+    exit(0);
 
     V_g.set(i, i, vgvebeta.vg);
     V_e.set(i, i, vgvebeta.ve);
@@ -2067,6 +2062,7 @@ void analyze_plink(const DMatrix U, const DMatrix eval,
   DMatrix x; // = gsl_vector_alloc(n_size);
 
   DMatrix Y = zeros_dmatrix(d_size, n_size);
+  Y = UtY.T;
   DMatrix X = zeros_dmatrix(c_size + 1, n_size);
   DMatrix V_g = zeros_dmatrix(d_size, d_size);
   DMatrix V_e = zeros_dmatrix(d_size, d_size);
@@ -2080,31 +2076,25 @@ void analyze_plink(const DMatrix U, const DMatrix eval,
   DMatrix B_null; // = gsl_matrix_alloc(d_size, c_size + 1);
   DMatrix se_B_null; // = gsl_matrix_alloc(d_size, c_size);
 
-  //gsl_matrix_view
-  DMatrix X_sub = get_sub_dmatrix(X, 0, 0, c_size, n_size);
-  //gsl_matrix_view
+  DMatrix X_sub = UtW.T;
+  X = set_sub_dmatrix(X, 0, 0, c_size, n_size, X_sub);
   DMatrix B_sub = get_sub_dmatrix(B, 0, 0, d_size, c_size);
   //gsl_matrix_view
   DMatrix xHi_all_sub = get_sub_dmatrix(xHi_all, 0, 0, d_size * c_size, d_size * n_size);
-
-  //gsl_matrix_transpose_memcpy(Y, UtY);
-  //Y = > Uty
-  //gsl_matrix_transpose_memcpyX_sub, UtW);
-
-  //gsl_vector_view
   DMatrix X_row = get_row(X, c_size);
-  //gsl_vector_set_zero(X_row);
+
   //gsl_vector_view
   DMatrix B_col = get_col(B, c_size);
-  //gsl_vector_set_zero(B_col);
+
 
   size_t em_iter = 0; //check
   double em_prec = 0;
   size_t nr_iter = 0;
   double nr_prec = 0;
-  double l_min = 0;
-  double l_max = 0;
-  size_t n_region;
+  double l_min = 1e-05;
+  double l_max = 100000;
+  size_t n_region = 10;
+
   double[] Vg_remle_null;
   double[] Ve_remle_null;
   double[] VVg_remle_null;
@@ -2126,8 +2116,8 @@ void analyze_plink(const DMatrix U, const DMatrix eval,
   size_t ni_test, ni_total;
   int[] snpInfo;
 
-  MphInitial(em_iter, em_prec, nr_iter, nr_prec, eval, UtW.T, UtY, l_min,
-             l_max, n_region, V_g, V_e, B_sub);
+
+  MphInitial(em_iter, em_prec, nr_iter, nr_prec, eval, X_sub, Y, l_min, l_max, n_region, V_g, V_e, B_sub);
 
   logl_H0 = MphEM('R', em_iter, em_prec, eval, X_sub, Y, U_hat, E_hat,
                   OmegaU, OmegaE, UltVehiY, UltVehiBX, UltVehiU, UltVehiE, V_g,

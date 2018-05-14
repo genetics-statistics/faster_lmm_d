@@ -64,10 +64,14 @@ void generate_kinship(const string geno_fn, const string pheno_fn, const string 
 void generate_kinship_plink(const string file_bed, const string test_name = ""){
   writeln("in generate_kinship_plink");
   size_t[] p_column;
+  double[][] cvt;
+  int[] indicator_cvt;
+  size_t n_cvt;
+
   // pheno
   auto pheno = readfile_fam(file_bed, p_column);
 
-  auto indicators = process_cvt_phen(pheno.indicator_pheno);
+  auto indicators = process_cvt_phen(pheno.indicator_pheno, cvt, indicator_cvt, n_cvt);
 
   size_t ni_test = indicators.ni_test;
   DMatrix W = CopyCvt(indicators.cvt, indicators.indicator_cvt, indicators.indicator_idv, indicators.n_cvt, ni_test);
@@ -87,6 +91,9 @@ void generate_kinship_plink(const string file_bed, const string test_name = ""){
 void Read_files(const string geno_fn, const string pheno_fn,  const string test_name = "", const string co_variate_fn = ""){
   double[] indicator_pheno;
   size_t[] p_column = [1];
+  double[][] cvt;
+  int[] indicator_cvt;
+  size_t n_cvt;
 
   auto pheno = ReadFile_pheno(pheno_fn, p_column);
 
@@ -95,7 +102,7 @@ void Read_files(const string geno_fn, const string pheno_fn,  const string test_
     check_indicator_pheno(pheno.indicator_pheno);
   }
 
-  auto indicators = process_cvt_phen(pheno.indicator_pheno);
+  auto indicators = process_cvt_phen(pheno.indicator_pheno, cvt, indicator_cvt, n_cvt);
 
   size_t ni_test = indicators.ni_test;
 
@@ -552,11 +559,8 @@ DMatrix CopyCvt(const DMatrix cvt, const int[] indicator_cvt, const int[] indica
   return W;
 }
 
-void CheckCvt() {
-  int[] indicator_cvt, indicator_idv;
-  double[][] cvt;
-  size_t n_cvt, ni_test;
-
+void check_cvt(int[] indicator_cvt, int[] indicator_idv, ref double[][] cvt, size_t n_cvt, size_t ni_test) {
+  writeln("in check_cvt");
   if (indicator_cvt.length == 0) {
     return;
   }
@@ -570,7 +574,7 @@ void CheckCvt() {
       continue;
     }
     for (size_t j = 0; j < n_cvt; ++j) {
-      W.set(ci_test, j, (cvt)[i][j]);
+      W.set(ci_test, j, cvt[i][j]);
     }
     ci_test++;
   }
@@ -614,16 +618,13 @@ void CheckCvt() {
 
 
 // Post-process phenotypes and covariates.
-Indicators_result process_cvt_phen(const DMatrix indicator_pheno, const string test_name = ""){
-
-  writeln(indicator_pheno.shape);
+Indicators_result process_cvt_phen(const DMatrix indicator_pheno, double[][] cvt, int[] indicator_cvt, size_t n_cvt, const string test_name = ""){
 
   // Convert indicator_pheno to indicator_idv.
   int k = 1;
-  int[] indicator_idv, indicator_cvt, indicator_weight;
+  int[] indicator_idv, indicator_weight;
   int[] indicator_gxe;
   size_t ni_test, ni_subsample;
-  double[] cvt;
   int a_mode;
 
   foreach(i ; 0..indicator_pheno.rows) {
@@ -710,11 +711,9 @@ Indicators_result process_cvt_phen(const DMatrix indicator_pheno, const string t
   // After getting ni_test.
   // Add or remove covariates.
 
-
   if (indicator_cvt.length != 0) {
-    //CheckCvt();
+    check_cvt(indicator_cvt, indicator_idv, cvt, n_cvt, ni_test);
   } else {
-
     double[] cvt_row;
     cvt_row ~= 1;
 
@@ -724,13 +723,18 @@ Indicators_result process_cvt_phen(const DMatrix indicator_pheno, const string t
     }
   }
 
-  DMatrix s_cvt = DMatrix([indicator_idv.length, cvt.length/indicator_idv.length] , cvt);
+  double[] cvt_elements;
+  foreach(cvt_row; cvt){
+    cvt_elements ~= cvt_row;
+  }
+
+  DMatrix s_cvt = DMatrix([indicator_idv.length, cvt_elements.length/indicator_idv.length] , cvt_elements);
 
   writeln("done process_cvt_phen");
   writeln(ni_test);
 
   if(test_name == "hs1940_kinship"){ 
-    check_indicator_cvt(cvt);
+    check_indicator_cvt(s_cvt.elements);
     check_cvt_matrix(s_cvt);
     check_indicator_idv(indicator_idv);
   }

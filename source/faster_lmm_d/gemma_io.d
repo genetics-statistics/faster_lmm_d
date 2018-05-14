@@ -169,9 +169,9 @@ void read_all_files() {
 
   // Read covariates before the genotype files.
   if (file_cvt != "") {
-    if (readfile_cvt(file_cvt, indicator_cvt, cvt, n_cvt) == false) {
-      error = true;
-    }
+    //if (readfile_cvt(file_cvt, indicator_cvt, cvt, n_cvt) == false) {
+    //  error = true;
+    //}
     if (indicator_cvt.length == 0) {
       n_cvt = 1;
     }
@@ -299,8 +299,7 @@ void read_all_files() {
 
         // Post-process covariates and phenotypes, obtain
         // ni_test, save all useful covariates.
-        DMatrix mock;
-        process_cvt_phen(mock);
+        //process_cvt_phen(mock);
 
         // Obtain covariate matrix.
         //W3 = gsl_matrix_safe_alloc(ni_test, n_cvt);
@@ -340,8 +339,7 @@ void read_all_files() {
 
     // Post-process covariates and phenotypes, obtain ni_test,
     // save all useful covariates.
-    DMatrix mock;
-    process_cvt_phen(mock);
+    //process_cvt_phen(mock);
 
     // Obtain covariate matrix.
     DMatrix W4;// = gsl_matrix_safe_alloc(ni_test, n_cvt);
@@ -389,8 +387,7 @@ void read_all_files() {
 
     // Post-process covariates and phenotypes, obtain
     // ni_test, save all useful covariates.
-    DMatrix mock;
-    process_cvt_phen(mock);
+    //process_cvt_phen(mock);
 
     // Obtain covariate matrix.
     // gsl_matrix *W5 = gsl_matrix_alloc(ni_test, n_cvt);
@@ -428,8 +425,7 @@ void read_all_files() {
 
     // Post-process covariates and phenotypes, obtain
     // ni_test, save all useful covariates.
-    DMatrix mock;
-    process_cvt_phen(mock);
+    //process_cvt_phen(mock);
   }
 
   // Compute setKSnps when -loco is passed in
@@ -509,10 +505,10 @@ bool CountFileLines(const string file_input, size_t n_lines) {
 }
 
 
-bool readfile_cvt(const string file_cvt, int[] indicator_cvt,
-                  double[][] cvt, size_t n_cvt) {
+double[][] readfile_cvt(const string file_cvt, ref int[] indicator_cvt, ref size_t n_cvt) {
   writeln("entered readfile_cvt");
-  //indicator_cvt.clear();
+
+  double[][] cvt;
 
   File infile = File(file_cvt);
   double d;
@@ -522,9 +518,9 @@ bool readfile_cvt(const string file_cvt, int[] indicator_cvt,
   foreach(line; infile.byLine) {
     double[] v_d;
     flag_na = 0;
-    auto chrs = line.split("\t");
+    auto chrs = line.split();
     foreach(ch_ptr; chrs) {
-      if (ch_ptr == "NA") {
+      if (to!string(ch_ptr) == "NA") {
         flag_na = 1;
         d = -9;
       } else {
@@ -556,12 +552,12 @@ bool readfile_cvt(const string file_cvt, int[] indicator_cvt,
       }
       if (flag_na != 0 && n_cvt != cvt[i].length) {
         writeln("error! number of covariates in row ", i, " do not match other rows.");
-        return false;
+        return cvt;
       }
     }
   }
 
-  return true;
+  return cvt;
 }
 
 // Read bimbam mean genotype file, the first time, to obtain #SNPs for

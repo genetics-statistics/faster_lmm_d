@@ -53,7 +53,11 @@ void lm_run(string option_kinship, string option_pheno, string option_covar, str
   //DMatrix covar_matrix = ones_dmatrix(Y.shape[0], Y.shape[1]);
   writeln(covar_matrix);
 
-  auto indicators = process_cvt_phen(pheno.indicator_pheno);
+  double[][] cvt;
+  size_t n_cvt;
+  int[] indicator_cvt;
+
+  auto indicators = process_cvt_phen(pheno.indicator_pheno, cvt, indicator_cvt, n_cvt);
 
   size_t ni_test = indicators.ni_test;
   writeln(ni_test);
