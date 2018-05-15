@@ -172,13 +172,14 @@ void analyze_bimbam_mvlmm(const DMatrix U, const DMatrix eval,
   DMatrix B_col = get_col(B, c_size);
   //gsl_vector_set_zero(B_col);
 
-  size_t em_iter = 0; //check
+  size_t em_iter = 10; //check
   double em_prec = 0;
   size_t nr_iter = 0;
   double nr_prec = 0;
-  double l_min = 0;
-  double l_max = 0;
-  size_t n_region;
+  double l_min = 1e-05;
+  double l_max = 100000;
+  size_t n_region = 10;
+
   double[] Vg_remle_null;
   double[] Ve_remle_null;
   double[] VVg_remle_null;
@@ -706,29 +707,31 @@ double MphEM(const char func_name, const size_t max_iter, const double max_prec,
   size_t n_size = eval.size, c_size = X.shape[0], d_size = Y.shape[0];
   size_t dc_size = d_size * c_size;
 
-  DMatrix XXt; // = gsl_matrix_alloc(c_size, c_size);
-  DMatrix XXti; // = gsl_matrix_alloc(c_size, c_size);
-  DMatrix D_l; // = gsl_vector_alloc(d_size);
-  DMatrix UltVeh; // = gsl_matrix_alloc(d_size, d_size);
-  DMatrix UltVehi; // = gsl_matrix_alloc(d_size, d_size);
-  DMatrix UltVehiB; // = gsl_matrix_alloc(d_size, c_size);
-  DMatrix Qi; // = gsl_matrix_alloc(dc_size, dc_size);
-  DMatrix Sigma_uu; // = gsl_matrix_alloc(d_size, d_size);
-  DMatrix Sigma_ee; // = gsl_matrix_alloc(d_size, d_size);
-  DMatrix xHiy; // = gsl_vector_alloc(dc_size);
+  DMatrix XXt = zeros_dmatrix(c_size, c_size);
+  DMatrix XXti = zeros_dmatrix(c_size, c_size);
+  DMatrix D_l = zeros_dmatrix(1, d_size);
+  DMatrix UltVeh = zeros_dmatrix(d_size, d_size);
+  DMatrix UltVehi = zeros_dmatrix(d_size, d_size);
+  DMatrix UltVehiB = zeros_dmatrix(d_size, c_size);
+  DMatrix Qi = zeros_dmatrix(dc_size, dc_size);
+  DMatrix Sigma_uu = zeros_dmatrix(d_size, d_size);
+  DMatrix Sigma_ee = zeros_dmatrix(d_size, d_size);
+  DMatrix xHiy = zeros_dmatrix(1, dc_size);
 
   double logl_const = 0.0, logl_old = 0.0, logl_new = 0.0;
   double logdet_Q, logdet_Ve;
   int sig;
 
   // Calculate |XXt| and (XXt)^{-1}.
-  //gsl_blas_dsyrk(CblasUpper, CblasNoTrans, 1.0, X, 0.0, XXt);
+  XXt = matrix_mult(X, X.T);
+
   for (size_t i = 0; i < c_size; ++i) {
     for (size_t j = 0; j < i; ++j) {
       XXt.set(i, j, XXt.accessor(j, i));
     }
   }
 
+  writeln("inverse calculated");
   XXti = XXt.inverse;
 
   // Calculate the constant for logl.
@@ -741,11 +744,11 @@ double MphEM(const char func_name, const size_t max_iter, const double max_prec,
   }
 
   // Start EM.
+  writeln("max_iter => ", max_iter);
   for (size_t t = 0; t < max_iter; t++) {
     logdet_Ve = EigenProc(V_g, V_e, D_l, UltVeh, UltVehi);
 
     logdet_Q = CalcQi(eval, D_l, X, Qi);
-
     UltVehiY = matrix_mult(UltVehi, Y);
     CalcXHiY(eval, D_l, X, UltVehiY, xHiy);
 
@@ -794,7 +797,6 @@ double MphEM(const char func_name, const size_t max_iter, const double max_prec,
     // Update V_g and V_e.
     UpdateV(eval, U_hat, E_hat, Sigma_uu, Sigma_ee, V_g, V_e);
   }
-
   return logl_new;
 }
 
@@ -2084,7 +2086,7 @@ void analyze_plink(const DMatrix U, const DMatrix eval,
   DMatrix B_col = get_col(B, c_size);
 
 
-  size_t em_iter = 0; //check
+  size_t em_iter = 10; //check
   double em_prec = 0;
   size_t nr_iter = 0;
   double nr_prec = 0;
@@ -2700,12 +2702,8 @@ void CalcSigma(const char func_name, const DMatrix eval,
 
   // Calculate the second term for REML.
   if (func_name == 'R' || func_name == 'r') {
-    DMatrix M_u; // = gsl_matrix_alloc(dc_size, d_size);
-    DMatrix M_e; // = gsl_matrix_alloc(dc_size, d_size);
-    DMatrix QiM; // = gsl_matrix_alloc(dc_size, d_size);
-
-    M_u = zeros_dmatrix(M_u.shape[0], M_u.shape[1]);
-    M_e = zeros_dmatrix(M_e.shape[0], M_e.shape[1]);
+    DMatrix M_u = zeros_dmatrix(dc_size, d_size);
+    DMatrix M_e = zeros_dmatrix(dc_size, d_size);
 
     for (size_t k = 0; k < n_size; k++) {
       delta = eval.elements[k];
@@ -2719,12 +2717,11 @@ void CalcSigma(const char func_name, const DMatrix eval,
           M_u.set(j * d_size + i, i, d * dl);
         }
       }
-      QiM = matrix_mult(Qi, M_u);
-      // IMP : note delta scaling
-      //matrix_mult(CblasTrans, CblasNoTrans, delta, M_u, QiM, 1.0, Sigma_uu);
 
+      DMatrix QiM = matrix_mult(Qi, M_u);
+      Sigma_uu = matrix_mult(multiply_dmatrix_num(M_u, delta).T, QiM) + Sigma_uu; //check
       QiM = matrix_mult(Qi, M_e);
-      Sigma_ee = matrix_mult(M_e.T, QiM);
+      Sigma_ee = matrix_mult(multiply_dmatrix_num(M_e, delta).T, QiM) + Sigma_ee; //check
     }
   }
 
