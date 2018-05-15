@@ -620,7 +620,7 @@ void MphInitial(const size_t em_iter, const double em_prec,
   // Calculate B hat using GSL estimate.
   DMatrix UltVehiY = zeros_dmatrix(d_size, n_size);
 
-  DMatrix D_l; // = gsl_vector_alloc(d_size);
+  DMatrix D_l = zeros_dmatrix(1, d_size);
   DMatrix UltVeh = zeros_dmatrix(d_size, d_size);
   DMatrix UltVehi = zeros_dmatrix(d_size, d_size);
   DMatrix Qi = zeros_dmatrix(d_size * c_size, d_size * c_size);
@@ -2888,19 +2888,20 @@ void Calc_xHiy(const DMatrix Y, const DMatrix xHi, DMatrix xHiy) {
 // Below are functions for EM algorithm.
 double EigenProc(const DMatrix V_g, const DMatrix V_e, DMatrix D_l,
                  DMatrix UltVeh, DMatrix UltVehi) {
+  writeln("in EigenProc");
   size_t d_size = V_g.shape[0];
   double d, logdet_Ve = 0.0;
 
   // Eigen decomposition of V_e.
-  DMatrix Lambda; // = gsl_matrix_alloc(d_size, d_size);
-  DMatrix V_e_temp; // = gsl_matrix_alloc(d_size, d_size);
-  DMatrix V_e_h; // = gsl_matrix_alloc(d_size, d_size);
-  DMatrix V_e_hi; // = gsl_matrix_alloc(d_size, d_size);
-  DMatrix VgVehi; // = gsl_matrix_alloc(d_size, d_size);
-  DMatrix U_l; // = gsl_matrix_alloc(d_size, d_size);
+  DMatrix Lambda = zeros_dmatrix(d_size, d_size);
+  DMatrix V_e_temp = zeros_dmatrix(d_size, d_size);
+  DMatrix V_e_h = zeros_dmatrix(d_size, d_size);
+  DMatrix V_e_hi = zeros_dmatrix(d_size, d_size);
+  DMatrix VgVehi = zeros_dmatrix(d_size, d_size);
+  DMatrix U_l = zeros_dmatrix(d_size, d_size);
 
   //gsl_matrix_memcpy(V_e_temp, V_e);
-  EigenDecomp(V_e_temp, U_l, D_l, 0);
+  EigenDecomp(cast(DMatrix)V_e, U_l, D_l, 0);
 
   // Calculate V_e_h and V_e_hi.
   V_e_h = zeros_dmatrix(V_e_h.shape[0], V_e_h.shape[1]);
@@ -3432,23 +3433,21 @@ void Calc_yHiDHiDHiy(const DMatrix eval, const DMatrix Hi,
   return;
 }
 
-
 // Does NOT set eigenvalues to be positive. G gets destroyed. Returns
 // eigen trace and values in U and eval (eigenvalues).
 double EigenDecomp(DMatrix G, DMatrix U, DMatrix eval,
                    const size_t flag_largematrix) {
-  //lapack_eigen_symmv(G, eval, U, flag_largematrix);
-
+  writeln("EigenDecomp");
+  lapack_eigen_symmv(G, eval, U, flag_largematrix);
   // Calculate track_G=mean(diag(G)).
   double d = 0.0;
   for (size_t i = 0; i < eval.size; ++i)
     d += eval.elements[i];
 
   d /= to!double(eval.size);
-
+  writeln("d = ", d);
   return d;
 }
-
 
 // Same as EigenDecomp but zeroes eigenvalues close to zero. When
 // negative eigenvalues remain a warning is issued.
