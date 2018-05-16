@@ -805,6 +805,7 @@ double MphNR(const char func_name, const size_t max_iter, const double max_prec,
              DMatrix Hi_all, DMatrix xHi_all, DMatrix Hiy_all,
              DMatrix V_g, DMatrix V_e, DMatrix Hessian_inv,
              double crt_a, double crt_b, double crt_c) {
+  writeln("in MphNR");
   if (func_name != 'R' && func_name != 'L' && func_name != 'r' && func_name != 'l') {
     writeln("func_name only takes 'R' or 'L': 'R' for log-restricted likelihood, 'L' for log-likelihood.");
     return 0.0;
@@ -818,20 +819,20 @@ double MphNR(const char func_name, const size_t max_iter, const double max_prec,
   int sig;
   size_t step_iter, flag_pd;
 
-  DMatrix Vg_save; // = gsl_matrix_alloc(d_size, d_size);
-  DMatrix Ve_save; // = gsl_matrix_alloc(d_size, d_size);
-  DMatrix V_temp; // = gsl_matrix_alloc(d_size, d_size);
-  DMatrix U_temp; // = gsl_matrix_alloc(d_size, d_size);
-  DMatrix D_temp; // = gsl_vector_alloc(d_size);
-  DMatrix xHiy; // = gsl_vector_alloc(dc_size);
-  DMatrix QixHiy; // = gsl_vector_alloc(dc_size);
-  DMatrix Qi; // = gsl_matrix_alloc(dc_size, dc_size);
-  DMatrix XXt; // = gsl_matrix_alloc(c_size, c_size);
+  DMatrix Vg_save = zeros_dmatrix(d_size, d_size);
+  DMatrix Ve_save = zeros_dmatrix(d_size, d_size);
+  DMatrix V_temp = zeros_dmatrix(d_size, d_size);
+  DMatrix U_temp = zeros_dmatrix(d_size, d_size);
+  DMatrix D_temp = zeros_dmatrix(1, d_size);
+  DMatrix xHiy = zeros_dmatrix(1, dc_size);
+  DMatrix QixHiy = zeros_dmatrix(1, dc_size);
+  DMatrix Qi = zeros_dmatrix(dc_size, dc_size);
+  DMatrix XXt = zeros_dmatrix(c_size, c_size);
 
-  DMatrix gradient; // = gsl_vector_alloc(v_size * 2);
+  DMatrix gradient = zeros_dmatrix(1, v_size * 2);
 
   // Calculate |XXt| and (XXt)^{-1}.
-  //gsl_blas_dsyrk(CblasUpper, CblasNoTrans, 1.0, X, 0.0, XXt);
+  XXt = matrix_mult(X, X.T);
   for (size_t i = 0; i < c_size; ++i) {
     for (size_t j = 0; j < i; ++j) {
       XXt.set(i, j, XXt.accessor(j, i));
@@ -942,16 +943,16 @@ double MphCalcP(const DMatrix eval, const DMatrix x_vec, const DMatrix W,
   size_t dc_size = d_size * c_size;
   double delta, dl, d, d1, d2, dy, dx, dw; //  logdet_Ve, logdet_Q, p_value;
 
-  DMatrix D_l; // = gsl_vector_alloc(d_size);
-  DMatrix UltVeh; // = gsl_matrix_alloc(d_size, d_size);
-  DMatrix UltVehi; // = gsl_matrix_alloc(d_size, d_size);
-  DMatrix Qi; // = gsl_matrix_alloc(dc_size, dc_size);
-  DMatrix WHix; // = gsl_matrix_alloc(dc_size, d_size);
-  DMatrix QiWHix; // = gsl_matrix_alloc(dc_size, d_size);
+  DMatrix D_l = zeros_dmatrix(1, d_size);
+  DMatrix UltVeh = zeros_dmatrix(d_size, d_size);
+  DMatrix UltVehi = zeros_dmatrix(d_size, d_size);
+  DMatrix Qi = zeros_dmatrix(dc_size, dc_size);
+  DMatrix WHix = zeros_dmatrix(dc_size, d_size);
+  DMatrix QiWHix = zeros_dmatrix(dc_size, d_size);
 
-  DMatrix xPx; // = gsl_matrix_alloc(d_size, d_size);
-  DMatrix xPy; // = gsl_vector_alloc(d_size);
-  DMatrix WHiy; // = gsl_vector_alloc(dc_size);
+  DMatrix xPx = zeros_dmatrix(d_size, d_size);
+  DMatrix xPy = zeros_dmatrix(1, d_size);
+  DMatrix WHiy = zeros_dmatrix(1, dc_size);
 
   //gsl_matrix_set_zero(xPx);
   //gsl_matrix_set_zero(WHix);
@@ -1031,19 +1032,20 @@ double MphCalcP(const DMatrix eval, const DMatrix x_vec, const DMatrix W,
 
 void MphCalcBeta(const DMatrix eval, const DMatrix W, const DMatrix Y, const DMatrix V_g,
                  const DMatrix V_e, DMatrix UltVehiY, DMatrix B, DMatrix se_B) {
+  writeln("in MphCalcBeta");
   size_t n_size = eval.size, c_size = W.shape[0], d_size = W.shape[1];
   size_t dc_size = d_size * c_size;
   double delta, dl, d, dy, dw; // , logdet_Ve, logdet_Q;
 
-  DMatrix D_l; // = gsl_vector_alloc(d_size);
-  DMatrix UltVeh; // = gsl_matrix_alloc(d_size, d_size);
-  DMatrix UltVehi; // = gsl_matrix_alloc(d_size, d_size);
-  DMatrix Qi; // = gsl_matrix_alloc(dc_size, dc_size);
-  DMatrix Qi_temp; // = gsl_matrix_alloc(dc_size, dc_size);
-  DMatrix WHiy; // = gsl_vector_alloc(dc_size);
-  DMatrix QiWHiy; // = gsl_vector_alloc(dc_size);
-  DMatrix beta; // = gsl_vector_alloc(dc_size);
-  DMatrix Vbeta; // = gsl_matrix_alloc(dc_size, dc_size);
+  DMatrix D_l = zeros_dmatrix(1, d_size);
+  DMatrix UltVeh = zeros_dmatrix(d_size, d_size);
+  DMatrix UltVehi = zeros_dmatrix(d_size, d_size);
+  DMatrix Qi = zeros_dmatrix(dc_size, dc_size);
+  DMatrix Qi_temp = zeros_dmatrix(dc_size, dc_size);
+  DMatrix WHiy = zeros_dmatrix(1, dc_size);
+  DMatrix QiWHiy = zeros_dmatrix(1, dc_size);
+  DMatrix beta = zeros_dmatrix(1, dc_size);
+  DMatrix Vbeta = zeros_dmatrix(dc_size, dc_size);
 
   WHiy = zeros_dmatrix(WHiy.shape[0], WHiy.shape[1]);
 
@@ -2066,14 +2068,14 @@ void analyze_plink(const DMatrix U, const DMatrix eval,
   DMatrix V_g = zeros_dmatrix(d_size, d_size);
   DMatrix V_e = zeros_dmatrix(d_size, d_size);
   DMatrix B = zeros_dmatrix(d_size, c_size + 1);
-  DMatrix beta; // = gsl_vector_alloc(d_size);
-  DMatrix Vbeta; // = gsl_matrix_alloc(d_size, d_size);
+  DMatrix beta = zeros_dmatrix(1, d_size);
+  DMatrix Vbeta = zeros_dmatrix(d_size, d_size);
 
   // Null estimates for initial values.
-  DMatrix V_g_null; // = gsl_matrix_alloc(d_size, d_size);
-  DMatrix V_e_null; // = gsl_matrix_alloc(d_size, d_size);
-  DMatrix B_null; // = gsl_matrix_alloc(d_size, c_size + 1);
-  DMatrix se_B_null; // = gsl_matrix_alloc(d_size, c_size);
+  DMatrix V_g_null = zeros_dmatrix(d_size, d_size);
+  DMatrix V_e_null = zeros_dmatrix(d_size, d_size);
+  DMatrix B_null = zeros_dmatrix(d_size, c_size + 1);
+  DMatrix se_B_null = zeros_dmatrix(d_size, c_size);
 
   DMatrix X_sub = UtW.T;
   X = set_sub_dmatrix(X, 0, 0, c_size, n_size, X_sub);
@@ -2529,7 +2531,7 @@ void CalcXHiY(const DMatrix eval, const DMatrix D_l,
               DMatrix xHiy) {
   size_t n_size = eval.size, c_size = X.shape[0], d_size = D_l.size;
 
-  //gsl_vector_set_zero(xHiy);
+  xHiy = zeros_dmatrix(xHiy.shape[0], xHiy.shape[1]);
 
   double x, delta, dl, y, d;
   for (size_t i = 0; i < d_size; i++) {
@@ -2644,8 +2646,7 @@ void UpdateV(const DMatrix eval, const DMatrix U, const DMatrix E,
     //gsl_blas_dsyr(CblasUpper, 1.0 / delta, &U_col.vector, V_g);
   }
 
-  // IMP
-  //gsl_blas_dsyrk(CblasUpper, CblasNoTrans, 1.0, E, 0.0, V_e);
+  V_e = matrix_mult(E, E.T); // check
 
   // Copy the upper part to lower part.
   for (size_t i = 0; i < d_size; i++) {
@@ -3128,16 +3129,16 @@ void Calc_xHiDHiy(const DMatrix eval, const DMatrix xHi,
     DMatrix xHi_col_i = get_col(xHi, k * d_size + i);
     d = Hiy.accessor(j, k);
 
-    //gsl_blas_daxpy(d * delta, &xHi_col_i.vector, xHiDHiy_g);
-    //gsl_blas_daxpy(d, &xHi_col_i.vector, xHiDHiy_e);
+    xHiDHiy_g = axpy(d * delta, xHi_col_i, xHiDHiy_g);  // daxpy
+    xHiDHiy_e = axpy(d, xHi_col_i, xHiDHiy_e);  // daxpy
 
     if (i != j) {
       //gsl_vector_const_view
       DMatrix xHi_col_j = get_col(xHi, k * d_size + j);
       d = Hiy.accessor(i, k);
 
-      //gsl_blas_daxpy(d * delta, &xHi_col_j.vector, xHiDHiy_g);
-      //gsl_blas_daxpy(d, &xHi_col_j.vector, xHiDHiy_e);
+      xHiDHiy_g = axpy(d, xHi_col_j, xHiDHiy_g);  // daxpy
+      xHiDHiy_e = axpy(d, xHi_col_j, xHiDHiy_e); // daxpy
     }
   }
 
@@ -3154,8 +3155,8 @@ void Calc_xHiDHix(const DMatrix eval, const DMatrix xHi, const size_t i,
 
   double delta;
 
-  DMatrix mat_dcdc; // = gsl_matrix_alloc(dc_size, dc_size);
-  DMatrix mat_dcdc_t; // = gsl_matrix_alloc(dc_size, dc_size);
+  DMatrix mat_dcdc = zeros_dmatrix(dc_size, dc_size);
+  DMatrix mat_dcdc_t = zeros_dmatrix(dc_size, dc_size);
 
   for (size_t k = 0; k < n_size; k++) {
     delta = eval.elements[k];
@@ -3165,10 +3166,10 @@ void Calc_xHiDHix(const DMatrix eval, const DMatrix xHi, const size_t i,
     //gsl_vector_const_view
     DMatrix xHi_col_j = get_col(xHi, k * d_size + j);
 
-    mat_dcdc = zeros_dmatrix(mat_dcdc.shape[0], mat_dcdc.shape[1]);
-    //gsl_blas_dger(1.0, &xHi_col_i.vector, &xHi_col_j.vector, mat_dcdc);
+    mat_dcdc = zeros_dmatrix(mat_dcdc.shape[0], mat_dcdc.shape[1]); //check
+    mat_dcdc = ger(1.0, xHi_col_i, xHi_col_j, mat_dcdc);
 
-    //gsl_matrix_transpose_memcpy(mat_dcdc_t, mat_dcdc);
+    mat_dcdc_t = mat_dcdc.T;
 
     xHiDHix_e = add_dmatrix(xHiDHix_e, mat_dcdc);
 
@@ -3217,32 +3218,32 @@ void Calc_xHiDHiDHiy(const DMatrix eval, const DMatrix Hi,
     d_Hi_j1j2 = Hi.accessor(j1, k * d_size + j2);
 
     if (i1 == j1) {
-      //gsl_blas_daxpy(delta * delta * d_Hi_j1i2 * d_Hiy_j, xHi_col_i, xHiDHiDHiy_gg);
-      //gsl_blas_daxpy(d_Hi_j1i2 * d_Hiy_j, xHi_col_i, xHiDHiDHiy_ee);
-      //gsl_blas_daxpy(delta * d_Hi_j1i2 * d_Hiy_j, xHi_col_i, xHiDHiDHiy_ge);
+      xHiDHiDHiy_gg = axpy(delta * delta * d_Hi_j1i2 * d_Hiy_j, xHi_col_i, xHiDHiDHiy_gg); // daxpy
+      xHiDHiDHiy_ee = axpy(d_Hi_j1i2 * d_Hiy_j,                 xHi_col_i, xHiDHiDHiy_ee); // daxpy
+      xHiDHiDHiy_ge = axpy(delta * d_Hi_j1i2 * d_Hiy_j,         xHi_col_i, xHiDHiDHiy_ge); // daxpy
 
       if (i2 != j2) {
-        //gsl_blas_daxpy(delta * delta * d_Hi_j1j2 * d_Hiy_i, xHi_col_i, xHiDHiDHiy_gg);
-        //gsl_blas_daxpy(d_Hi_j1j2 * d_Hiy_i, xHi_col_i, xHiDHiDHiy_ee);
-        //gsl_blas_daxpy(delta * d_Hi_j1j2 * d_Hiy_i, xHi_col_i, xHiDHiDHiy_ge);
+        xHiDHiDHiy_gg = axpy(delta * delta * d_Hi_j1j2 * d_Hiy_i, xHi_col_i, xHiDHiDHiy_gg); // daxpy
+        xHiDHiDHiy_ee = axpy(d_Hi_j1j2 * d_Hiy_i,                 xHi_col_i, xHiDHiDHiy_ee); // daxpy
+        xHiDHiDHiy_ge = axpy(delta * d_Hi_j1j2 * d_Hiy_i,         xHi_col_i, xHiDHiDHiy_ge); // daxpy
       }
     } else {
-      //gsl_blas_daxpy(delta * delta * d_Hi_j1i2 * d_Hiy_j, xHi_col_i, xHiDHiDHiy_gg);
-      //gsl_blas_daxpy(d_Hi_j1i2 * d_Hiy_j, xHi_col_i, xHiDHiDHiy_ee);
-      //gsl_blas_daxpy(delta * d_Hi_j1i2 * d_Hiy_j, xHi_col_i, xHiDHiDHiy_ge);
+      xHiDHiDHiy_gg = axpy(delta * delta * d_Hi_j1i2 * d_Hiy_j, xHi_col_i, xHiDHiDHiy_gg); // daxpy
+      xHiDHiDHiy_ee = axpy(d_Hi_j1i2 * d_Hiy_j,                 xHi_col_i, xHiDHiDHiy_ee); // daxpy
+      xHiDHiDHiy_ge = axpy(delta * d_Hi_j1i2 * d_Hiy_j,         xHi_col_i, xHiDHiDHiy_ge); // daxpy
 
-      //gsl_blas_daxpy(delta * delta * d_Hi_i1i2 * d_Hiy_j, xHi_col_j, xHiDHiDHiy_gg);
-      //gsl_blas_daxpy(d_Hi_i1i2 * d_Hiy_j, xHi_col_j, xHiDHiDHiy_ee);
-      //gsl_blas_daxpy(delta * d_Hi_i1i2 * d_Hiy_j, xHi_col_j, xHiDHiDHiy_ge);
+      xHiDHiDHiy_gg = axpy(delta * delta * d_Hi_i1i2 * d_Hiy_j, xHi_col_j, xHiDHiDHiy_gg); // daxpy
+      xHiDHiDHiy_ee = axpy(d_Hi_i1i2 * d_Hiy_j,                 xHi_col_j, xHiDHiDHiy_ee); // daxpy
+      xHiDHiDHiy_ge = axpy(delta * d_Hi_i1i2 * d_Hiy_j,         xHi_col_j, xHiDHiDHiy_ge); // daxpy
 
       if (i2 != j2) {
-        //gsl_blas_daxpy(delta * delta * d_Hi_j1j2 * d_Hiy_i, xHi_col_i, xHiDHiDHiy_gg);
-        //gsl_blas_daxpy(d_Hi_j1j2 * d_Hiy_i, xHi_col_i, xHiDHiDHiy_ee);
-        //gsl_blas_daxpy(delta * d_Hi_j1j2 * d_Hiy_i, xHi_col_i, xHiDHiDHiy_ge);
+        xHiDHiDHiy_gg = axpy(delta * delta * d_Hi_j1j2 * d_Hiy_i, xHi_col_i, xHiDHiDHiy_gg); // daxpy
+        xHiDHiDHiy_ee = axpy(d_Hi_j1j2 * d_Hiy_i,                 xHi_col_i, xHiDHiDHiy_ee); // daxpy
+        xHiDHiDHiy_ge = axpy(delta * d_Hi_j1j2 * d_Hiy_i,         xHi_col_i, xHiDHiDHiy_ge); // daxpy
 
-        //gsl_blas_daxpy(delta * delta * d_Hi_i1j2 * d_Hiy_i, xHi_col_j, xHiDHiDHiy_gg);
-        //gsl_blas_daxpy(d_Hi_i1j2 * d_Hiy_i, xHi_col_j, xHiDHiDHiy_ee);
-        //gsl_blas_daxpy(delta * d_Hi_i1j2 * d_Hiy_i, xHi_col_j, xHiDHiDHiy_ge);
+        xHiDHiDHiy_gg = axpy(delta * delta * d_Hi_i1j2 * d_Hiy_i, xHi_col_j, xHiDHiDHiy_gg); // daxpy
+        xHiDHiDHiy_ee = axpy(d_Hi_i1j2 * d_Hiy_i,                 xHi_col_j, xHiDHiDHiy_ee); // daxpy
+        xHiDHiDHiy_ge = axpy(delta * d_Hi_i1j2 * d_Hiy_i,         xHi_col_j, xHiDHiDHiy_ge); // daxpy
       }
     }
   }
@@ -3284,7 +3285,7 @@ void Calc_xHiDHiDHix(const DMatrix eval, const DMatrix Hi,
 
     if (i1 == j1) {
       mat_dcdc = zeros_dmatrix(mat_dcdc.shape[0], mat_dcdc.shape[1]);
-      //gsl_blas_dger(d_Hi_j1i2, &xHi_col_i1.vector, &xHi_col_j2.vector, mat_dcdc);
+      mat_dcdc = ger(d_Hi_j1i2, xHi_col_i1, xHi_col_j2, mat_dcdc);
 
       xHiDHiDHix_ee = add_dmatrix(xHiDHiDHix_ee, mat_dcdc);
       mat_dcdc = multiply_dmatrix_num(mat_dcdc, delta);
@@ -3294,7 +3295,7 @@ void Calc_xHiDHiDHix(const DMatrix eval, const DMatrix Hi,
 
       if (i2 != j2) {
         mat_dcdc = zeros_dmatrix(mat_dcdc.shape[0], mat_dcdc.shape[1]);
-        //gsl_blas_dger(d_Hi_j1j2, xHi_col_i1, xHi_col_i2, mat_dcdc);
+        mat_dcdc = ger(d_Hi_j1j2, xHi_col_i1, xHi_col_i2, mat_dcdc);
 
         xHiDHiDHix_ee = add_dmatrix(xHiDHiDHix_ee, mat_dcdc);
         mat_dcdc = multiply_dmatrix_num(mat_dcdc, delta);
@@ -3303,8 +3304,8 @@ void Calc_xHiDHiDHix(const DMatrix eval, const DMatrix Hi,
         xHiDHiDHix_gg = add_dmatrix(xHiDHiDHix_gg, mat_dcdc);
       }
     } else {
-      mat_dcdc = zeros_dmatrix(mat_dcdc.shape[0], mat_dcdc.shape[1]);
-      //gsl_blas_dger(d_Hi_j1i2, &xHi_col_i1.vector, &xHi_col_j2.vector, mat_dcdc);
+      mat_dcdc = zeros_dmatrix(mat_dcdc.shape[0], mat_dcdc.shape[1]);  // check
+      mat_dcdc = ger(d_Hi_j1i2, xHi_col_i1, xHi_col_j2, mat_dcdc);
 
       xHiDHiDHix_ee = add_dmatrix(xHiDHiDHix_ee, mat_dcdc);
       mat_dcdc = multiply_dmatrix_num(mat_dcdc, delta);
@@ -3312,8 +3313,8 @@ void Calc_xHiDHiDHix(const DMatrix eval, const DMatrix Hi,
       mat_dcdc = multiply_dmatrix_num(mat_dcdc, delta);
       xHiDHiDHix_gg = add_dmatrix(xHiDHiDHix_gg, mat_dcdc);
 
-      mat_dcdc = zeros_dmatrix(mat_dcdc.shape[0], mat_dcdc.shape[1]);
-      //gsl_blas_dger(d_Hi_i1i2, &xHi_col_j1.vector, &xHi_col_j2.vector, mat_dcdc);
+      mat_dcdc = zeros_dmatrix(mat_dcdc.shape[0], mat_dcdc.shape[1]); // check
+      mat_dcdc = ger(d_Hi_i1i2, xHi_col_j1, xHi_col_j2, mat_dcdc);
 
       xHiDHiDHix_ee = add_dmatrix(xHiDHiDHix_ee, mat_dcdc);
       mat_dcdc = multiply_dmatrix_num(mat_dcdc, delta);
@@ -3323,7 +3324,7 @@ void Calc_xHiDHiDHix(const DMatrix eval, const DMatrix Hi,
 
       if (i2 != j2) {
         mat_dcdc = zeros_dmatrix(mat_dcdc.shape[0], mat_dcdc.shape[1]);
-        //gsl_blas_dger(d_Hi_j1j2, &xHi_col_i1.vector, &xHi_col_i2.vector, mat_dcdc);
+        mat_dcdc = ger(d_Hi_j1j2, xHi_col_i1, xHi_col_i2, mat_dcdc);
 
         xHiDHiDHix_ee = add_dmatrix(xHiDHiDHix_ee, mat_dcdc);
         mat_dcdc = multiply_dmatrix_num(mat_dcdc, delta);
@@ -3332,7 +3333,7 @@ void Calc_xHiDHiDHix(const DMatrix eval, const DMatrix Hi,
         xHiDHiDHix_gg = add_dmatrix(xHiDHiDHix_gg, mat_dcdc);
 
         mat_dcdc = zeros_dmatrix(mat_dcdc.shape[0], mat_dcdc.shape[1]);
-        //gsl_blas_dger(d_Hi_i1j2, &xHi_col_j1.vector, &xHi_col_i2.vector, mat_dcdc);
+        mat_dcdc = ger(d_Hi_i1j2, xHi_col_j1, xHi_col_i2, mat_dcdc);
 
         xHiDHiDHix_ee = add_dmatrix(xHiDHiDHix_ee, mat_dcdc);
         mat_dcdc = multiply_dmatrix_num(mat_dcdc, delta);
@@ -3434,7 +3435,6 @@ void Calc_yHiDHiDHiy(const DMatrix eval, const DMatrix Hi,
 // eigen trace and values in U and eval (eigenvalues).
 double EigenDecomp(DMatrix G, DMatrix U, DMatrix eval,
                    const size_t flag_largematrix) {
-  writeln("EigenDecomp");
   lapack_eigen_symmv(G, eval, U, flag_largematrix);
   // Calculate track_G=mean(diag(G)).
   double d = 0.0;
@@ -3442,7 +3442,6 @@ double EigenDecomp(DMatrix G, DMatrix U, DMatrix eval,
     d += eval.elements[i];
 
   d /= to!double(eval.size);
-  writeln("d = ", d);
   return d;
 }
 

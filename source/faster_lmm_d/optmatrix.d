@@ -14,7 +14,7 @@ import std.math: sqrt, round;
 import std.stdio;
 import std.typecons; // for Tuples
 
-import cblas : gemm, Transpose, Order, cblas_ddot;
+import cblas : gemm, Transpose, Order, Uplo, cblas_ddot, cblas_daxpy, cblas_dger, cblas_dsyr;
 
 import faster_lmm_d.dmatrix;
 import faster_lmm_d.helpers;
@@ -94,6 +94,28 @@ DMatrix large_matrix_mult(DMatrix lha, DMatrix rha) {
   DMatrix res_dr = matrix_mult(mat.last,  nat.last) ;
 
   return matrix_join(res_ul, res_ur, res_dl, res_dr);
+}
+
+DMatrix axpy(const double alpha, const DMatrix X, const DMatrix Y){
+  double[] elements = Y.elements.dup();
+  cblas_daxpy(to!int(X.size), alpha, X.elements.ptr, 1, elements.ptr, 1);
+  return DMatrix([1, Y.size], elements);
+}
+
+DMatrix ger(const double alpha, const DMatrix X , const DMatrix Y , const DMatrix A){
+  double [] elements = A.elements.dup();
+  int m = to!int(A.rows), n = to!int(A.cols);
+  assert(m == X.size);
+  assert(n == Y.size);
+  cblas_dger(Order.RowMajor, m, n, alpha, X.elements.ptr, 1, Y.elements.ptr, 1, elements.ptr, m);
+  return DMatrix(A.shape, elements);
+}
+
+DMatrix syr(const double alpha, const DMatrix X, const DMatrix A ){
+  assert(A.rows == A.cols);
+  double[] elements = A.elements.dup;
+  cblas_dsyr(Order.RowMajor, Uplo.Upper, to!int(A.rows), alpha, X.elements.ptr, 1, elements.ptr, to!int(A.rows)); 
+  return DMatrix(A.shape, elements);
 }
 
 /*
