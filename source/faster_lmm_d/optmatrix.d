@@ -14,7 +14,7 @@ import std.math: sqrt, round;
 import std.stdio;
 import std.typecons; // for Tuples
 
-import cblas : gemm, Transpose, Order, Uplo, cblas_ddot, cblas_daxpy, cblas_dger, cblas_dsyr;
+import cblas : gemm, Transpose, Order, Uplo, cblas_ddot, cblas_daxpy, cblas_dger, cblas_dsyr, cblas_dsyrk;
 
 import faster_lmm_d.dmatrix;
 import faster_lmm_d.helpers;
@@ -102,6 +102,8 @@ DMatrix axpy(const double alpha, const DMatrix X, const DMatrix Y){
   return DMatrix([1, Y.size], elements);
 }
 
+//compute the rank-1 update A = alpha x y^T + A of the matrix A.
+
 DMatrix ger(const double alpha, const DMatrix X , const DMatrix Y , const DMatrix A){
   double [] elements = A.elements.dup();
   int m = to!int(A.rows), n = to!int(A.cols);
@@ -111,10 +113,21 @@ DMatrix ger(const double alpha, const DMatrix X , const DMatrix Y , const DMatri
   return DMatrix(A.shape, elements);
 }
 
+//compute the symmetric rank-1 update A = alpha x x^T + A of the symmetric matrix A
+
 DMatrix syr(const double alpha, const DMatrix X, const DMatrix A ){
   assert(A.rows == A.cols);
   double[] elements = A.elements.dup;
   cblas_dsyr(Order.RowMajor, Uplo.Upper, to!int(A.rows), alpha, X.elements.ptr, 1, elements.ptr, to!int(A.rows)); 
+  return DMatrix(A.shape, elements);
+}
+
+//compute a rank-k update of the symmetric matrix C, C = alpha A A^T + beta C 
+
+DMatrix syrk(const double alpha, const DMatrix A, double beta, const DMatrix C){
+  assert(A.rows == A.cols);
+  double[] elements = C.elements.dup();
+  cblas_dsyrk(Order.RowMajor, Uplo.Upper, Transpose.Trans, to!int(C.rows), to!int(A.cols), alpha, A.elements.ptr, to!int(A.rows), beta, elements.ptr, to!int(C.rows)); 
   return DMatrix(A.shape, elements);
 }
 

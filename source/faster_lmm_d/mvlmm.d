@@ -724,6 +724,7 @@ double MphEM(const char func_name, const size_t max_iter, const double max_prec,
 
   // Calculate |XXt| and (XXt)^{-1}.
   XXt = matrix_mult(X, X.T);
+  //XXt = syrk(1, X, 0, XXt); // check which is faster
 
   for (size_t i = 0; i < c_size; ++i) {
     for (size_t j = 0; j < i; ++j) {
@@ -833,6 +834,7 @@ double MphNR(const char func_name, const size_t max_iter, const double max_prec,
 
   // Calculate |XXt| and (XXt)^{-1}.
   XXt = matrix_mult(X, X.T);
+  //XXt = syrk(1, X, 0, XXt); // check which is faster
   for (size_t i = 0; i < c_size; ++i) {
     for (size_t j = 0; j < i; ++j) {
       XXt.set(i, j, XXt.accessor(j, i));
@@ -953,11 +955,6 @@ double MphCalcP(const DMatrix eval, const DMatrix x_vec, const DMatrix W,
   DMatrix xPx = zeros_dmatrix(d_size, d_size);
   DMatrix xPy = zeros_dmatrix(1, d_size);
   DMatrix WHiy = zeros_dmatrix(1, dc_size);
-
-  //gsl_matrix_set_zero(xPx);
-  //gsl_matrix_set_zero(WHix);
-  //gsl_vector_set_zero(xPy);
-  //gsl_vector_set_zero(WHiy);
 
   // Eigen decomposition and calculate log|Ve|.
   EigenProc(V_g, V_e, D_l, UltVeh, UltVehi);
@@ -1082,9 +1079,9 @@ void MphCalcBeta(const DMatrix eval, const DMatrix W, const DMatrix Y, const DMa
   // Need to multiply I_c\otimes UltVehi on both sides or one side.
   for (size_t i = 0; i < c_size; i++) {
     //gsl_vector_view
-    DMatrix QiWHiy_sub ;//= gsl_vector_subvector(QiWHiy, i * d_size, d_size);
+    DMatrix QiWHiy_sub = get_subvector_dmatrix(QiWHiy, i * d_size, d_size);
     //gsl_vector_view
-    DMatrix beta_sub;// = gsl_vector_subvector(beta, i * d_size, d_size);
+    DMatrix beta_sub = get_subvector_dmatrix(beta, i * d_size, d_size);
     beta_sub = matrix_mult(UltVeh, QiWHiy_sub);
 
     for (size_t j = 0; j < c_size; j++) {
@@ -1134,28 +1131,28 @@ void CalcDev(const char func_name, const DMatrix eval, const DMatrix Qi,
   size_t v1, v2;
   double dev1_g, dev1_e, dev2_gg, dev2_ee, dev2_ge;
 
-  DMatrix Hessian; // = gsl_matrix_alloc(v_size * 2, v_size * 2);
+  DMatrix Hessian = zeros_dmatrix(v_size * 2, v_size * 2);
 
-  DMatrix xHiDHiy_all_g; // = gsl_matrix_alloc(dc_size, v_size);
-  DMatrix xHiDHiy_all_e; // = gsl_matrix_alloc(dc_size, v_size);
-  DMatrix xHiDHix_all_g; // = gsl_matrix_alloc(dc_size, v_size * dc_size);
-  DMatrix xHiDHix_all_e; // = gsl_matrix_alloc(dc_size, v_size * dc_size);
-  DMatrix xHiDHixQixHiy_all_g; // = gsl_matrix_alloc(dc_size, v_size);
-  DMatrix xHiDHixQixHiy_all_e; // = gsl_matrix_alloc(dc_size, v_size);
+  DMatrix xHiDHiy_all_g = zeros_dmatrix(dc_size, v_size);
+  DMatrix xHiDHiy_all_e = zeros_dmatrix(dc_size, v_size);
+  DMatrix xHiDHix_all_g = zeros_dmatrix(dc_size, v_size * dc_size);
+  DMatrix xHiDHix_all_e = zeros_dmatrix(dc_size, v_size * dc_size);
+  DMatrix xHiDHixQixHiy_all_g = zeros_dmatrix(dc_size, v_size);
+  DMatrix xHiDHixQixHiy_all_e = zeros_dmatrix(dc_size, v_size);
 
-  DMatrix QixHiDHiy_all_g; // = gsl_matrix_alloc(dc_size, v_size);
-  DMatrix QixHiDHiy_all_e; // = gsl_matrix_alloc(dc_size, v_size);
-  DMatrix QixHiDHix_all_g; // = gsl_matrix_alloc(dc_size, v_size * dc_size);
-  DMatrix QixHiDHix_all_e; // = gsl_matrix_alloc(dc_size, v_size * dc_size);
-  DMatrix QixHiDHixQixHiy_all_g; // = gsl_matrix_alloc(dc_size, v_size);
-  DMatrix QixHiDHixQixHiy_all_e; // = gsl_matrix_alloc(dc_size, v_size);
+  DMatrix QixHiDHiy_all_g = zeros_dmatrix(dc_size, v_size);
+  DMatrix QixHiDHiy_all_e = zeros_dmatrix(dc_size, v_size);
+  DMatrix QixHiDHix_all_g = zeros_dmatrix(dc_size, v_size * dc_size);
+  DMatrix QixHiDHix_all_e = zeros_dmatrix(dc_size, v_size * dc_size);
+  DMatrix QixHiDHixQixHiy_all_g = zeros_dmatrix(dc_size, v_size);
+  DMatrix QixHiDHixQixHiy_all_e = zeros_dmatrix(dc_size, v_size);
 
-  DMatrix xHiDHiDHiy_all_gg; // = gsl_matrix_alloc(dc_size, v_size * v_size);
-  DMatrix xHiDHiDHiy_all_ee; // = gsl_matrix_alloc(dc_size, v_size * v_size);
-  DMatrix xHiDHiDHiy_all_ge; // = gsl_matrix_alloc(dc_size, v_size * v_size);
-  DMatrix xHiDHiDHix_all_gg; // = gsl_matrix_alloc(dc_size, v_size * v_size * dc_size);
-  DMatrix xHiDHiDHix_all_ee; // = gsl_matrix_alloc(dc_size, v_size * v_size * dc_size);
-  DMatrix xHiDHiDHix_all_ge; // = gsl_matrix_alloc(dc_size, v_size * v_size * dc_size);
+  DMatrix xHiDHiDHiy_all_gg = zeros_dmatrix(dc_size, v_size * v_size);
+  DMatrix xHiDHiDHiy_all_ee = zeros_dmatrix(dc_size, v_size * v_size);
+  DMatrix xHiDHiDHiy_all_ge = zeros_dmatrix(dc_size, v_size * v_size);
+  DMatrix xHiDHiDHix_all_gg = zeros_dmatrix(dc_size, v_size * v_size * dc_size);
+  DMatrix xHiDHiDHix_all_ee = zeros_dmatrix(dc_size, v_size * v_size * dc_size);
+  DMatrix xHiDHiDHix_all_ge = zeros_dmatrix(dc_size, v_size * v_size * dc_size);
 
   // Calculate xHiDHiy_all, xHiDHix_all and xHiDHixQixHiy_all.
   Calc_xHiDHiy_all(eval, xHi, Hiy, xHiDHiy_all_g, xHiDHiy_all_e);
@@ -1254,15 +1251,6 @@ void CalcDev(const char func_name, const DMatrix eval, const DMatrix Qi,
       }
     }
   }
-
-  // Invert Hessian.
-  int sig;
-  //gsl_permutation *pmt = gsl_permutation_alloc(v_size * 2);
-
-  //LUDecomp(Hessian, pmt, &sig);
-  //LUInvert(Hessian, pmt, Hessian_inv);
-
-  //gsl_permutation_free(pmt);
 
   Hessian_inv = Hessian.inverse();
   // Calculate Edgeworth correction factors after inverting
