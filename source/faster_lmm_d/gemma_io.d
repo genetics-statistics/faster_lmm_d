@@ -10,6 +10,7 @@ module faster_lmm_d.gemma_io;
 import core.stdc.stdlib : exit;
 import core.stdc.time;
 
+import std.bitmanip;
 import std.algorithm;
 import std.conv;
 import std.exception;
@@ -818,16 +819,13 @@ bool readfile_bim(const string file_bim, SNPINFO[] snpInfo) {
 }
 
 // Read bed file, the first time.
-int[] readfile_bed(const string file_bed, const string[] setSnps,
-                  const DMatrix W, int[] indicator_idv, SNPINFO[] snpInfo,
+Geno_result readfile_bed(const string file_bed, const string[] setSnps,
+                  const DMatrix W, int[] indicator_idv, size_t ns_total,
                   const double maf_level, const double miss_level,
                   const double hwe_level, const double r2_level,
                   size_t ns_test) {
-  writeln("entered readfile_bed");
   int[] indicator_snp = [];
-  writeln("booyakasha");
-  size_t ns_total = snpInfo.length;
-  ns_total = 200;
+  SNPINFO[] snpInfo;
 
   File infile = File(file_bed);
 
@@ -863,9 +861,9 @@ int[] readfile_bed(const string file_bed, const string[] setSnps,
   // Ignore the first three magic numbers.
   int num;
   for (int i = 0; i < 3; ++i) {
-    // FIXME
-    auto ch = infile.rawRead(new char[8]);
-    writeln(to!int(ch));
+    auto ch = infile.rawRead(new bool[8]);
+    auto b = BitArray(ch);
+    writeln("b = " , b);
   }
 
   double maf;
@@ -897,8 +895,9 @@ int[] readfile_bed(const string file_bed, const string[] setSnps,
     c_idv = 0;
     genotype_miss = zeros_dmatrix(genotype_miss.shape[0], genotype_miss.shape[1]);
     for (size_t i = 0; i < n_bit; ++i) {
-      // fixme
-      auto b = infile.rawRead(new char[8]);
+      auto ch = infile.rawRead(new bool[8]);
+      auto b = BitArray(ch);
+      writeln("b = " , b);
 
       // Minor allele homozygous: 2.0; major: 0.0;
       for (size_t j = 0; j < 4; ++j) {
@@ -987,8 +986,8 @@ int[] readfile_bed(const string file_bed, const string[] setSnps,
     indicator_snp ~= 1;
     ns_test++;
   }
-
-  return indicator_snp;
+  writeln("indicator_snp", indicator_snp);
+  return Geno_result(indicator_snp, snpInfo);
 }
 
 // Read 1 column of phenotype.

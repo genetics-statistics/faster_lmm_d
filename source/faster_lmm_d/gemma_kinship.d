@@ -11,6 +11,7 @@ import core.stdc.stdlib : exit;
 import core.stdc.time;
 
 import std.algorithm;
+import std.bitmanip;
 import std.conv;
 import std.exception;
 import std.file;
@@ -80,8 +81,8 @@ void generate_kinship_plink(const string file_bed, const string test_name = ""){
   double maf_level, miss_level, hwe_level, r2_level;
   size_t ns_test;
   //geno
-  int[] indicator_snp = readfile_bed(file_bed ~ ".bed", setSnps, W, indicators.indicator_idv, snpInfo,
-                  maf_level, miss_level, hwe_level, r2_level, ns_test);
+  int[] indicator_snp = readfile_bed(file_bed ~ ".bed", setSnps, W, indicators.indicator_idv, 200,
+                  maf_level, miss_level, hwe_level, r2_level, ns_test).indicator_snp;
 
   size_t ni_total = indicators.indicator_idv.length;
 
@@ -772,7 +773,7 @@ DMatrix plink_kin(const string file_bed, int[] indicator_snp, const int k_mode, 
 
   // print the first three magic numbers
   for (int i = 0; i < 3; ++i) {
-    auto b = infile.rawRead(new char[8]);
+    auto ch = infile.rawRead(new bool[8]);
   }
 
   for (size_t t = 0; t < indicator_snp.length; ++t) {
@@ -789,7 +790,8 @@ DMatrix plink_kin(const string file_bed, int[] indicator_snp, const int k_mode, 
     ci_total = 0;
     geno_var = 0.0;
     for (int i = 0; i < n_bit; ++i) {
-      auto b = infile.rawRead(new char[8]);
+      auto ch = infile.rawRead(new bool[8]);
+      auto b = BitArray(ch);
 
       // Minor allele homozygous: 2.0; major: 0.0.
       for (size_t j = 0; j < 4; ++j) {
