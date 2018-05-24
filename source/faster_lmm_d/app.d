@@ -16,6 +16,7 @@ import std.json;
 import std.math : round;
 import std.stdio;
 
+import faster_lmm_d.bslmm;
 import faster_lmm_d.dmatrix;
 import faster_lmm_d.gwas;
 import faster_lmm_d.gemma;
@@ -84,6 +85,7 @@ void main(string[] args)
   ulong option_ni_total;
   size_t option_nind;
   ulong option_ni_ph = 1;
+  int option_w, option_s, option_seed;
 
   globalLogLevel(LogLevel.warning); //default
   check_memory("App: Start");
@@ -120,6 +122,9 @@ void main(string[] args)
     "nind", &option_nind,
     "ni_total", &option_ni_total,
     "ni_ph", &option_ni_ph,
+    "w", &option_w,
+    "s", &option_s,
+    "seed", &option_seed,
     "help", &option_help
   );
 
@@ -183,6 +188,9 @@ void main(string[] args)
     }
     else if(cmd == "mvlmm"){
       mvlmm_run(option_kinship, option_pheno, option_covar, option_geno, option_bfile);
+    }
+    else if(cmd == "bslmm"){
+      bslmm_run();
     }
     else if(cmd == "lm"){
       lm_run(option_kinship, option_pheno, option_covar, option_geno, option_bfile);
