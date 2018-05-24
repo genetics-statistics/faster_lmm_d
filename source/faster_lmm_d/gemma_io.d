@@ -825,7 +825,7 @@ Geno_result readfile_bed(const string file_bed, const string[] setSnps,
                   const double hwe_level, const double r2_level,
                   size_t ns_test) {
   int[] indicator_snp = [];
-  SNPINFO[] snpInfo;
+  SNPINFO[] snpInfo = new SNPINFO[ns_total];
 
   File infile = File(file_bed);
 
@@ -935,12 +935,12 @@ Geno_result readfile_bed(const string file_bed, const string[] setSnps,
     }
     maf /= 2.0 * to!double(ni_test - n_miss);
 
-    //snpInfo[t].n_miss = n_miss;
-    //snpInfo[t].missingness = to!double(n_miss) / to!double(ni_test);
-    //snpInfo[t].maf = maf;
-    //snpInfo[t].n_idv = ni_test - n_miss;
-    //snpInfo[t].n_nb = 0;
-    //snpInfo[t].file_position = t;
+    snpInfo[t].n_miss = n_miss;
+    snpInfo[t].missingness = to!double(n_miss) / to!double(ni_test);
+    snpInfo[t].maf = maf;
+    snpInfo[t].n_idv = ni_test - n_miss;
+    snpInfo[t].n_nb = 0;
+    snpInfo[t].file_position = t;
 
     if (to!double(n_miss) / to!double(ni_test) > miss_level) {
       indicator_snp ~= 0;

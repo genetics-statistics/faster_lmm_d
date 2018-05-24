@@ -101,7 +101,7 @@ void mvlmm_run(string option_kinship, string option_pheno, string option_covar, 
   writeln("trace_G =>", trace_G);
   cPar.a_mode = 1;
 
-  analyze_plink(U, eval, UtW, Uty, option_bfile, snpInfo);
+  analyze_plink(U, eval, UtW, Uty, option_bfile, snpInfo, geno_result.indicator_snp, indicators.indicator_idv);
 }
 
 void analyze_bimbam_mvlmm(const DMatrix U, const DMatrix eval,
@@ -724,7 +724,6 @@ double MphEM(const char func_name, const size_t max_iter, const double max_prec,
 
   double logl_const = 0.0, logl_old = 0.0, logl_new = 0.0;
   double logdet_Q, logdet_Ve;
-  int sig;
 
   // Calculate |XXt| and (XXt)^{-1}.
   XXt = matrix_mult(X, X.T);
@@ -945,6 +944,7 @@ double MphNR(const char func_name, const size_t max_iter, const double max_prec,
 double MphCalcP(const DMatrix eval, const DMatrix x_vec, const DMatrix W,
                 const DMatrix Y, const DMatrix V_g, const DMatrix V_e,
                 DMatrix UltVehiY, DMatrix beta, DMatrix Vbeta) {
+  writeln("in MphCalcP");
   size_t n_size = eval.elements.length, c_size = W.shape[0], d_size = V_g.shape[0];
   size_t dc_size = d_size * c_size;
   double delta, dl, d, d1, d2, dy, dx, dw; //  logdet_Ve, logdet_Q, p_value;
@@ -1007,26 +1007,22 @@ double MphCalcP(const DMatrix eval, const DMatrix x_vec, const DMatrix W,
   xPx    = matrix_mult(WHix.T, QiWHix);
   xPy    = matrix_mult(QiWHix.T, WHiy, );
 
-  // Calculate V(beta) and beta.
-  int sig;
-  gsl_permutation *pmt = gsl_permutation_alloc(d_size);
   // TODO
+  // Calculate V(beta) and beta.
   //LUDecomp(xPx, pmt, &sig);
   //LUSolve(xPx, pmt, xPy, D_l);
   //LUInvert(xPx, pmt, Vbeta);
-  Vbeta = xPx.inverse();
+  //Vbeta = xPx.inverse();
 
   // Need to multiply UltVehi on both sides or one side.
-  beta  = matrix_mult(UltVeh.T, D_l);
-  xPx   = matrix_mult(Vbeta, UltVeh);
-  Vbeta = matrix_mult(UltVeh.T, xPx);
+  //beta  = matrix_mult(UltVeh.T, D_l);
+  //xPx   = matrix_mult(Vbeta, UltVeh);
+  //Vbeta = matrix_mult(UltVeh.T, xPx);
 
   // Calculate test statistic and p value.
-  d = vector_ddot(D_l, xPy);
+  //d = vector_ddot(D_l, xPy);
 
   double p_value = gsl_cdf_chisq_Q(d, to!double(d_size));
-
-  gsl_permutation_free(pmt);
 
   return p_value;
 }
@@ -2000,8 +1996,9 @@ double PCRT(const size_t mode, const size_t d_size, const double p_value,
   return p_crt;
 }
 
-void analyze_plink(const DMatrix U, const DMatrix eval,
-                   const DMatrix UtW, const DMatrix UtY, string file_bed, SNPINFO[] snpInfo) {
+void analyze_plink(const DMatrix U, const DMatrix eval, const DMatrix UtW, const DMatrix UtY, 
+                    string file_bed, SNPINFO[] snpInfo, int[] indicator_snp, int[] indicator_idv,
+                    size_t ni_test = 200, size_t ni_total = 200) {
   writeln("entering analyze_plink");
 
   MPHSUMSTAT[] sumStat;
@@ -2048,7 +2045,7 @@ void analyze_plink(const DMatrix U, const DMatrix eval,
 
   DMatrix Hessian = zeros_dmatrix(v_size * 2, v_size * 2);
 
-  DMatrix x; // = gsl_vector_alloc(n_size);
+  DMatrix x = zeros_dmatrix(1, n_size);
 
   DMatrix Y = zeros_dmatrix(d_size, n_size);
   Y = UtY.T;
@@ -2099,10 +2096,9 @@ void analyze_plink(const DMatrix U, const DMatrix eval,
   double[] beta_mle_null;
   double[] se_beta_mle_null;
   double logl_mle_H0;
-  int[] indicator_snp;
-  int[] indicator_idv;
-  int a_mode;
-  size_t ni_test, ni_total;
+
+  // check
+  int a_mode = 4;
 
   MphInitial(em_iter, em_prec, nr_iter, nr_prec, eval, X_sub, Y, l_min, l_max, n_region, V_g, V_e, B_sub);
 
@@ -2284,8 +2280,9 @@ void analyze_plink(const DMatrix U, const DMatrix eval,
     ci_total = 0;
     ci_test = 0;
     for (int i = 0; i < n_bit; ++i) {
-      auto ch = infile.rawRead(new bool[1]);
-      auto b = BitArray(ch);  // check
+      auto ch = infile.rawRead(new bool[8]);
+      auto b = BitArray(ch);  // check1
+      writeln(b);
 
       // Minor allele homozygous: 2.0; major: 0.0;
       for (size_t j = 0; j < 4; ++j) {
@@ -2328,7 +2325,6 @@ void analyze_plink(const DMatrix U, const DMatrix eval,
         geno = x_mean;
       }
     }
-
     //gsl_vector_view
     DMatrix Xlarge_col = get_col(Xlarge, csnp % msize);
     //gsl_vector_memcpy(Xlarge_col, x);
