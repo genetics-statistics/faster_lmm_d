@@ -135,7 +135,6 @@ DMatrix syr(const double alpha, const DMatrix X, const DMatrix A ){
 //compute a rank-k update of the symmetric matrix C, C = alpha A A^T + beta C 
 
 DMatrix syrk(const double alpha, const DMatrix A, double beta, const DMatrix C){
-  assert(A.rows == A.cols);
   double[] elements = C.elements.dup();
   cblas_dsyrk(Order.RowMajor, Uplo.Upper, Transpose.Trans, to!int(C.rows), to!int(A.cols), alpha, A.elements.ptr, to!int(A.rows), beta, elements.ptr, to!int(C.rows)); 
   return DMatrix(A.shape, elements);

@@ -77,11 +77,11 @@ void generate_kinship_plink(const string file_bed, const string test_name = ""){
   size_t ni_test = indicators.ni_test;
   DMatrix W = CopyCvt(indicators.cvt, indicators.indicator_cvt, indicators.indicator_idv, indicators.n_cvt, ni_test);
   string[] setSnps;
-  SNPINFO[] snpInfo;
+  SNPINFO[] snpInfo = readfile_bim(file_bed);
   double maf_level, miss_level, hwe_level, r2_level;
   size_t ns_test;
   //geno
-  int[] indicator_snp = readfile_bed(file_bed ~ ".bed", setSnps, W, indicators.indicator_idv, 200,
+  int[] indicator_snp = readfile_bed(file_bed ~ ".bed", setSnps, W, indicators.indicator_idv, snpInfo,
                   maf_level, miss_level, hwe_level, r2_level, ns_test).indicator_snp;
 
   size_t ni_total = indicators.indicator_idv.length;

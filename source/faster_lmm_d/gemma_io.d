@@ -119,9 +119,9 @@ void read_all_files() {
     //}
     if (file_bfile != "") {
       file_str = file_bfile ~ ".bim";
-      if (readfile_bim(file_str, snpInfo) == false) {
-        error = true;
-      }
+      //if (readfile_bim(file_str, snpInfo) == false) {
+      //  error = true;
+      //}
       file_str = file_bfile ~ ".fam";
       //if (readfile_fam(file_str, indicator_pheno, pheno, mapID2num, p_column) ==
       //    false) {
@@ -198,9 +198,9 @@ void read_all_files() {
   if (!file_bfile.empty()) {
     file_str = file_bfile ~ ".bim";
     snpInfo = [];
-    if (readfile_bim(file_str, snpInfo) == false) {
+    /*if (readfile_bim(file_str, snpInfo) == false) {
       error = true;
-    }
+    }*/
 
     // If both fam file and pheno files are used, use
     // phenotypes inside the pheno file.
@@ -277,9 +277,9 @@ void read_all_files() {
     foreach(file_name; infile.byLine){
       file_str = to!string(file_name) ~ ".bim";
 
-      if (readfile_bim(file_str, snpInfo) == false) {
-        error = true;
-      }
+      //if (readfile_bim(file_str, snpInfo) == false) {
+      //  error = true;
+      //}
 
       if (t == 0) {
 
@@ -789,11 +789,11 @@ bool ReadFile_anno(const string file_anno, string[string] mapRS2chr,
 
 
 // Read .bim file.
-bool readfile_bim(const string file_bim, SNPINFO[] snpInfo) {
+SNPINFO[] readfile_bim(const string file_bim) {
   writeln("entered readfile_bim");
-  //snpInfo.clear();
+  SNPINFO[] snpInfo;
 
-  File infile = File(file_bim);
+  File infile = File(file_bim ~ ".bim");
 
   string rs;
   long   b_pos;
@@ -815,19 +815,20 @@ bool readfile_bim(const string file_bim, SNPINFO[] snpInfo) {
     snpInfo ~= sInfo;
   }
 
-  return true;
+  return snpInfo;
 }
 
 // Read bed file, the first time.
 Geno_result readfile_bed(const string file_bed, const string[] setSnps,
-                  const DMatrix W, int[] indicator_idv, size_t ns_total,
+                  const DMatrix W, int[] indicator_idv, SNPINFO[] snpInfo,
                   const double maf_level, const double miss_level,
                   const double hwe_level, const double r2_level,
                   size_t ns_test) {
   int[] indicator_snp = [];
-  SNPINFO[] snpInfo = new SNPINFO[ns_total];
 
   File infile = File(file_bed);
+
+  size_t ns_total = snpInfo.length;
 
   DMatrix genotype = zeros_dmatrix(1, W.shape[0]);
   DMatrix genotype_miss;
@@ -847,7 +848,6 @@ Geno_result readfile_bed(const string file_bed, const string[] setSnps,
   for (size_t i = 0; i < ni_total; ++i) {
     ni_test += indicator_idv[i];
   }
-  writeln("ni_test", ni_test);
   ns_test = 0;
 
   // Calculate n_bit and c, the number of bit for each snp.
@@ -858,12 +858,11 @@ Geno_result readfile_bed(const string file_bed, const string[] setSnps,
     n_bit = ni_total / 4 + 1;
   }
 
-  // Ignore the first three magic numbers.
+  // Ignorereadfile_bed the first three magic numbers.
   int num;
   for (int i = 0; i < 3; ++i) {
     auto ch = infile.rawRead(new bool[8]);
     auto b = BitArray(ch);
-    writeln("b = " , b);
   }
 
   double maf;
@@ -897,7 +896,6 @@ Geno_result readfile_bed(const string file_bed, const string[] setSnps,
     for (size_t i = 0; i < n_bit; ++i) {
       auto ch = infile.rawRead(new bool[8]);
       auto b = BitArray(ch);
-      writeln("b = " , b);
 
       // Minor allele homozygous: 2.0; major: 0.0;
       for (size_t j = 0; j < 4; ++j) {

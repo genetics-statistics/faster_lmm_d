@@ -80,6 +80,8 @@ void mvlmm_run(string option_kinship, string option_pheno, string option_covar, 
   size_t ni_test = indicators.ni_test;
   writeln(ni_test);
 
+  SNPINFO[] snpInfo = readfile_bim(option_bfile);
+
   DMatrix W = CopyCvt(indicators.cvt, indicators.indicator_cvt, indicators.indicator_idv, indicators.n_cvt, ni_test);
 
   size_t ni_total = indicators.indicator_idv.length;
@@ -88,8 +90,12 @@ void mvlmm_run(string option_kinship, string option_pheno, string option_covar, 
 
   double maf_level, miss_level, hwe_level, r2_level;
   size_t ns_test;
-  auto geno_result = readfile_bed(option_bfile ~ ".bed", setSnps, W, indicators.indicator_idv, 200, maf_level, miss_level, hwe_level, r2_level, ns_test);
-  SNPINFO[] snpInfo = geno_result.snpInfo;
+
+  writeln(snpInfo.length);
+  //exit(0);
+
+  auto geno_result = readfile_bed(option_bfile ~ ".bed", setSnps, W, indicators.indicator_idv, snpInfo, maf_level, miss_level, hwe_level, r2_level, ns_test);
+  snpInfo = geno_result.snpInfo;
 
   DMatrix UtW = matrix_mult(U.T, indicators.cvt);
   writeln("UtW.shape =>", UtW.shape);
@@ -727,7 +733,7 @@ double MphEM(const char func_name, const size_t max_iter, const double max_prec,
 
   // Calculate |XXt| and (XXt)^{-1}.
   XXt = matrix_mult(X, X.T);
-  //XXt = syrk(1, X, 0, XXt); // check which is faster
+  //XXt = syrk(1, X, 0, X); // check which is faster
 
   for (size_t i = 0; i < c_size; ++i) {
     for (size_t j = 0; j < i; ++j) {
@@ -735,7 +741,6 @@ double MphEM(const char func_name, const size_t max_iter, const double max_prec,
     }
   }
 
-  writeln("inverse calculated");
   XXti = XXt.inverse;
 
   // Calculate the constant for logl.
@@ -1005,7 +1010,7 @@ double MphCalcP(const DMatrix eval, const DMatrix x_vec, const DMatrix W,
 
   QiWHix = matrix_mult(Qi, WHix);
   xPx    = matrix_mult(WHix.T, QiWHix);
-  xPy    = matrix_mult(QiWHix.T, WHiy, );
+  xPy    = matrix_mult(QiWHix.T, WHiy);
 
   // Calculate V(beta) and beta.
   D_l = xPx.solve(xPy);
@@ -1699,31 +1704,31 @@ void CalcCRT(const DMatrix Hessian_inv, const DMatrix Qi,
   double trCg1, trCe1, trCg2, trCe2, trB_gg, trB_ge, trB_ee;
   double trCC_gg, trCC_ge, trCC_ee, trD_gg = 0.0, trD_ge = 0.0, trD_ee = 0.0;
 
-  DMatrix QiMQi_g1; // = gsl_matrix_alloc(dc_size, dc_size);
-  DMatrix QiMQi_e1; // = gsl_matrix_alloc(dc_size, dc_size);
-  DMatrix QiMQi_g2; // = gsl_matrix_alloc(dc_size, dc_size);
-  DMatrix QiMQi_e2; // = gsl_matrix_alloc(dc_size, dc_size);
+  DMatrix QiMQi_g1 = zeros_dmatrix(dc_size, dc_size);
+  DMatrix QiMQi_e1 = zeros_dmatrix(dc_size, dc_size);
+  DMatrix QiMQi_g2 = zeros_dmatrix(dc_size, dc_size);
+  DMatrix QiMQi_e2 = zeros_dmatrix(dc_size, dc_size);
 
-  DMatrix QiMQisQisi_g1; // = gsl_matrix_alloc(d_size, d_size);
-  DMatrix QiMQisQisi_e1; // = gsl_matrix_alloc(d_size, d_size);
-  DMatrix QiMQisQisi_g2; // = gsl_matrix_alloc(d_size, d_size);
-  DMatrix QiMQisQisi_e2; // = gsl_matrix_alloc(d_size, d_size);
+  DMatrix QiMQisQisi_g1 = zeros_dmatrix(d_size, d_size);
+  DMatrix QiMQisQisi_e1 = zeros_dmatrix(d_size, d_size);
+  DMatrix QiMQisQisi_g2 = zeros_dmatrix(d_size, d_size);
+  DMatrix QiMQisQisi_e2 = zeros_dmatrix(d_size, d_size);
 
-  DMatrix QiMQiMQi_gg; // = gsl_matrix_alloc(dc_size, dc_size);
-  DMatrix QiMQiMQi_ge; // = gsl_matrix_alloc(dc_size, dc_size);
-  DMatrix QiMQiMQi_ee; // = gsl_matrix_alloc(dc_size, dc_size);
+  DMatrix QiMQiMQi_gg = zeros_dmatrix(dc_size, dc_size);
+  DMatrix QiMQiMQi_ge = zeros_dmatrix(dc_size, dc_size);
+  DMatrix QiMQiMQi_ee = zeros_dmatrix(dc_size, dc_size);
 
-  DMatrix QiMMQi_gg; // = gsl_matrix_alloc(dc_size, dc_size);
-  DMatrix QiMMQi_ge; // = gsl_matrix_alloc(dc_size, dc_size);
-  DMatrix QiMMQi_ee; // = gsl_matrix_alloc(dc_size, dc_size);
+  DMatrix QiMMQi_gg = zeros_dmatrix(dc_size, dc_size);
+  DMatrix QiMMQi_ge = zeros_dmatrix(dc_size, dc_size);
+  DMatrix QiMMQi_ee = zeros_dmatrix(dc_size, dc_size);
 
-  DMatrix Qi_si; // = gsl_matrix_alloc(d_size, d_size);
+  DMatrix Qi_si = zeros_dmatrix(d_size, d_size);
 
-  DMatrix M_dd; // = gsl_matrix_alloc(d_size, d_size);
-  DMatrix M_dcdc; // = gsl_matrix_alloc(dc_size, dc_size);
+  DMatrix M_dd = zeros_dmatrix(d_size, d_size);
+  DMatrix M_dcdc = zeros_dmatrix(dc_size, dc_size);
 
   // Invert Qi_sub to Qi_si.
-  DMatrix Qi_sub; // = gsl_matrix_alloc(d_size, d_size);
+  DMatrix Qi_sub = zeros_dmatrix(d_size, d_size);
 
   //gsl_matrix_const_view
   DMatrix Qi_s = get_sub_dmatrix( Qi, (c_size - 1) * d_size, (c_size - 1) * d_size, d_size, d_size);
@@ -1928,7 +1933,7 @@ void UpdateVgVe(const DMatrix Hessian_inv, const DMatrix gradient,
   size_t v_size = gradient.size / 2, d_size = V_g.shape[0];
   size_t v;
 
-  DMatrix vec_v; // = gsl_vector_alloc(v_size * 2);
+  DMatrix vec_v = zeros_dmatrix(1, v_size * 2);
 
   double d;
 
@@ -2323,8 +2328,9 @@ void analyze_plink(const DMatrix U, const DMatrix eval, const DMatrix UtW, const
       }
     }
     //gsl_vector_view
-    DMatrix Xlarge_col = get_col(Xlarge, csnp % msize);
+    //DMatrix Xlarge_col = get_col(Xlarge, csnp % msize);
     //gsl_vector_memcpy(Xlarge_col, x);
+    set_col2(Xlarge, csnp % msize, x.T);
     csnp++;
 
     if (csnp % msize == 0 || csnp == t_last) {
@@ -2341,13 +2347,15 @@ void analyze_plink(const DMatrix U, const DMatrix eval, const DMatrix UtW, const
       DMatrix UtXlarge_sub = get_sub_dmatrix(UtXlarge, 0, 0, UtXlarge.shape[0], l);
 
       UtXlarge_sub = matrix_mult(U.T, Xlarge_sub);
+      set_sub_dmatrix2(UtXlarge, 0, 0,  UtXlarge.shape[0], l, UtXlarge_sub);
 
       Xlarge = zeros_dmatrix(Xlarge.shape[0], Xlarge.shape[1]);
 
       for (size_t i = 0; i < l; i++) {
         //gsl_vector_view
-        DMatrix UtXlarge_col = get_col(UtXlarge, i);
+        //DMatrix UtXlarge_col = get_col(UtXlarge, i);
         //gsl_vector_memcpy(X_row, UtXlarge_col);
+        X_row = get_col(UtXlarge, i);
 
         // Initial values.
         //gsl_matrix_memcpy(V_g, V_g_null);
@@ -2458,9 +2466,7 @@ double MphCalcLogL(const DMatrix eval, const DMatrix xHiy, const DMatrix D_l,
   }
 
   // Calculate the rest of yPxy.
-  DMatrix Qiv; // = gsl_vector_alloc(dc_size);
-
-  Qiv = matrix_mult(Qi, xHiy);
+  DMatrix Qiv = matrix_mult(Qi, xHiy);
   d = vector_ddot(xHiy, Qiv);
 
   logl -= d;
@@ -2470,7 +2476,7 @@ double MphCalcLogL(const DMatrix eval, const DMatrix xHiy, const DMatrix D_l,
 
 // Qi=(\sum_{k=1}^n x_kx_k^T\otimes(delta_k*Dl+I)^{-1} )^{-1}.
 double CalcQi(const DMatrix eval, const DMatrix D_l,
-              const DMatrix X, DMatrix Qi) {
+              const DMatrix X, ref DMatrix Qi) {
   size_t n_size = eval.size, d_size = D_l.size, dc_size = Qi.shape[0];
   size_t c_size = dc_size / d_size;
 
@@ -2731,10 +2737,10 @@ void CalcHiQi(const DMatrix eval, const DMatrix X,
   size_t n_size = eval.size, c_size = X.shape[0], d_size = V_g.shape[0];
   double logdet_Ve = 0.0, delta, dl, d;
 
-  DMatrix mat_dd; // = gsl_matrix_alloc(d_size, d_size);
-  DMatrix UltVeh; // = gsl_matrix_alloc(d_size, d_size);
-  DMatrix UltVehi; // = gsl_matrix_alloc(d_size, d_size);
-  DMatrix D_l; // = gsl_vector_alloc(d_size);
+  DMatrix mat_dd = zeros_dmatrix(d_size, d_size);
+  DMatrix UltVeh = zeros_dmatrix(d_size, d_size);
+  DMatrix UltVehi = zeros_dmatrix(d_size, d_size);
+  DMatrix D_l = zeros_dmatrix(1, d_size);
 
   // Calculate D_l, UltVeh and UltVehi.
   logdet_Ve = EigenProc(V_g, V_e, D_l, UltVeh, UltVehi);
