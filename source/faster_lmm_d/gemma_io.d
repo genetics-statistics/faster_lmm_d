@@ -823,19 +823,22 @@ Geno_result readfile_bed(const string file_bed, const string[] setSnps,
                   const DMatrix W, int[] indicator_idv, SNPINFO[] snpInfo,
                   const double maf_level, const double miss_level,
                   const double hwe_level, const double r2_level,
-                  size_t ns_test) {
+                  ref size_t ns_test) {
   int[] indicator_snp = [];
 
+  DMatrix WT = W.T;
+
   File infile = File(file_bed);
+  writeln("reading ", file_bed);
 
   size_t ns_total = snpInfo.length;
+  writeln(ns_total);
 
   DMatrix genotype = zeros_dmatrix(1, W.shape[0]);
   DMatrix genotype_miss;
   genotype_miss.shape = [1, W.shape[0]];
 
-  DMatrix WtW = matrix_mult(W.T, W);
-  int sig;
+  DMatrix WtW = matrix_mult(WT, W);
   DMatrix WtWi = WtW.inverse;
   double v_x, v_w, geno;
   size_t c_idv = 0;
@@ -861,8 +864,8 @@ Geno_result readfile_bed(const string file_bed, const string[] setSnps,
   // Ignorereadfile_bed the first three magic numbers.
   int num;
   for (int i = 0; i < 3; ++i) {
-    auto ch = infile.rawRead(new bool[8]);
-    auto b = BitArray(ch);
+    auto b = BitArray(8, cast(ulong*)infile.rawRead(new char[1]));
+    writeln(b);
   }
 
   double maf;
@@ -894,9 +897,7 @@ Geno_result readfile_bed(const string file_bed, const string[] setSnps,
     c_idv = 0;
     genotype_miss = zeros_dmatrix(genotype_miss.shape[0], genotype_miss.shape[1]);
     for (size_t i = 0; i < n_bit; ++i) {
-      auto ch = infile.rawRead(new bool[8]);
-      auto b = BitArray(ch);
-
+      auto b = BitArray(8, cast(ulong*)infile.rawRead(new char[1]));
       // Minor allele homozygous: 2.0; major: 0.0;
       for (size_t j = 0; j < 4; ++j) {
         if ((i == (n_bit - 1)) && c == ni_total) {
@@ -971,7 +972,7 @@ Geno_result readfile_bed(const string file_bed, const string[] setSnps,
       }
     }
 
-    DMatrix Wtx = matrix_mult(W.T, genotype);
+    DMatrix Wtx = matrix_mult(WT, genotype);
     DMatrix WtWiWtx = matrix_mult(WtWi, Wtx);
     v_x = vector_ddot(genotype, genotype);
     v_w = vector_ddot(Wtx, WtWiWtx);
@@ -984,7 +985,6 @@ Geno_result readfile_bed(const string file_bed, const string[] setSnps,
     indicator_snp ~= 1;
     ns_test++;
   }
-  writeln("indicator_snp", indicator_snp);
   return Geno_result(indicator_snp, snpInfo);
 }
 

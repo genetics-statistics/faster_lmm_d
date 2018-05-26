@@ -88,13 +88,16 @@ void mvlmm_run(string option_kinship, string option_pheno, string option_covar, 
 
   string[] setSnps;
 
-  double maf_level, miss_level, hwe_level, r2_level;
+  double maf_level = 0.1;
+  double  miss_level = 0.05;
+  double hwe_level = 0;
+  double r2_level = 0.9999;
   size_t ns_test;
 
   writeln(snpInfo.length);
-  //exit(0);
 
   auto geno_result = readfile_bed(option_bfile ~ ".bed", setSnps, W, indicators.indicator_idv, snpInfo, maf_level, miss_level, hwe_level, r2_level, ns_test);
+  writeln("calculated snpInfo");
   snpInfo = geno_result.snpInfo;
 
   DMatrix UtW = matrix_mult(U.T, indicators.cvt);
@@ -2254,9 +2257,7 @@ void analyze_plink(const DMatrix U, const DMatrix eval, const DMatrix UtW, const
 
   // Print the first three magic numbers.
   for (int i = 0; i < 3; ++i) {
-    auto ch = infile.rawRead(new bool[8]);
-    auto b = BitArray(ch);
-    //writeln(to!int(ch));
+    auto b = BitArray(8, cast(ulong*)infile.rawRead(new char[1]));
   }
 
   size_t csnp = 0, t_last = 0;
@@ -2282,9 +2283,7 @@ void analyze_plink(const DMatrix U, const DMatrix eval, const DMatrix UtW, const
     ci_total = 0;
     ci_test = 0;
     for (int i = 0; i < n_bit; ++i) {
-      auto ch = infile.rawRead(new bool[8]);
-      auto b = BitArray(ch);  // check1
-      writeln(b);
+      auto b = BitArray(8, cast(ulong*)infile.rawRead(new char[1]));
 
       // Minor allele homozygous: 2.0; major: 0.0;
       for (size_t j = 0; j < 4; ++j) {
