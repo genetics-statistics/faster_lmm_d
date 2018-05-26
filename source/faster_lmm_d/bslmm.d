@@ -748,9 +748,8 @@ void CenterVector(DMatrix y, const DMatrix W) {
   Wty = matrix_mult(W.T, y);
 
   int sig;
-  gsl_permutation *pmt = gsl_permutation_alloc(W.shape[1]);
-  //LUDecomp(WtW, pmt, &sig);
-  //LUSolve(WtW, pmt, Wty, WtWiWty);
+  //
+  WtWiWty = WtW.solve(Wty);
 
   // note -1
   //gsl_blas_dgemv(CblasNoTrans, -1.0, W, WtWiWty, 1.0, y);

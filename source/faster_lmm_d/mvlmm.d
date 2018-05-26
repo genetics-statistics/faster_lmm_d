@@ -1007,20 +1007,17 @@ double MphCalcP(const DMatrix eval, const DMatrix x_vec, const DMatrix W,
   xPx    = matrix_mult(WHix.T, QiWHix);
   xPy    = matrix_mult(QiWHix.T, WHiy, );
 
-  // TODO
   // Calculate V(beta) and beta.
-  //LUDecomp(xPx, pmt, &sig);
-  //LUSolve(xPx, pmt, xPy, D_l);
-  //LUInvert(xPx, pmt, Vbeta);
-  //Vbeta = xPx.inverse();
+  D_l = xPx.solve(xPy);
+  Vbeta = xPx.inverse();
 
   // Need to multiply UltVehi on both sides or one side.
-  //beta  = matrix_mult(UltVeh.T, D_l);
-  //xPx   = matrix_mult(Vbeta, UltVeh);
-  //Vbeta = matrix_mult(UltVeh.T, xPx);
+  beta  = matrix_mult(UltVeh.T, D_l);
+  xPx   = matrix_mult(Vbeta, UltVeh);
+  Vbeta = matrix_mult(UltVeh.T, xPx);
 
   // Calculate test statistic and p value.
-  //d = vector_ddot(D_l, xPy);
+  d = vector_ddot(D_l, xPy);
 
   double p_value = gsl_cdf_chisq_Q(d, to!double(d_size));
 

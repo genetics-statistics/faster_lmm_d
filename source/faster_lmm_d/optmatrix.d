@@ -96,6 +96,16 @@ DMatrix large_matrix_mult(DMatrix lha, DMatrix rha) {
   return matrix_join(res_ul, res_ur, res_dl, res_dr);
 }
 
+DMatrix solve(const DMatrix A, const DMatrix B){
+  double[] lhs = A.elements.dup;
+  int n = to!int(A.rows);
+  int m = to!int(B.cols);
+  auto ipiv = new int[min(n,m)+1];
+  double[] elements = B.elements.dup;
+  LAPACKE_dgesv(101, n, m, lhs.ptr, n, ipiv.ptr, elements.ptr, m);
+  return DMatrix([1, B.cols], elements);
+}
+
 DMatrix axpy(const double alpha, const DMatrix X, const DMatrix Y){
   double[] elements = Y.elements.dup();
   cblas_daxpy(to!int(X.size), alpha, X.elements.ptr, 1, elements.ptr, 1);
@@ -583,10 +593,7 @@ void CenterVector(DMatrix y, const DMatrix W) {
   DMatrix WtW = matrix_mult(W.T, W);
   DMatrix Wty = matrix_mult(W.T, y);
 
-  int sig;
-  //gsl_permutation *pmt = gsl_permutation_alloc(W->size2);
-  //LUDecomp(WtW, pmt, &sig);
-  //LUSolve(WtW, pmt, Wty, WtWiWty);
+  DMatrix WtWiWty = WtW.solve(Wty);
 
   //gsl_blas_dgemv(CblasNoTrans, -1.0, W, WtWiWty, 1.0, y);
 
