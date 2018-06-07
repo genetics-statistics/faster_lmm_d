@@ -365,7 +365,7 @@ body {
 
 // Eigenvalue decomposition, matrix A is destroyed. Returns eigenvalues in
 // 'eval'. Also returns matrix 'evec' (U).
-void lapack_eigen_symmv(DMatrix A, DMatrix eval, DMatrix evec, const size_t flag_largematrix) {
+void lapack_eigen_symmv(DMatrix A, ref DMatrix eval, ref DMatrix evec, const size_t flag_largematrix) {
   if (flag_largematrix == 1) {
     int N = to!int(A.shape[0]), LDA = to!int(A.shape[0]), INFO, LWORK = -1;
     char JOBZ = 'V', UPLO = 'L';

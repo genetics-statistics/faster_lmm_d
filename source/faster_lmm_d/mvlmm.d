@@ -110,7 +110,7 @@ void mvlmm_run(string option_kinship, string option_pheno, string option_covar, 
   writeln("trace_G =>", trace_G);
   cPar.a_mode = 1;
 
-  analyze_plink(U, eval, UtW, Uty, option_bfile, snpInfo, geno_result.indicator_snp, indicators.indicator_idv);
+  analyze_plink(U, eval, UtW, Uty, option_bfile, snpInfo, geno_result.indicator_snp, indicators.indicator_idv, ni_test);
 }
 
 void analyze_bimbam_mvlmm(const DMatrix U, const DMatrix eval,
@@ -524,7 +524,7 @@ void MphInitial(const size_t em_iter, const double em_prec,
                 const size_t nr_iter, const double nr_prec,
                 const DMatrix eval, const DMatrix X, const DMatrix Y,
                 const double l_min, const double l_max, const size_t n_region,
-                DMatrix V_g, DMatrix V_e, DMatrix B) {
+                ref DMatrix V_g, ref DMatrix V_e, ref DMatrix B) {
 
   writeln("entered MphInitial");
 
@@ -706,10 +706,10 @@ size_t GetIndex(const size_t i, const size_t j, const size_t d_size) {
 
 double MphEM(const char func_name, const size_t max_iter, const double max_prec,
              const DMatrix eval, const DMatrix X, const DMatrix Y,
-             DMatrix U_hat, DMatrix E_hat, DMatrix OmegaU,
-             DMatrix OmegaE, DMatrix UltVehiY, DMatrix UltVehiBX,
-             DMatrix UltVehiU, DMatrix UltVehiE, DMatrix V_g,
-             DMatrix V_e, DMatrix B) {
+             ref DMatrix U_hat, ref DMatrix E_hat, ref DMatrix OmegaU,
+             ref DMatrix OmegaE, ref DMatrix UltVehiY, ref DMatrix UltVehiBX,
+             ref DMatrix UltVehiU, ref DMatrix UltVehiE, ref DMatrix V_g,
+             ref DMatrix V_e, ref DMatrix B) {
   writeln("entered MphEM");
 
   if (func_name != 'R' && func_name != 'L' && func_name != 'r' && func_name != 'l') {
@@ -814,9 +814,9 @@ double MphEM(const char func_name, const size_t max_iter, const double max_prec,
 
 double MphNR(const char func_name, const size_t max_iter, const double max_prec,
              const DMatrix eval, const DMatrix X, const DMatrix Y,
-             DMatrix Hi_all, DMatrix xHi_all, DMatrix Hiy_all,
-             DMatrix V_g, DMatrix V_e, DMatrix Hessian_inv,
-             double crt_a, double crt_b, double crt_c) {
+             ref DMatrix Hi_all, ref DMatrix xHi_all, ref DMatrix Hiy_all,
+             ref DMatrix V_g, ref DMatrix V_e, ref DMatrix Hessian_inv,
+             ref double crt_a, ref double crt_b, ref double crt_c) {
   writeln("in MphNR");
   if (func_name != 'R' && func_name != 'L' && func_name != 'r' && func_name != 'l') {
     writeln("func_name only takes 'R' or 'L': 'R' for log-restricted likelihood, 'L' for log-likelihood.");
@@ -863,13 +863,14 @@ double MphNR(const char func_name, const size_t max_iter, const double max_prec,
 
   // Optimization iterations.
   for (size_t t = 0; t < max_iter; t++) {
+    writeln("Optimization iterations");
     Vg_save = V_g; // Check dup
     Ve_save = V_e;
 
     step_scale = 1.0;
     step_iter = 0;
     do {
-      V_g = Vg_save;
+      V_g = cast(DMatrix)Vg_save;
       V_e = Ve_save;
 
       // Update Vg, Ve, and invert Hessian.
@@ -936,6 +937,7 @@ double MphNR(const char func_name, const size_t max_iter, const double max_prec,
       }
     }
 
+    writeln("out of opt loops");
     logl_old = logl_new;
 
     CalcDev(func_name, eval, Qi, Hi_all, xHi_all, Hiy_all, QixHiy, gradient, Hessian_inv, crt_a, crt_b, crt_c);
@@ -1033,7 +1035,7 @@ double MphCalcP(const DMatrix eval, const DMatrix x_vec, const DMatrix W,
 }
 
 void MphCalcBeta(const DMatrix eval, const DMatrix W, const DMatrix Y, const DMatrix V_g,
-                 const DMatrix V_e, DMatrix UltVehiY, DMatrix B, DMatrix se_B) {
+                 const DMatrix V_e, ref DMatrix UltVehiY, ref DMatrix B, ref DMatrix se_B) {
   writeln("in MphCalcBeta");
   size_t n_size = eval.size, c_size = W.shape[0], d_size = W.shape[1];
   size_t dc_size = d_size * c_size;
@@ -1122,8 +1124,10 @@ void MphCalcBeta(const DMatrix eval, const DMatrix W, const DMatrix Y, const DMa
 // Calculate first-order and second-order derivatives.
 void CalcDev(const char func_name, const DMatrix eval, const DMatrix Qi,
              const DMatrix Hi, const DMatrix xHi, const DMatrix Hiy,
-             const DMatrix QixHiy, DMatrix gradient, DMatrix Hessian_inv,
-             double crt_a, double crt_b, double crt_c) {
+             const DMatrix QixHiy, ref DMatrix gradient, ref DMatrix Hessian_inv,
+             ref double crt_a, ref double crt_b, ref double crt_c) {
+
+  writeln("in CalcDev");
 
   if (func_name != 'R' && func_name != 'L' && func_name != 'r' && func_name != 'l') {
     writeln("func_name only takes 'R' or 'L': 'R' for log-restricted likelihood, 'L' for log-likelihood.");
@@ -1257,6 +1261,9 @@ void CalcDev(const char func_name, const DMatrix eval, const DMatrix Qi,
     }
   }
 
+  writeln("setting up Hessian_inv");
+
+  writeln(Hessian);
   Hessian_inv = Hessian.inverse();
   // Calculate Edgeworth correction factors after inverting
   // Hessian.
@@ -1511,7 +1518,9 @@ void Calc_yPDPy(const DMatrix eval, const DMatrix Hiy,
                 const DMatrix xHiDHiy_all_e,
                 const DMatrix xHiDHixQixHiy_all_g,
                 const DMatrix xHiDHixQixHiy_all_e, const size_t i,
-                const size_t j, double yPDPy_g, double yPDPy_e) {
+                const size_t j, ref double yPDPy_g, ref double yPDPy_e) {
+  writeln("in Calc_yPDPy");
+
   size_t d_size = Hiy.shape[0];
   size_t v = GetIndex(i, j, d_size);
 
@@ -1692,7 +1701,8 @@ void CalcCRT(const DMatrix Hessian_inv, const DMatrix Qi,
              const DMatrix xHiDHiDHix_all_gg,
              const DMatrix xHiDHiDHix_all_ee,
              const DMatrix xHiDHiDHix_all_ge, const size_t d_size,
-             double crt_a, double crt_b, double crt_c) {
+             ref double crt_a, ref double crt_b, ref double crt_c) {
+  writeln("in CalcCRT");
   crt_a = 0.0;
   crt_b = 0.0;
   crt_c = 0.0;
@@ -1736,10 +1746,6 @@ void CalcCRT(const DMatrix Hessian_inv, const DMatrix Qi,
   //gsl_matrix_const_view
   DMatrix Qi_s = get_sub_dmatrix( Qi, (c_size - 1) * d_size, (c_size - 1) * d_size, d_size, d_size);
 
-  int sig;
-  gsl_permutation *pmt = gsl_permutation_alloc(d_size);
-
-  //gsl_matrix_memcpy(Qi_sub, &Qi_s);
   Qi_si = Qi_sub.inverse();
 
   // Calculate correction factors.
@@ -1932,7 +1938,7 @@ void CalcCRT(const DMatrix Hessian_inv, const DMatrix Qi,
 }
 // Update Vg, Ve.
 void UpdateVgVe(const DMatrix Hessian_inv, const DMatrix gradient,
-                const double step_scale, DMatrix V_g, DMatrix V_e) {
+                const double step_scale, ref DMatrix V_g, ref DMatrix V_e) {
   size_t v_size = gradient.size / 2, d_size = V_g.shape[0];
   size_t v;
 
@@ -2003,9 +2009,10 @@ double PCRT(const size_t mode, const size_t d_size, const double p_value,
 
 void analyze_plink(const DMatrix U, const DMatrix eval, const DMatrix UtW, const DMatrix UtY, 
                     string file_bed, SNPINFO[] snpInfo, int[] indicator_snp, int[] indicator_idv,
-                    size_t ni_test = 200, size_t ni_total = 200) {
+                    size_t ni_test) {
   writeln("entering analyze_plink");
 
+  size_t ni_total = snpInfo.length;
   MPHSUMSTAT[] sumStat;
 
   writeln("bed file =>", file_bed);
@@ -2078,13 +2085,14 @@ void analyze_plink(const DMatrix U, const DMatrix eval, const DMatrix UtW, const
   DMatrix B_col = get_col(B, c_size);
 
 
-  size_t em_iter = 10; //check
-  double em_prec = 0;
-  size_t nr_iter = 0;
-  double nr_prec = 0;
+  size_t em_iter = 10_000; //check
+  double em_prec = 0.0001;
+  size_t nr_iter = 100;
+  double nr_prec = 0.0001;
   double l_min = 1e-05;
   double l_max = 100000;
   size_t n_region = 10;
+
 
   double[] Vg_remle_null;
   double[] Ve_remle_null;
@@ -2658,7 +2666,7 @@ void CalcSigma(const char func_name, const DMatrix eval,
                const DMatrix D_l, const DMatrix X,
                const DMatrix OmegaU, const DMatrix OmegaE,
                const DMatrix UltVeh, const DMatrix Qi,
-               DMatrix Sigma_uu, DMatrix Sigma_ee) {
+               ref DMatrix Sigma_uu, ref DMatrix Sigma_ee) {
   if(func_name != 'R' && func_name != 'L' && func_name != 'r' && func_name != 'l') {
     writeln("func_name only takes 'R' or 'L': 'R' for log-restricted likelihood, 'L' for log-likelihood.");
     return;
@@ -2726,8 +2734,9 @@ void CalcSigma(const char func_name, const DMatrix eval,
 // and calculate Qi and return logdet_Q
 // and calculate yPy.
 void CalcHiQi(const DMatrix eval, const DMatrix X,
-              const DMatrix V_g, const DMatrix V_e, DMatrix Hi_all,
-              DMatrix Qi, double logdet_H, double logdet_Q) {
+              const DMatrix V_g, const DMatrix V_e, ref DMatrix Hi_all,
+              ref DMatrix Qi, ref double logdet_H, ref double logdet_Q) {
+  writeln("in CalcHiQi");
   Hi_all = zeros_dmatrix(Hi_all.shape[0], Hi_all.shape[1]);
   Qi = zeros_dmatrix(Qi.shape[0], Qi.shape[1]);
   logdet_H = 0.0;
@@ -2791,7 +2800,7 @@ void CalcHiQi(const DMatrix eval, const DMatrix X,
 
 
 // Calculate all Hiy.
-void Calc_Hiy_all(const DMatrix Y, const DMatrix Hi_all, DMatrix Hiy_all) {
+void Calc_Hiy_all(const DMatrix Y, const DMatrix Hi_all, ref DMatrix Hiy_all) {
   Hiy_all = zeros_dmatrix(Hiy_all.shape[0], Hiy_all.shape[1]);
 
   size_t n_size = Y.shape[1], d_size = Y.shape[0];
@@ -2811,8 +2820,7 @@ void Calc_Hiy_all(const DMatrix Y, const DMatrix Hi_all, DMatrix Hiy_all) {
 }
 
 // Calculate all xHi.
-void Calc_xHi_all(const DMatrix X, const DMatrix Hi_all,
-                  DMatrix xHi_all) {
+void Calc_xHi_all(const DMatrix X, const DMatrix Hi_all, ref DMatrix xHi_all) {
   xHi_all = zeros_dmatrix(xHi_all.shape[0], xHi_all.shape[1]);
 
   size_t n_size = X.shape[1], c_size = X.shape[0], d_size = Hi_all.shape[0];
@@ -2853,7 +2861,7 @@ double Calc_yHiy(const DMatrix Y, const DMatrix Hiy_all) {
 }
 
 // Calculate the vector xHiy.
-void Calc_xHiy(const DMatrix Y, const DMatrix xHi, DMatrix xHiy) {
+void Calc_xHiy(const DMatrix Y, const DMatrix xHi, ref DMatrix xHiy) {
   xHiy = zeros_dmatrix(xHiy.shape[0], xHiy.shape[1]);
 
   size_t n_size = Y.shape[1], d_size = Y.shape[0], dc_size = xHi.shape[0];
@@ -2871,8 +2879,8 @@ void Calc_xHiy(const DMatrix Y, const DMatrix xHi, DMatrix xHiy) {
 }
 
 // Below are functions for EM algorithm.
-double EigenProc(const DMatrix V_g, const DMatrix V_e, DMatrix D_l,
-                 DMatrix UltVeh, DMatrix UltVehi) {
+double EigenProc(const DMatrix V_g, const DMatrix V_e, ref DMatrix D_l,
+                 ref DMatrix UltVeh, ref DMatrix UltVehi) {
   writeln("in EigenProc");
   size_t d_size = V_g.shape[0];
   double d, logdet_Ve = 0.0;
@@ -2901,7 +2909,7 @@ double EigenProc(const DMatrix V_g, const DMatrix V_e, DMatrix D_l,
     //gsl_vector_view
     DMatrix U_col = get_col(U_l, i);
     d = sqrt(d);
-    //gsl_blas_dsyr(CblasUpper, d, &U_col.vector, V_e_h);
+    //gsl_blas_dsyr(CblasUpper, d, &U_col.vector, V_e_h);  // check
     d = 1.0 / d;
     //gsl_blas_dsyr(CblasUpper, d, &U_col.vector, V_e_hi);
   }
@@ -2932,7 +2940,9 @@ double EigenProc(const DMatrix V_g, const DMatrix V_e, DMatrix D_l,
 void Calc_tracePD(const DMatrix eval, const DMatrix Qi,
                   const DMatrix Hi, const DMatrix xHiDHix_all_g,
                   const DMatrix xHiDHix_all_e, const size_t i,
-                  const size_t j, double tPD_g, double tPD_e) {
+                  const size_t j, ref double tPD_g, ref double tPD_e) {
+  writeln("in Calc_tracePD");
+
   size_t dc_size = Qi.shape[0], d_size = Hi.shape[0];
   size_t v = GetIndex(i, j, d_size);
 
@@ -2970,7 +2980,7 @@ void Calc_tracePDPD(const DMatrix eval, const DMatrix Qi,
                     const DMatrix xHiDHiDHix_all_ee,
                     const DMatrix xHiDHiDHix_all_ge, const size_t i1,
                     const size_t j1, const size_t i2, const size_t j2,
-                    double tPDPD_gg, double tPDPD_ee, double tPDPD_ge) {
+                    ref double tPDPD_gg, ref double tPDPD_ee, ref double tPDPD_ge) {
   size_t dc_size = Qi.shape[0], d_size = Hi.shape[0];
   size_t v_size = d_size * (d_size + 1) / 2;
   size_t v1 = GetIndex(i1, j1, d_size), v2 = GetIndex(i2, j2, d_size);
@@ -3029,7 +3039,7 @@ void Calc_tracePDPD(const DMatrix eval, const DMatrix Qi,
 }
 
 void Calc_traceHiD(const DMatrix eval, const DMatrix Hi, const size_t i,
-                   const size_t j, double tHiD_g, double tHiD_e) {
+                   const size_t j, ref double tHiD_g, ref double tHiD_e) {
   tHiD_g = 0.0;
   tHiD_e = 0.0;
 
@@ -3054,8 +3064,8 @@ void Calc_traceHiD(const DMatrix eval, const DMatrix Hi, const size_t i,
 
 void Calc_traceHiDHiD(const DMatrix eval, const DMatrix Hi,
                       const size_t i1, const size_t j1, const size_t i2,
-                      const size_t j2, double tHiDHiD_gg, double tHiDHiD_ee,
-                      double tHiDHiD_ge) {
+                      const size_t j2, ref double tHiDHiD_gg, ref double tHiDHiD_ee,
+                      ref double tHiDHiD_ge) {
   tHiDHiD_gg = 0.0;
   tHiDHiD_ee = 0.0;
   tHiDHiD_ge = 0.0;
@@ -3101,7 +3111,7 @@ void Calc_traceHiDHiD(const DMatrix eval, const DMatrix Hi,
 
 void Calc_xHiDHiy(const DMatrix eval, const DMatrix xHi,
                   const DMatrix Hiy, const size_t i, const size_t j,
-                  DMatrix xHiDHiy_g, DMatrix xHiDHiy_e) {
+                  ref DMatrix xHiDHiy_g, ref DMatrix xHiDHiy_e) {
   xHiDHiy_g = zeros_dmatrix(xHiDHiy_g.shape[0], xHiDHiy_g.shape[1]);
   xHiDHiy_e = zeros_dmatrix(xHiDHiy_e.shape[0], xHiDHiy_e.shape[1]);
 
@@ -3133,7 +3143,7 @@ void Calc_xHiDHiy(const DMatrix eval, const DMatrix xHi,
 }
 
 void Calc_xHiDHix(const DMatrix eval, const DMatrix xHi, const size_t i,
-                  const size_t j, DMatrix xHiDHix_g, DMatrix xHiDHix_e) {
+                  const size_t j, ref DMatrix xHiDHix_g, ref DMatrix xHiDHix_e) {
   xHiDHix_g = zeros_dmatrix(xHiDHix_g.shape[0], xHiDHix_g.shape[1]);
   xHiDHix_e = zeros_dmatrix(xHiDHix_e.shape[0], xHiDHix_e.shape[1]);
 
@@ -3177,8 +3187,8 @@ void Calc_xHiDHix(const DMatrix eval, const DMatrix xHi, const size_t i,
 void Calc_xHiDHiDHiy(const DMatrix eval, const DMatrix Hi,
                      const DMatrix xHi, const DMatrix Hiy,
                      const size_t i1, const size_t j1, const size_t i2,
-                     const size_t j2, DMatrix xHiDHiDHiy_gg,
-                     DMatrix xHiDHiDHiy_ee, DMatrix xHiDHiDHiy_ge) {
+                     const size_t j2, ref DMatrix xHiDHiDHiy_gg,
+                     ref DMatrix xHiDHiDHiy_ee, ref DMatrix xHiDHiDHiy_ge) {
   xHiDHiDHiy_gg = zeros_dmatrix(xHiDHiDHiy_gg.shape[0], xHiDHiDHiy_gg.shape[1]);
   xHiDHiDHiy_ee = zeros_dmatrix(xHiDHiDHiy_ee.shape[0], xHiDHiDHiy_ee.shape[1]);
   xHiDHiDHiy_ge = zeros_dmatrix(xHiDHiDHiy_ge.shape[0], xHiDHiDHiy_ge.shape[1]);
@@ -3241,8 +3251,8 @@ void Calc_xHiDHiDHiy(const DMatrix eval, const DMatrix Hi,
 void Calc_xHiDHiDHix(const DMatrix eval, const DMatrix Hi,
                      const DMatrix xHi, const size_t i1, const size_t j1,
                      const size_t i2, const size_t j2,
-                     DMatrix xHiDHiDHix_gg, DMatrix xHiDHiDHix_ee,
-                     DMatrix xHiDHiDHix_ge) {
+                     ref DMatrix xHiDHiDHix_gg, ref DMatrix xHiDHiDHix_ee,
+                     ref DMatrix xHiDHiDHix_ge) {
   xHiDHiDHix_gg = zeros_dmatrix(xHiDHiDHix_gg.shape[0], xHiDHiDHix_gg.shape[1]);
   xHiDHiDHix_ee = zeros_dmatrix(xHiDHiDHix_ee.shape[0], xHiDHiDHix_ee.shape[1]);
   xHiDHiDHix_ge = zeros_dmatrix(xHiDHiDHix_ge.shape[0], xHiDHiDHix_ge.shape[1]);
@@ -3271,7 +3281,7 @@ void Calc_xHiDHiDHix(const DMatrix eval, const DMatrix Hi,
     d_Hi_j1j2 = Hi.accessor(j1, k * d_size + j2);
 
     if (i1 == j1) {
-      mat_dcdc = zeros_dmatrix(mat_dcdc.shape[0], mat_dcdc.shape[1]);
+      mat_dcdc = zeros_dmatrix(dc_size, dc_size);
       mat_dcdc = ger(d_Hi_j1i2, xHi_col_i1, xHi_col_j2, mat_dcdc);
 
       xHiDHiDHix_ee = add_dmatrix(xHiDHiDHix_ee, mat_dcdc);
@@ -3291,7 +3301,7 @@ void Calc_xHiDHiDHix(const DMatrix eval, const DMatrix Hi,
         xHiDHiDHix_gg = add_dmatrix(xHiDHiDHix_gg, mat_dcdc);
       }
     } else {
-      mat_dcdc = zeros_dmatrix(mat_dcdc.shape[0], mat_dcdc.shape[1]);  // check
+      mat_dcdc = zeros_dmatrix(dc_size, dc_size);  // check
       mat_dcdc = ger(d_Hi_j1i2, xHi_col_i1, xHi_col_j2, mat_dcdc);
 
       xHiDHiDHix_ee = add_dmatrix(xHiDHiDHix_ee, mat_dcdc);
@@ -3300,7 +3310,7 @@ void Calc_xHiDHiDHix(const DMatrix eval, const DMatrix Hi,
       mat_dcdc = multiply_dmatrix_num(mat_dcdc, delta);
       xHiDHiDHix_gg = add_dmatrix(xHiDHiDHix_gg, mat_dcdc);
 
-      mat_dcdc = zeros_dmatrix(mat_dcdc.shape[0], mat_dcdc.shape[1]); // check
+      mat_dcdc = zeros_dmatrix(dc_size, dc_size); // check
       mat_dcdc = ger(d_Hi_i1i2, xHi_col_j1, xHi_col_j2, mat_dcdc);
 
       xHiDHiDHix_ee = add_dmatrix(xHiDHiDHix_ee, mat_dcdc);
@@ -3310,7 +3320,7 @@ void Calc_xHiDHiDHix(const DMatrix eval, const DMatrix Hi,
       xHiDHiDHix_gg = add_dmatrix(xHiDHiDHix_gg, mat_dcdc);
 
       if (i2 != j2) {
-        mat_dcdc = zeros_dmatrix(mat_dcdc.shape[0], mat_dcdc.shape[1]);
+        mat_dcdc = zeros_dmatrix(dc_size, dc_size);
         mat_dcdc = ger(d_Hi_j1j2, xHi_col_i1, xHi_col_i2, mat_dcdc);
 
         xHiDHiDHix_ee = add_dmatrix(xHiDHiDHix_ee, mat_dcdc);
@@ -3319,7 +3329,7 @@ void Calc_xHiDHiDHix(const DMatrix eval, const DMatrix Hi,
         mat_dcdc = multiply_dmatrix_num(mat_dcdc, delta);
         xHiDHiDHix_gg = add_dmatrix(xHiDHiDHix_gg, mat_dcdc);
 
-        mat_dcdc = zeros_dmatrix(mat_dcdc.shape[0], mat_dcdc.shape[1]);
+        mat_dcdc = zeros_dmatrix(dc_size, dc_size);
         mat_dcdc = ger(d_Hi_i1j2, xHi_col_j1, xHi_col_i2, mat_dcdc);
 
         xHiDHiDHix_ee = add_dmatrix(xHiDHiDHix_ee, mat_dcdc);
@@ -3335,7 +3345,7 @@ void Calc_xHiDHiDHix(const DMatrix eval, const DMatrix Hi,
 }
 
 void Calc_yHiDHiy(const DMatrix eval, const DMatrix Hiy, const size_t i,
-                  const size_t j, double yHiDHiy_g, double yHiDHiy_e) {
+                  const size_t j, ref double yHiDHiy_g, ref double yHiDHiy_e) {
   yHiDHiy_g = 0.0;
   yHiDHiy_e = 0.0;
 
@@ -3363,7 +3373,7 @@ void Calc_yHiDHiy(const DMatrix eval, const DMatrix Hiy, const size_t i,
 void Calc_yHiDHiDHiy(const DMatrix eval, const DMatrix Hi,
                      const DMatrix Hiy, const size_t i1, const size_t j1,
                      const size_t i2, const size_t j2, double yHiDHiDHiy_gg,
-                     double yHiDHiDHiy_ee, double yHiDHiDHiy_ge) {
+                     ref double yHiDHiDHiy_ee, ref double yHiDHiDHiy_ge) {
   yHiDHiDHiy_gg = 0.0;
   yHiDHiDHiy_ee = 0.0;
   yHiDHiDHiy_ge = 0.0;
@@ -3420,7 +3430,7 @@ void Calc_yHiDHiDHiy(const DMatrix eval, const DMatrix Hi,
 
 // Does NOT set eigenvalues to be positive. G gets destroyed. Returns
 // eigen trace and values in U and eval (eigenvalues).
-double EigenDecomp(DMatrix G, DMatrix U, DMatrix eval,
+double EigenDecomp(DMatrix G, ref DMatrix U, ref DMatrix eval,
                    const size_t flag_largematrix) {
   lapack_eigen_symmv(G, eval, U, flag_largematrix);
   // Calculate track_G=mean(diag(G)).
@@ -3434,7 +3444,7 @@ double EigenDecomp(DMatrix G, DMatrix U, DMatrix eval,
 
 // Same as EigenDecomp but zeroes eigenvalues close to zero. When
 // negative eigenvalues remain a warning is issued.
-double EigenDecomp_Zeroed(DMatrix G, DMatrix U, DMatrix eval,
+double EigenDecomp_Zeroed(DMatrix G, ref DMatrix U, ref DMatrix eval,
                           const size_t flag_largematrix) {
   EigenDecomp(G,U,eval,flag_largematrix);
   auto d = 0.0;
