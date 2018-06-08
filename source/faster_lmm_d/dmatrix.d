@@ -460,6 +460,19 @@ void set_sub_dmatrix2(ref DMatrix H,  size_t a, size_t b, size_t n1, size_t n2, 
   }
 }
 
+struct DMatrix_int{
+  size_t[] shape;
+  int[] elements;
+}
+
+int accessor(DMatrix_int input, size_t row, size_t col){
+  return input.elements[row * input.shape[0] + col];
+}
+
+void set(ref DMatrix_int input, size_t row, size_t col, int val){
+  input.elements[row * input.shape[0] + col] = val;
+}
+
 unittest{
   auto d = DMatrix([2,2],[1,2,3,4]);
 
