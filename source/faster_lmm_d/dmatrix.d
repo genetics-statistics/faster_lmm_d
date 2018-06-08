@@ -463,6 +463,10 @@ void set_sub_dmatrix2(ref DMatrix H,  size_t a, size_t b, size_t n1, size_t n2, 
 struct DMatrix_int{
   size_t[] shape;
   int[] elements;
+
+  pragma(inline) const m_items rows() { return shape[0]; }
+  pragma(inline) const m_items cols() { return shape[1]; }
+  pragma(inline) const m_items size() { return rows() * cols(); }
 }
 
 int accessor(DMatrix_int input, size_t row, size_t col){

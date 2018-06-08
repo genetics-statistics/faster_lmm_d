@@ -1,12 +1,39 @@
 module faster_lmm_d.logistic;
 
+import std.bitmanip;
+import std.conv;
+import std.exception;
+import std.file;
+import std.math;
+import std.parallelism;
+alias mlog = std.math.log;
+import std.process;
+import std.range;
+import std.stdio;
+import std.typecons;
+import std.experimental.logger;
+import std.string;
+
+extern(C){
+
+  struct gsl_sf_result
+  {
+    double val;
+    double err;
+  };
+
+  double gsl_sf_log_1plusx (double x);
+  double gsl_sf_exp (double x);
+  int gsl_sf_exp_e (double x, gsl_sf_result* result);
+}
+
 import faster_lmm_d.dmatrix;
 
 // I need to bundle all the data that goes to the function to optimze
 // together.
 
 struct fix_parm_mixed_T {
-  DMatrix X;
+  DMatrix_int X;
   DMatrix_int nlev;
   DMatrix y;
   DMatrix Xc; // Continuous covariates matrix Nobs x Kc (NULL if not used).
@@ -16,8 +43,8 @@ struct fix_parm_mixed_T {
 
 double fLogit_mixed(DMatrix beta, DMatrix_int X, DMatrix_int nlev,
                     DMatrix Xc, DMatrix y, double lambdaL1, double lambdaL2) {
-  int n = y.size;
-  int npar = beta.size;
+  size_t n = y.size;
+  size_t npar = beta.size;
   double total = 0;
   double aux = 0;
 
@@ -33,16 +60,16 @@ double fLogit_mixed(DMatrix beta, DMatrix_int X, DMatrix_int nlev,
   total = total - aux * lambdaL1;
   // #pragma omp parallel for schedule(static) shared(n,beta,X,nlev,y)
   // #reduction (+:total)
-  for (int i = 0; i < n; ++i) {
+  for (size_t i = 0; i < n; ++i) {
     double Xbetai = beta.elements[0];
     int iParm = 1;
-    for (size_t k = 0; k < X.size2; ++k) {
-      if (X.elements[i, k] > 0)
+    for (size_t k = 0; k < X.shape[1]; ++k) {
+      if (X.accessor(i, k) > 0)
         Xbetai += beta.elements[X.accessor(i, k) - 1 + iParm];
       iParm += nlev.elements[k] - 1;
     }
-    for (size_t k = 0; k < (Xc.size2); ++k)
-      Xbetai += Xc.accessor(i, k) * beta.accessor[iParm++];
+    for (size_t k = 0; k < (Xc.shape[1]); ++k)
+      Xbetai += Xc.accessor(i, k) * beta.elements[iParm++];
     total += y.elements[i] * Xbetai - gsl_sf_log_1plusx(gsl_sf_exp(Xbetai));
   }
   return -total;
@@ -75,47 +102,47 @@ void logistic_mixed_pred(DMatrix beta,     // Vector of parameters
 void wgsl_mixed_optim_df(const DMatrix beta, void *params,
                          DMatrix output) {
   fix_parm_mixed_T *p = cast(fix_parm_mixed_T *)params;
-  int n = p.y.size;
-  int K = p.X.shape[1];
-  int Kc = p.Xc.shape[1];
-  int npar = beta.size;
+  size_t n = p.y.size;
+  size_t K = p.X.shape[1];
+  size_t Kc = p.Xc.shape[1];
+  size_t npar = beta.size;
 
   // Intitialize gradient output necessary?
-  for (int i = 0; i < npar; ++i)
+  for (size_t i = 0; i < npar; ++i)
     output.elements[i] = 0;
 
   // Changed loop start at 1 instead of 0 to avoid regularization of beta 0.
-  for (int i = 1; i < npar; ++i)
+  for (size_t i = 1; i < npar; ++i)
     output.elements[i] = p.lambdaL2 * beta.elements[i];
-  for (int i = 1; i < npar; ++i)
+  for (size_t i = 1; i < npar; ++i)
     output.elements[i] += p.lambdaL1 * ((beta.elements[i] > 0) - (beta.elements[i] < 0));
 
-  for (int i = 0; i < n; ++i) {
+  for (size_t i = 0; i < n; ++i) {
     double pn = 0;
     double Xbetai = beta.elements[0];
-    int iParm = 1;
-    for (int k = 0; k < K; ++k) {
+    size_t iParm = 1;
+    for (size_t k = 0; k < K; ++k) {
       if (p.X.accessor(i, k) > 0)
         Xbetai += beta.elements[p.X.accessor(i, k) - 1 + iParm];
       iParm += p.nlev.elements[k] - 1;
     }
 
     // Adding the continuous.
-    for (int k = 0; k < Kc; ++k)
+    for (size_t k = 0; k < Kc; ++k)
       Xbetai += p.Xc.accessor(i, k) * beta.elements[iParm++];
 
     pn = -(p.y.elements[i] - 1 / (1 + gsl_sf_exp(-Xbetai)));
 
     output.elements[0] += pn;
     iParm = 1;
-    for (int k = 0; k < K; ++k) {
+    for (size_t k = 0; k < K; ++k) {
       if (p.X.accessor(i, k) > 0)
         output.elements[p.X.accessor(i, k) - 1 + iParm] += pn;
       iParm += p.nlev.elements[k] - 1;
     }
 
     // Adding the continuous.
-    for (int k = 0; k < Kc; ++k) {
+    for (size_t k = 0; k < Kc; ++k) {
       output.elements[iParm++] += p.Xc.accessor(i, k) * pn;
     }
   }
@@ -124,14 +151,14 @@ void wgsl_mixed_optim_df(const DMatrix beta, void *params,
 // The Hessian of f.
 void wgsl_mixed_optim_hessian(const DMatrix beta, void *params, DMatrix output) {
   fix_parm_mixed_T *p = cast(fix_parm_mixed_T *)params;
-  int n = p.y.size;
-  int K = p.X.shape[1];
-  int Kc = p.Xc.shape[1];
-  int npar = beta.size;
+  size_t n = p.y.size;
+  size_t K = p.X.shape[1];
+  size_t Kc = p.Xc.shape[1];
+  size_t npar = beta.size;
   DMatrix gn = zeros_dmatrix(1, npar); // gn
 
   // Intitialize Hessian output necessary ???
-  gsl_matrix_set_zero(output);
+  output = zeros_dmatrix(output.shape[0], output.shape[1]);
 
   /* Changed loop start at 1 instead of 0 to avoid regularization of beta 0*/
   for (int i = 1; i < npar; ++i)
@@ -139,19 +166,19 @@ void wgsl_mixed_optim_hessian(const DMatrix beta, void *params, DMatrix output) 
 
   // L1 penalty not working yet, as not differentiable, I may need to
   // do coordinate descent (as in glm_net)
-  for (int i = 0; i < n; ++i) {
+  for (size_t i = 0; i < n; ++i) {
     double pn = 0;
     double aux = 0;
     double Xbetai = beta.elements[0];
-    int iParm1 = 1;
-    for (int k = 0; k < K; ++k) {
-      if (gsl_matrix_int_get(p.X, i, k) > 0)
+    size_t iParm1 = 1;
+    for (size_t k = 0; k < K; ++k) {
+      if (p.X.accessor(i, k) > 0)
         Xbetai += beta.elements[p.X.accessor(i, k) - 1 + iParm1];
       iParm1 += p.nlev.elements[k] - 1; //-1?
     }
 
     // Adding the continuous.
-    for (int k = 0; k < Kc; ++k)
+    for (size_t k = 0; k < Kc; ++k)
       Xbetai += p.Xc.accessor(i, k) * beta.elements[iParm1++];
 
     pn = 1 / (1 + gsl_sf_exp(-Xbetai));
@@ -160,23 +187,23 @@ void wgsl_mixed_optim_hessian(const DMatrix beta, void *params, DMatrix output) 
     aux = pn * (1 - pn);
 
     // Calculate sub-gradient vector gn.
-    gsl_vector_set_zero(gn);
+    gn = zeros_dmatrix(gn.shape[0], gn.shape[1]);
     gn.elements[0] = 1;
     iParm1 = 1;
-    for (int k = 0; k < K; ++k) {
+    for (size_t k = 0; k < K; ++k) {
       if (p.X.accessor(i, k) > 0)
         gn.elements[p.X.accessor(i, k) - 1 + iParm1] = 1;
       iParm1 += p.nlev.elements[k] - 1;
     }
 
     // Adding the continuous.
-    for (int k = 0; k < Kc; ++k) {
+    for (size_t k = 0; k < Kc; ++k) {
       gn.elements[iParm1++] = p.Xc.accessor(i, k);
     }
 
-    for (int k1 = 0; k1 < npar; ++k1)
+    for (size_t k1 = 0; k1 < npar; ++k1)
       if (gn.elements[k1] != 0)
-        for (int k2 = 0; k2 < npar; ++k2)
+        for (size_t k2 = 0; k2 < npar; ++k2)
           if (gn.elements[k2] != 0)
             output.set(k1, k2, output.accessor(k1, k2) + aux * gn.elements[k1] * gn.elements[k2]);
   }
@@ -199,8 +226,8 @@ int logistic_mixed_fit(DMatrix beta, DMatrix_int X,
                        double lambdaL1, double lambdaL2) {
   // double mLogLik = 0;
   fix_parm_mixed_T p;
-  int npar = beta.size;
-  int iter = 0;
+  size_t npar = beta.size;
+  size_t iter = 0;
   double maxchange = 0;
 
   // Intializing fix parameters.
@@ -223,13 +250,13 @@ int logistic_mixed_fit(DMatrix beta, DMatrix_int X,
   for (iter = 0; iter < 100; iter++) {
     wgsl_mixed_optim_hessian(beta, &p, myH); // Calculate Hessian.
     wgsl_mixed_optim_df(beta, &p, myG);      // Calculate Gradient.
-    gsl_linalg_QR_decomp(myH, tau);          // Calculate next beta.
-    gsl_linalg_QR_solve(myH, tau, myG, stBeta);
+    //gsl_linalg_QR_decomp(myH, tau); // TODO          // Calculate next beta.
+    //gsl_linalg_QR_solve(myH, tau, myG, stBeta);
     beta = beta - stBeta;
 
     // Monitor convergence.
     maxchange = 0;
-    for (int i = 0; i < npar; i++)
+    for (size_t i = 0; i < npar; i++)
       if (maxchange < fabs(stBeta.elements[i]))
         maxchange = fabs(stBeta.elements[i]);
 
@@ -259,28 +286,28 @@ struct fix_parm_cat_T{
 
 double fLogit_cat(DMatrix beta, DMatrix_int X, DMatrix_int nlev,
                   DMatrix y, double lambdaL1, double lambdaL2) {
-  int n = y.size;
-  int npar = beta.size;
+  size_t n = y.size;
+  size_t npar = beta.size;
   double total = 0;
   double aux = 0;
 
   // omp_set_num_threads(ompthr); /\* Changed loop start at 1 instead
   // of 0 to avoid regularization of beta 0*\/ /\*#pragma omp parallel
   // for reduction (+:total)*\/
-  for (int i = 1; i < npar; ++i)
+  for (size_t i = 1; i < npar; ++i)
     total += beta.elements[i] * beta.elements[i];
   total = (-total * lambdaL2 / 2);
 
   // /\*#pragma omp parallel for reduction (+:aux)*\/
-  for (int i = 1; i < npar; ++i)
+  for (size_t i = 1; i < npar; ++i)
     aux += (beta.elements[i] > 0) ? beta.elements[i] : -beta.elements[i];
   total = total - aux * lambdaL1;
 
   // #pragma omp parallel for schedule(static) shared(n,beta,X,nlev,y)
   // #reduction (+:total)
-  for (int i = 0; i < n; ++i) {
+  for (size_t i = 0; i < n; ++i) {
     double Xbetai = beta.elements[0];
-    int iParm = 1;
+    size_t iParm = 1;
     for (size_t k = 0; k < X.shape[1]; ++k) {
       if (X.accessor(i, k) > 0)
         Xbetai += beta.elements[X.accessor(i, k) - 1 + iParm];
@@ -299,7 +326,7 @@ void logistic_cat_pred(DMatrix beta,     // Vector of parameters
                                              // the logistic.
   for (size_t i = 0; i < X.shape[0]; ++i) {
     double Xbetai = beta.elements[0];
-    int iParm = 1;
+    size_t iParm = 1;
     for (size_t k = 0; k < X.shape[1]; ++k) {
       if (X.accessor(i, k) > 0)
         Xbetai += beta.elements[X.accessor(i, k) - 1 + iParm];
@@ -312,27 +339,27 @@ void logistic_cat_pred(DMatrix beta,     // Vector of parameters
 // The gradient of f, df = (df/dx, df/dy).
 void wgsl_cat_optim_df(const DMatrix beta, void *params, DMatrix output) {
   fix_parm_cat_T *p = cast(fix_parm_cat_T *)params;
-  int n = p.y.size;
-  int K = p.X.shape[1];
-  int npar = beta.size;
+  size_t n = p.y.size;
+  size_t K = p.X.shape[1];
+  size_t npar = beta.size;
 
   // Intitialize gradient output necessary?
-  for (int i = 0; i < npar; ++i)
+  for (size_t i = 0; i < npar; ++i)
     output.elements[i] = 0;
 
   // Changed loop start at 1 instead of 0 to avoid regularization of beta 0.
-  for (int i = 1; i < npar; ++i)
+  for (size_t i = 1; i < npar; ++i)
     output.elements[i] = p.lambdaL2 * beta.elements[i];
-  for (int i = 1; i < npar; ++i)
+  for (size_t i = 1; i < npar; ++i)
     output.elements[i] += p.lambdaL1 * ((beta.elements[i] > 0) - (beta.elements[i] < 0));
 
-  for (int i = 0; i < n; ++i) {
+  for (size_t i = 0; i < n; ++i) {
     double pn = 0;
     double Xbetai = beta.elements[0];
-    int iParm = 1;
-    for (int k = 0; k < K; ++k) {
-      if (gsl_matrix_int_get(p.X, i, k) > 0)
-        Xbetai += beta.elements[gsl_matrix_int_get(p.X, i, k) - 1 + iParm];
+    size_t iParm = 1;
+    for (size_t k = 0; k < K; ++k) {
+      if (p.X.accessor(i, k) > 0)
+        Xbetai += beta.elements[p.X.accessor(i, k) - 1 + iParm];
       iParm += p.nlev.elements[k] - 1;
     }
 
@@ -340,9 +367,9 @@ void wgsl_cat_optim_df(const DMatrix beta, void *params, DMatrix output) {
 
     output.elements[0] += pn;
     iParm = 1;
-    for (int k = 0; k < K; ++k) {
-      if (gsl_matrix_int_get(p.X, i, k) > 0)
-        output.elements[gsl_matrix_int_get(p.X, i, k) - 1 + iParm] += pn;
+    for (size_t k = 0; k < K; ++k) {
+      if (p.X.accessor(i, k) > 0)
+        output.elements[p.X.accessor(i, k) - 1 + iParm] += pn;
       iParm += p.nlev.elements[k] - 1;
     }
   }
@@ -351,57 +378,55 @@ void wgsl_cat_optim_df(const DMatrix beta, void *params, DMatrix output) {
 // The Hessian of f.
 void wgsl_cat_optim_hessian(const DMatrix beta, void *params, DMatrix output) {
   fix_parm_cat_T *p = cast(fix_parm_cat_T *)params;
-  int n = p.y.size;
-  int K = p.X.size2;
-  int npar = beta.size;
+  size_t n = p.y.size;
+  size_t K = p.X.shape[1];
+  size_t npar = beta.size;
 
   // Intitialize Hessian output necessary.
-  gsl_matrix_set_zero(output);
+  output = zeros_dmatrix(output.shape[0], output.shape[1]);
 
   // Changed loop start at 1 instead of 0 to avoid regularization of beta.
-  for (int i = 1; i < npar; ++i)
+  for (size_t i = 1; i < npar; ++i)
     output.set(i, i, p.lambdaL2); // Double-check this.
 
   // L1 penalty not working yet, as not differentiable, I may need to
   // do coordinate descent (as in glm_net).
-  for (int i = 0; i < n; ++i) {
+  for (size_t i = 0; i < n; ++i) {
     double pn = 0;
     double aux = 0;
     double Xbetai = beta.elements[0];
-    int iParm2 = 1;
-    int iParm1 = 1;
-    for (int k = 0; k < K; ++k) {
+    size_t iParm2 = 1;
+    size_t iParm1 = 1;
+    for (size_t k = 0; k < K; ++k) {
       if (p.X.accessor(i, k) > 0)
-        Xbetai += beta.data[p.X.accessor(i, k) - 1 + iParm1];
-      iParm1 += p.nlev.data[k] - 1; //-1?
+        Xbetai += beta.elements[p.X.accessor(i, k) - 1 + iParm1];
+      iParm1 += p.nlev.elements[k] - 1; //-1?
     }
 
     pn = 1 / (1 + gsl_sf_exp(-Xbetai));
 
     // Add a protection for pn very close to 0 or 1?
     aux = pn * (1 - pn);
-    *gsl_matrix_ptr(output, 0, 0) += aux;
+    output.elements[0] += aux;
     iParm2 = 1;
-    for (int k2 = 0; k2 < K; ++k2) {
+    for (size_t k2 = 0; k2 < K; ++k2) {
       if (p.X.accessor(i, k2) > 0)
-        *gsl_matrix_ptr(output, 0, p.X.accessor(i, k2) - 1 + iParm2) +=
-            aux;
-      iParm2 += p.nlev.data[k2] - 1; //-1?
+        output.elements[p.X.accessor(i, k2) - 1 + iParm2] += aux;
+      iParm2 += p.nlev.elements[k2] - 1; //-1?
     }
     iParm1 = 1;
-    for (int k1 = 0; k1 < K; ++k1) {
+    for (size_t k1 = 0; k1 < K; ++k1) {
       if (p.X.accessor(i, k1) > 0)
-        *gsl_matrix_ptr(output, p.X.accessor(i, k1) - 1 + iParm1, 0) +=
-            aux;
+        output.elements[(p.X.accessor(i, k1) - 1 + iParm1) * output.rows] += aux;
       iParm2 = 1;
-      for (int k2 = 0; k2 < K; ++k2) {
-        if ((p.X.accessor(i, k1) > 0) &&
-            (p.X.accessor(i, k2) > 0))
-          *gsl_matrix_ptr(output, p.X.accessor(i, k1) - 1 + iParm1,
-                          p.X.accessor(i, k2) - 1 + iParm2) += aux;
-        iParm2 += p.nlev.data[k2] - 1; //-1?
+      for (size_t k2 = 0; k2 < K; ++k2) {
+        if ((p.X.accessor(i, k1) > 0) && (p.X.accessor(i, k2) > 0)){
+          size_t some_val = ((p.X.accessor(i, k1) - 1 + iParm1 ) * output.rows) + (p.X.accessor(i, k2) - 1 + iParm2);
+          output.elements[some_val] += aux;
+        }
+        iParm2 += p.nlev.elements[k2] - 1; //-1?
       }
-      iParm1 += p.nlev.data[k1] - 1; //-1?
+      iParm1 += p.nlev.elements[k1] - 1; //-1?
     }
   }
 }
@@ -414,7 +439,7 @@ double wgsl_cat_optim_f(DMatrix v, void *params) {
 }
 
 // Compute both f and df together.
-void wgsl_cat_optim_fdf(DMatrix x, void *params, double f, DMatrix df) {
+void wgsl_cat_optim_fdf(DMatrix x, void *params, double *f, DMatrix df) {
   *f = wgsl_cat_optim_f(x, params);
   wgsl_cat_optim_df(x, params, df);
 }
@@ -423,8 +448,8 @@ int logistic_cat_fit(DMatrix beta, DMatrix_int X, DMatrix_int nlev,
                      DMatrix y, double lambdaL1, double lambdaL2) {
   // double mLogLik = 0;
   fix_parm_cat_T p;
-  int npar = beta.size;
-  int iter = 0;
+  size_t npar = beta.size;
+  size_t iter = 0;
   double maxchange = 0;
 
   // Intializing fix parameters.
@@ -448,13 +473,13 @@ int logistic_cat_fit(DMatrix beta, DMatrix_int X, DMatrix_int nlev,
   for (iter = 0; iter < 100; iter++) {
     wgsl_cat_optim_hessian(beta, &p, myH); // Calculate Hessian.
     wgsl_cat_optim_df(beta, &p, myG);      // Calculate Gradient.
-    gsl_linalg_QR_decomp(myH, tau);        // Calculate next beta.
-    gsl_linalg_QR_solve(myH, tau, myG, stBeta);
+    //gsl_linalg_QR_decomp(myH, tau);     // TODO    // Calculate next beta.
+    //gsl_linalg_QR_solve(myH, tau, myG, stBeta);
     beta = beta - stBeta;
 
     // Monitor convergence.
     maxchange = 0;
-    for (int i = 0; i < npar; i++)
+    for (size_t i = 0; i < npar; i++)
       if (maxchange < fabs(stBeta.elements[i]))
         maxchange = fabs(stBeta.elements[i]);
 
@@ -487,30 +512,30 @@ struct fix_parm_cont_T {
 
 double fLogit_cont(const DMatrix beta, const DMatrix Xc, const DMatrix y,
                    double lambdaL1, double lambdaL2) {
-  int n = y.size;
-  int npar = beta.size;
+  size_t n = y.size;
+  size_t npar = beta.size;
   double total = 0;
   double aux = 0;
 
   // omp_set_num_threads(ompthr); /\* Changed loop start at 1 instead
   // of 0 to avoid regularization of beta_0*\/ /\*#pragma omp parallel
   // for reduction (+:total)*\/
-  for (int i = 1; i < npar; ++i)
+  for (size_t i = 1; i < npar; ++i)
     total += beta.elements[i] * beta.elements[i];
   total = (-total * lambdaL2 / 2);
 
   // /\*#pragma omp parallel for reduction (+:aux)*\/
-  for (int i = 1; i < npar; ++i)
+  for (size_t i = 1; i < npar; ++i)
     aux += (beta.elements[i]) > 0 ? beta.elements[i] : -beta.elements[i];
   total = total - aux * lambdaL1;
 
   // #pragma omp parallel for schedule(static) shared(n,beta,X,nlev,y)
   // #reduction (+:total)
-  for (int i = 0; i < n; ++i) {
+  for (size_t i = 0; i < n; ++i) {
     double Xbetai = beta.elements[0];
-    int iParm = 1;
-    for (size_t k = 0; k < (Xc.size2); ++k)
-      Xbetai += gsl_matrix_get(Xc, i, k) * beta.elements[iParm++];
+    size_t iParm = 1;
+    for (size_t k = 0; k < (Xc.shape[1]); ++k)
+      Xbetai += Xc.accessor(i, k) * beta.elements[iParm++];
     total += y.elements[i] * Xbetai - gsl_sf_log_1plusx(gsl_sf_exp(Xbetai));
   }
   return -total;
@@ -522,11 +547,11 @@ void logistic_cont_pred(DMatrix beta,   // Vector of parameters
                                             // Nobs x Kc (NULL if not used).
                         DMatrix yhat) { // Vector of prob. predicted by
                                             // the logistic.
-  for (size_t i = 0; i < Xc.size1; ++i) {
+  for (size_t i = 0; i < Xc.shape[0]; ++i) {
     double Xbetai = beta.elements[0];
-    int iParm = 1;
-    for (size_t k = 0; k < (Xc.size2); ++k)
-      Xbetai += gsl_matrix_get(Xc, i, k) * beta.elements[iParm++];
+    size_t iParm = 1;
+    for (size_t k = 0; k < (Xc.shape[1]); ++k)
+      Xbetai += Xc.accessor(i, k) * beta.elements[iParm++];
     yhat.elements[i] = 1 / (1 + gsl_sf_exp(-Xbetai));
   }
 }
@@ -534,26 +559,26 @@ void logistic_cont_pred(DMatrix beta,   // Vector of parameters
 // The gradient of f, df = (df/dx, df/dy).
 void wgsl_cont_optim_df(const DMatrix beta, const void *params, DMatrix output) {
   fix_parm_cont_T *p = cast(fix_parm_cont_T *)params;
-  int n = p.y.size;
-  int Kc = p.Xc.size2;
-  int npar = beta.size;
+  size_t n = p.y.size;
+  size_t Kc = p.Xc.shape[1];
+  size_t npar = beta.size;
 
-  // Intitialize gradient output necessary?
-  for (int i = 0; i < npar; ++i)
+  // size_titialize gradient output necessary?
+  for (size_t i = 0; i < npar; ++i)
     output.elements[i] = 0;
 
   // Changed loop start at 1 instead of 0 to avoid regularization of beta 0.
-  for (int i = 1; i < npar; ++i)
+  for (size_t i = 1; i < npar; ++i)
     output.elements[i] = p.lambdaL2 * beta.elements[i];
-  for (int i = 1; i < npar; ++i)
+  for (size_t i = 1; i < npar; ++i)
     output.elements[i] += p.lambdaL1 * ((beta.elements[i] > 0) - (beta.elements[i] < 0));
 
-  for (int i = 0; i < n; ++i) {
+  for (size_t i = 0; i < n; ++i) {
     double pn = 0;
     double Xbetai = beta.elements[0];
-    int iParm = 1;
-    for (int k = 0; k < Kc; ++k)
-      Xbetai += gsl_matrix_get(p.Xc, i, k) * beta.elements[iParm++];
+    size_t iParm = 1;
+    for (size_t k = 0; k < Kc; ++k)
+      Xbetai += p.Xc.accessor(i, k) * beta.elements[iParm++];
 
     pn = -(p.y.elements[i] - 1 / (1 + gsl_sf_exp(-Xbetai)));
 
@@ -561,8 +586,8 @@ void wgsl_cont_optim_df(const DMatrix beta, const void *params, DMatrix output) 
     iParm = 1;
 
     // Adding the continuous.
-    for (int k = 0; k < Kc; ++k) {
-      output.elements[iParm++] += gsl_matrix_get(p.Xc, i, k) * pn;
+    for (size_t k = 0; k < Kc; ++k) {
+      output.elements[iParm++] += p.Xc.accessor(i, k) * pn;
     }
   }
 }
@@ -571,29 +596,29 @@ void wgsl_cont_optim_df(const DMatrix beta, const void *params, DMatrix output) 
 void wgsl_cont_optim_hessian(const DMatrix beta, void *params,
                              DMatrix output) {
   fix_parm_cont_T *p = cast(fix_parm_cont_T *)params;
-  int n = p.y.size;
-  int Kc = p.Xc.size2;
-  int npar = beta.size;
+  size_t n = p.y.size;
+  size_t Kc = p.Xc.shape[1];
+  size_t npar = beta.size;
   DMatrix gn = zeros_dmatrix(1, npar); // gn.
 
   // Intitialize Hessian output necessary ???
 
-  gsl_matrix_set_zero(output);
+  output = zeros_dmatrix(output.shape[0], output.shape[1]);
 
   // Changed loop start at 1 instead of 0 to avoid regularization of
   // beta 0.
-  for (int i = 1; i < npar; ++i)
-    gsl_matrix_set(output, i, i, (p.lambdaL2)); // Double-check this.
+  for (size_t i = 1; i < npar; ++i)
+    output.set(i, i, (p.lambdaL2)); // Double-check this.
 
   // L1 penalty not working yet, as not differentiable, I may need to
   // do coordinate descent (as in glm_net).
-  for (int i = 0; i < n; ++i) {
+  for (size_t i = 0; i < n; ++i) {
     double pn = 0;
     double aux = 0;
     double Xbetai = beta.elements[0];
-    int iParm1 = 1;
-    for (int k = 0; k < Kc; ++k)
-      Xbetai += gsl_matrix_get(p.Xc, i, k) * beta.elements[iParm1++];
+    size_t iParm1 = 1;
+    for (size_t k = 0; k < Kc; ++k)
+      Xbetai += p.Xc.accessor(i, k) * beta.elements[iParm1++];
 
     pn = 1 / (1 + gsl_sf_exp(-Xbetai));
 
@@ -604,13 +629,13 @@ void wgsl_cont_optim_hessian(const DMatrix beta, void *params,
     gn = zeros_dmatrix(1, npar);
     gn.elements[0] = 1;
     iParm1 = 1;
-    for (int k = 0; k < Kc; ++k) {
-      gn.elements[iParm1++] = gsl_matrix_get(p.Xc, i, k);
+    for (size_t k = 0; k < Kc; ++k) {
+      gn.elements[iParm1++] = p.Xc.accessor(i, k);
     }
 
-    for (int k1 = 0; k1 < npar; ++k1)
+    for (size_t k1 = 0; k1 < npar; ++k1)
       if (gn.elements[k1] != 0)
-        for (int k2 = 0; k2 < npar; ++k2)
+        for (size_t k2 = 0; k2 < npar; ++k2)
           if (gn.elements[k2] != 0)
             output.set(k1, k2, output.accessor(k1, k2) + aux * gn.elements[k1] * gn.elements[k2]);
   }
@@ -636,8 +661,8 @@ int logistic_cont_fit(DMatrix beta,
                       DMatrix y, double lambdaL1, double lambdaL2) {
 
   fix_parm_cont_T p;
-  int npar = beta.size;
-  int iter = 0;
+  size_t npar = beta.size;
+  size_t iter = 0;
   double maxchange = 0;
 
   // Initializing fix parameters.
@@ -660,13 +685,13 @@ int logistic_cont_fit(DMatrix beta,
   for (iter = 0; iter < 100; iter++) {
     wgsl_cont_optim_hessian(beta, &p, myH); // Calculate Hessian.
     wgsl_cont_optim_df(beta, &p, myG);      // Calculate Gradient.
-    gsl_linalg_QR_decomp(myH, tau);         // Calculate next beta.
-    gsl_linalg_QR_solve(myH, tau, myG, stBeta);
+    //gsl_linalg_QR_decomp(myH, tau);         // Calculate next beta. //TODO
+    //gsl_linalg_QR_solve(myH, tau, myG, stBeta);
     beta = beta - stBeta;
 
     // Monitor convergence.
     maxchange = 0;
-    for (int i = 0; i < npar; i++)
+    for (size_t i = 0; i < npar; i++)
       if (maxchange < fabs(stBeta.elements[i]))
         maxchange = fabs(stBeta.elements[i]);
 
