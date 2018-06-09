@@ -429,12 +429,23 @@ DMatrix get_subvector_dmatrix(const DMatrix H, const size_t offset, const size_t
 }
 
 
-DMatrix get_sub_dmatrix(const DMatrix H, const size_t a, const size_t b, const size_t n1, const size_t n2){
+DMatrix get_sub_dmatrix_old(const DMatrix H, const size_t a, const size_t b, const size_t n1, const size_t n2){
   size_t index = 0, cols = H.cols;
   double[] elements = new double[n1*n2];
   foreach(i; 0..n1){
     foreach(j; 0..n2){
       elements[index++] = H.elements[i*cols + j];
+    }
+  }
+  return DMatrix([n1, n2], elements);
+}
+
+DMatrix get_sub_dmatrix(const DMatrix H, const size_t k1, const size_t k2, const size_t n1, const size_t n2){
+  size_t index = 0, cols = H.cols;
+  double[] elements = new double[n1*n2];
+  foreach(i; 0..n1){
+    foreach(j; 0..n2){
+      elements[index++] = H.elements[(i*cols) + j + k1*cols + k2];
     }
   }
   return DMatrix([n1, n2], elements);
@@ -451,11 +462,21 @@ DMatrix set_sub_dmatrix(const DMatrix H, const size_t a, const size_t b, const s
   return DMatrix(H.shape, elements);
 }
 
-void set_sub_dmatrix2(ref DMatrix H,  size_t a, size_t b, size_t n1, size_t n2, DMatrix H_Sub){
+void set_sub_dmatrix2_old(ref DMatrix H,  size_t a, size_t b, size_t n1, size_t n2, DMatrix H_Sub){
   size_t index = 0, cols = H.cols;
   foreach(i; 0..n1){
     foreach(j; 0..n2){
      H.elements[(i*cols) + j] = H_Sub.elements[index++];
+    }
+  }
+}
+
+void set_sub_dmatrix2(ref DMatrix H,  size_t k1, size_t k2, size_t n1, size_t n2, DMatrix H_Sub){
+  size_t index = 0, cols = H.cols;
+  //m'(i,j) = m->data[(k1*m->tda + k2) + i*m->tda + j] // tda ~ cols
+  foreach(i; 0..n1){
+    foreach(j; 0..n2){
+      H.elements[(i*cols) + j + k1*cols + k2] = H_Sub.elements[index++];
     }
   }
 }
