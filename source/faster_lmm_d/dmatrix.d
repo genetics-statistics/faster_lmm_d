@@ -488,14 +488,31 @@ struct DMatrix_int{
   pragma(inline) const m_items rows() { return shape[0]; }
   pragma(inline) const m_items cols() { return shape[1]; }
   pragma(inline) const m_items size() { return rows() * cols(); }
+
+  this(const size_t[] shape_in, const int[] e) {
+    shape    = shape_in.dup_fast;
+    elements = e.dup_fast;
+  }
+
+  this(const DMatrix_int m) {
+    this(m.shape,m.elements);
+  }
 }
 
-int accessor(DMatrix_int input, size_t row, size_t col){
+int accessor(const DMatrix_int input, size_t row, size_t col){
   return input.elements[row * input.shape[0] + col];
 }
 
 void set(ref DMatrix_int input, size_t row, size_t col, int val){
   input.elements[row * input.shape[0] + col] = val;
+}
+
+DMatrix_int zeros_dmatrix_int(const ulong rows, const ulong cols) {
+  int[] elements = new int[rows * cols];
+  for(auto i = 0; i < rows*cols; i++) {
+    elements[i] = 0;
+  }
+  return DMatrix_int([rows, cols], elements);
 }
 
 unittest{
