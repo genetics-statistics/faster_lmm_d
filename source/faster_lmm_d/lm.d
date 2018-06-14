@@ -40,7 +40,7 @@ import gsl.rng;
 import gsl.randist;
 import gsl.cdf;
 
-void lm_run(string option_kinship, string option_pheno, string option_covar, string option_geno, string option_bfile){
+void lm_run(string option_snps, string option_kinship, string option_pheno, string option_covar, string option_geno, string option_bfile){
   writeln("entered lm_run");
 
   writeln("reading pheno " , option_pheno);
@@ -48,14 +48,12 @@ void lm_run(string option_kinship, string option_pheno, string option_covar, str
   DMatrix Y = pheno.pheno;
   writeln(Y);
 
-  writeln("reading covar " , option_covar);
-  DMatrix covar_matrix = (option_covar != "" ? read_covariate_matrix_from_file(option_covar) : ones_dmatrix(pheno.pheno.shape[0], pheno.pheno.shape[1]));
-  //DMatrix covar_matrix = ones_dmatrix(Y.shape[0], Y.shape[1]);
-  writeln(covar_matrix);
-
-  double[][] cvt;
   size_t n_cvt;
   int[] indicator_cvt;
+
+  writeln("reading covar " , option_covar);
+  double[][] cvt = readfile_cvt(option_covar, indicator_cvt, n_cvt);
+  writeln(cvt);
 
   auto indicators = process_cvt_phen(pheno.indicator_pheno, cvt, indicator_cvt, n_cvt);
 
@@ -65,7 +63,14 @@ void lm_run(string option_kinship, string option_pheno, string option_covar, str
 
   DMatrix W = CopyCvt(indicators.cvt, indicators.indicator_cvt, indicators.indicator_idv, indicators.n_cvt, ni_test);
 
-  auto geno_result = ReadFile_geno1(option_geno, ni_total, W, indicators.indicator_idv);
+  string[] setSnps = ReadFile_snps(option_snps);
+  //writeln(setSnps);
+  string[string] mapRS2chr;
+  size_t[string] mapRS2bp; 
+  double[string] mapRS2cM;
+  ReadFile_anno(option_snps, mapRS2chr, mapRS2bp, mapRS2cM);
+
+  auto geno_result = ReadFile_geno1(option_geno, ni_total, W, indicators.indicator_idv, setSnps, mapRS2chr, mapRS2bp, mapRS2cM);
   int[] indicator_snp = geno_result.indicator_snp;
   SNPINFO[] snpInfo = geno_result.snpInfo;
 
@@ -103,7 +108,7 @@ void lm_write_files(SUMSTAT[] sumStat, const string file_gene, SNPINFO[] snpInfo
   int a_mode = 51;
   string file_str = path_out ~ "/" ~ file_out ~ ".assoc.txt";
 
-  if (file_gene != "") {
+  if (file_gene == "") {
     fwrite("geneID\t");
 
     if (a_mode == 51) {
@@ -365,7 +370,6 @@ SUMSTAT[] lm_analyze_bimbam(const string file_geno, const DMatrix W, const DMatr
   // Start reading genotypes and analyze.
   int t = 0;
   foreach (line; input.byLine) {
-    //line = input.readln();
    
     if (indicator_snp[t] == 0) {
       t++;

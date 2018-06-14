@@ -96,7 +96,7 @@ void read_all_files() {
 
   // Read SNP set.
   if (file_snps != "") {
-    if (ReadFile_snps(file_snps, setSnps) == false) {
+    if (ReadFile_snps(file_snps).length != 0) {
       error = true;
     }
   } else {
@@ -105,7 +105,7 @@ void read_all_files() {
 
   // Read KSNP set.
   if (file_ksnps != "") {
-    if (ReadFile_snps(file_ksnps, setKSnps) == false) {
+    if (ReadFile_snps(file_ksnps).length != 0) {
       error = true;
     }
   } else {
@@ -437,18 +437,18 @@ void read_all_files() {
 }
 
 // Read SNP file. A single column of SNP names.
-bool ReadFile_snps(const string file_snps, string[] setSnps) {
+string[] ReadFile_snps(const string file_snps) {
   writeln("entered ReadFile_snps");
-  setSnps = [];
+  string[] setSnps = [];
 
   File infile = File(file_snps);
 
   foreach(line; infile.byLine) {
-    //string[] ch_ptr = line.split("\t");
-    //setSnps ~= ch_ptr;
+    auto ch_ptr = line.split("\t");
+    setSnps ~= to!string(ch_ptr[0]);
   }
 
-  return true;
+  return setSnps;
 }
 
 // Trim #individuals to size which is used to write tests that run faster
@@ -563,15 +563,11 @@ double[][] readfile_cvt(const string file_cvt, ref int[] indicator_cvt, ref size
 
 // Read bimbam mean genotype file, the first time, to obtain #SNPs for
 // analysis (ns_test) and total #SNP (ns_total).
-Geno_result ReadFile_geno1(const string geno_fn, const ulong ni_total, const DMatrix W, const int[] indicator_idv){
+Geno_result ReadFile_geno1(const string geno_fn, const ulong ni_total, const DMatrix W, const int[] indicator_idv, 
+                          string[] setSnps, string[string] mapRS2chr, size_t[string] mapRS2bp, double[string] mapRS2cM){
 
   writeln("ReadFile_geno", geno_fn);
   int[] indicator_snp;
-
-  string[string] mapRS2chr;
-  long[string] mapRS2bp, mapRS2cM;
-
-  string[] setSnps;
 
   size_t ns_test;
   SNPINFO[] snpInfo;
@@ -611,10 +607,10 @@ Geno_result ReadFile_geno1(const string geno_fn, const ulong ni_total, const DMa
     rs = ch_ptr[0];
     minor = ch_ptr[1];
     major = ch_ptr[2];
-
     auto chr_val = ch_ptr[3..$];
 
     if (setSnps.length != 0 && setSnps.count(rs) == 0) {
+
       // if SNP in geno but not in -snps we add an missing value
       SNPINFO sInfo = SNPINFO("-9", rs, -9, -9, minor, major,
                                 0,  -9, -9, 0, 0, file_pos);
@@ -625,7 +621,7 @@ Geno_result ReadFile_geno1(const string geno_fn, const ulong ni_total, const DMa
 
       continue;
     }
-    if (mapRS2bp.get(rs, 0) != -1) { // check
+    if (mapRS2bp.get(rs, 0) == 0) { // check
       if (count_warnings++ < 10) {
         writeln("Can't figure out position for ");
       }
@@ -736,11 +732,9 @@ Geno_result ReadFile_geno1(const string geno_fn, const ulong ni_total, const DMa
 
 
 // Read bimbam annotation file which consists of rows of SNP, POS and CHR
-bool ReadFile_anno(const string file_anno, string[string] mapRS2chr,
-                   size_t[string] mapRS2bp, double[string] mapRS2cM) {
+bool ReadFile_anno(const string file_anno, ref string[string] mapRS2chr,
+                   ref size_t[string] mapRS2bp, ref double[string] mapRS2cM) {
   writeln("ReadFile_anno");
-  //mapRS2chr = [];
-  //mapRS2bp = [];
 
   File infile = File(file_anno);
   //if (!infile) {
@@ -756,27 +750,33 @@ bool ReadFile_anno(const string file_anno, string[string] mapRS2chr,
 
     //enforce_str(ch_ptr[1], line + " Bad format");
     long b_pos;
-    if (ch_ptr[1] == "NA"){
-      b_pos = -9;
-    } else {
-      b_pos = to!long(ch_ptr[1]);
+    if(ch_ptr.length > 1){
+      if (ch_ptr[1] == "NA"){
+        b_pos = -9;
+      } else {
+        b_pos = to!long(ch_ptr[1]);
+      }
     }
     //enforce_str(b_pos, line + " Bad pos format (is zero)");
 
     string chr;
-    if (ch_ptr[2] == "NULL" || ch_ptr[2] == "NA") { // TODO
-      chr = "-9";
-    } else {
-      chr = to!string(ch_ptr[2]);
-      //enforce_str(chr != "", line + " Bad chr format");
+    if(ch_ptr.length > 2){
+      if (ch_ptr[2] == "NA") {
+        chr = "-9";
+      } else {
+        chr = to!string(ch_ptr[2]);
+        //enforce_str(chr != "", line + " Bad chr format");
+      }
     }
 
     double cM;
-    if (ch_ptr[3] == "NULL" || ch_ptr[2] == "NA") { // TODO
-      cM = -9;
-    } else {
-      cM = to!double(ch_ptr[3]);
-      //enforce_str(b_pos, line + "Bad cM format (is zero)");
+    if(ch_ptr.length > 3){
+      if (ch_ptr[3] == "NA") {
+        cM = -9;
+      } else {
+        cM = to!double(ch_ptr[3]);
+        //enforce_str(b_pos, line + "Bad cM format (is zero)");
+      }
     }
 
     mapRS2chr[rs] = chr;
