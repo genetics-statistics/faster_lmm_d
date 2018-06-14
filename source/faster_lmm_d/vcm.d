@@ -882,7 +882,7 @@ void ReadFile_beta(const bool flag_priorscale, const string file_beta,
 
 // Read cov file the first time, record mapRS2in, mapRS2var (in case
 // var is not provided in the z file), store vec_n and vec_rs.
-void ReadFile_cor(const string file_cor, const string[] setSnps,
+void ReadFile_cor2(const string file_cor, const string[] setSnps,
                   string[] vec_rs, size_t[] vec_n,
                   double[] vec_cm, double[] vec_bp,
                   size_t[string] mapRS2in,
@@ -1023,7 +1023,7 @@ void ReadFile_cor(const string file_cor, const string[] setSnps,
 
 // Read beta file, store mapRS2var if var is provided here, calculate
 // q and var_y.
-void ReadFile_beta(const bool flag_priorscale, const string file_beta,
+void ReadFile_beta2(const bool flag_priorscale, const string file_beta,
                    const size_t[string] mapRS2cat,
                    size_t[string] mapRS2in,
                    double[string] mapRS2var,

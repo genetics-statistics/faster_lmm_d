@@ -14,7 +14,7 @@ import std.math: sqrt, round;
 import std.stdio;
 import std.typecons; // for Tuples
 
-import cblas : gemm, Transpose, Order, cblas_ddot;
+import cblas : gemm, Transpose, Order, Uplo, cblas_ddot, cblas_daxpy, cblas_dger, cblas_dsyr, cblas_dsyrk;
 
 import faster_lmm_d.dmatrix;
 import faster_lmm_d.helpers;
@@ -24,7 +24,10 @@ extern (C) {
   void dgetri_ (int* n, double* a, int* lda, const(int)* ipiv, double* work, int* lwork, int* info);
   int LAPACKE_dgetrf (int matrix_layout, int m, int n, double* a, int lda, int* ipiv);
   double EIGEN_MINVALUE = 1e-10;
-//INFO = LAPACKE_dsyev_(101, JOBZ, UPLO, N, A.elements.ptr, LDA, eval.elements.ptr);
+  void dsyev_(char* jobz,  char* uplo, int* n, double *a, int* lda, double *w, double *work, int* lwork, int* info);
+  void dsyevr_(char* jobz, char* range, char* uplo, int* n, double *a, int* lda, double *vl, 
+               double *vu, int *il, int *iu, double* abstol, int* m, double *w, double *z, 
+               int* ldz, int *isuppz, double *work, int* lwork, int *iwork, int *liwork, int* info);
   int LAPACKE_dsyev (int matrix_layout, char jobz, char uplo, int n,
                       double* a, int lda, double* z);
   int LAPACKE_dsyevr (int matrix_layout, char jobz, char range, char uplo, int n,
@@ -91,6 +94,50 @@ DMatrix large_matrix_mult(DMatrix lha, DMatrix rha) {
   DMatrix res_dr = matrix_mult(mat.last,  nat.last) ;
 
   return matrix_join(res_ul, res_ur, res_dl, res_dr);
+}
+
+DMatrix solve(const DMatrix A, const DMatrix B){
+  double[] lhs = A.elements.dup;
+  int n = to!int(A.rows);
+  int m = to!int(B.cols);
+  auto ipiv = new int[min(n,m)+1];
+  double[] elements = B.elements.dup;
+  LAPACKE_dgesv(101, n, m, lhs.ptr, n, ipiv.ptr, elements.ptr, m);
+  return DMatrix([1, B.cols], elements);
+}
+
+DMatrix axpy(const double alpha, const DMatrix X, const DMatrix Y){
+  double[] elements = Y.elements.dup();
+  cblas_daxpy(to!int(X.size), alpha, X.elements.ptr, 1, elements.ptr, 1);
+  return DMatrix([1, Y.size], elements);
+}
+
+//compute the rank-1 update A = alpha x y^T + A of the matrix A.
+
+DMatrix ger(const double alpha, const DMatrix X , const DMatrix Y , const DMatrix A){
+  double [] elements = A.elements.dup();
+  int m = to!int(A.rows), n = to!int(A.cols);
+  assert(m == X.size);
+  assert(n == Y.size);
+  cblas_dger(Order.RowMajor, m, n, alpha, X.elements.ptr, 1, Y.elements.ptr, 1, elements.ptr, m);
+  return DMatrix(A.shape, elements);
+}
+
+//compute the symmetric rank-1 update A = alpha x x^T + A of the symmetric matrix A
+
+DMatrix syr(const double alpha, const DMatrix X, const DMatrix A ){
+  assert(A.rows == A.cols);
+  double[] elements = A.elements.dup;
+  cblas_dsyr(Order.RowMajor, Uplo.Upper, to!int(A.rows), alpha, X.elements.ptr, 1, elements.ptr, to!int(A.rows)); 
+  return DMatrix(A.shape, elements);
+}
+
+//compute a rank-k update of the symmetric matrix C, C = alpha A A^T + beta C 
+
+DMatrix syrk(const double alpha, const DMatrix A, double beta, const DMatrix C){
+  double[] elements = C.elements.dup();
+  cblas_dsyrk(Order.RowMajor, Uplo.Upper, Transpose.Trans, to!int(C.rows), to!int(A.cols), alpha, A.elements.ptr, to!int(A.rows), beta, elements.ptr, to!int(C.rows)); 
+  return DMatrix(A.shape, elements);
 }
 
 /*
@@ -316,6 +363,78 @@ body {
   return prod;
 }
 
+// Eigenvalue decomposition, matrix A is destroyed. Returns eigenvalues in
+// 'eval'. Also returns matrix 'evec' (U).
+void lapack_eigen_symmv(DMatrix A, ref DMatrix eval, ref DMatrix evec, const size_t flag_largematrix) {
+  if (flag_largematrix == 1) {
+    int N = to!int(A.shape[0]), LDA = to!int(A.shape[0]), INFO, LWORK = -1;
+    char JOBZ = 'V', UPLO = 'L';
+
+    if (N != to!int(A.shape[1]) || N != to!int(eval.size)) {
+      writeln("Matrix needs to be symmetric and same dimension in lapack_eigen_symmv.");
+      return;
+    }
+
+    LWORK = 3 * N;
+    double[] WORK = new double[LWORK];
+    dsyev_(&JOBZ, &UPLO, &N, A.elements.ptr, &LDA, eval.elements.ptr, WORK.ptr, &LWORK, &INFO);
+    if (INFO != 0) {
+      writeln("Eigen decomposition unsuccessful in lapack_eigen_symmv.");
+      return;
+    }
+
+    //gsl_matrix_view
+    DMatrix A_sub = get_sub_dmatrix(A, 0, 0, N, N);
+    //gsl_matrix_memcpy(evec, &A_sub.matrix);
+    //gsl_matrix_transpose(evec);
+
+  } else {
+    int N = to!int(A.shape[0]), LDA = to!int(A.shape[0]), LDZ = to!int(A.shape[0]), INFO;
+    int LWORK = -1, LIWORK = -1;
+    char JOBZ = 'V', UPLO = 'L', RANGE = 'A';
+    double ABSTOL = 1.0E-7;
+
+    // VL, VU, IL, IU are not referenced; M equals N if RANGE='A'.
+    double VL = 0.0, VU = 0.0;
+    int IL = 0, IU = 0, M;
+
+    if (N != to!int(A.shape[1]) || N != to!int(eval.size)) {
+      writeln("Matrix needs to be symmetric and same dimension in lapack_eigen_symmv.");
+      return;
+    }
+
+    int[] ISUPPZ = new int[2 * N];
+
+    double[] WORK_temp = new double[1];
+    int[] IWORK_temp = new int[1];
+
+    dsyevr_(&JOBZ, &RANGE, &UPLO, &N, A.elements.ptr, &LDA, &VL, &VU, &IL, &IU,
+            &ABSTOL, &M, eval.elements.ptr, evec.elements.ptr, &LDZ, ISUPPZ.ptr, WORK_temp.ptr,
+            &LWORK, IWORK_temp.ptr, &LIWORK, &INFO);
+    if (INFO != 0) {
+      writeln("Work space estimate unsuccessful in lapack_eigen_symmv.");
+      return;
+    }
+    LWORK = to!int(WORK_temp[0]);
+    LIWORK = to!int(IWORK_temp[0]);
+
+    double[] WORK = new double[LWORK];
+    int[] IWORK = new int[LIWORK];
+
+    dsyevr_(&JOBZ, &RANGE, &UPLO, &N, A.elements.ptr, &LDA, &VL, &VU, &IL, &IU,
+            &ABSTOL, &M, eval.elements.ptr, evec.elements.ptr, &LDZ, ISUPPZ.ptr, WORK.ptr, &LWORK,
+            IWORK.ptr, &LIWORK, &INFO);
+    if (INFO != 0) {
+      writeln("Eigen decomposition unsuccessful in lapack_eigen_symmv.");
+      return;
+    }
+
+    evec = evec.T;
+  }
+
+  return;
+}
+
 alias Tuple!(int[],"ipiv",double[],"arr") LUtup;
 
 LUtup getrf(const double[] arr, const m_items cols, const m_items rows = 1) {
@@ -473,10 +592,7 @@ void CenterVector(DMatrix y, const DMatrix W) {
   DMatrix WtW = matrix_mult(W.T, W);
   DMatrix Wty = matrix_mult(W.T, y);
 
-  int sig;
-  //gsl_permutation *pmt = gsl_permutation_alloc(W->size2);
-  //LUDecomp(WtW, pmt, &sig);
-  //LUSolve(WtW, pmt, Wty, WtWiWty);
+  DMatrix WtWiWty = WtW.solve(Wty);
 
   //gsl_blas_dgemv(CblasNoTrans, -1.0, W, WtWiWty, 1.0, y);
 

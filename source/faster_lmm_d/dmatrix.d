@@ -100,7 +100,7 @@ DMatrix get_diagonal(const DMatrix input){
   assert(input.rows == input.cols);
   double[] elements = new double[input.rows];
   foreach(i; 0..input.rows){
-    elements ~= input.accessor(i, i);
+    elements[i] = input.elements[i*input.rows + i];
   }
   return DMatrix([input.rows, 1], elements);
 }
@@ -423,12 +423,29 @@ DMatrix matrix_join(DMatrix ul, DMatrix ur, DMatrix dl, DMatrix dr){
   return result;
 }
 
-DMatrix get_sub_dmatrix(const DMatrix H, const size_t a, const size_t b, const size_t n1, const size_t n2){
+DMatrix get_subvector_dmatrix(const DMatrix H, const size_t offset, const size_t n){
+  double[] elements = H.elements.dup;
+  return DMatrix([1, n], elements[offset..(offset+n)]);
+}
+
+
+DMatrix get_sub_dmatrix_old(const DMatrix H, const size_t a, const size_t b, const size_t n1, const size_t n2){
   size_t index = 0, cols = H.cols;
   double[] elements = new double[n1*n2];
   foreach(i; 0..n1){
     foreach(j; 0..n2){
       elements[index++] = H.elements[i*cols + j];
+    }
+  }
+  return DMatrix([n1, n2], elements);
+}
+
+DMatrix get_sub_dmatrix(const DMatrix H, const size_t k1, const size_t k2, const size_t n1, const size_t n2){
+  size_t index = 0, cols = H.cols;
+  double[] elements = new double[n1*n2];
+  foreach(i; 0..n1){
+    foreach(j; 0..n2){
+      elements[index++] = H.elements[(i*cols) + j + k1*cols + k2];
     }
   }
   return DMatrix([n1, n2], elements);
@@ -445,13 +462,57 @@ DMatrix set_sub_dmatrix(const DMatrix H, const size_t a, const size_t b, const s
   return DMatrix(H.shape, elements);
 }
 
-void set_sub_dmatrix2(ref DMatrix H,  size_t a, size_t b, size_t n1, size_t n2, DMatrix H_Sub){
+void set_sub_dmatrix2_old(ref DMatrix H,  size_t a, size_t b, size_t n1, size_t n2, DMatrix H_Sub){
   size_t index = 0, cols = H.cols;
   foreach(i; 0..n1){
     foreach(j; 0..n2){
      H.elements[(i*cols) + j] = H_Sub.elements[index++];
     }
   }
+}
+
+void set_sub_dmatrix2(ref DMatrix H,  size_t k1, size_t k2, size_t n1, size_t n2, DMatrix H_Sub){
+  size_t index = 0, cols = H.cols;
+  //m'(i,j) = m->data[(k1*m->tda + k2) + i*m->tda + j] // tda ~ cols
+  foreach(i; 0..n1){
+    foreach(j; 0..n2){
+      H.elements[(i*cols) + j + k1*cols + k2] = H_Sub.elements[index++];
+    }
+  }
+}
+
+struct DMatrix_int{
+  size_t[] shape;
+  int[] elements;
+
+  pragma(inline) const m_items rows() { return shape[0]; }
+  pragma(inline) const m_items cols() { return shape[1]; }
+  pragma(inline) const m_items size() { return rows() * cols(); }
+
+  this(const size_t[] shape_in, const int[] e) {
+    shape    = shape_in.dup_fast;
+    elements = e.dup_fast;
+  }
+
+  this(const DMatrix_int m) {
+    this(m.shape,m.elements);
+  }
+}
+
+int accessor(const DMatrix_int input, size_t row, size_t col){
+  return input.elements[row * input.shape[0] + col];
+}
+
+void set(ref DMatrix_int input, size_t row, size_t col, int val){
+  input.elements[row * input.shape[0] + col] = val;
+}
+
+DMatrix_int zeros_dmatrix_int(const ulong rows, const ulong cols) {
+  int[] elements = new int[rows * cols];
+  for(auto i = 0; i < rows*cols; i++) {
+    elements[i] = 0;
+  }
+  return DMatrix_int([rows, cols], elements);
 }
 
 unittest{

@@ -11,6 +11,7 @@ import core.stdc.stdlib : exit;
 import core.stdc.time;
 
 import std.algorithm;
+import std.bitmanip;
 import std.conv;
 import std.exception;
 import std.file;
@@ -63,17 +64,37 @@ void generate_kinship(const string geno_fn, const string pheno_fn, const string 
 
 void generate_kinship_plink(const string file_bed, const string test_name = ""){
   writeln("in generate_kinship_plink");
-  DMatrix matrix_kin;
-  ulong[] p_column;
-  int[][] indicator_pheno;
-  double[][] pheno;
-  ulong[ulong] mapId2num;
-  readfile_fam(file_bed, indicator_pheno, pheno, mapId2num, p_column);
+  size_t[] p_column;
+  double[][] cvt;
+  int[] indicator_cvt;
+  size_t n_cvt;
+
+  // pheno
+  auto pheno = readfile_fam(file_bed, p_column);
+
+  auto indicators = process_cvt_phen(pheno.indicator_pheno, cvt, indicator_cvt, n_cvt);
+
+  size_t ni_test = indicators.ni_test;
+  DMatrix W = CopyCvt(indicators.cvt, indicators.indicator_cvt, indicators.indicator_idv, indicators.n_cvt, ni_test);
+  string[] setSnps;
+  SNPINFO[] snpInfo = readfile_bim(file_bed);
+  double maf_level, miss_level, hwe_level, r2_level;
+  size_t ns_test;
+  //geno
+  int[] indicator_snp = readfile_bed(file_bed ~ ".bed", setSnps, W, indicators.indicator_idv, snpInfo,
+                  maf_level, miss_level, hwe_level, r2_level, ns_test).indicator_snp;
+
+  size_t ni_total = indicators.indicator_idv.length;
+
+  DMatrix matrix_kin = plink_kin(file_bed, indicator_snp, 1, ni_total);
 }
 
 void Read_files(const string geno_fn, const string pheno_fn,  const string test_name = "", const string co_variate_fn = ""){
   double[] indicator_pheno;
-  size_t[] p_column;
+  size_t[] p_column = [1];
+  double[][] cvt;
+  int[] indicator_cvt;
+  size_t n_cvt;
 
   auto pheno = ReadFile_pheno(pheno_fn, p_column);
 
@@ -82,11 +103,11 @@ void Read_files(const string geno_fn, const string pheno_fn,  const string test_
     check_indicator_pheno(pheno.indicator_pheno);
   }
 
-  auto indicators = process_cvt_phen(pheno.indicator_pheno);
+  auto indicators = process_cvt_phen(pheno.indicator_pheno, cvt, indicator_cvt, n_cvt);
 
   size_t ni_test = indicators.ni_test;
 
-  DMatrix W = CopyCvt(indicators.cvt, indicators.indicator_cvt, indicators.indicator_idv, indicators.n_cvt);
+  DMatrix W = CopyCvt(indicators.cvt, indicators.indicator_cvt, indicators.indicator_idv, indicators.n_cvt, ni_test);
 
   size_t ni_total = indicators.indicator_idv.length;
 
@@ -99,8 +120,8 @@ void Read_files(const string geno_fn, const string pheno_fn,  const string test_
   //bimbam_kin(geno_fn, pheno_fn, W, indicator_snp);
 }
 
-Pheno_result ReadFile_pheno(const string file_pheno, size_t[] p_column){
-
+Pheno_result ReadFile_pheno(const string file_pheno, size_t[] p_column = [1]){
+  writeln("entered ReadFile_pheno");
   double[] pheno_elements;
   double[] indicator_pheno;
 
@@ -109,7 +130,7 @@ Pheno_result ReadFile_pheno(const string file_pheno, size_t[] p_column){
   double[] pheno_row;
   double[] ind_pheno_row;
 
-  p_column = [1]; // modify it later for multiple elements in p_column
+  writeln(p_column);
 
   size_t p_max = p_column.reduce!(max);
 
@@ -124,7 +145,7 @@ Pheno_result ReadFile_pheno(const string file_pheno, size_t[] p_column){
   int rows = 0;
 
   foreach (line ; input.byLine) {
-    auto ch_ptr = to!string(line).split("\t");
+    auto ch_ptr = to!string(line).split();
     size_t i = 0;
     while (i < p_max) {
       if((i+1) in mapP2c){
@@ -514,7 +535,6 @@ DMatrix ReadFile_geno(const string geno_fn, const ulong ni_total, const DMatrix 
   if (ns_test % msize != 0) {
     matrix_kin = add_dmatrix(matrix_kin, cpu_mat_mult(Xlarge, 0, Xlarge, 1));
   }
-
   matrix_kin = divide_dmatrix_num(matrix_kin, ns_test);
   matrix_kin = matrix_kin.T;
 
@@ -523,8 +543,7 @@ DMatrix ReadFile_geno(const string geno_fn, const ulong ni_total, const DMatrix 
   return matrix_kin;
 }
 
-DMatrix CopyCvt(const DMatrix cvt, const int[] indicator_cvt, const int[] indicator_idv, const size_t n_cvt) {
-  size_t ni_test = 1410;
+DMatrix CopyCvt(const DMatrix cvt, const int[] indicator_cvt, const int[] indicator_idv, const size_t n_cvt, const size_t ni_test) {
   DMatrix W = zeros_dmatrix(ni_test, n_cvt); // ni_test missing
   size_t ci_test = 0;
 
@@ -541,20 +560,75 @@ DMatrix CopyCvt(const DMatrix cvt, const int[] indicator_cvt, const int[] indica
   return W;
 }
 
-// Post-process phenotypes and covariates.
-Indicators_result process_cvt_phen(const DMatrix indicator_pheno, const string test_name = ""){
+void check_cvt(int[] indicator_cvt, int[] indicator_idv, ref double[][] cvt, size_t n_cvt, size_t ni_test) {
+  writeln("in check_cvt");
+  if (indicator_cvt.length == 0) {
+    return;
+  }
 
-  writeln(indicator_pheno.shape);
+  size_t ci_test = 0;
+
+  DMatrix W = zeros_dmatrix(ni_test, n_cvt);
+
+  for (size_t i = 0; i < indicator_idv.length; ++i) {
+    if (indicator_idv[i] == 0 || indicator_cvt[i] == 0) {
+      continue;
+    }
+    for (size_t j = 0; j < n_cvt; ++j) {
+      W.set(ci_test, j, cvt[i][j]);
+    }
+    ci_test++;
+  }
+
+  size_t flag_ipt = 0;
+  double v_min, v_max;
+  size_t[] set_remove;
+
+  // Check if any columns is an intercept.
+  for (size_t i = 0; i < W.shape[1]; i++) {
+    //gsl_vector_view
+    DMatrix w_col = get_col(W, i);
+    v_min = w_col.elements.minElement;
+    v_max = w_col.elements.maxElement;
+    if (v_min == v_max) {
+      flag_ipt = 1;
+      //set_remove.insert(i);
+    }
+  }
+
+  // Add an intercept term if needed.
+  if (n_cvt == set_remove.length) {
+    indicator_cvt = [];
+    n_cvt = 1;
+  } else if (flag_ipt == 0) {
+    writeln("no intercept term is found in the cvt file. a column of 1s is added.");
+
+    for (size_t i = 0; i < indicator_idv.length; ++i) {
+      if (indicator_idv[i] == 0 || indicator_cvt[i] == 0) {
+        continue;
+      }
+      cvt[i] ~= 1.0;
+    }
+
+    n_cvt++;
+  } else {
+  }
+
+  return;
+}
+
+
+// Post-process phenotypes and covariates.
+Indicators_result process_cvt_phen(const DMatrix indicator_pheno, double[][] cvt, int[] indicator_cvt, size_t n_cvt, const string test_name = ""){
 
   // Convert indicator_pheno to indicator_idv.
   int k = 1;
-  int[] indicator_idv, indicator_cvt, indicator_weight;
+  int[] indicator_idv, indicator_weight;
   int[] indicator_gxe;
   size_t ni_test, ni_subsample;
-  double[] cvt;
   int a_mode;
 
-  foreach(i ; 0..indicator_pheno.elements.length) {
+  foreach(i ; 0..indicator_pheno.rows) {
     k = 1;
     foreach(j; 0..indicator_pheno.cols) {
       if (indicator_pheno.accessor(i,j) == 0) {
@@ -563,6 +637,8 @@ Indicators_result process_cvt_phen(const DMatrix indicator_pheno, const string t
     }
     indicator_idv ~= k;
   }
+
+  writeln("at line 577");
 
   ni_test = 0;
   foreach(i; 0..indicator_idv.length){
@@ -636,11 +712,9 @@ Indicators_result process_cvt_phen(const DMatrix indicator_pheno, const string t
   // After getting ni_test.
   // Add or remove covariates.
 
-
   if (indicator_cvt.length != 0) {
-    //CheckCvt();
+    check_cvt(indicator_cvt, indicator_idv, cvt, n_cvt, ni_test);
   } else {
-
     double[] cvt_row;
     cvt_row ~= 1;
 
@@ -650,13 +724,18 @@ Indicators_result process_cvt_phen(const DMatrix indicator_pheno, const string t
     }
   }
 
-  DMatrix s_cvt = DMatrix([indicator_idv.length, cvt.length/indicator_idv.length] , cvt);
+  double[] cvt_elements;
+  foreach(cvt_row; cvt){
+    cvt_elements ~= cvt_row;
+  }
+
+  DMatrix s_cvt = DMatrix([indicator_idv.length, cvt_elements.length/indicator_idv.length] , cvt_elements);
 
   writeln("done process_cvt_phen");
   writeln(ni_test);
 
   if(test_name == "hs1940_kinship"){ 
-    check_indicator_cvt(cvt);
+    check_indicator_cvt(s_cvt.elements);
     check_cvt_matrix(s_cvt);
     check_indicator_idv(indicator_idv);
   }
@@ -665,22 +744,16 @@ Indicators_result process_cvt_phen(const DMatrix indicator_pheno, const string t
 }
 
 
-bool PlinkKin(const string file_bed, int[] indicator_snp,
-              const int k_mode, const int display_pace,
-              DMatrix matrix_kin) {
+DMatrix plink_kin(const string file_bed, int[] indicator_snp, const int k_mode, size_t ni_total) {
   writeln("entered PlinkKin");
 
   File infile = File(file_bed ~ ".bed");
 
-  //char ch[1];
-  int[] b;
-
   size_t n_miss, ci_total;
   double d, geno_mean, geno_var;
 
-  size_t ni_total = matrix_kin.shape[0];
-  //gsl_vector *geno = gsl_vector_safe_alloc(ni_total);
-  DMatrix geno;
+  DMatrix matrix_kin = zeros_dmatrix(ni_total, ni_total);
+  DMatrix geno = zeros_dmatrix(1, ni_total);
 
   size_t ns_test = 0;
   size_t n_bit;
@@ -700,8 +773,7 @@ bool PlinkKin(const string file_bed, int[] indicator_snp,
 
   // print the first three magic numbers
   for (int i = 0; i < 3; ++i) {
-    //infile.read(ch, 1);
-    //b = ch[0];
+    auto ch = infile.rawRead(new bool[8]);
   }
 
   for (size_t t = 0; t < indicator_snp.length; ++t) {
@@ -718,8 +790,8 @@ bool PlinkKin(const string file_bed, int[] indicator_snp,
     ci_total = 0;
     geno_var = 0.0;
     for (int i = 0; i < n_bit; ++i) {
-      //infile.read(ch, 1);
-      //b = ch[0];
+      auto ch = infile.rawRead(new bool[8]);
+      auto b = BitArray(ch);
 
       // Minor allele homozygous: 2.0; major: 0.0.
       for (size_t j = 0; j < 4; ++j) {
@@ -786,10 +858,10 @@ bool PlinkKin(const string file_bed, int[] indicator_snp,
   matrix_kin = divide_dmatrix_num(matrix_kin, ns_test);
   matrix_kin = matrix_kin.T;
 
-  return true;
+  return matrix_kin;
 }
 
-bool PlinkKin(const string file_bed, const int display_pace,
+bool plink_kin(const string file_bed,
               const int[] indicator_idv,
               const int[] indicator_snp,
               const double[string] mapRS2weight,
@@ -809,8 +881,6 @@ bool PlinkKin(const string file_bed, const int display_pace,
   size_t ni_test = matrix_kin.shape[0];
   size_t ni_total = indicator_idv.length;
   DMatrix geno; // = gsl_vector_safe_alloc(ni_test);
-
-  gsl_permutation *pmt = gsl_permutation_alloc(W.shape[1]);
 
   DMatrix WtW = matrix_mult(W.T, W);
 
@@ -983,8 +1053,6 @@ bool PlinkKin(const string file_bed, const int display_pace,
       }
     }
   }
-
-  gsl_permutation_free(pmt);
 
   return true;
 }

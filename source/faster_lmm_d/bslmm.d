@@ -52,30 +52,107 @@ struct HYPBSLMM{
   double pve, rho, pge, logp;
 }
 
+void bslmm_run(){
+  writeln("in bslmm_run");
+
+  double rho_min, rho_max;
+
+  DMatrix y, W, G, UtX;
+
+  // center y, even for case/control data
+  double pheno_mean = CenterVector(y);
+
+  // run bvsr if rho==1
+  if (rho_min == 1 && rho_max == 1) {
+  //  // read genotypes X (not UtX)
+    //ReadGenotypes(UtX, G, false);
+
+    // perform BSLMM analysis
+    MCMC(UtX, y);
+    // else, if rho!=1
+  } 
+  else {
+    DMatrix U, eval, UtW, Uty;
+
+  //  // read relatedness matrix G
+  //  if (!(cPar.file_kin).empty()) {
+  //    cPar.ReadGenotypes(UtX, G, false);
+
+  //    // read relatedness matrix G
+  //    ReadFile_kin(cPar.file_kin, cPar.indicator_idv, cPar.mapID2num, cPar.k_mode, cPar.error, G);
+  //    if (cPar.error == true) {
+  //      cout << "error! fail to read kinship/relatedness file. " << endl;
+  //      return;
+  //    }
+
+  //    // center matrix G
+  //    CenterMatrix(G);
+  //    validate_K(G);
+  //  } else {
+  //    cPar.ReadGenotypes(UtX, G, true);
+  //  }
+
+  //  // eigen-decomposition and calculate trace_G
+  //  writeln("Start Eigen-Decomposition...");
+  //  double trace_G = EigenDecomp_Zeroed(G, U, eval, 0);
+
+  //  // calculate UtW and Uty
+  //  CalcUtX(U, W, UtW);
+  //  CalcUtX(U, y, Uty);
+
+  //  // calculate REMLE/MLE estimate and pve
+  //  CalcLambda('L', eval, UtW, Uty, cPar.l_min, cPar.l_max, cPar.n_region,
+  //             cPar.l_mle_null, cPar.logl_mle_H0);
+  //  CalcLambda('R', eval, UtW, Uty, cPar.l_min, cPar.l_max, cPar.n_region,
+  //             cPar.l_remle_null, cPar.logl_remle_H0);
+  //  CalcPve(eval, UtW, Uty, cPar.l_remle_null, cPar.trace_G, cPar.pve_null,
+  //          cPar.pve_se_null);
+
+  //  cPar.PrintSummary();
+
+  //  // Creat and calcualte UtX, use a large memory
+  //  CalcUtX(U, UtX);
+
+  //  // perform BSLMM or BSLMMDAP analysis
+  //  if (a_mode == 11 || a_mode == 12 || a_mode == 13) {
+  //    if (a_mode == 12) { // ridge regression
+  //      cBslmm.RidgeR(U, UtX, Uty, eval, cPar.l_remle_null);
+  //    } else { // Run MCMC
+  //      cBslmm.MCMC(U, UtX, Uty, eval, y);
+  //    }
+  //  } 
+  //  else {
+  //  }
+
+  }
+}
+
 // If a_mode==13, then run probit model.
 void MCMC(const DMatrix X, const DMatrix y) {
+
+  size_t ni_test, s_max, w_pace, ns_test, randseed;
 
   HYPBSLMM cHyp_initial; // todo
 
   HYPBSLMM cHyp_old, cHyp_new;
 
-  DMatrix Result_hyp; // = gsl_matrix_alloc(w_pace, 6);
-  DMatrix Result_gamma; // = gsl_matrix_alloc(w_pace, s_max);
+  DMatrix Result_hyp   = zeros_dmatrix(w_pace, 6);
+  DMatrix Result_gamma = zeros_dmatrix(w_pace, s_max);
 
-  DMatrix Xb_new; // = gsl_vector_alloc(ni_test);
-  DMatrix Xb_old; // = gsl_vector_alloc(ni_test);
-  DMatrix z_hat;  // = gsl_vector_alloc(ni_test);
-  DMatrix z;      // = gsl_vector_alloc(ni_test);
+  DMatrix Xb_new     = zeros_dmatrix(1, ni_test);
+  DMatrix Xb_old     = zeros_dmatrix(1, ni_test);
+  DMatrix z_hat      = zeros_dmatrix(1, ni_test);
+  DMatrix z          = zeros_dmatrix(1, ni_test);
 
-  DMatrix Xgamma_old; // = gsl_matrix_alloc(ni_test, s_max);
-  DMatrix XtX_old;    // = gsl_matrix_alloc(s_max, s_max);
-  DMatrix Xtz_old;    // = gsl_vector_alloc(s_max);
-  DMatrix beta_old;   // = gsl_vector_alloc(s_max);
+  DMatrix Xgamma_old = zeros_dmatrix(ni_test, s_max);
+  DMatrix XtX_old    = zeros_dmatrix(s_max, s_max);
+  DMatrix Xtz_old    = zeros_dmatrix(1, s_max);
+  DMatrix beta_old   = zeros_dmatrix(1, s_max);
 
-  DMatrix Xgamma_new; // = gsl_matrix_alloc(ni_test, s_max);
-  DMatrix XtX_new; // = gsl_matrix_alloc(s_max, s_max);
-  DMatrix Xtz_new;  // = gsl_vector_alloc(s_max);
-  DMatrix beta_new;   // = gsl_vector_alloc(s_max);
+  DMatrix Xgamma_new = zeros_dmatrix(ni_test, s_max);
+  DMatrix XtX_new    = zeros_dmatrix(s_max, s_max);
+  DMatrix Xtz_new    = zeros_dmatrix(1, s_max);
+  DMatrix beta_new   = zeros_dmatrix(1, s_max);
 
   double ztz = 0.0;
 
@@ -93,7 +170,6 @@ void MCMC(const DMatrix X, const DMatrix y) {
   double logMHratio;
 
   //define later
-  size_t w_pace, s_max, ns_test, randseed, ni_test;
   int a_mode;
   double pheno_mean;
   size_t[] mapRank2pos;
@@ -352,22 +428,22 @@ void MCMC(const DMatrix U, const DMatrix UtX,
   double pheno_mean;
   size_t[] mapRank2pos;
 
-  DMatrix Result_hyp; // = gsl_matrix_alloc(w_pace, 6);
+  DMatrix Result_hyp   = zeros_dmatrix(w_pace, 6);
   DMatrix Result_gamma = zeros_dmatrix(w_pace, s_max);
 
-  DMatrix alpha_prime; // = gsl_vector_alloc(ni_test);
-  DMatrix alpha_new; // = gsl_vector_alloc(ni_test);
-  DMatrix alpha_old; // = gsl_vector_alloc(ni_test);
-  DMatrix Utu; // = gsl_vector_alloc(ni_test);
-  DMatrix Utu_new; // = gsl_vector_alloc(ni_test);
-  DMatrix Utu_old; // = gsl_vector_alloc(ni_test);
+  DMatrix alpha_prime  = zeros_dmatrix(1, ni_test);
+  DMatrix alpha_new    = zeros_dmatrix(1, ni_test);
+  DMatrix alpha_old    = zeros_dmatrix(1, ni_test);
+  DMatrix Utu          = zeros_dmatrix(1, ni_test);
+  DMatrix Utu_new      = zeros_dmatrix(1, ni_test);
+  DMatrix Utu_old      = zeros_dmatrix(1, ni_test);
 
-  DMatrix UtXb_new; // = gsl_vector_alloc(ni_test);
-  DMatrix UtXb_old; // = gsl_vector_alloc(ni_test);
+  DMatrix UtXb_new     = zeros_dmatrix(1, ni_test);
+  DMatrix UtXb_old     = zeros_dmatrix(1, ni_test);
 
-  DMatrix z_hat; // = gsl_vector_alloc(ni_test);
-  DMatrix z; // = gsl_vector_alloc(ni_test);
-  DMatrix Utz; // = gsl_vector_alloc(ni_test);
+  DMatrix z_hat        = zeros_dmatrix(1, ni_test);
+  DMatrix z            = zeros_dmatrix(1, ni_test);
+  DMatrix Utz          = zeros_dmatrix(1, ni_test);
 
   //gsl_vector_memcpy(Utz, Uty);
 
@@ -672,9 +748,8 @@ void CenterVector(DMatrix y, const DMatrix W) {
   Wty = matrix_mult(W.T, y);
 
   int sig;
-  gsl_permutation *pmt = gsl_permutation_alloc(W.shape[1]);
-  //LUDecomp(WtW, pmt, &sig);
-  //LUSolve(WtW, pmt, Wty, WtWiWty);
+  //
+  WtWiWty = WtW.solve(Wty);
 
   // note -1
   //gsl_blas_dgemv(CblasNoTrans, -1.0, W, WtWiWty, 1.0, y);
@@ -779,8 +854,8 @@ double CalcPosterior(const DMatrix Uty, const DMatrix K_eval,
 
   double sigma_b2 = cHyp.h * (1.0 - cHyp.rho) / (trace_G * (1 - cHyp.h));
 
-  DMatrix Utu_rand; // = gsl_vector_alloc(Uty.size);
-  DMatrix weight_Hi; // = gsl_vector_alloc(Uty.size);
+  DMatrix Utu_rand  = zeros_dmatrix(1, Uty.size);
+  DMatrix weight_Hi = zeros_dmatrix(1, Uty.size);
 
   double logpost = 0.0;
   double d, ds, uy, Hi_yy = 0, logdet_H = 0.0;
@@ -856,12 +931,12 @@ double CalcPosterior(const DMatrix UtXgamma, const DMatrix Uty,
   double logpost = 0.0;
   double d, ds, uy, P_yy = 0, logdet_O = 0.0, logdet_H = 0.0;
 
-  DMatrix UtXgamma_eval; // = gsl_matrix_alloc(UtXgamma->size1, UtXgamma->size2);
-  DMatrix Omega; // = gsl_matrix_alloc(UtXgamma->size2, UtXgamma->size2);
-  DMatrix XtHiy; // = gsl_vector_alloc(UtXgamma->size2);
-  DMatrix beta_hat; // = gsl_vector_alloc(UtXgamma->size2);
-  DMatrix Utu_rand; // = gsl_vector_alloc(UtXgamma->size1);
-  DMatrix weight_Hi; // = gsl_vector_alloc(UtXgamma->size1);
+  DMatrix UtXgamma_eval = zeros_dmatrix(UtXgamma.shape[0], UtXgamma.shape[1]);
+  DMatrix Omega         = zeros_dmatrix(UtXgamma.shape[1], UtXgamma.shape[1]);
+  DMatrix XtHiy         = zeros_dmatrix(1, UtXgamma.shape[1]);
+  DMatrix beta_hat      = zeros_dmatrix(1, UtXgamma.shape[1]);
+  DMatrix Utu_rand      = zeros_dmatrix(1, UtXgamma.shape[0]);
+  DMatrix weight_Hi     = zeros_dmatrix(1, UtXgamma.shape[0]);
 
   //gsl_matrix_memcpy(UtXgamma_eval, UtXgamma);
 
@@ -1006,10 +1081,10 @@ double CalcPosterior(const DMatrix Xgamma, const DMatrix XtX,
   DMatrix XtX_sub = get_sub_dmatrix(XtX, 0, 0, s_size, s_size);
   //gsl_vector_const_view Xty_sub = gsl_vector_const_subvector(Xty, 0, s_size);
 
-  DMatrix Omega; // = gsl_matrix_alloc(s_size, s_size);
-  DMatrix M_temp; // = gsl_matrix_alloc(s_size, s_size);
-  DMatrix beta_hat; // = gsl_vector_alloc(s_size);
-  DMatrix Xty_temp; // = gsl_vector_alloc(s_size);
+  DMatrix Omega    = zeros_dmatrix(s_size, s_size);
+  DMatrix M_temp   = zeros_dmatrix(s_size, s_size);
+  DMatrix beta_hat = zeros_dmatrix(1, s_size);
+  DMatrix Xty_temp = zeros_dmatrix(1, s_size);
 
   //gsl_vector_memcpy(Xty_temp, &Xty_sub.vector);
 
@@ -1477,10 +1552,10 @@ void SetXgamma(const DMatrix X, const DMatrix X_old,
         i_new++;
       }
     } else {
-      DMatrix X_add; // = gsl_matrix_alloc(X_old->size1, rank_add.length);
-      DMatrix XtX_aa; // = gsl_matrix_alloc(X_add->size2, X_add->size2);
-      DMatrix XtX_ao; // = gsl_matrix_alloc(X_add->size2, X_old->size2);
-      DMatrix Xty_add; // = gsl_vector_alloc(X_add->size2);
+      DMatrix X_add   = zeros_dmatrix(X_old.shape[0], rank_add.length);
+      DMatrix XtX_aa  = zeros_dmatrix(X_add.shape[1], X_add.shape[1]);
+      DMatrix XtX_ao  = zeros_dmatrix(X_add.shape[1], X_old.shape[1]);
+      DMatrix Xty_add = zeros_dmatrix(1, X_add.shape[1]);
 
       // Get X_add.
       SetXgamma(X_add, X, rank_add);
@@ -1579,9 +1654,9 @@ double CalcPveLM(const DMatrix UtXgamma, const DMatrix Uty,
                         const double sigma_a2) {
   double pve, var_y;
 
-  DMatrix Omega; // = identity_matrix(UtXgamma.shape[1], UtXgamma.shape[1]);
-  DMatrix Xty; // = gsl_vector_alloc(UtXgamma->size2);
-  DMatrix OiXty; // = gsl_vector_alloc(UtXgamma->size2);
+  DMatrix Omega = identity_dmatrix(UtXgamma.shape[1], UtXgamma.shape[1]);
+  DMatrix Xty   = zeros_dmatrix(1, UtXgamma.shape[1]);
+  DMatrix OiXty = zeros_dmatrix(1, UtXgamma.shape[1]);
 
   Omega = multiply_dmatrix_num(Omega, 1.0 / sigma_a2);
 
