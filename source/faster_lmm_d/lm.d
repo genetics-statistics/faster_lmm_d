@@ -40,7 +40,7 @@ import gsl.rng;
 import gsl.randist;
 import gsl.cdf;
 
-void lm_run(string option_snps, string option_kinship, string option_pheno, string option_covar, string option_geno, string option_bfile){
+void lm_run(string option_snps, string option_kinship, string option_pheno, string option_covar, string option_geno, string option_bfile, size_t lm_mode){
   writeln("entered lm_run");
 
   writeln("reading pheno " , option_pheno);
@@ -61,7 +61,7 @@ void lm_run(string option_snps, string option_kinship, string option_pheno, stri
   writeln(ni_test);
   size_t ni_total = indicators.indicator_idv.length;
 
-  DMatrix W = CopyCvt(indicators.cvt, indicators.indicator_cvt, indicators.indicator_idv, indicators.n_cvt, ni_test);
+  DMatrix W = CopyCvt(indicators.cvt, indicators.indicator_cvt, indicators.indicator_idv, n_cvt, ni_test);
 
   string[] setSnps = ReadFile_snps(option_snps);
   //writeln(setSnps);
@@ -81,7 +81,7 @@ void lm_run(string option_snps, string option_kinship, string option_pheno, stri
 
   // set covariates matrix W and phenotype matrix Y
   // an intercept should be included in W,
-  //CopyCvtPhen(W, Y, 0);
+  CopyCvtPhen(W, Y, indicators.indicator_idv, indicators.indicator_cvt, cvt, pheno.pheno, n_ph, n_cvt, 0);
 
   // Fit LM or mvLM
   if (n_ph == 1) {
@@ -97,27 +97,26 @@ void lm_run(string option_snps, string option_kinship, string option_pheno, stri
       sumStat = lm_analyze_bimbam(option_geno, W, Y_col, indicators.indicator_idv, indicator_snp, ni_test, ni_total);
     }
 
-    lm_write_files(sumStat, option_geno, snpInfo, indicator_snp, ni_test);
+    lm_write_files(sumStat, option_geno, snpInfo, indicator_snp, ni_test, lm_mode);
   }
 }
 
-void lm_write_files(SUMSTAT[] sumStat, const string file_gene, SNPINFO[] snpInfo, int[] indicator_snp, size_t ni_test) {
+void lm_write_files(SUMSTAT[] sumStat, const string file_gene, SNPINFO[] snpInfo, int[] indicator_snp, size_t ni_test, size_t lm_mode) {
   // define later
   string path_out = "";
   string file_out = "";
-  int a_mode = 51;
   string file_str = path_out ~ "/" ~ file_out ~ ".assoc.txt";
 
   if (file_gene == "") {
     fwrite("geneID\t");
 
-    if (a_mode == 51) {
+    if (lm_mode == 1) {
       fwrite("beta\tse\tp_wald\n");
-    } else if (a_mode == 52) {
+    } else if (lm_mode == 2) {
       fwrite("p_lrt\n");
-    } else if (a_mode == 53) {
+    } else if (lm_mode == 3) {
       fwrite("beta\tse\tp_score\n");
-    } else if (a_mode == 54) {
+    } else if (lm_mode == 4) {
       fwrite("beta\tse\tp_wald\tp_lrt\tp_score\n");
     } else {
     }
@@ -125,13 +124,13 @@ void lm_write_files(SUMSTAT[] sumStat, const string file_gene, SNPINFO[] snpInfo
     for (size_t t = 0; t < sumStat.length; ++t) {
       fwrite(snpInfo[t].rs_number, "\t");
 
-      if (a_mode == 51) {
+      if (lm_mode == 1) {
         fwrite(sumStat[t].beta, "\t", sumStat[t].se, "\t", sumStat[t].p_wald, "\n");
-      } else if (a_mode == 52) {
+      } else if (lm_mode == 2) {
         fwrite(sumStat[t].p_lrt, "\n");
-      } else if (a_mode == 53) {
+      } else if (lm_mode == 3) {
         fwrite(sumStat[t].beta, "\t", sumStat[t].se, "\t", sumStat[t].p_score, "\n");
-      } else if (a_mode == 54) {
+      } else if (lm_mode == 4) {
         fwrite(sumStat[t].beta, "\t", sumStat[t].se, "\t", sumStat[t].p_wald, "\t",
               sumStat[t].p_lrt, "\t", sumStat[t].p_score);
       } else {
@@ -155,23 +154,23 @@ void lm_write_files(SUMSTAT[] sumStat, const string file_gene, SNPINFO[] snpInfo
           "af",
           "\t");
 
-    if (a_mode == 51) {
+    if (lm_mode == 1) {
       fwrite("beta",
             "\t",
             "se",
             "\t",
             "p_wald", 
             "\n");
-    } else if (a_mode == 52) {
+    } else if (lm_mode == 2) {
       fwrite("p_lrt", "\n");
-    } else if (a_mode == 53) {
+    } else if (lm_mode == 3) {
       fwrite("beta",
             "\t",
             "se",
             "\t",
             "p_score",
             "\n");
-    } else if (a_mode == 54) {
+    } else if (lm_mode == 4) {
       fwrite("beta",
             "\t",
             "se",
@@ -195,13 +194,13 @@ void lm_write_files(SUMSTAT[] sumStat, const string file_gene, SNPINFO[] snpInfo
             ni_test - snpInfo[i].n_miss, "\t", snpInfo[i].a_minor, "\t",
             snpInfo[i].a_major, "\t", snpInfo[i].maf,"\t");
 
-      if (a_mode == 51) {
+      if (lm_mode == 1) {
         fwrite(sumStat[t].beta, "\t", sumStat[t].se, "\t", sumStat[t].p_wald, "\n");
-      } else if (a_mode == 52) {
+      } else if (lm_mode == 2) {
         fwrite(sumStat[t].p_lrt, "\n");
-      } else if (a_mode == 53) {
+      } else if (lm_mode == 3) {
         fwrite(sumStat[t].beta, "\t", sumStat[t].se, "\t", sumStat[t].p_score, "\n");
-      } else if (a_mode == 54) {
+      } else if (lm_mode == 4) {
         fwrite(sumStat[t].beta, "\t", sumStat[t].se, "\t", sumStat[t].p_wald, "\t",
               sumStat[t].p_lrt, "\t", sumStat[t].p_score, "\n");
       } else {
@@ -233,20 +232,17 @@ void CalcvPv(const DMatrix WtWi, const DMatrix Wty,
 }
 
 void CalcvPv(const DMatrix WtWi, const DMatrix Wty, const DMatrix y, ref double yPwy) {
-  size_t c_size = Wty.size;
-  double d;
-
   yPwy = vector_ddot(y, y);
   DMatrix WtWiWty = matrix_mult(WtWi, Wty);
 
-  d = vector_ddot(WtWiWty, Wty);
+  double d = vector_ddot(WtWiWty, Wty);
   yPwy -= d;
 
   return;
 }
 
 // Calculate p-values and beta/se in a linear model.
-void LmCalcP(const size_t test_mode, const double yPwy, const double xPwy,
+void LmCalcP(const size_t lm_mode, const double yPwy, const double xPwy,
              const double xPwx, const double df, const size_t n_size,
              ref double beta, ref double se, ref double p_wald, ref double p_lrt,
              ref double p_score) {
@@ -254,14 +250,14 @@ void LmCalcP(const size_t test_mode, const double yPwy, const double xPwy,
   double se_wald, se_score;
 
   beta = xPwy / xPwx;
+
   se_wald = sqrt(yPxy / (df * xPwx));
   se_score = sqrt(yPwy / (to!double(n_size) * xPwx));
-
   p_wald = gsl_cdf_fdist_Q(beta * beta / (se_wald * se_wald), 1.0, df);
   p_score = gsl_cdf_fdist_Q(beta * beta / (se_score * se_score), 1.0, df);
   p_lrt = gsl_cdf_chisq_Q(to!double(n_size) * (mlog(yPwy) - mlog(yPxy)), 1);
 
-  if (test_mode == 3) {
+  if (lm_mode == 3) {
     se = se_score;
   } else {
     se = se_wald;
@@ -272,7 +268,7 @@ void LmCalcP(const size_t test_mode, const double yPwy, const double xPwy,
 
 void lm_analyze_gene(const string file_gene, const DMatrix W, const DMatrix x) {
   writeln("entered lm_analyze_gene");
-  int a_mode;
+  size_t lm_mode;
   size_t ni_test, ng_total;
   int[] indicator_idv, indicator_snp;
   SUMSTAT[] sumStat;
@@ -324,7 +320,7 @@ void lm_analyze_gene(const string file_gene, const DMatrix W, const DMatrix x) {
     // Calculate statistics.
     DMatrix Wty = matrix_mult(W.T, y);
     CalcvPv(WtWi, Wtx, Wty, x, y, xPwy, yPwy);
-    LmCalcP(a_mode - 50, yPwy, xPwy, xPwx, df, W.shape[0], beta, se, p_wald,
+    LmCalcP(lm_mode, yPwy, xPwy, xPwx, df, W.shape[0], beta, se, p_wald,
             p_lrt, p_score);
 
     // Store summary data.
@@ -347,7 +343,7 @@ SUMSTAT[] lm_analyze_bimbam(const string file_geno, const DMatrix W, const DMatr
   auto pipe = pipeShell("gunzip -c " ~ file_geno);
   File input = pipe.stdout;
 
-  int a_mode = 0;
+  int lm_mode = 0;
   double beta = 0, se = 0, p_wald = 0, p_lrt = 0, p_score = 0;
   int n_miss, c_phen;
   double geno, x_mean;
@@ -413,7 +409,7 @@ SUMSTAT[] lm_analyze_bimbam(const string file_geno, const DMatrix W, const DMatr
     DMatrix Wtx = matrix_mult(W.T, x);
 
     CalcvPv(WtWi, Wty, Wtx, y, x, xPwy, xPwx);
-    LmCalcP(a_mode - 50, yPwy, xPwy, xPwx, df, W.shape[0], beta, se, p_wald, p_lrt, p_score);
+    LmCalcP(lm_mode - 50, yPwy, xPwy, xPwx, df, W.shape[0], beta, se, p_wald, p_lrt, p_score);
 
     // Store summary data.
     SUMSTAT SNPs = SUMSTAT(beta, se, 0.0, 0.0, p_wald, p_lrt, p_score, -0.0);
@@ -429,7 +425,7 @@ void lm_analyze_plink(const string file_bfile, const DMatrix W, const DMatrix y)
   writeln("entered lm_analyze_plink");
 
   size_t ni_total, ni_test;
-  int a_mode;
+  int lm_mode;
   int[] indicator_snp, indicator_idv;
   SUMSTAT[] sumStat;
   SNPINFO[] snpInfo;
@@ -534,7 +530,7 @@ void lm_analyze_plink(const string file_bfile, const DMatrix W, const DMatrix y)
 
     DMatrix Wtx = matrix_mult(W.T, x);
     CalcvPv(WtWi, Wty, Wtx, y, x, xPwy, xPwx);
-    LmCalcP(a_mode - 50, yPwy, xPwy, xPwx, df, W.shape[0], beta, se, p_wald, p_lrt, p_score);
+    LmCalcP(lm_mode, yPwy, xPwy, xPwx, df, W.shape[0], beta, se, p_wald, p_lrt, p_score);
 
     // store summary data
     SUMSTAT SNPs = SUMSTAT(beta, se, 0.0, 0.0, p_wald, p_lrt, p_score, -0.0);

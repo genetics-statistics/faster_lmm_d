@@ -12,6 +12,7 @@ import core.stdc.time;
 
 import std.algorithm;
 import std.bitmanip;
+import std.container.rbtree;
 import std.conv;
 import std.exception;
 import std.file;
@@ -560,7 +561,7 @@ DMatrix CopyCvt(const DMatrix cvt, const int[] indicator_cvt, const int[] indica
   return W;
 }
 
-void check_cvt(int[] indicator_cvt, int[] indicator_idv, ref double[][] cvt, size_t n_cvt, size_t ni_test) {
+void check_cvt(int[] indicator_cvt, int[] indicator_idv, ref double[][] cvt, ref size_t n_cvt, size_t ni_test) {
   writeln("in check_cvt");
   if (indicator_cvt.length == 0) {
     return;
@@ -582,7 +583,7 @@ void check_cvt(int[] indicator_cvt, int[] indicator_idv, ref double[][] cvt, siz
 
   size_t flag_ipt = 0;
   double v_min, v_max;
-  size_t[] set_remove;
+  auto set_remove = redBlackTree!size_t();
 
   // Check if any columns is an intercept.
   for (size_t i = 0; i < W.shape[1]; i++) {
@@ -592,7 +593,7 @@ void check_cvt(int[] indicator_cvt, int[] indicator_idv, ref double[][] cvt, siz
     v_max = w_col.elements.maxElement;
     if (v_min == v_max) {
       flag_ipt = 1;
-      //set_remove.insert(i);
+      set_remove.insert(i);
     }
   }
 
@@ -617,9 +618,39 @@ void check_cvt(int[] indicator_cvt, int[] indicator_idv, ref double[][] cvt, siz
   return;
 }
 
+// If flag=0, then use indicator_idv to load W and Y;
+// else, use indicator_cvt to load them.
+void CopyCvtPhen(DMatrix W, DMatrix Y, int[] indicator_idv, int[] indicator_cvt, 
+                 double[][] cvt, DMatrix pheno, size_t n_ph, size_t n_cvt, size_t flag) {
+  size_t ci_test = 0;
+
+  for (size_t i = 0; i < indicator_idv.length; ++i) {
+    if (flag == 0) {
+      if (indicator_idv[i] == 0) {
+        continue;
+      }
+    } else {
+      if (indicator_cvt[i] == 0) {
+        continue;
+      }
+    }
+
+    for (size_t j = 0; j < n_ph; ++j) {
+      Y.set(ci_test, j, pheno.accessor(i, j));
+    }
+
+    for (size_t j = 0; j < n_cvt; ++j) {
+      W.set(ci_test, j, cvt[i][j]);
+    }
+
+    ci_test++;
+  }
+
+  return;
+}
 
 // Post-process phenotypes and covariates.
-Indicators_result process_cvt_phen(const DMatrix indicator_pheno, double[][] cvt, int[] indicator_cvt, size_t n_cvt, const string test_name = ""){
+Indicators_result process_cvt_phen(const DMatrix indicator_pheno, double[][] cvt, int[] indicator_cvt, ref size_t n_cvt, const string test_name = ""){
 
   // Convert indicator_pheno to indicator_idv.
   int k = 1;
@@ -740,7 +771,7 @@ Indicators_result process_cvt_phen(const DMatrix indicator_pheno, double[][] cvt
     check_indicator_idv(indicator_idv);
   }
 
-  return Indicators_result(s_cvt, indicator_cvt, indicator_idv, 1, ni_test);
+  return Indicators_result(s_cvt, indicator_cvt, indicator_idv, to!int(n_cvt), ni_test);
 }
 
 
