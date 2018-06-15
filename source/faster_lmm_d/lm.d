@@ -45,8 +45,6 @@ void lm_run(string option_snps, string option_kinship, string option_pheno, stri
 
   writeln("reading pheno " , option_pheno);
   auto pheno = ReadFile_pheno(option_pheno, [1]);
-  DMatrix Y = pheno.pheno;
-  writeln(Y);
 
   size_t n_cvt;
   int[] indicator_cvt;
@@ -61,8 +59,6 @@ void lm_run(string option_snps, string option_kinship, string option_pheno, stri
   writeln(ni_test);
   size_t ni_total = indicators.indicator_idv.length;
 
-  DMatrix W = CopyCvt(indicators.cvt, indicators.indicator_cvt, indicators.indicator_idv, n_cvt, ni_test);
-
   string[] setSnps = ReadFile_snps(option_snps);
   //writeln(setSnps);
   string[string] mapRS2chr;
@@ -70,9 +66,6 @@ void lm_run(string option_snps, string option_kinship, string option_pheno, stri
   double[string] mapRS2cM;
   ReadFile_anno(option_snps, mapRS2chr, mapRS2bp, mapRS2cM);
 
-  auto geno_result = ReadFile_geno1(option_geno, ni_total, W, indicators.indicator_idv, setSnps, mapRS2chr, mapRS2bp, mapRS2cM);
-  int[] indicator_snp = geno_result.indicator_snp;
-  SNPINFO[] snpInfo = geno_result.snpInfo;
 
   size_t n_ph = 1;
   string option_gene;
@@ -80,8 +73,14 @@ void lm_run(string option_snps, string option_kinship, string option_pheno, stri
   SUMSTAT[] sumStat;
 
   // set covariates matrix W and phenotype matrix Y
-  // an intercept should be included in W,
+  // an intercept should be included in W
+  DMatrix Y = zeros_dmatrix(ni_test, n_ph);
+  DMatrix W = zeros_dmatrix(ni_test, n_cvt);
   CopyCvtPhen(W, Y, indicators.indicator_idv, indicators.indicator_cvt, cvt, pheno.pheno, n_ph, n_cvt, 0);
+
+  auto geno_result = ReadFile_geno1(option_geno, ni_total, W, indicators.indicator_idv, setSnps, mapRS2chr, mapRS2bp, mapRS2cM);
+  int[] indicator_snp = geno_result.indicator_snp;
+  SNPINFO[] snpInfo = geno_result.snpInfo;
 
   // Fit LM or mvLM
   if (n_ph == 1) {
@@ -179,7 +178,8 @@ void lm_write_files(SUMSTAT[] sumStat, const string file_gene, SNPINFO[] snpInfo
             "\t",
             "p_lrt",
             "\t",
-            "p_score");
+            "p_score",
+            "\n");
     } else {
     }
 
