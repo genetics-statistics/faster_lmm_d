@@ -193,7 +193,7 @@ void main(string[] args)
       bslmm_run();
     }
     else if(cmd == "lm"){
-      lm_run(option_anno, option_kinship, option_pheno, option_covar, option_geno, option_bfile);
+      lm_run(option_anno, option_kinship, option_pheno, option_covar, option_geno, option_bfile, option_lm);
     }
     else{
       batch_run(option_kinship, option_pheno, option_covar, option_geno, option_indicator_idv,
