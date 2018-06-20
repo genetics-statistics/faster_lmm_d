@@ -26,8 +26,11 @@ import std.string;
 
 import faster_lmm_d.dmatrix;
 import faster_lmm_d.gemma_lmm;
+import faster_lmm_d.gemma_io;
+import faster_lmm_d.gemma_kinship;
 import faster_lmm_d.gemma_param;
 import faster_lmm_d.helpers;
+import faster_lmm_d.mvlmm;
 import faster_lmm_d.optmatrix;
 
 import gsl.cdf;
@@ -53,11 +56,16 @@ struct HYPBSLMM{
 }
 
 void bslmm_run(){
+  int a_mode, k_mode;
+  int[string] mapID2num;
   writeln("in bslmm_run");
+  double l_remle_null;
 
   double rho_min, rho_max;
-
   DMatrix y, W, G, UtX;
+  string file_geno, file_kin;
+  int[] indicator_idv, indicator_snp;
+  bool error;
 
   // center y, even for case/control data
   double pheno_mean = CenterVector(y);
@@ -66,6 +74,7 @@ void bslmm_run(){
   if (rho_min == 1 && rho_max == 1) {
   //  // read genotypes X (not UtX)
     //ReadGenotypes(UtX, G, false);
+    ReadFile_geno(file_geno, indicator_idv, indicator_snp, UtX, G, false);
 
     // perform BSLMM analysis
     MCMC(UtX, y);
@@ -74,55 +83,54 @@ void bslmm_run(){
   else {
     DMatrix U, eval, UtW, Uty;
 
-  //  // read relatedness matrix G
-  //  if (!(cPar.file_kin).empty()) {
-  //    cPar.ReadGenotypes(UtX, G, false);
+    // read relatedness matrix G
+    if (file_kin != "") {
+      // ReadGenotypes(UtX, G, false);
+       ReadFile_geno(file_geno, indicator_idv, indicator_snp, UtX, G, false);
 
-  //    // read relatedness matrix G
-  //    ReadFile_kin(cPar.file_kin, cPar.indicator_idv, cPar.mapID2num, cPar.k_mode, cPar.error, G);
-  //    if (cPar.error == true) {
-  //      cout << "error! fail to read kinship/relatedness file. " << endl;
-  //      return;
-  //    }
-
-  //    // center matrix G
-  //    CenterMatrix(G);
-  //    validate_K(G);
-  //  } else {
-  //    cPar.ReadGenotypes(UtX, G, true);
-  //  }
+      // read relatedness matrix G
+      ReadFile_kin(file_kin, indicator_idv, mapID2num, k_mode, error, G);
+      if (error == true) {
+        writeln("error! fail to read kinship/relatedness file.");
+        return;
+      }
+      // center matrix G
+      CenterMatrix(G);
+      validate_K(G);
+    }
+    else {
+      //ReadGenotypes(UtX, G, true);
+      ReadFile_geno(file_geno, indicator_idv, indicator_snp, UtX, G, true);
+    }
 
   //  // eigen-decomposition and calculate trace_G
-  //  writeln("Start Eigen-Decomposition...");
-  //  double trace_G = EigenDecomp_Zeroed(G, U, eval, 0);
+    writeln("Start Eigen-Decomposition...");
+    double trace_G = EigenDecomp_Zeroed(G, U, eval, 0);
 
-  //  // calculate UtW and Uty
-  //  CalcUtX(U, W, UtW);
-  //  CalcUtX(U, y, Uty);
+    // calculate UtW and Uty
+    UtW = matrix_mult(U.T, W);
+    Uty = matrix_mult(U.T, y);
 
-  //  // calculate REMLE/MLE estimate and pve
-  //  CalcLambda('L', eval, UtW, Uty, cPar.l_min, cPar.l_max, cPar.n_region,
-  //             cPar.l_mle_null, cPar.logl_mle_H0);
-  //  CalcLambda('R', eval, UtW, Uty, cPar.l_min, cPar.l_max, cPar.n_region,
-  //             cPar.l_remle_null, cPar.logl_remle_H0);
-  //  CalcPve(eval, UtW, Uty, cPar.l_remle_null, cPar.trace_G, cPar.pve_null,
-  //          cPar.pve_se_null);
+    // calculate REMLE/MLE estimate and pve
+    //TODO
+    //CalcLambda('L', eval, UtW, Uty, l_min, l_max, n_region, l_mle_null, logl_mle_H0);
+    //CalcLambda('R', eval, UtW, Uty, l_min, l_max, n_region, l_remle_null, logl_remle_H0);
+    //CalcPve(eval, UtW, Uty, l_remle_null, trace_G, pve_null, pve_se_null);
 
-  //  cPar.PrintSummary();
+    //PrintSummary();
 
-  //  // Creat and calcualte UtX, use a large memory
-  //  CalcUtX(U, UtX);
+    // Creat and calcualte UtX, use a large memory
+    UtX = matrix_mult(U.T, UtX);
 
-  //  // perform BSLMM or BSLMMDAP analysis
-  //  if (a_mode == 11 || a_mode == 12 || a_mode == 13) {
-  //    if (a_mode == 12) { // ridge regression
-  //      cBslmm.RidgeR(U, UtX, Uty, eval, cPar.l_remle_null);
-  //    } else { // Run MCMC
-  //      cBslmm.MCMC(U, UtX, Uty, eval, y);
-  //    }
-  //  } 
-  //  else {
-  //  }
+    // perform BSLMM or BSLMMDAP analysis
+    if (a_mode == 11 || a_mode == 12 || a_mode == 13) {
+      if (a_mode == 12){ // ridge regression
+        RidgeR(U, UtX, Uty, eval, l_remle_null);
+      }
+      else{ // Run MCMC
+        MCMC(U, UtX, Uty, eval, y);
+      }
+    } 
 
   }
 }
@@ -1402,6 +1410,33 @@ double ProposeGamma(const size_t[] rank_old, size_t[] rank_new, const double[] p
 
 bool comp_lr(pair2 a, pair2 b) {
   return (a.second > b.second);
+}
+
+
+void RidgeR(const DMatrix U, const DMatrix UtX,
+            const DMatrix Uty, const DMatrix eval,
+            const double lambda) {
+  DMatrix beta = zeros_dmatrix(1, UtX.shape[1]);
+  DMatrix H_eval = zeros_dmatrix(1, Uty.size);
+  DMatrix bv = zeros_dmatrix(1, Uty.size);
+
+  H_eval = eval.dup_dmatrix;
+  H_eval = multiply_dmatrix_num(H_eval, lambda);
+  H_eval = add_dmatrix_num(H_eval, 1.0);
+
+  bv = Uty.dup_dmatrix;
+  bv = bv / H_eval;
+
+  // TODO
+  //gsl_blas_dgemv(CblasTrans, lambda / (double)UtX->size2, UtX, bv, 0.0, beta);
+  H_eval = add_dmatrix_num(H_eval, -1.0);
+  H_eval = H_eval * bv;
+  bv = matrix_mult(U, H_eval);
+
+  //WriteParam(beta);
+  //WriteBV(bv);
+
+  return;
 }
 
 // Below fits MCMC for rho=1.
