@@ -173,6 +173,11 @@ bool validate_kinship(){
   return true;
 }
 
+bool validate_K(DMatrix K){
+  writeln("TODO!");
+  return true;
+}
+
 DMatrix bimbam_kin(const string geno_fn, const string pheno_fn, const DMatrix W, const int[] indicator_snp,
                    const size_t ni_total = 1940, const bool test_nind= false){
 

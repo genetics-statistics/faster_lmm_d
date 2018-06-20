@@ -561,6 +561,93 @@ double[][] readfile_cvt(const string file_cvt, ref int[] indicator_cvt, ref size
   return cvt;
 }
 
+// Read bimbam mean genotype file, the second time, recode "mean"
+// genotype and calculate K.
+bool ReadFile_geno(const string file_geno, ref int[] indicator_idv,
+                   ref int[] indicator_snp, ref DMatrix UtX, ref DMatrix K,
+                   const bool calc_K) {
+  File infile = File(file_geno);
+
+
+  if (calc_K == true) {
+    K = zeros_dmatrix(K.shape[0], K.shape[1]);
+  }
+
+  DMatrix genotype = zeros_dmatrix(1, UtX.shape[0]);
+  DMatrix genotype_miss = zeros_dmatrix(1, UtX.shape[0]);
+  double geno, geno_mean;
+  size_t n_miss;
+
+  int ni_total = to!int(indicator_idv.length);
+  int ns_total = to!int(indicator_snp.length);
+  int ni_test = to!int(UtX.shape[0]);
+  int ns_test = to!int(UtX.shape[1]);
+
+  int c_idv = 0, c_snp = 0;
+
+  for (int i = 0; i < ns_total; ++i) {
+    if (indicator_snp[i] == 0) {
+      continue;
+    }
+    auto line = infile.readln();
+    auto ch_ptr = line.split("\n")[3..$];
+
+    c_idv = 0;
+    geno_mean = 0;
+    n_miss = 0;
+    genotype_miss = zeros_dmatrix(genotype_miss.shape[0], genotype_miss.shape[1]);
+    for (int j = 0; j < ni_total; ++j) {
+      if (indicator_idv[j] == 0) {
+        continue;
+      }
+
+      if (ch_ptr[i] == "NA"){
+        genotype_miss.elements[c_idv] = 1;
+        n_miss++;
+      } else {
+        geno = to!double(ch_ptr[i]);
+        genotype.elements[c_idv] = geno;
+        geno_mean += geno;
+      }
+      c_idv++;
+    }
+
+    geno_mean /= to!double(ni_test - n_miss);
+
+    for (size_t k = 0; k < genotype.size; ++k) {
+      if (genotype_miss.elements[k] == 1) {
+        geno = 0;
+      } else {
+        geno = genotype.elements[k];
+        geno -= geno_mean;
+      }
+
+      genotype.elements[k] = geno;
+      UtX.set(k, c_snp, geno);
+    }
+
+    if (calc_K == true) {
+      K = syr(1.0, genotype, K);
+    }
+
+    c_snp++;
+  }
+
+  if (calc_K == true) {
+    K = multiply_dmatrix_num(K, 1.0 / to!double(ns_test));
+
+    for (size_t i = 0; i < genotype.size; ++i) {
+      for (size_t j = 0; j < i; ++j) {
+        geno = K.accessor(j, i);
+        K.set(i, j, geno);
+      }
+    }
+  }
+
+  return true;
+}
+
+
 // Read bimbam mean genotype file, the first time, to obtain #SNPs for
 // analysis (ns_test) and total #SNP (ns_total).
 Geno_result ReadFile_geno1(const string geno_fn, const ulong ni_total, const DMatrix W, const int[] indicator_idv, 
@@ -1409,4 +1496,97 @@ double CalcHWE(const int n_hom1, const int n_hom2, const int n_ab) {
   p_hwe = p_hwe > 1.0 ? 1.0 : p_hwe;
 
   return p_hwe;
+}
+
+void ReadFile_kin(const string file_kin, ref int[] indicator_idv,
+                  ref int[string] mapID2num, const size_t k_mode, bool error,
+                  ref DMatrix G) {
+  File infile = File(file_kin);
+
+  size_t ni_total = indicator_idv.length;
+
+  G = zeros_dmatrix(G.shape[0], G.shape[1]);
+
+  double d;
+
+  if (k_mode == 1) {
+    size_t i_test = 0, i_total = 0, j_test = 0, j_total = 0;
+    foreach(line; infile.byLine){
+      if (i_total == ni_total) {
+        writeln("number of rows in the kinship file is larger than the number of phentypes");
+      }
+
+      if (indicator_idv[i_total] == 0) {
+        i_total++;
+        continue;
+      }
+
+      j_total = 0;
+      j_test = 0;
+      auto ch_ptr = line.split("\t");
+      foreach (chr; ch_ptr) {
+        if (j_total == ni_total) {
+          writeln("number of columns in the kinship file is larger than the number of individuals for row = ", i_total);
+        }
+
+        d = to!double(chr);
+        if (indicator_idv[j_total] == 1) {
+          G.set(i_test, j_test, d);
+          j_test++;
+        }
+        j_total++;
+      }
+      if (j_total != ni_total) {
+        writeln("number of columns in the kinship file does not match the number of individuals for row = ", i_total);
+        exit(0);
+      }
+      i_total++;
+      i_test++;
+    }
+    if (i_total != ni_total) {
+      writeln("number of rows in the kinship file does not match the number of individuals.");
+      exit(0);
+    }
+  } else {
+    size_t[size_t] mapID2ID;
+    size_t c = 0;
+    for (size_t i = 0; i < indicator_idv.length; i++) {
+      if (indicator_idv[i] == 1) {
+        mapID2ID[i] = c;
+        c++;
+      }
+    }
+
+    string id1, id2;
+    double Cov_d;
+    size_t n_id1, n_id2;
+
+    foreach(line; infile.byLine) {
+      auto ch_ptr = line.split("\t");
+      id1 = to!string(ch_ptr[0]);
+      id2 = to!string(ch_ptr[1]);
+      d = to!double(ch_ptr[2]);
+      //if (mapID2num.count(id1) == 0 || mapID2num.count(id2) == 0) {
+      //  continue;
+      //}
+      if (indicator_idv[mapID2num[id1]] == 0 || indicator_idv[mapID2num[id2]] == 0) {
+        continue;
+      }
+
+      n_id1 = mapID2ID[mapID2num[id1]];
+      n_id2 = mapID2ID[mapID2num[id2]];
+
+      Cov_d = G.accessor(n_id1, n_id2);
+      if (Cov_d != 0 && Cov_d != d) {
+        writeln("error! redundant and unequal terms in the 
+                 kinship file, for id1 = ", id1, " and id2 = ", id2);
+        exit(0);
+      } else {
+        G.set(n_id1, n_id2, d);
+        G.set(n_id2, n_id1, d);
+      }
+    }
+  }
+
+  return;
 }
