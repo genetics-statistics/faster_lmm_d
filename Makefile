@@ -115,7 +115,10 @@ $(OUT): build-setup $(OBJ)
 
 test:
 	chmod 755 build/faster_lmm_d
-	./run_tests.sh
+	./tests/lm_tests.sh
+	./tests/kinship_tests.sh
+	./tests/lmm_tests.sh
+	./tests/pylmm_tests.sh
 
 debug-strip: debug
 
