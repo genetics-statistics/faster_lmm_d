@@ -52,7 +52,7 @@ void mvlmm_run(string option_kinship, string option_pheno, string option_covar, 
 
   // Read Files.
   writeln("reading pheno " , option_pheno);
-  auto Y = ReadFile_pheno(option_pheno, [1,2,3,15]);
+  auto pheno = ReadFile_pheno(option_pheno, [1,2,3,15]);
   //writeln(Y.pheno);
 
 
@@ -73,7 +73,7 @@ void mvlmm_run(string option_kinship, string option_pheno, string option_covar, 
   writeln(eval.shape);
   writeln(U.shape);
 
-  auto indicators = process_cvt_phen(Y.indicator_pheno, cvt, indicator_cvt, n_cvt);
+  auto indicators = process_cvt_phen(pheno.indicator_pheno, cvt, indicator_cvt, n_cvt);
 
   //writeln(indicators.cvt);
 
@@ -82,7 +82,7 @@ void mvlmm_run(string option_kinship, string option_pheno, string option_covar, 
 
   SNPINFO[] snpInfo = readfile_bim(option_bfile);
 
-  DMatrix W = CopyCvt(indicators.cvt, indicators.indicator_cvt, indicators.indicator_idv, indicators.n_cvt, ni_test);
+  //DMatrix W = CopyCvt(indicators.cvt, indicators.indicator_cvt, indicators.indicator_idv, indicators.n_cvt, ni_test);
 
   size_t ni_total = indicators.indicator_idv.length;
 
@@ -96,6 +96,12 @@ void mvlmm_run(string option_kinship, string option_pheno, string option_covar, 
 
   writeln(snpInfo.length);
 
+  size_t n_ph = 4;
+
+  DMatrix Y = zeros_dmatrix(ni_test, n_ph);
+  DMatrix W = zeros_dmatrix(ni_test, n_cvt);
+  CopyCvtPhen(W, Y, indicators.indicator_idv, indicators.indicator_cvt, cvt, pheno.pheno, n_ph, n_cvt, 0);
+
   auto geno_result = readfile_bed(option_bfile ~ ".bed", setSnps, W, indicators.indicator_idv, snpInfo, maf_level, miss_level, hwe_level, r2_level, ns_test);
   writeln("calculated snpInfo");
   snpInfo = geno_result.snpInfo;
@@ -103,7 +109,7 @@ void mvlmm_run(string option_kinship, string option_pheno, string option_covar, 
   DMatrix UtW = matrix_mult(U.T, indicators.cvt);
   writeln("UtW.shape =>", UtW.shape);
 
-  DMatrix Uty = matrix_mult(U.T, Y.pheno);
+  DMatrix Uty = matrix_mult(U.T, Y);
   writeln("UtY.shape =>", Uty.shape);
   Param cPar;
   double trace_G = sum(eval.elements)/eval.elements.length;

@@ -566,6 +566,7 @@ double[][] readfile_cvt(const string file_cvt, ref int[] indicator_cvt, ref size
 bool ReadFile_geno(const string file_geno, ref int[] indicator_idv,
                    ref int[] indicator_snp, ref DMatrix UtX, ref DMatrix K,
                    const bool calc_K) {
+  writeln(" in ReadFile_geno");
   File infile = File(file_geno);
 
 
@@ -806,6 +807,7 @@ Geno_result ReadFile_geno1(const string geno_fn, const ulong ni_total, const DMa
     v_x = vector_ddot(genotype, genotype);
     v_w = Wtx * Wtx * WtWi;
 
+    //r2_level
     if (W.shape[1] != 1 && v_w / v_x >= r2_level) {
       indicator_snp ~= 0;
       continue;

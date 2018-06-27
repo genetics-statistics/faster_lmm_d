@@ -55,15 +55,28 @@ struct HYPBSLMM{
   double pve, rho, pge, logp;
 }
 
-void bslmm_run(){
+void bslmm_run(string file_geno, string file_pheno){
   int a_mode, k_mode;
   int[string] mapID2num;
   writeln("in bslmm_run");
   double l_remle_null;
 
+  writeln("reading pheno " , file_pheno);
+  auto pheno = ReadFile_pheno(file_pheno, [1]);
+
+  DMatrix y = pheno.pheno;
+  writeln("pheno_vector", y);
+
   double rho_min, rho_max;
-  DMatrix y, W, G, UtX;
-  string file_geno, file_kin;
+
+  size_t ni_test = y.size;
+  size_t n_cvt = 100, ns_test = 1410;
+
+  DMatrix W = zeros_dmatrix(ni_test, n_cvt);
+  DMatrix G = zeros_dmatrix(ni_test, ni_test);
+  DMatrix UtX = zeros_dmatrix(ni_test, ns_test);
+
+  string file_kin;
   int[] indicator_idv, indicator_snp;
   bool error;
 
@@ -266,7 +279,7 @@ void MCMC(const DMatrix X, const DMatrix y) {
         //gsl_matrix_view
         DMatrix Xold_sub = get_sub_dmatrix(Xgamma_old, 0, 0, ni_test, rank_old.length);
         //gsl_vector_view
-        DMatrix Xtz_sub; // = gsl_vector_subvector(Xtz_old, 0, rank_old.length);
+        DMatrix Xtz_sub = get_subvector_dmatrix(Xtz_old, 0, rank_old.length);
         Xtz_sub = matrix_mult(Xold_sub.T, z);
         logPost_old = CalcPosterior(Xgamma_old, XtX_old, Xtz_old, ztz, rank_old.length, Xb_old, beta_old, cHyp_old);
       }
@@ -328,18 +341,18 @@ void MCMC(const DMatrix X, const DMatrix y) {
           //gsl_matrix_view
           DMatrix XtXold_sub = get_sub_dmatrix(XtX_old, 0, 0, rank_new.length, rank_new.length);
           //gsl_vector_view
-          DMatrix Xtzold_sub; // = gsl_vector_subvector(Xtz_old, 0, rank_new.length);
+          DMatrix Xtzold_sub = get_subvector_dmatrix(Xtz_old, 0, rank_new.length);
           //gsl_vector_view
-          DMatrix betaold_sub; // = gsl_vector_subvector(beta_old, 0, rank_new.length);
+          DMatrix betaold_sub = get_subvector_dmatrix(beta_old, 0, rank_new.length);
 
           //gsl_matrix_view
           DMatrix Xnew_sub = get_sub_dmatrix(Xgamma_new, 0, 0, ni_test, rank_new.length);
           //gsl_matrix_view
           DMatrix XtXnew_sub = get_sub_dmatrix(XtX_new, 0, 0, rank_new.length, rank_new.length);
           //gsl_vector_view
-          DMatrix Xtznew_sub; // = gsl_vector_subvector(Xtz_new, 0, rank_new.length);
+          DMatrix Xtznew_sub = get_subvector_dmatrix(Xtz_new, 0, rank_new.length);
           //gsl_vector_view
-          DMatrix betanew_sub; // = gsl_vector_subvector(beta_new, 0, rank_new.length);
+          DMatrix betanew_sub = get_subvector_dmatrix(beta_new, 0, rank_new.length);
 
           //gsl_matrix_memcpy(Xold_sub, Xnew_sub);
           //gsl_matrix_memcpy(XtXold_sub, XtXnew_sub);
@@ -734,6 +747,7 @@ void MatrixCalcLmLR(const DMatrix X, const DMatrix y,
 
 // Center the vector y.
 double CenterVector(DMatrix y) {
+  writeln("in CenterVector");
   double d = 0.0;
 
   for (size_t i = 0; i < y.size; ++i) {
@@ -748,9 +762,10 @@ double CenterVector(DMatrix y) {
 
 // Center the vector y.
 void CenterVector(DMatrix y, const DMatrix W) {
-  DMatrix WtW; // = gsl_matrix_safe_alloc(W->size2, W->size2);
-  DMatrix Wty; // = gsl_vector_safe_alloc(W->size2);
-  DMatrix WtWiWty; // = gsl_vector_safe_alloc(W->size2);
+  writeln("in CenterVector");
+  DMatrix WtW     = zeros_dmatrix(W.shape[1], W.shape[1]);
+  DMatrix Wty     = zeros_dmatrix(1, W.shape[1]);
+  DMatrix WtWiWty = zeros_dmatrix(1, W.shape[1]);
 
   WtW = matrix_mult(W.T, W);
   Wty = matrix_mult(W.T, y);
@@ -1077,17 +1092,14 @@ double CalcPosterior(const DMatrix Xgamma, const DMatrix XtX,
   // TODO
   size_t ni_test, ns_test;
   int a_mode;
-  DMatrix beta_sub;
 
   double sigma_a2 = cHyp.h / ((1 - cHyp.h) * exp(cHyp.logp) * to!double(ns_test));
   double logpost = 0.0;
   double d, P_yy = yty, logdet_O = 0.0;
 
-  //gsl_matrix_const_view
   DMatrix Xgamma_sub = get_sub_dmatrix(Xgamma, 0, 0, Xgamma.shape[0], s_size);
-  //gsl_matrix_const_view
   DMatrix XtX_sub = get_sub_dmatrix(XtX, 0, 0, s_size, s_size);
-  //gsl_vector_const_view Xty_sub = gsl_vector_const_subvector(Xty, 0, s_size);
+  DMatrix Xty_sub = get_subvector_dmatrix(Xty, 0, s_size);
 
   DMatrix Omega    = zeros_dmatrix(s_size, s_size);
   DMatrix M_temp   = zeros_dmatrix(s_size, s_size);
@@ -1120,7 +1132,7 @@ double CalcPosterior(const DMatrix Xgamma, const DMatrix XtX,
     //d = gsl_ran_gaussian(gsl_r, 1);
     beta.elements[i] = d;
   }
-  //gsl_vector_view beta_sub = gsl_vector_subvector(beta, 0, s_size);
+  DMatrix beta_sub = get_subvector_dmatrix(beta, 0, s_size);
   //gsl_blas_dtrsv(CblasUpper, CblasNoTrans, CblasNonUnit, Omega, &beta_sub.vector);
 
   // This computes inv(L^T(Omega)) %*% beta.
@@ -1204,7 +1216,7 @@ void CalcCC_PVEnZ(const DMatrix U, const DMatrix UtXb,
   d = vector_ddot(Utu, Utu);
   cHyp.pve = cHyp.pge + d / to!double(ni_test);
 
-  //gsl_vector_memcpy(UtXbU, Utu);
+  UtXbU = Utu.dup_dmatrix;
   UtXbU = add_dmatrix(UtXbU, UtXb);
   z_hat = matrix_mult(U, UtXbU);
 
@@ -1220,6 +1232,8 @@ void CalcCC_PVEnZ(const DMatrix U, const DMatrix UtXb,
 }
 
 void SampleZ(const DMatrix y, const DMatrix z_hat, DMatrix z) {
+  //TODO
+  gsl_rng *gsl_r;
   double d1, d2, z_rand = 0.0;
   for (size_t i = 0; i < z.size; ++i) {
     d1 = y.elements[i];
@@ -1230,7 +1244,7 @@ void SampleZ(const DMatrix y, const DMatrix z_hat, DMatrix z) {
 
       // Control, right truncated.
       do {
-        //z_rand = d2 + gsl_ran_gaussian(gsl_r, 1.0);
+        z_rand = d2 + gsl_ran_gaussian(gsl_r, 1.0);
       } while (z_rand > 0.0);
     } else {
       do {
@@ -1446,7 +1460,7 @@ void CalcXtX(const DMatrix X, const DMatrix y,
   //gsl_matrix_view
   DMatrix XtX_sub = get_sub_dmatrix(XtX, 0, 0, s_size, s_size);
   //gsl_vector_view
-  DMatrix Xty_sub; // = gsl_vector_subvector(Xty, 0, s_size);
+  DMatrix Xty_sub = get_subvector_dmatrix(Xty, 0, s_size);
 
   XtX_sub = matrix_mult(X_sub.T, X_sub);
   Xty_sub = matrix_mult(X_sub.T, y);
@@ -1526,25 +1540,23 @@ void SetXgamma(const DMatrix X, const DMatrix X_old,
   }
 
   // Obtain the subset of matrix/vector.
-  //gsl_matrix_const_view
   DMatrix Xold_sub = get_sub_dmatrix(X_old, 0, 0, X_old.shape[0], rank_old.length);
-  //gsl_matrix_const_view
   DMatrix XtXold_sub = get_sub_dmatrix(XtX_old, 0, 0, rank_old.length, rank_old.length);
   //gsl_vector_const_view
-  DMatrix Xtyold_sub; // = gsl_vector_const_subvector(Xty_old, 0, rank_old.length);
+  DMatrix Xtyold_sub = get_subvector_dmatrix(Xty_old, 0, rank_old.length);
 
   //gsl_matrix_view
   DMatrix Xnew_sub = get_sub_dmatrix(X_new, 0, 0, X_new.shape[0], rank_new.length);
   //gsl_matrix_view
   DMatrix XtXnew_sub = get_sub_dmatrix(XtX_new, 0, 0, rank_new.length, rank_new.length);
   //gsl_vector_view
-  DMatrix Xtynew_sub; // = gsl_vector_subvector(Xty_new, 0, rank_new.length);
+  DMatrix Xtynew_sub = get_subvector_dmatrix(Xty_new, 0, rank_new.length);
 
   // Get X_new and calculate XtX_new.
   if (rank_remove.length == 0 && rank_add.length == 0) {
-    //gsl_matrix_memcpy(Xnew_sub, Xold_sub);
-    //gsl_matrix_memcpy(XtXnew_sub, XtXold_sub);
-    //gsl_vector_memcpy(Xtynew_sub, Xtyold_sub);
+    Xnew_sub = Xold_sub.dup_dmatrix;
+    XtXnew_sub = XtXold_sub.dup_dmatrix;
+    Xtynew_sub = Xtyold_sub.dup_dmatrix;
   } else {
     size_t i_old, j_old, i_new, j_new, i_add, j_add, i_flag, j_flag;
     if (rank_add.length == 0) {

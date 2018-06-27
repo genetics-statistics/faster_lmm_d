@@ -190,7 +190,7 @@ void main(string[] args)
       mvlmm_run(option_kinship, option_pheno, option_covar, option_geno, option_bfile);
     }
     else if(cmd == "bslmm"){
-      bslmm_run();
+      bslmm_run(option_geno, option_pheno);
     }
     else if(cmd == "lm"){
       lm_run(option_anno, option_kinship, option_pheno, option_covar, option_geno, option_bfile, option_lm);
