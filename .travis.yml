@@ -11,7 +11,7 @@ addons:
       - google-perftools
       - libgoogle-perftools-dev
       - graphviz
-
+      - gfortran
 
 branches:
   only:

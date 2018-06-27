@@ -14,7 +14,7 @@
     "resusage": "~>0.2.7"
   },
   "description": "Experiment lmm",
-  "copyright": "Copyright © 2016, 2017, Prasun Anand and Pjotr Prins",
+  "copyright": "Copyright © 2016 - 2018, Prasun Anand and Pjotr Prins",
   "license": "GPL3",
-  "libs": ["openblas", "gsl", "lapacke", "cuda", "cublas"],
+  "libs": ["openblas", "gsl", "lapacke", "cuda", "cublas", "gfortran"],
 }
