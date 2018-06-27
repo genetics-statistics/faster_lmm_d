@@ -41,7 +41,7 @@ if [ $? -ne 0 ]; then echo "ERR3b test8000 failed" ; fi
 echo "GEMMA tests"
 
 echo "CenteredRelatednessMatrixKFullLOCO1"
-$build/faster_lmm_d -g ../example/mouse_hs1940.geno.txt.gz \
+./build/faster_lmm_d -g ../example/mouse_hs1940.geno.txt.gz \
                     -p ../example/mouse_hs1940.pheno.txt \
                     -a ../example/mouse_hs1940.anno.txt \
                     -loco 1 \
