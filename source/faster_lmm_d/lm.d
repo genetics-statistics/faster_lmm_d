@@ -72,6 +72,7 @@ void lm_run(const string option_snps, const string option_pheno, const string op
 
   // set covariates matrix W and phenotype matrix Y
   // an intercept should be included in W
+  writeln(ni_test);
   DMatrix Y = zeros_dmatrix(ni_test, n_ph);
   DMatrix W = zeros_dmatrix(ni_test, n_cvt);
   CopyCvtPhen(W, Y, indicators.indicator_idv, indicators.indicator_cvt, cvt, pheno.pheno, n_ph, n_cvt, 0);
@@ -96,7 +97,7 @@ void lm_run(const string option_snps, const string option_pheno, const string op
       lm_analyze_plink(option_geno, W, Y_col);
     } else {
       DMatrix Wty = matrix_mult(W.T, Y_col);
-      sumStat = lm_analyze_bimbam(option_geno, W, Y_col, WtWi, Wty, indicators.indicator_idv, indicator_snp, ni_test, ni_total);
+      sumStat = lm_analyze_bimbam_batched(option_geno, W, Y_col, WtWi, Wty, indicators.indicator_idv, indicator_snp, ni_test, ni_total);
     }
 
     //lm_write_files(sumStat, option_geno, snpInfo, indicator_snp, ni_test, lm_mode);
@@ -225,6 +226,7 @@ vPvResult CalcvPv(const DMatrix WtWi, const DMatrix Wty,
 
   double xPwx = vector_ddot(x, x);
   double xPwy = vector_ddot(x, y);
+
   DMatrix WtWiWtx = matrix_mult(WtWi, Wtx);
 
   d = vector_ddot(WtWiWtx, Wtx);
@@ -261,6 +263,39 @@ Pvals LmCalcP(const size_t lm_mode, const double yPwy, const double xPwy,
   double p_lrt = gsl_cdf_chisq_Q(to!double(n_size) * (mlog(yPwy) - mlog(yPxy)), 1);
   double se = (lm_mode == 3 ? se_score : se_wald); 
   return Pvals(beta, se, p_wald, p_lrt, p_score);
+}
+
+void LmCalcP2(const DMatrix WtWi, const DMatrix Wty,
+              const DMatrix Wtx_collect, const DMatrix y, const DMatrix x_collect,
+              const size_t lm_mode, const double yPwy, const double df, const size_t n_size) {
+
+  size_t c_size = Wty.size;
+  DMatrix xPwx = matrix_mult(x_collect, x_collect.T).get_diagonal;
+  DMatrix xPwy = matrix_mult(x_collect, y);
+  DMatrix WtWiWtx = matrix_mult(WtWi, Wtx_collect.T);
+
+  DMatrix d = matrix_mult(WtWiWtx.T, Wtx_collect.T).get_diagonal; //check shape
+  xPwx = xPwx - d; // subtract_dmatrix 
+  DMatrix d2 = matrix_mult(WtWiWtx.T, Wty);
+  xPwy = subtract_dmatrix(xPwy, d2); // subtract_dmatrix_num
+
+  DMatrix yPxy = subtract_num_dmatrix(yPwy, (xPwy * (xPwy / xPwx))); // matrix
+  DMatrix beta_matrix = xPwy / xPwx; // beta
+  DMatrix xPwx_se = multiply_dmatrix_num(xPwx, n_size);
+  DMatrix wald = yPxy / multiply_dmatrix_num(xPwx, df);
+
+  SUMSTAT[] sumStat;
+  foreach(i, beta; beta_matrix.elements){
+    double se_score = sqrt(yPwy / xPwx_se.elements[i]);
+    double se_wald = sqrt(wald.elements[i]);
+    double p_wald = gsl_cdf_fdist_Q(beta * beta / (se_wald * se_wald), 1.0, df);
+    double p_score = gsl_cdf_fdist_Q(beta * beta / (se_score * se_score), 1.0, df);
+    double p_lrt = gsl_cdf_chisq_Q(to!double(n_size) * (mlog(yPwy) - mlog(yPxy.elements[i])), 1);
+    double se = (lm_mode == 3 ? se_score : se_wald); 
+    sumStat ~= SUMSTAT(beta, se, 0.0, 0.0, p_wald, p_lrt, p_score, -0.0);
+  }
+  writeln(sumStat[0]);
+  //return sumStat;
 }
 
 void lm_analyze_gene(const string file_gene, const DMatrix W, const DMatrix x) {
@@ -349,8 +384,8 @@ SUMSTAT[] lm_analyze_bimbam(const string file_geno, const DMatrix W, const DMatr
   // Calculate some basic quantities.
   double df = to!double(W.shape[0]) - to!double(W.shape[1]) - 1.0;
 
-  DMatrix x = zeros_dmatrix(ni_total, 1);
-  DMatrix x_miss = zeros_dmatrix(1, ni_total);
+  DMatrix x = zeros_dmatrix(ni_test, 1);
+  DMatrix x_miss = zeros_dmatrix(1, ni_test);
 
   double yPwy = CalcvPv(WtWi, Wty, y);
 
@@ -393,7 +428,6 @@ SUMSTAT[] lm_analyze_bimbam(const string file_geno, const DMatrix W, const DMatr
       if (x_miss.elements[i] == 0) {
         x.elements[i] = x_mean;
       }
-      geno = x.elements[i];
     }
 
     // Calculate statistics.
@@ -414,6 +448,122 @@ SUMSTAT[] lm_analyze_bimbam(const string file_geno, const DMatrix W, const DMatr
 
   return sumStat;
 }
+
+SUMSTAT[] lm_analyze_bimbam_batched(const string file_geno, const DMatrix W, const DMatrix y,
+                                    const DMatrix WtWi, const DMatrix Wty,
+                                    const int[] indicator_idv, const int[] indicator_snp,
+                                    const size_t ni_test, const size_t ni_total) {
+
+  writeln("entered lm_analyze_bimbam");
+  version(PARALLEL){
+    auto task_pool = new TaskPool(totalCPUs);
+  }
+
+  size_t msize=5000;
+  
+  SUMSTAT[] sumStat;
+  SNPINFO[] snpInfo;
+
+  writeln(file_geno);
+
+  auto pipe = pipeShell("gunzip -c " ~ file_geno);
+  File input = pipe.stdout;
+
+  int lm_mode = 0;
+  double beta = 0, se = 0, p_wald = 0, p_lrt = 0, p_score = 0;
+  int n_miss, c_phen;
+  double geno, x_mean;
+
+  // Calculate some basic quantities.
+  double df = to!double(W.shape[0]) - to!double(W.shape[1]) - 1.0;
+
+  DMatrix x = zeros_dmatrix(ni_test, 1);
+  DMatrix x_miss = zeros_dmatrix(1, ni_test);
+
+  double yPwy = CalcvPv(WtWi, Wty, y);
+
+  // Start reading genotypes and analyze.
+  int t = 0;
+  size_t c = 0;
+  size_t batch_count = 0;
+  size_t total_snps = indicator_snp.length;
+  size_t expected_batch_count = total_snps / msize;
+  size_t t_last = total_snps;
+  DMatrix x_collect = DMatrix([msize, ni_test],[]);
+  DMatrix Wtx_collect = DMatrix([msize, W.shape[1]], []);
+  if(expected_batch_count == batch_count){ msize = total_snps % msize;}
+  foreach (line; input.byLine) {
+   
+    if (indicator_snp[t] == 0) {
+      t++;
+      continue;
+    }
+
+    auto ch_ptr = to!string(line).split(",")[3..$];
+
+    x_mean = 0.0;
+    c_phen = 0;
+    n_miss = 0;
+    x_miss = zeros_dmatrix(1, W.shape[0]);
+    for (size_t i = 0; i < ni_total; ++i) {
+      if (indicator_idv[i] == 0) {
+        continue;
+      }
+
+      if (ch_ptr[0] == "NA") {
+        x_miss.elements[c_phen] = 0.0;
+        n_miss++;
+      } else {
+        geno = to!double(ch_ptr[i].strip());
+
+        x.elements[c_phen] = geno;
+        x_miss.elements[c_phen] = 1.0;
+        x_mean += geno;
+      }
+      c_phen++;
+    }
+
+    for (size_t i = 0; i < ni_test; ++i) {
+      if (x_miss.elements[i] == 0) {
+        x.elements[i] = x_mean;
+      }
+    }
+
+    // Calculate statistics.
+    DMatrix Wtx = matrix_mult(W.T, x);
+
+    x_collect.elements ~= x.elements;
+    Wtx_collect.elements ~= Wtx.elements;
+    c++;
+
+    if(c%5000 == 0 || c==t_last){
+      version(PARALLEL){
+        auto taskk = task(&LmCalcP2, WtWi, Wty, Wtx_collect, y, x_collect, lm_mode,  yPwy, df, W.shape[0]);
+        task_pool.put(taskk);
+      }
+      else{
+        LmCalcP2(WtWi, Wty, Wtx_collect, y, x_collect, lm_mode,  yPwy, df, W.shape[0]);
+      } 
+      batch_count++;
+      if(expected_batch_count == batch_count){ msize = total_snps % msize;}
+      x_collect = DMatrix([msize , ni_test],[]);
+      Wtx_collect = DMatrix([msize, W.shape[1]],[]);
+    }
+    t++;
+  }
+
+  //sumStat = LmCalcP2(WtWi, Wty, Wtx_collect,  y, x_collect_mat,lm_mode,  yPwy, df, W.shape[0]);
+  version(PARALLEL){
+    task_pool.finish(true);
+  }
+  if(file_geno == "data/gemma/BXD_geno.txt.gz"){
+    check_lm_results(sumStat);
+  }
+
+  return sumStat;
+}
+
+
 
 void lm_analyze_plink(const string file_bfile, const DMatrix W, const DMatrix y) {
   

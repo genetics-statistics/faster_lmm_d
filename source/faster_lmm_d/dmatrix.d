@@ -182,6 +182,15 @@ DMatrix add_dmatrix_num(const DMatrix input, const double num) {
   return DMatrix(input.shape, elements);
 }
 
+DMatrix subtract_num_dmatrix(const double num, const DMatrix input) {
+  m_items total_items = input.size();
+  double[] elements = new double[total_items];
+  foreach(i ,input_element; input.elements) {
+    elements[i] = num - input_element;
+  }
+  return DMatrix(input.shape, elements);
+}
+
 DMatrix multiply_dmatrix_num(const DMatrix input, const double num) {
   m_items total_items = input.size();
   double[] elements = new double[total_items];
