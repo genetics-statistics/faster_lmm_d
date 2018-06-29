@@ -35,23 +35,21 @@ import faster_lmm_d.gemma_param;
 import faster_lmm_d.helpers;
 import faster_lmm_d.optmatrix;
 
-import gsl.permutation;
-import gsl.rng;
-import gsl.randist;
 import gsl.cdf;
 
-void lm_run(string option_snps, string option_kinship, string option_pheno, string option_covar, string option_geno, string option_bfile, size_t lm_mode){
+void lm_run(const string option_snps, const string option_pheno, const string option_covar,
+            const string option_geno, const string option_bfile, const size_t lm_mode){
   writeln("entered lm_run");
 
   writeln("reading pheno " , option_pheno);
   auto pheno = ReadFile_pheno(option_pheno, [1]);
-
+  
   size_t n_cvt;
   int[] indicator_cvt;
 
   writeln("reading covar " , option_covar);
   double[][] cvt = readfile_cvt(option_covar, indicator_cvt, n_cvt);
-  writeln(cvt);
+  //writeln(cvt);
 
   auto indicators = process_cvt_phen(pheno.indicator_pheno, cvt, indicator_cvt, n_cvt);
 
@@ -81,6 +79,10 @@ void lm_run(string option_snps, string option_kinship, string option_pheno, stri
   auto geno_result = ReadFile_geno1(option_geno, ni_total, W, indicators.indicator_idv, setSnps, mapRS2chr, mapRS2bp, mapRS2cM);
   int[] indicator_snp = geno_result.indicator_snp;
   SNPINFO[] snpInfo = geno_result.snpInfo;
+  writeln(snpInfo.length);
+
+  DMatrix WtW = matrix_mult(W.T, W);
+  DMatrix WtWi = WtW.inverse();
 
   // Fit LM or mvLM
   if (n_ph == 1) {
@@ -93,14 +95,16 @@ void lm_run(string option_snps, string option_kinship, string option_pheno, stri
     } else if (option_bfile != "") {
       lm_analyze_plink(option_geno, W, Y_col);
     } else {
-      sumStat = lm_analyze_bimbam(option_geno, W, Y_col, indicators.indicator_idv, indicator_snp, ni_test, ni_total);
+      DMatrix Wty = matrix_mult(W.T, Y_col);
+      sumStat = lm_analyze_bimbam(option_geno, W, Y_col, WtWi, Wty, indicators.indicator_idv, indicator_snp, ni_test, ni_total);
     }
 
-    lm_write_files(sumStat, option_geno, snpInfo, indicator_snp, ni_test, lm_mode);
+    //lm_write_files(sumStat, option_geno, snpInfo, indicator_snp, ni_test, lm_mode);
   }
 }
 
-void lm_write_files(SUMSTAT[] sumStat, const string file_gene, SNPINFO[] snpInfo, int[] indicator_snp, size_t ni_test, size_t lm_mode) {
+void lm_write_files(SUMSTAT[] sumStat, const string file_gene, const SNPINFO[] snpInfo, 
+                    const int[] indicator_snp, const size_t ni_test, const size_t lm_mode) {
   // define later
   string path_out = "";
   string file_out = "";
@@ -212,14 +216,15 @@ void lm_write_files(SUMSTAT[] sumStat, const string file_gene, SNPINFO[] snpInfo
   return;
 }
 
-void CalcvPv(const DMatrix WtWi, const DMatrix Wty,
-             const DMatrix Wtx, const DMatrix y, const DMatrix x,
-             ref double xPwy, ref double xPwx) {
+alias Tuple!(const double, "x", const double, "y")vPvResult;
+
+vPvResult CalcvPv(const DMatrix WtWi, const DMatrix Wty,
+             const DMatrix Wtx, const DMatrix y, const DMatrix x) {
   size_t c_size = Wty.size;
   double d;
 
-  xPwx = vector_ddot(x, x);
-  xPwy = vector_ddot(x, y);
+  double xPwx = vector_ddot(x, x);
+  double xPwy = vector_ddot(x, y);
   DMatrix WtWiWtx = matrix_mult(WtWi, Wtx);
 
   d = vector_ddot(WtWiWtx, Wtx);
@@ -228,42 +233,34 @@ void CalcvPv(const DMatrix WtWi, const DMatrix Wty,
   d = vector_ddot(WtWiWtx, Wty);
   xPwy -= d;
 
-  return;
+  return vPvResult(xPwx, xPwy);
 }
 
-void CalcvPv(const DMatrix WtWi, const DMatrix Wty, const DMatrix y, ref double yPwy) {
-  yPwy = vector_ddot(y, y);
+double CalcvPv(const DMatrix WtWi, const DMatrix Wty, const DMatrix y) {
+  double yPwy = vector_ddot(y, y);
   DMatrix WtWiWty = matrix_mult(WtWi, Wty);
 
   double d = vector_ddot(WtWiWty, Wty);
   yPwy -= d;
 
-  return;
+  return yPwy;
 }
 
 // Calculate p-values and beta/se in a linear model.
-void LmCalcP(const size_t lm_mode, const double yPwy, const double xPwy,
-             const double xPwx, const double df, const size_t n_size,
-             ref double beta, ref double se, ref double p_wald, ref double p_lrt,
-             ref double p_score) {
+alias Tuple!(const double, "beta", const double, "se", const double, "p_wald", 
+       const double, "p_lrt", const double, "p_score")Pvals;
+
+Pvals LmCalcP(const size_t lm_mode, const double yPwy, const double xPwy,
+             const double xPwx, const double df, const size_t n_size) {
   double yPxy = yPwy - xPwy * xPwy / xPwx;
-  double se_wald, se_score;
-
-  beta = xPwy / xPwx;
-
-  se_wald = sqrt(yPxy / (df * xPwx));
-  se_score = sqrt(yPwy / (to!double(n_size) * xPwx));
-  p_wald = gsl_cdf_fdist_Q(beta * beta / (se_wald * se_wald), 1.0, df);
-  p_score = gsl_cdf_fdist_Q(beta * beta / (se_score * se_score), 1.0, df);
-  p_lrt = gsl_cdf_chisq_Q(to!double(n_size) * (mlog(yPwy) - mlog(yPxy)), 1);
-
-  if (lm_mode == 3) {
-    se = se_score;
-  } else {
-    se = se_wald;
-  }
-
-  return;
+  double beta = xPwy / xPwx;
+  double se_wald = sqrt(yPxy / (df * xPwx));
+  double se_score = sqrt(yPwy / (to!double(n_size) * xPwx));
+  double p_wald = gsl_cdf_fdist_Q(beta * beta / (se_wald * se_wald), 1.0, df);
+  double p_score = gsl_cdf_fdist_Q(beta * beta / (se_score * se_score), 1.0, df);
+  double p_lrt = gsl_cdf_chisq_Q(to!double(n_size) * (mlog(yPwy) - mlog(yPxy)), 1);
+  double se = (lm_mode == 3 ? se_score : se_wald); 
+  return Pvals(beta, se, p_wald, p_lrt, p_score);
 }
 
 void lm_analyze_gene(const string file_gene, const DMatrix W, const DMatrix x) {
@@ -285,7 +282,6 @@ void lm_analyze_gene(const string file_gene, const DMatrix W, const DMatrix x) {
   double d;
 
   // Calculate some basic quantities.
-  double yPwy, xPwy, xPwx;
   double df = to!double(W.shape[0]) - to!double(W.shape[1]) - 1.0;
 
   DMatrix y; // = gsl_vector_alloc(W,shape[0]);
@@ -294,7 +290,7 @@ void lm_analyze_gene(const string file_gene, const DMatrix W, const DMatrix x) {
   DMatrix WtWi = WtW.inverse();
 
   DMatrix Wtx =  matrix_mult(W.T, x);
-  CalcvPv(WtWi, Wtx, x, xPwx);
+  double xPwx = CalcvPv(WtWi, Wtx, x);
 
   // Header.
   infile.readln();
@@ -319,19 +315,21 @@ void lm_analyze_gene(const string file_gene, const DMatrix W, const DMatrix x) {
 
     // Calculate statistics.
     DMatrix Wty = matrix_mult(W.T, y);
-    CalcvPv(WtWi, Wtx, Wty, x, y, xPwy, yPwy);
-    LmCalcP(lm_mode, yPwy, xPwy, xPwx, df, W.shape[0], beta, se, p_wald,
-            p_lrt, p_score);
+    auto vPv = CalcvPv(WtWi, Wtx, Wty, x, y);
+    Pvals p = LmCalcP(lm_mode, vPv.y, vPv.x, xPwx, df, W.shape[0]);
 
     // Store summary data.
-    SUMSTAT SNPs = SUMSTAT(beta, se, 0.0, 0.0, p_wald, p_lrt, p_score, -0.0);
+    SUMSTAT SNPs = SUMSTAT(p.beta, p.se, 0.0, 0.0, p.p_wald, p.p_lrt, p.p_score, -0.0);
     sumStat ~= SNPs;
   }
 
   return;
 }
 
-SUMSTAT[] lm_analyze_bimbam(const string file_geno, const DMatrix W, const DMatrix y, int[] indicator_idv, int[] indicator_snp, size_t ni_test, size_t ni_total) {
+SUMSTAT[] lm_analyze_bimbam(const string file_geno, const DMatrix W, const DMatrix y,
+                            const DMatrix WtWi, const DMatrix Wty,
+                            const int[] indicator_idv, const int[] indicator_snp,
+                            const size_t ni_test, const size_t ni_total) {
 
   writeln("entered lm_analyze_bimbam");
   
@@ -349,19 +347,12 @@ SUMSTAT[] lm_analyze_bimbam(const string file_geno, const DMatrix W, const DMatr
   double geno, x_mean;
 
   // Calculate some basic quantities.
-  double yPwy, xPwy, xPwx;
   double df = to!double(W.shape[0]) - to!double(W.shape[1]) - 1.0;
 
   DMatrix x = zeros_dmatrix(ni_total, 1);
   DMatrix x_miss = zeros_dmatrix(1, ni_total);
 
-  DMatrix WtW = matrix_mult(W.T, W);
-  DMatrix WtWi = WtW.inverse();
-
-  writeln(WtWi);
-
-  DMatrix Wty = matrix_mult(W.T, y);
-  CalcvPv(WtWi, Wty, y, yPwy);
+  double yPwy = CalcvPv(WtWi, Wty, y);
 
   // Start reading genotypes and analyze.
   int t = 0;
@@ -408,13 +399,17 @@ SUMSTAT[] lm_analyze_bimbam(const string file_geno, const DMatrix W, const DMatr
     // Calculate statistics.
     DMatrix Wtx = matrix_mult(W.T, x);
 
-    CalcvPv(WtWi, Wty, Wtx, y, x, xPwy, xPwx);
-    LmCalcP(lm_mode - 50, yPwy, xPwy, xPwx, df, W.shape[0], beta, se, p_wald, p_lrt, p_score);
+    auto vPv = CalcvPv(WtWi, Wty, Wtx, y, x);
+    auto p = LmCalcP(lm_mode - 50, yPwy, vPv.y, vPv.x, df, W.shape[0]);
 
     // Store summary data.
-    SUMSTAT SNPs = SUMSTAT(beta, se, 0.0, 0.0, p_wald, p_lrt, p_score, -0.0);
+    SUMSTAT SNPs = SUMSTAT(p.beta, p.se, 0.0, 0.0, p.p_wald, p.p_lrt, p.p_score, -0.0);
     sumStat ~= SNPs;
     t++;
+  }
+
+  if(file_geno == "data/gemma/BXD_geno.txt.gz"){
+    check_lm_results(sumStat);
   }
 
   return sumStat;
@@ -441,18 +436,16 @@ void lm_analyze_plink(const string file_bfile, const DMatrix W, const DMatrix y)
   double geno, x_mean;
 
   // Calculate some basic quantities.
-  double yPwy, xPwy, xPwx;
+  double xPwy, xPwx;
   double df = to!double(W.shape[0]) - to!double(W.shape[1]) - 1.0;
 
   DMatrix x; // = gsl_vector_alloc(W->size1);
-
-  gsl_permutation *pmt = gsl_permutation_alloc(W.shape[1]);
 
   DMatrix WtW = matrix_mult(W.T, W);
   DMatrix WtWi = WtW.inverse;
 
   DMatrix Wty = matrix_mult(W.T, y);
-  CalcvPv(WtWi, Wty, y, yPwy);
+  double yPwy = CalcvPv(WtWi, Wty, y);
 
   // Calculate n_bit and c, the number of bit for each SNP.
   if (ni_total % 4 == 0) {
@@ -529,15 +522,14 @@ void lm_analyze_plink(const string file_bfile, const DMatrix W, const DMatrix y)
     // Calculate statistics.
 
     DMatrix Wtx = matrix_mult(W.T, x);
-    CalcvPv(WtWi, Wty, Wtx, y, x, xPwy, xPwx);
-    LmCalcP(lm_mode, yPwy, xPwy, xPwx, df, W.shape[0], beta, se, p_wald, p_lrt, p_score);
+    auto vPv = CalcvPv(WtWi, Wty, Wtx, y, x);
+    auto p = LmCalcP(lm_mode, yPwy, vPv.y, vPv.x, df, W.shape[0]);
 
     // store summary data
-    SUMSTAT SNPs = SUMSTAT(beta, se, 0.0, 0.0, p_wald, p_lrt, p_score, -0.0);
+    SUMSTAT SNPs = SUMSTAT(p.beta, p.se, 0.0, 0.0, p.p_wald, p.p_lrt, p.p_score, -0.0);
     sumStat ~= SNPs;
   }
 
-  gsl_permutation_free(pmt);
   return;
 }
 
@@ -559,4 +551,28 @@ void MatrixCalcLmLR(const DMatrix X, const DMatrix y,
   }
 
   return;
+}
+
+void check_lm_results(SUMSTAT[] sumStat){
+  enforce(modDiff(sumStat[0].beta,    0.174093)<0.001);
+  enforce(modDiff(sumStat[0].p_wald,  0.136021)<0.001);
+  enforce(modDiff(sumStat[0].p_score, 0.131061,)<0.001);
+  enforce(modDiff(sumStat[1].beta,    0.174093)<0.001);
+  enforce(modDiff(sumStat[1].p_wald,  0.136021)<0.001);
+  enforce(modDiff(sumStat[1].p_score, 0.131061,)<0.001);
+  enforce(modDiff(sumStat[2].beta,    0.174093)<0.001);
+  enforce(modDiff(sumStat[2].p_wald,  0.136021)<0.001);
+  enforce(modDiff(sumStat[2].p_score, 0.131061,)<0.001);
+
+  enforce(modDiff(sumStat[$-3].beta,    0.0896522)<0.001);
+  enforce(modDiff(sumStat[$-3].p_wald,  0.46775)<0.001);
+  enforce(modDiff(sumStat[$-3].p_score, 0.455906)<0.001);
+  enforce(modDiff(sumStat[$-2].beta,    0.145594)<0.001);
+  enforce(modDiff(sumStat[$-2].p_wald,  0.22889)<0.001);
+  enforce(modDiff(sumStat[$-2].p_score, 0.220097)<0.001);
+  enforce(modDiff(sumStat[$-1].beta,    0.145594)<0.001);    
+  enforce(modDiff(sumStat[$-1].p_wald,  0.22889)<0.001);    
+  enforce(modDiff(sumStat[$-1].p_score, 0.220097)<0.001);    
+
+  writeln("Linear Model tests pass!");
 }
