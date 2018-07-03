@@ -31,6 +31,7 @@ import faster_lmm_d.tsvreader;
 import faster_lmm_d.gemma_kinship;
 import faster_lmm_d.gemma_lmm;
 import faster_lmm_d.lm;
+import faster_lmm_d.logistic;
 
 import test.covar_matrix;
 import test.geno_matrix;
@@ -194,6 +195,9 @@ void main(string[] args)
     }
     else if(cmd == "lm"){
       lm_run(option_anno, option_pheno, option_covar, option_geno, option_bfile, option_lm);
+    }
+    else if(cmd == "logistic"){
+      logistic_run(option_anno, option_pheno, option_covar, option_geno, option_bfile);
     }
     else{
       batch_run(option_kinship, option_pheno, option_covar, option_geno, option_indicator_idv,

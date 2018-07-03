@@ -1,0 +1,1 @@
+./build/faster_lmm_d --geno=data/gemma/BXD_geno.txt.gz --pheno=data/gemma/BXD.pheno --covar=data/gemma/BXD_covariates2.txt --anno=data/gemma/BXD_snps.txt --kinship=data/gemma/BXD.cXX.txt --maf=0.1 --cmd=logistic
