@@ -28,9 +28,67 @@ extern(C){
 }
 
 import faster_lmm_d.dmatrix;
+import faster_lmm_d.gemma_io;
+import faster_lmm_d.gemma_kinship;
+import faster_lmm_d.gemma_param;
 
 // I need to bundle all the data that goes to the function to optimze
 // together.
+
+void logistic_run(const string option_snps, const string option_pheno, const string option_covar,
+            const string option_geno, const string option_bfile){
+  writeln("In logistic regression");
+
+  auto pheno = ReadFile_pheno(option_pheno, [1]);
+
+  size_t n_cvt;
+  int[] indicator_cvt;
+
+  writeln("reading covar " , option_covar);
+  double[][] cvt = readfile_cvt(option_covar, indicator_cvt, n_cvt);
+  //writeln(cvt);
+
+  auto indicators = process_cvt_phen(pheno.indicator_pheno, cvt, indicator_cvt, n_cvt);
+
+  size_t ni_test = indicators.ni_test;
+  writeln(ni_test);
+  size_t ni_total = indicators.indicator_idv.length;
+
+  string[] setSnps = ReadFile_snps(option_snps);
+  //writeln(setSnps);
+  string[string] mapRS2chr;
+  size_t[string] mapRS2bp; 
+  double[string] mapRS2cM;
+  ReadFile_anno(option_snps, mapRS2chr, mapRS2bp, mapRS2cM);
+
+  size_t n_ph = 1;
+  string option_gene;
+
+  SUMSTAT[] sumStat;
+
+  // set covariates matrix W and phenotype matrix Y
+  // an intercept should be included in W
+  writeln(ni_test);
+  DMatrix Y = zeros_dmatrix(ni_test, n_ph);
+  DMatrix W = zeros_dmatrix(ni_test, n_cvt);
+  CopyCvtPhen(W, Y, indicators.indicator_idv, indicators.indicator_cvt, cvt, pheno.pheno, n_ph, n_cvt, 0);
+
+  auto geno_result = ReadFile_geno1(option_geno, ni_total, W, indicators.indicator_idv, setSnps, mapRS2chr, mapRS2bp, mapRS2cM);
+  int[] indicator_snp = geno_result.indicator_snp;
+  SNPINFO[] snpInfo = geno_result.snpInfo;
+  writeln(snpInfo.length);
+
+  logistic_analyze_bimbam_batched(option_geno);
+
+  writeln("done!");
+}
+
+void logistic_analyze_bimbam_batched(string file_geno){
+  // decide continuous/categorical/mixed
+  //build X
+  //logistic_cat_fit(coef, Ad, dlevel, pip, 0, 0);
+  //logistic_cat_pred(coef, Ad, dlevel, prior_vec);
+}
 
 struct fix_parm_mixed_T {
   DMatrix_int X;
@@ -319,7 +377,7 @@ double fLogit_cat(DMatrix beta, DMatrix_int X, DMatrix_int nlev,
 }
 
 void logistic_cat_pred(DMatrix beta,     // Vector of parameters
-                                             // length = 1 + Sum_k(C_k-1).
+                                         // length = 1 + Sum_k(C_k-1).
                        DMatrix_int X,    // Matrix Nobs x K
                        DMatrix_int nlev, // Vector with #categories
                        DMatrix yhat) {   // Vector of prob. predicted by
@@ -492,7 +550,7 @@ int logistic_cat_fit(DMatrix beta, DMatrix_int X, DMatrix_int nlev,
   }
 
   // Final fit.
-  // mLogLik = wgsl_cat_optim_f(beta, &p);
+   mLogLik = wgsl_cat_optim_f(beta, &p);
 
   return 0;
 }
@@ -685,7 +743,7 @@ int logistic_cont_fit(DMatrix beta,
   for (iter = 0; iter < 100; iter++) {
     wgsl_cont_optim_hessian(beta, &p, myH); // Calculate Hessian.
     wgsl_cont_optim_df(beta, &p, myG);      // Calculate Gradient.
-    //gsl_linalg_QR_decomp(myH, tau);         // Calculate next beta. //TODO
+    //gsl_linalg_QR_decomp(myH, tau);       // Calculate next beta. //TODO
     //gsl_linalg_QR_solve(myH, tau, myG, stBeta);
     beta = beta - stBeta;
 
@@ -704,7 +762,7 @@ int logistic_cont_fit(DMatrix beta,
   }
 
   // Final fit.
-  // mLogLik = wgsl_cont_optim_f(beta, &p);
+   mLogLik = wgsl_cont_optim_f(beta, &p);
 
   return 0;
 }
