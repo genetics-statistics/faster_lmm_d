@@ -30,6 +30,7 @@ extern(C){
 import faster_lmm_d.dmatrix;
 import faster_lmm_d.gemma_io;
 import faster_lmm_d.gemma_kinship;
+import faster_lmm_d.optmatrix;
 import faster_lmm_d.gemma_param;
 
 // I need to bundle all the data that goes to the function to optimze
@@ -86,8 +87,17 @@ void logistic_run(const string option_snps, const string option_pheno, const str
 void logistic_analyze_bimbam_batched(string file_geno){
   // decide continuous/categorical/mixed
   //build X
-  //logistic_cat_fit(coef, Ad, dlevel, pip, 0, 0);
-  //logistic_cat_pred(coef, Ad, dlevel, prior_vec);
+
+  DMatrix beta = zeros_dmatrix(1, 100);
+  DMatrix_int X = zeros_dmatrix_int(10,10);
+  DMatrix_int nlev = zeros_dmatrix_int(10, 10);
+  DMatrix y = zeros_dmatrix(1,10);
+  double lambdaL1 = 10;
+  double lambdaL2 = 10;
+  
+  logistic_cat_fit(beta, X, nlev, y, lambdaL1,lambdaL2);
+  logistic_cat_pred(beta, X, nlev, y);
+
 }
 
 struct fix_parm_mixed_T {
@@ -308,8 +318,7 @@ int logistic_mixed_fit(DMatrix beta, DMatrix_int X,
   for (iter = 0; iter < 100; iter++) {
     wgsl_mixed_optim_hessian(beta, &p, myH); // Calculate Hessian.
     wgsl_mixed_optim_df(beta, &p, myG);      // Calculate Gradient.
-    //gsl_linalg_QR_decomp(myH, tau); // TODO          // Calculate next beta.
-    //gsl_linalg_QR_solve(myH, tau, myG, stBeta);
+    stBeta = solve(myH, myG);
     beta = beta - stBeta;
 
     // Monitor convergence.
@@ -344,6 +353,7 @@ struct fix_parm_cat_T{
 
 double fLogit_cat(DMatrix beta, DMatrix_int X, DMatrix_int nlev,
                   DMatrix y, double lambdaL1, double lambdaL2) {
+  writeln("in fLogit_cat");
   size_t n = y.size;
   size_t npar = beta.size;
   double total = 0;
@@ -367,8 +377,9 @@ double fLogit_cat(DMatrix beta, DMatrix_int X, DMatrix_int nlev,
     double Xbetai = beta.elements[0];
     size_t iParm = 1;
     for (size_t k = 0; k < X.shape[1]; ++k) {
-      if (X.accessor(i, k) > 0)
+      if (X.accessor(i, k) > 0){
         Xbetai += beta.elements[X.accessor(i, k) - 1 + iParm];
+      }
       iParm += nlev.elements[k] - 1;
     }
     total += y.elements[i] * Xbetai - gsl_sf_log_1plusx(gsl_sf_exp(Xbetai));
@@ -382,6 +393,7 @@ void logistic_cat_pred(DMatrix beta,     // Vector of parameters
                        DMatrix_int nlev, // Vector with #categories
                        DMatrix yhat) {   // Vector of prob. predicted by
                                              // the logistic.
+  writeln("in logistic_cat_pred");
   for (size_t i = 0; i < X.shape[0]; ++i) {
     double Xbetai = beta.elements[0];
     size_t iParm = 1;
@@ -392,10 +404,12 @@ void logistic_cat_pred(DMatrix beta,     // Vector of parameters
     }
     yhat.elements[i] = 1 / (1 + gsl_sf_exp(-Xbetai));
   }
+  writeln(yhat);
 }
 
 // The gradient of f, df = (df/dx, df/dy).
-void wgsl_cat_optim_df(const DMatrix beta, void *params, DMatrix output) {
+void wgsl_cat_optim_df(const DMatrix beta, void *params, ref DMatrix output) {
+  writeln("in wgsl_cat_optim_df");
   fix_parm_cat_T *p = cast(fix_parm_cat_T *)params;
   size_t n = p.y.size;
   size_t K = p.X.shape[1];
@@ -431,10 +445,12 @@ void wgsl_cat_optim_df(const DMatrix beta, void *params, DMatrix output) {
       iParm += p.nlev.elements[k] - 1;
     }
   }
+  writeln("out");
 }
 
 // The Hessian of f.
-void wgsl_cat_optim_hessian(const DMatrix beta, void *params, DMatrix output) {
+void wgsl_cat_optim_hessian(const DMatrix beta, void *params, ref DMatrix output) {
+  writeln("in wgsl_cat_optim_hessian");
   fix_parm_cat_T *p = cast(fix_parm_cat_T *)params;
   size_t n = p.y.size;
   size_t K = p.X.shape[1];
@@ -489,7 +505,8 @@ void wgsl_cat_optim_hessian(const DMatrix beta, void *params, DMatrix output) {
   }
 }
 
-double wgsl_cat_optim_f(DMatrix v, void *params) {
+double wgsl_cat_optim_f(ref DMatrix v, void *params) { // v is a vector
+  writeln("in wgsl_cat_optim_f");
   double mLogLik = 0;
   fix_parm_cat_T *p = cast(fix_parm_cat_T *)params;
   mLogLik = fLogit_cat(v, p.X, p.nlev, p.y, p.lambdaL1, p.lambdaL2);
@@ -497,13 +514,15 @@ double wgsl_cat_optim_f(DMatrix v, void *params) {
 }
 
 // Compute both f and df together.
-void wgsl_cat_optim_fdf(DMatrix x, void *params, double *f, DMatrix df) {
-  *f = wgsl_cat_optim_f(x, params);
+void wgsl_cat_optim_fdf(ref DMatrix x, void *params, ref double f, ref DMatrix df) {
+  writeln("in wgsl_cat_optim_fdf");
+  f = wgsl_cat_optim_f(x, params);
   wgsl_cat_optim_df(x, params, df);
 }
 
-int logistic_cat_fit(DMatrix beta, DMatrix_int X, DMatrix_int nlev,
-                     DMatrix y, double lambdaL1, double lambdaL2) {
+int logistic_cat_fit(ref DMatrix beta, ref DMatrix_int X, ref DMatrix_int nlev,
+                     ref DMatrix y, double lambdaL1, double lambdaL2) {
+  writeln("in logistic_cat_fit");
   // double mLogLik = 0;
   fix_parm_cat_T p;
   size_t npar = beta.size;
@@ -531,15 +550,16 @@ int logistic_cat_fit(DMatrix beta, DMatrix_int X, DMatrix_int nlev,
   for (iter = 0; iter < 100; iter++) {
     wgsl_cat_optim_hessian(beta, &p, myH); // Calculate Hessian.
     wgsl_cat_optim_df(beta, &p, myG);      // Calculate Gradient.
-    //gsl_linalg_QR_decomp(myH, tau);     // TODO    // Calculate next beta.
-    //gsl_linalg_QR_solve(myH, tau, myG, stBeta);
-    beta = beta - stBeta;
+    //stBeta = solve(myH, myG);              // breaks if X is a zeros matrix
+    beta = subtract_dmatrix(beta, stBeta);
 
     // Monitor convergence.
     maxchange = 0;
-    for (size_t i = 0; i < npar; i++)
-      if (maxchange < fabs(stBeta.elements[i]))
+    for (size_t i = 0; i < npar; i++){
+      if (maxchange < fabs(stBeta.elements[i])){
         maxchange = fabs(stBeta.elements[i]);
+      }
+    }
 
 //#ifdef _RPR_DEBUG_
     mLogLik = wgsl_cat_optim_f(beta, &p);
@@ -548,7 +568,6 @@ int logistic_cat_fit(DMatrix beta, DMatrix_int X, DMatrix_int nlev,
     if (maxchange < 1E-4)
       break;
   }
-
   // Final fit.
    mLogLik = wgsl_cat_optim_f(beta, &p);
 
@@ -603,7 +622,7 @@ void logistic_cont_pred(DMatrix beta,   // Vector of parameters
                                             // length = 1 + Sum_k(C_k-1).
                         DMatrix Xc,     // Continuous covariates matrix,
                                             // Nobs x Kc (NULL if not used).
-                        DMatrix yhat) { // Vector of prob. predicted by
+                        ref DMatrix yhat) { // Vector of prob. predicted by
                                             // the logistic.
   for (size_t i = 0; i < Xc.shape[0]; ++i) {
     double Xbetai = beta.elements[0];
@@ -615,7 +634,7 @@ void logistic_cont_pred(DMatrix beta,   // Vector of parameters
 }
 
 // The gradient of f, df = (df/dx, df/dy).
-void wgsl_cont_optim_df(const DMatrix beta, const void *params, DMatrix output) {
+void wgsl_cont_optim_df(const DMatrix beta, const void *params, ref DMatrix output) {
   fix_parm_cont_T *p = cast(fix_parm_cont_T *)params;
   size_t n = p.y.size;
   size_t Kc = p.Xc.shape[1];
@@ -652,7 +671,7 @@ void wgsl_cont_optim_df(const DMatrix beta, const void *params, DMatrix output) 
 
 // The Hessian of f.
 void wgsl_cont_optim_hessian(const DMatrix beta, void *params,
-                             DMatrix output) {
+                             ref DMatrix output) {
   fix_parm_cont_T *p = cast(fix_parm_cont_T *)params;
   size_t n = p.y.size;
   size_t Kc = p.Xc.shape[1];
@@ -743,8 +762,7 @@ int logistic_cont_fit(DMatrix beta,
   for (iter = 0; iter < 100; iter++) {
     wgsl_cont_optim_hessian(beta, &p, myH); // Calculate Hessian.
     wgsl_cont_optim_df(beta, &p, myG);      // Calculate Gradient.
-    //gsl_linalg_QR_decomp(myH, tau);       // Calculate next beta. //TODO
-    //gsl_linalg_QR_solve(myH, tau, myG, stBeta);
+    stBeta = solve(myH, myG);
     beta = beta - stBeta;
 
     // Monitor convergence.
