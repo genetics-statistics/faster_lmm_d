@@ -85,7 +85,7 @@ alias Tuple!(const DMatrix, "geno", immutable string[], "gnames", immutable stri
 alias Tuple!(DMatrix, "first", DMatrix, "last")MatrixSplit;
 
 DMatrix dup_dmatrix(const DMatrix input){
-  return DMatrix(input.shape.dup, input.elements.dup_fast);
+  return DMatrix(input.shape.dup, input.elements.dup);
 }
 
 void set(ref DMatrix mat, size_t row, size_t col, double value){
@@ -105,11 +105,38 @@ DMatrix get_diagonal(const DMatrix input){
   return DMatrix([input.rows, 1], elements);
 }
 
+DMatrix sigmoid(const DMatrix input) {
+  m_items total_items = input.size();
+  double[] elements = new double[total_items];
+  for(auto i = 0; i < total_items; i++) {
+    elements[i] = 1/ (1+exp(-1 * input.elements[i]));
+  }
+  return DMatrix(input.shape, elements);
+}
+
 DMatrix log_dmatrix(const DMatrix input) {
   m_items total_items = input.size();
   double[] elements = new double[total_items];
   for(auto i = 0; i < total_items; i++) {
     elements[i] = log(input.elements[i]);
+  }
+  return DMatrix(input.shape, elements);
+}
+
+DMatrix abs_dmatrix(const DMatrix input) {
+  m_items total_items = input.size();
+  double[] elements = new double[total_items];
+  for(auto i = 0; i < total_items; i++) {
+    elements[i] = abs(input.elements[i]);
+  }
+  return DMatrix(input.shape, elements);
+}
+
+DMatrix sqrt_dmatrix(const DMatrix input) {
+  m_items total_items = input.size();
+  double[] elements = new double[total_items];
+  for(auto i = 0; i < total_items; i++) {
+    elements[i] = sqrt(input.elements[i]);
   }
   return DMatrix(input.shape, elements);
 }
