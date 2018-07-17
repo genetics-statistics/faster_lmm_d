@@ -103,7 +103,7 @@ DMatrix solve(const DMatrix A, const DMatrix B){
   auto ipiv = new int[min(n,m)+1];
   double[] elements = B.elements.dup;
   LAPACKE_dgesv(101, n, m, lhs.ptr, n, ipiv.ptr, elements.ptr, m);
-  return DMatrix([1, B.cols], elements);
+  return DMatrix([1, A.cols], elements);
 }
 
 DMatrix axpy(const double alpha, const DMatrix X, const DMatrix Y){
