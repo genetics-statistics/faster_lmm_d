@@ -32,8 +32,10 @@ import std.algorithm.iteration:map;
 import std.conv;
 import std.exception;
 import std.math;
+import std.process;
 alias mlog = std.math.log;
 import std.stdio;
+import std.string;
 import std.typecons;
 
 import gsl.cdf;
@@ -91,7 +93,84 @@ void logistic_reg_run(const string option_snps, const string option_pheno, const
     }
   }
 
-  writeln("done!");
+  LogisticRegressionFit dummy;  
+
+  auto null_fit = model_fit(W, Y, dummy);
+
+  logistic_analyze_bimbam(option_geno, null_fit, W, Y, indicators.indicator_idv, indicator_snp, ni_test, ni_total);
+}
+
+void logistic_analyze_bimbam(const string file_geno, const LogisticRegressionFit null_fit,
+                             const DMatrix W, const DMatrix y,
+                             const int[] indicator_idv, const int[] indicator_snp,
+                             const size_t ni_test, const size_t ni_total) {
+
+  writeln("entered lm_analyze_bimbam");
+  
+  SUMSTAT[] sumStat;
+  SNPINFO[] snpInfo;
+
+  writeln(file_geno);
+
+  auto pipe = pipeShell("gunzip -c " ~ file_geno);
+  File input = pipe.stdout;
+
+  int lm_mode = 0;
+  double beta = 0, se = 0, p_wald = 0, p_lrt = 0, p_score = 0;
+  int n_miss, c_phen;
+  double geno, x_mean;
+
+  // Calculate some basic quantities.
+  double df = to!double(W.shape[0]) - to!double(W.shape[1]) - 1.0;
+
+  DMatrix x = zeros_dmatrix(ni_test, 1);
+  DMatrix x_miss = zeros_dmatrix(1, ni_test);
+
+  // Start reading genotypes and analyze.
+  int t = 0;
+  foreach (line; input.byLine) {
+   
+    if (indicator_snp[t] == 0) {
+      t++;
+      continue;
+    }
+
+    auto ch_ptr = to!string(line).split(",")[3..$];
+
+    x_mean = 0.0;
+    c_phen = 0;
+    n_miss = 0;
+    x_miss = zeros_dmatrix(1, W.shape[0]);
+    for (size_t i = 0; i < ni_total; ++i) {
+      if (indicator_idv[i] == 0) {
+        continue;
+      }
+
+      if (ch_ptr[0] == "NA") {
+        x_miss.elements[c_phen] = 0.0;
+        n_miss++;
+      } else {
+        geno = to!double(ch_ptr[i].strip());
+
+        x.elements[c_phen] = geno;
+        x_miss.elements[c_phen] = 1.0;
+        x_mean += geno;
+      }
+      c_phen++;
+    }
+
+    x_mean /= to!double(ni_test - n_miss);
+
+    for (size_t i = 0; i < ni_test; ++i) {
+      if (x_miss.elements[i] == 0) {
+        x.elements[i] = x_mean;
+      }
+    }
+    DMatrix X = horizontally_stack(W, x);
+    WaldStats wald_stats = lm_wald_test(X, y, null_fit);
+    // Calculate statistics.
+    writeln(wald_stats);
+  }
 }
 
 struct LogisticRegressionFit{
