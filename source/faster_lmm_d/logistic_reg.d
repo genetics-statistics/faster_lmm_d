@@ -32,6 +32,7 @@ import std.algorithm.iteration:map;
 import std.conv;
 import std.exception;
 import std.math;
+import std.parallelism;
 import std.process;
 alias mlog = std.math.log;
 import std.stdio;
@@ -106,6 +107,10 @@ void logistic_analyze_bimbam(const string file_geno, const LogisticRegressionFit
                              const size_t ni_test, const size_t ni_total) {
 
   writeln("entered lm_analyze_bimbam");
+
+  version(PARALLEL){
+    auto task_pool = new TaskPool(totalCPUs);
+  }
   
   SUMSTAT[] sumStat;
   SNPINFO[] snpInfo;
@@ -167,9 +172,17 @@ void logistic_analyze_bimbam(const string file_geno, const LogisticRegressionFit
       }
     }
     DMatrix X = horizontally_stack(W, x);
-    WaldStats wald_stats = lm_wald_test(X, y, null_fit);
+    version(PARALLEL){
+      auto taskk = task(&lm_wald_test,X, y, null_fit);
+      task_pool.put(taskk);
+    }
+    else{
+      WaldStats wald_stats = lm_wald_test(X, y, null_fit);      
+    }
     // Calculate statistics.
-    writeln(wald_stats);
+  }
+  version(PARALLEL){
+    task_pool.finish(true);
   }
 }
 
@@ -212,7 +225,8 @@ WaldStats lm_wald_test(const DMatrix X, const DMatrix y, const LogisticRegressio
       p.elements[i] = 2 * gsl_cdf_ugaussian_P(-1*(abs(z.elements[i])));
     }
     waldStats = WaldStats(fit.b, se, z, p);
-  } 
+  }
+  writeln(waldStats);
 
   return waldStats;
 }
