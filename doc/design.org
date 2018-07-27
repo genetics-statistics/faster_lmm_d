@@ -1,0 +1,55 @@
+* A faster LMM in D
+
+** Introduction
+
+Current state of the art LMM resolvers are written in Python and C/C++
+and their performance is mainly derived for (parallel) BLAS
+functions. The objective of faster_lmm_d is to create the same
+functionality in D by writing drop-in replacement components for the
+GEMMA tool. GEMMA being the state-of-the-art LMM resolver used for
+genome-wide association studies (GWA) today. GEMMA software is written
+in C++ and is free and open source (FOSS).
+
+Speed improvements are aimed for through:
+
+1. Lazy computation
+2. Streaming and parallel execution of code
+3. Use of CUDA architecture
+4. Use of KNL architecture
+
+In addition we aim for
+
+5. Correctness
+
+Which implies testing results and checking the consistency of input
+data.
+
+The choice of D over C++ is mainly driven by the fact that C++
+programming is harder and (therefore) takes more effort. Writing
+idiomatic D is much closer to writing Python, but with type checking
+and performance close to C. In other words, D is a modern programming
+language very suitable for this type of exercise.
+
+** Install faster_lmm_d
+
+In principle faster_lmm_d can be independently installed as a binary
+executable. This executable can be run from GEMMA, Python, R etc.  See
+the [[../INSTALL.org][INSTALL doc]] for more information on building and installation.
+
+** Computing K
+
+** Computing GWA
+
+** LOCO
+
+** Architecture
+
+*** TODO Lazy computation
+
+*** TODO Streaming and parallel execution of code
+
+*** TODO Use of CUDA
+
+*** TODO Use of KNL
+
+** TODO Correctness
