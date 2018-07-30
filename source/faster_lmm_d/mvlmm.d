@@ -741,8 +741,7 @@ double MphEM(const char func_name, const size_t max_iter, const double max_prec,
   double logdet_Q, logdet_Ve;
 
   // Calculate |XXt| and (XXt)^{-1}.
-  XXt = matrix_mult(X, X.T);
-  //XXt = syrk(1, X, 0, X); // check which is faster
+  XXt = syrk(1, X, 0, XXt);
 
   for (size_t i = 0; i < c_size; ++i) {
     for (size_t j = 0; j < i; ++j) {
@@ -1336,7 +1335,7 @@ void Calc_xHiDHix_all(const DMatrix eval, const DMatrix xHi,
       }
       v = GetIndex(i, j, d_size);
 
-      DMatrix xHiDHix_g = zeros_dmatrix(dc_size, dc_size); 
+      DMatrix xHiDHix_g = zeros_dmatrix(dc_size, dc_size);
       DMatrix xHiDHix_e = zeros_dmatrix(dc_size, dc_size);
       Calc_xHiDHix(eval, xHi, i, j, xHiDHix_g, xHiDHix_e);
       set_sub_dmatrix2(xHiDHix_all_g, 0, v * dc_size, dc_size, dc_size, xHiDHix_g);
@@ -1348,7 +1347,7 @@ void Calc_xHiDHix_all(const DMatrix eval, const DMatrix xHi,
 
 // Calculate (xHiDHiy) for every pair (i,j).
 void Calc_xHiDHiDHiy_all(const size_t v_size, const DMatrix eval, const DMatrix Hi, const DMatrix xHi,
-                         const DMatrix Hiy, ref DMatrix xHiDHiDHiy_all_gg, 
+                         const DMatrix Hiy, ref DMatrix xHiDHiDHiy_all_gg,
                          ref DMatrix xHiDHiDHiy_all_ee, ref DMatrix xHiDHiDHiy_all_ge) {
   writeln("in Calc_xHiDHiDHiy_all");
   xHiDHiDHiy_all_gg = zeros_dmatrix(xHiDHiDHiy_all_gg.shape[0], xHiDHiDHiy_all_gg.shape[1]);
@@ -1474,7 +1473,7 @@ void Calc_xHiDHixQixHiy_all(const DMatrix xHiDHix_all_g,
 }
 
 // Calculate Qi(xHiDHiy) and Qi(xHiDHix)Qi(xHiy) for each pair of i,j (i<=j).
-void Calc_QiVec_all(const DMatrix Qi, const DMatrix vec_all_g, const DMatrix vec_all_e, 
+void Calc_QiVec_all(const DMatrix Qi, const DMatrix vec_all_g, const DMatrix vec_all_e,
                     ref DMatrix Qivec_all_g, ref DMatrix Qivec_all_e) {
   writeln("in Calc_QiVec_all");
   for (size_t i = 0; i < vec_all_g.shape[1]; i++) {
@@ -1988,7 +1987,7 @@ double PCRT(const size_t mode, const size_t d_size, const double p_value,
   return p_crt;
 }
 
-void analyze_plink(const DMatrix U, const DMatrix eval, const DMatrix UtW, const DMatrix UtY, 
+void analyze_plink(const DMatrix U, const DMatrix eval, const DMatrix UtW, const DMatrix UtY,
                     string file_bed, SNPINFO[] snpInfo, int[] indicator_snp, int[] indicator_idv,
                     size_t ni_test) {
   writeln("entering analyze_plink");
@@ -2469,6 +2468,9 @@ double MphCalcLogL(const DMatrix eval, const DMatrix xHiy, const DMatrix D_l,
 // Qi=(\sum_{k=1}^n x_kx_k^T\otimes(delta_k*Dl+I)^{-1} )^{-1}.
 double CalcQi(const DMatrix eval, const DMatrix D_l,
               const DMatrix X, ref DMatrix Qi) {
+  writeln("eval => ", eval);
+  writeln("D_l => ", D_l);
+  writeln("X => ", X);
   size_t n_size = eval.size, d_size = D_l.size, dc_size = Qi.shape[0];
   size_t c_size = dc_size / d_size;
 
@@ -2760,7 +2762,7 @@ void CalcHiQi(const DMatrix eval, const DMatrix X,
 
     DMatrix Hi_k = matrix_mult(UltVehi.T, mat_dd);
     set_sub_dmatrix2(Hi_all, 0, k * d_size, d_size, d_size, Hi_k);
-    //writeln("Hi_all", Hi_all); 
+    //writeln("Hi_all", Hi_all);
     //exit(0);
   }
 
@@ -2883,15 +2885,11 @@ double EigenProc(const DMatrix V_g, const DMatrix V_e, ref DMatrix D_l,
     }
     logdet_Ve += mlog(d);
 
-    //gsl_vector_view
     DMatrix U_col = get_col(U_l, i);
     d = sqrt(d);
-    //gsl_blas_dsyr(CblasUpper, d, &U_col.vector, V_e_h);  // check
     V_e_h = syr(d, U_col, V_e_h);
     d = 1.0 / d;
     V_e_hi = syr(d, U_col, V_e_h);
-    //gsl_blas_dsyr(CblasUpper, d, &U_col.vector, V_e_hi);
-    set_col2(U_l, i, U_col);
   }
 
   // Copy the upper part to lower part.
@@ -3417,8 +3415,9 @@ double EigenDecomp(DMatrix G, ref DMatrix U, ref DMatrix eval,
   lapack_eigen_symmv(G, eval, U, flag_largematrix);
   // Calculate track_G=mean(diag(G)).
   double d = 0.0;
-  for (size_t i = 0; i < eval.size; ++i)
+  for (size_t i = 0; i < eval.size; ++i){
     d += eval.elements[i];
+  }
 
   d /= to!double(eval.size);
   return d;

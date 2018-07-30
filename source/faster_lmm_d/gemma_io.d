@@ -41,8 +41,8 @@ alias Tuple!(int[], "indicator_snp", SNPINFO[], "snpInfo") Geno_result;
 
 // Read files: obtain ns_total, ng_total, ns_test, ni_test.
 void read_all_files() {
-  string file_mcat, file_cat, file_wcat, file_wsnp, file_mk, file_epm, 
-         file_bfile, file_snps, file_geno, file_pheno, file_ksnps, file_ebv, 
+  string file_mcat, file_cat, file_wcat, file_wsnp, file_mk, file_epm,
+         file_bfile, file_snps, file_geno, file_pheno, file_ksnps, file_ebv,
          file_gxe, file_weight, file_cvt, file_anno, file_log, file_mbfile,
          file_mgeno, file_gene, file_read;
   size_t[string] mapRS2cat, mapRS2wcat, mapRS2bp;
@@ -651,7 +651,7 @@ bool ReadFile_geno(const string file_geno, ref int[] indicator_idv,
 
 // Read bimbam mean genotype file, the first time, to obtain #SNPs for
 // analysis (ns_test) and total #SNP (ns_total).
-Geno_result ReadFile_geno1(const string geno_fn, const ulong ni_total, const DMatrix W, const int[] indicator_idv, 
+Geno_result ReadFile_geno1(const string geno_fn, const ulong ni_total, const DMatrix W, const int[] indicator_idv,
                           string[] setSnps, string[string] mapRS2chr, size_t[string] mapRS2bp, double[string] mapRS2cM){
 
   writeln("ReadFile_geno", geno_fn);
@@ -986,7 +986,8 @@ Geno_result readfile_bed(const string file_bed, const string[] setSnps,
     c_idv = 0;
     genotype_miss = zeros_dmatrix(genotype_miss.shape[0], genotype_miss.shape[1]);
     for (size_t i = 0; i < n_bit; ++i) {
-      auto b = BitArray(8, cast(ulong*)infile.rawRead(new char[1]));
+      BitArray b = BitArray(8, cast(ulong*)infile.rawRead(new char[1]));
+
       // Minor allele homozygous: 2.0; major: 0.0;
       for (size_t j = 0; j < 4; ++j) {
         if ((i == (n_bit - 1)) && c == ni_total) {
@@ -1061,8 +1062,8 @@ Geno_result readfile_bed(const string file_bed, const string[] setSnps,
       }
     }
 
-    DMatrix Wtx = matrix_mult(WT, genotype);
-    DMatrix WtWiWtx = matrix_mult(WtWi, Wtx);
+    DMatrix Wtx = matrix_mult(WT, genotype.T); // NOTE: important
+    DMatrix WtWiWtx = matrix_mult(WtWi.T, Wtx);
     v_x = vector_ddot(genotype, genotype);
     v_w = vector_ddot(Wtx, WtWiWtx);
 
@@ -1580,7 +1581,7 @@ void ReadFile_kin(const string file_kin, ref int[] indicator_idv,
 
       Cov_d = G.accessor(n_id1, n_id2);
       if (Cov_d != 0 && Cov_d != d) {
-        writeln("error! redundant and unequal terms in the 
+        writeln("error! redundant and unequal terms in the
                  kinship file, for id1 = ", id1, " and id2 = ", id2);
         exit(0);
       } else {
