@@ -556,7 +556,6 @@ void MphInitial(const size_t em_iter, const double em_prec,
   writeln("Y", Y.shape);
 
   for (size_t i = 0; i < d_size; i++) {
-    //gsl_vector_const_view
     DMatrix Y_row = get_row(Y, i);
     auto res = calc_lambda('R', eval, Xt, Y_row, l_min, l_max, n_region);
     lambda = res.lambda;
@@ -960,7 +959,7 @@ double MphNR(const char func_name, const size_t max_iter, const double max_prec,
 // Calculate p-value, beta (d by 1 vector) and V(beta).
 double MphCalcP(const DMatrix eval, const DMatrix x_vec, const DMatrix W,
                 const DMatrix Y, const DMatrix V_g, const DMatrix V_e,
-                DMatrix UltVehiY, DMatrix beta, DMatrix Vbeta) {
+                ref DMatrix UltVehiY, ref DMatrix beta, ref DMatrix Vbeta) {
   writeln("in MphCalcP");
   size_t n_size = eval.elements.length, c_size = W.shape[0], d_size = V_g.shape[0];
   size_t dc_size = d_size * c_size;
@@ -1109,7 +1108,7 @@ void MphCalcBeta(const DMatrix eval, const DMatrix W, const DMatrix Y, const DMa
       if (j < i) {
         //gsl_matrix_view
         DMatrix Vbeta_sym = get_sub_dmatrix(Vbeta, j * d_size, i * d_size, d_size, d_size);
-        //gsl_matrix_transpose_memcpy(Vbeta_sub, Vbeta_sym);
+        Vbeta_sub = Vbeta_sym.T;
       } else {
         Qitemp_sub = matrix_mult(Qi_sub, UltVeh);
         Vbeta_sub = matrix_mult(UltVeh, Qitemp_sub);
@@ -1455,16 +1454,14 @@ void Calc_xHiDHixQixHiy_all(const DMatrix xHiDHix_all_g,
   size_t v_size = xHiDHix_all_g.shape[1] / dc_size;
 
   for (size_t i = 0; i < v_size; i++) {
-    //gsl_matrix_const_view
     DMatrix xHiDHix_g = get_sub_dmatrix( xHiDHix_all_g, 0, i * dc_size, dc_size, dc_size);
-    //gsl_matrix_const_view
     DMatrix xHiDHix_e = get_sub_dmatrix( xHiDHix_all_e, 0, i * dc_size, dc_size, dc_size);
 
     DMatrix xHiDHixQixHiy_g = get_col(xHiDHixQixHiy_all_g, i);
     DMatrix xHiDHixQixHiy_e = get_col(xHiDHixQixHiy_all_e, i);
 
-    xHiDHixQixHiy_g = matrix_mult(xHiDHix_g, QixHiy);
-    xHiDHixQixHiy_e = matrix_mult(xHiDHix_e, QixHiy);
+    xHiDHixQixHiy_g = matrix_mult(xHiDHix_g, QixHiy.T);
+    xHiDHixQixHiy_e = matrix_mult(xHiDHix_e, QixHiy.T);
 
     set_col2(xHiDHixQixHiy_all_g, i, xHiDHixQixHiy_g);
     set_col2(xHiDHixQixHiy_all_e, i, xHiDHixQixHiy_e);
@@ -1658,9 +1655,7 @@ void Calc_yPDPDPy(const DMatrix eval, const DMatrix Hi, const DMatrix xHi,
   yPDPDPy_ge += d;
 
   // Eighth part: - (yHix)Qi(xHiDHix)Qi(xHiDHix)Qi(xHiy).
-  //gsl_vector_const_view
   DMatrix QixHiDHixQixHiy_g1 = get_col(QixHiDHixQixHiy_all_g, v1);
-  //gsl_vector_const_view
   DMatrix QixHiDHixQixHiy_e1 = get_col(QixHiDHixQixHiy_all_e, v1);
 
   d = vector_ddot(QixHiDHixQixHiy_g1, xHiDHixQixHiy_g2);
@@ -2588,7 +2583,7 @@ void UpdateRL_B(const DMatrix xHiy, const DMatrix Qi, ref DMatrix UltVehiB) {
 }
 
 void UpdateU(const DMatrix OmegaE, const DMatrix UltVehiY,
-             const DMatrix UltVehiBX, DMatrix UltVehiU) {
+             const DMatrix UltVehiBX, ref DMatrix UltVehiU) {
   //gsl_matrix_memcpy(UltVehiU, UltVehiY);
   UltVehiU = subtract_dmatrix(UltVehiU, UltVehiBX);
   UltVehiU = slow_multiply_dmatrix(UltVehiU, OmegaE);
@@ -2597,7 +2592,7 @@ void UpdateU(const DMatrix OmegaE, const DMatrix UltVehiY,
 
 
 void UpdateE(const DMatrix UltVehiY, const DMatrix UltVehiBX,
-             const DMatrix UltVehiU, DMatrix UltVehiE) {
+             const DMatrix UltVehiU, ref DMatrix UltVehiE) {
   //gsl_matrix_memcpy(UltVehiE, UltVehiY);
   UltVehiE = subtract_dmatrix(UltVehiE, UltVehiBX);
   UltVehiE = subtract_dmatrix(UltVehiE, UltVehiU);
@@ -2607,7 +2602,7 @@ void UpdateE(const DMatrix UltVehiY, const DMatrix UltVehiBX,
 
 void UpdateV(const DMatrix eval, const DMatrix U, const DMatrix E,
              const DMatrix Sigma_uu, const DMatrix Sigma_ee,
-             DMatrix V_g, DMatrix V_e) {
+             ref DMatrix V_g, ref DMatrix V_e) {
   size_t n_size = eval.size, d_size = U.shape[0];
 
   V_g = zeros_dmatrix(V_g.shape[0], V_g.shape[1]);
@@ -2968,18 +2963,13 @@ void Calc_tracePDPD(const DMatrix eval, const DMatrix Qi,
 
   // Calculate the first part: trace(HiDHiD).
   Calc_traceHiDHiD(eval, Hi, i1, j1, i2, j2, tPDPD_gg, tPDPD_ee, tPDPD_ge);
-  //exit(0);
 
   // Calculate the second and third parts:
   // -trace(HixQixHiDHiD) - trace(HiDHixQixHiD)
   for (size_t i = 0; i < dc_size; i++) {
-    //gsl_vector_const_view
     DMatrix Qi_row = get_row(Qi, i);
-    //gsl_vector_const_view
     DMatrix xHiDHiDHix_gg_col = get_col(xHiDHiDHix_all_gg, (v1 * v_size + v2) * dc_size + i);
-    //gsl_vector_const_view
     DMatrix xHiDHiDHix_ee_col = get_col(xHiDHiDHix_all_ee, (v1 * v_size + v2) * dc_size + i);
-    //gsl_vector_const_view
     DMatrix xHiDHiDHix_ge_col = get_col(xHiDHiDHix_all_ge, (v1 * v_size + v2) * dc_size + i);
 
     d = vector_ddot(Qi_row, xHiDHiDHix_gg_col);
@@ -2993,18 +2983,12 @@ void Calc_tracePDPD(const DMatrix eval, const DMatrix Qi,
   // Calculate the fourth part: trace(HixQixHiDHixQixHiD).
   for (size_t i = 0; i < dc_size; i++) {
 
-    //gsl_vector_const_view
     DMatrix QixHiDHix_g_fullrow1 = get_row(QixHiDHix_all_g, i);
-    //gsl_vector_const_view
     DMatrix QixHiDHix_e_fullrow1 = get_row(QixHiDHix_all_e, i);
-    //gsl_vector_const_view
     DMatrix QixHiDHix_g_row1 = get_subvector_dmatrix(QixHiDHix_g_fullrow1, v1 * dc_size, dc_size);
-    //gsl_vector_const_view
     DMatrix QixHiDHix_e_row1 = get_subvector_dmatrix(QixHiDHix_e_fullrow1, v1 * dc_size, dc_size);
 
-    //gsl_vector_const_view
     DMatrix QixHiDHix_g_col2 = get_col(QixHiDHix_all_g, v2 * dc_size + i);
-    //gsl_vector_const_view
     DMatrix QixHiDHix_e_col2 = get_col(QixHiDHix_all_e, v2 * dc_size + i);
 
     d = vector_ddot(QixHiDHix_g_row1, QixHiDHix_g_col2);
@@ -3014,6 +2998,8 @@ void Calc_tracePDPD(const DMatrix eval, const DMatrix Qi,
     d = vector_ddot(QixHiDHix_g_row1, QixHiDHix_e_col2);
     tPDPD_ge += d;
   }
+  writeln("tPDPD_gg => ", tPDPD_gg);
+  writeln("tPDPD_ee => ", tPDPD_ee);
 
   return;
 }
@@ -3102,7 +3088,6 @@ void Calc_xHiDHiy(const DMatrix eval, const DMatrix xHi,
   for (size_t k = 0; k < n_size; k++) {
     delta = eval.elements[k];
 
-    //gsl_vector_const_view
     DMatrix xHi_col_i = get_col(xHi, k * d_size + i);
     d = Hiy.accessor(j, k);
 
@@ -3110,7 +3095,6 @@ void Calc_xHiDHiy(const DMatrix eval, const DMatrix xHi,
     xHiDHiy_e = axpy(d, xHi_col_i, xHiDHiy_e);  // daxpy
 
     if (i != j) {
-      //gsl_vector_const_view
       DMatrix xHi_col_j = get_col(xHi, k * d_size + j);
       d = Hiy.accessor(i, k);
 
@@ -3138,9 +3122,7 @@ void Calc_xHiDHix(const DMatrix eval, const DMatrix xHi, const size_t i,
   for (size_t k = 0; k < n_size; k++) {
     delta = eval.elements[k];
 
-    //gsl_vector_const_view
     DMatrix xHi_col_i = get_col(xHi, k * d_size + i);
-    //gsl_vector_const_view
     DMatrix xHi_col_j = get_col(xHi, k * d_size + j);
 
     mat_dcdc = zeros_dmatrix(mat_dcdc.shape[0], mat_dcdc.shape[1]); //check
@@ -3181,9 +3163,7 @@ void Calc_xHiDHiDHiy(const DMatrix eval, const DMatrix Hi,
   for (size_t k = 0; k < n_size; k++) {
     delta = eval.elements[k];
 
-    //gsl_vector_const_view
     DMatrix xHi_col_i = get_col(xHi, k * d_size + i1);
-    //gsl_vector_const_view
     DMatrix xHi_col_j = get_col(xHi, k * d_size + j1);
 
     d_Hiy_i = Hiy.accessor(i2, k);
@@ -3241,18 +3221,14 @@ void Calc_xHiDHiDHix(const DMatrix eval, const DMatrix Hi,
 
   double delta, d_Hi_i1i2, d_Hi_i1j2, d_Hi_j1i2, d_Hi_j1j2;
 
-  DMatrix mat_dcdc; // = gsl_matrix_alloc(dc_size, dc_size);
+  DMatrix mat_dcdc = zeros_dmatrix(dc_size, dc_size);
 
   for (size_t k = 0; k < n_size; k++) {
     delta = eval.elements[k];
 
-    //gsl_vector_const_view
     DMatrix xHi_col_i1 = get_col(xHi, k * d_size + i1);
-    //gsl_vector_const_view
     DMatrix xHi_col_j1 = get_col(xHi, k * d_size + j1);
-    //gsl_vector_const_view
     DMatrix xHi_col_i2 = get_col(xHi, k * d_size + i2);
-    //gsl_vector_const_view
     DMatrix xHi_col_j2 = get_col(xHi, k * d_size + j2);
 
     d_Hi_i1i2 = Hi.accessor(i1, k * d_size + i2);
@@ -3352,7 +3328,7 @@ void Calc_yHiDHiy(const DMatrix eval, const DMatrix Hiy, const size_t i,
 
 void Calc_yHiDHiDHiy(const DMatrix eval, const DMatrix Hi,
                      const DMatrix Hiy, const size_t i1, const size_t j1,
-                     const size_t i2, const size_t j2, double yHiDHiDHiy_gg,
+                     const size_t i2, const size_t j2, ref double yHiDHiDHiy_gg,
                      ref double yHiDHiDHiy_ee, ref double yHiDHiDHiy_ge) {
   yHiDHiDHiy_gg = 0.0;
   yHiDHiDHiy_ee = 0.0;
@@ -3412,6 +3388,7 @@ void Calc_yHiDHiDHiy(const DMatrix eval, const DMatrix Hi,
 // eigen trace and values in U and eval (eigenvalues).
 double EigenDecomp(DMatrix G, ref DMatrix U, ref DMatrix eval,
                    const size_t flag_largematrix) {
+  writeln("in EigenDecomp");
   lapack_eigen_symmv(G, eval, U, flag_largematrix);
   // Calculate track_G=mean(diag(G)).
   double d = 0.0;
@@ -3427,6 +3404,7 @@ double EigenDecomp(DMatrix G, ref DMatrix U, ref DMatrix eval,
 // negative eigenvalues remain a warning is issued.
 double EigenDecomp_Zeroed(DMatrix G, ref DMatrix U, ref DMatrix eval,
                           const size_t flag_largematrix) {
+  writeln("in EigenDecomp_Zeroed");
   EigenDecomp(G,U,eval,flag_largematrix);
   auto d = 0.0;
   int count_zero_eigenvalues = 0;
