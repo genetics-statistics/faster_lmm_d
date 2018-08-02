@@ -3429,3 +3429,759 @@ double EigenDecomp_Zeroed(DMatrix G, ref DMatrix U, ref DMatrix eval,
 
   return d;
 }
+
+
+
+unittest{
+  DMatrix eval = DMatrix([1,2], [24, 6]);
+  DMatrix D_l = DMatrix([1,2], [11, 9]);
+  DMatrix X = DMatrix([2,2], [110, 21, 15, 77]);
+  DMatrix Qi = zeros_dmatrix(2,2);
+  double logdet_qi = CalcQi(eval, D_l, X, Qi);
+  //assert(Qi = DMatrix([],[]));
+
+  size_t flag_largematrix = 0;
+  DMatrix G = DMatrix([2,2], [818, 77, 45, 11]);
+  //double zeroed =  EigenDecomp_Zeroed(G, X,  eval, flag_largematrix);
+  //assert(eval == DMatrix([], []));
+  //assert(zeroed == 19);
+}
+
+unittest{
+  size_t em_iter;
+  double em_prec;
+  size_t nr_iter;
+  double nr_prec;
+  DMatrix eval;
+  DMatrix X;
+  DMatrix Y;
+  double l_min;
+  double l_max;
+  size_t n_region;
+  DMatrix V_g;
+  DMatrix V_e;
+  DMatrix B;
+
+  //MphInitial(em_iter, em_prec, nr_iter, nr_prec, eval, X, Y, l_min, l_max, n_region, V_g, V_e, B);
+  //assert(V_g == DMatrix([], []));
+  //assert(V_e == DMatrix([], []));
+  //assert(B == DMatrix([], []));
+
+}
+
+unittest{
+
+  char func_name;
+  size_t max_iter;
+  double max_prec;
+  DMatrix eval;
+  DMatrix X;
+  DMatrix Y;
+  DMatrix U_hat;
+  DMatrix E_hat;
+  DMatrix OmegaU;
+  DMatrix OmegaE;
+  DMatrix UltVehiY;
+  DMatrix UltVehiBX;
+  DMatrix UltVehiU;
+  DMatrix UltVehiE;
+  DMatrix V_g;
+  DMatrix V_e;
+  DMatrix B;
+
+  //MphEM(func_name, max_iter, max_prec, eval, X, Y, U_hat, E_hat, OmegaU, OmegaE, UltVehiY, UltVehiBX, UltVehiU,  UltVehiE, V_g, V_e, B);
+  //assert(U_hat);
+  //assert(E_hat);
+  //assert(OmegaU);
+  //assert(OmegaE);
+  //assert(UltVehiY);
+  //assert(UltVehiBX);
+  //assert(UltVehiU);
+  //assert(UltVehiE);
+  //assert(V_g);
+  //assert(V_e);
+  //assert(B);
+
+}
+
+unittest{
+
+  char func_name;
+  size_t max_iter;
+  double max_prec;
+  DMatrix eval;
+  DMatrix X;
+  DMatrix Y;
+  DMatrix Hi_all;
+  DMatrix xHi_all;
+  DMatrix Hiy_all;
+  DMatrix V_g;
+  DMatrix V_e;
+  DMatrix Hessian_inv;
+  double crt_a;
+  double crt_b;
+  double crt_c;
+
+  //double mphnr = MphNR(func_name, max_iter, max_prec, eval, X, Y, Hi_all,  xHi_all, Hiy_all, V_g, V_e, Hessian_inv, crt_a, crt_b, crt_c);
+  //assert(Hi_all);
+  //assert(xHi_all);
+  //assert(Hiy_all);
+  //assert(V_g);
+  //assert(V_e);
+  //assert(Hessian_inv);
+  //assert(crt_a);
+  //assert(crt_b);
+  //assert(crt_c);
+  //assert(mphnr);
+
+}
+
+unittest{
+
+  DMatrix eval;
+  DMatrix x_vec;
+  DMatrix W;
+  DMatrix Y;
+  DMatrix V_g;
+  DMatrix V_e;
+  DMatrix UltVehiY;
+  DMatrix beta;
+  DMatrix Vbeta;
+
+  //double mph_p = MphCalcP(eval, x_vec, W, Y, V_g, V_e, UltVehiY, beta,  Vbeta);
+  //assert(UltVehiY);
+  //assert(beta);
+  //assert(Vbeta);
+  //assert(mph_p);
+
+}
+
+unittest{
+
+  DMatrix eval;
+  DMatrix W;
+  DMatrix Y;
+  DMatrix V_g;
+  DMatrix V_e;
+  DMatrix UltVehiY;
+  DMatrix B;
+  DMatrix se_B;
+
+
+  //MphCalcBeta(eval, W, Y, V_g, V_e, UltVehiY, B, se_B);
+  //assert(UltVehiY);
+  //assert(B);
+  //assert(se_B);
+
+}
+
+unittest{
+
+  char func_name = 'L';
+  DMatrix eval;
+  DMatrix Qi;
+  DMatrix Hi;
+  DMatrix xHi;
+  DMatrix Hiy;
+  DMatrix QixHiy;
+  DMatrix gradient;
+  DMatrix Hessian_inv;
+  double crt_a = 0;
+  double crt_b = 0;
+  double crt_c = 0;
+
+  //CalcDev(func_name, eval, Qi, Hi, xHi, Hiy, QixHiy, gradient, Hessian_inv, crt_a, crt_b, crt_c);
+  //assert(gradient = DMatrix([], []));
+  //assert(Hessian_inv = DMatrix([], [])),
+  //assert(crt_a == 0);
+  //assert(crt_b == 0);
+  //assert(crt_c == 0);
+}
+
+unittest{
+
+  DMatrix eval;
+  DMatrix xHi;
+  DMatrix Hiy;
+  DMatrix xHiDHiy_all_g;
+  DMatrix xHiDHiy_all_e;
+
+  //Calc_xHiDHiy_all(eval, xHi, Hiy, xHiDHiy_all_g, xHiDHiy_all_e);
+  //assert(xHiDHiy_all_g = DMatrix([], []));
+  //assert(xHiDHiy_all_e = DMatrix([], []));
+}
+
+unittest{
+
+  DMatrix eval;
+  DMatrix xHi;
+  DMatrix xHiDHix_all_g;
+  DMatrix xHiDHix_all_e;
+
+  //Calc_xHiDHix_all(eval, xHi, xHiDHix_all_g, xHiDHix_all_e);
+  //assert(xHiDHix_all_g);
+  //assert(xHiDHix_all_e);
+}
+
+unittest{
+
+  size_t v_size;
+  DMatrix eval;
+  DMatrix Hi;
+  DMatrix xHi;
+  DMatrix Hiy;
+  DMatrix xHiDHiDHiy_all_gg;
+  DMatrix xHiDHiDHiy_all_ee;
+  DMatrix xHiDHiDHiy_all_ge;
+
+  //Calc_xHiDHiDHiy_all(v_size, eval, Hi, xHi, Hiy, xHiDHiDHiy_all_gg, xHiDHiDHiy_all_ee, xHiDHiDHiy_all_ge);
+  //assert(xHiDHiDHiy_all_gg);
+  //assert(xHiDHiDHiy_all_ee);
+  //assert(xHiDHiDHiy_all_ge);
+}
+
+unittest{
+
+  size_t v_size;
+  DMatrix eval;
+  DMatrix Hi;
+  DMatrix xHi;
+  DMatrix xHiDHiDHix_all_gg;
+  DMatrix xHiDHiDHix_all_ee;
+  DMatrix xHiDHiDHix_all_ge;
+
+  //Calc_xHiDHiDHix_all(v_size, eval, Hi, xHi, xHiDHiDHix_all_gg, xHiDHiDHix_all_ee, xHiDHiDHix_all_ge);
+  //assert(xHiDHiDHix_all_gg);
+  //assert(xHiDHiDHix_all_ee);
+  //assert(xHiDHiDHix_all_ge);
+
+}
+
+unittest{
+
+  DMatrix xHiDHix_all_g;
+  DMatrix xHiDHix_all_e;
+  DMatrix QixHiy;
+  DMatrix xHiDHixQixHiy_all_g;
+  DMatrix xHiDHixQixHiy_all_e;
+
+  //Calc_xHiDHixQixHiy_all(xHiDHix_all_g, xHiDHix_all_e, QixHiy, xHiDHixQixHiy_all_g, xHiDHixQixHiy_all_e);
+  //assert(xHiDHixQixHiy_all_g);
+  //assert(xHiDHixQixHiy_all_e);
+}
+
+unittest{
+
+  DMatrix Qi;
+  DMatrix vec_all_g;
+  DMatrix vec_all_e;
+  DMatrix Qivec_all_g;
+  DMatrix Qivec_all_e;
+
+  //Calc_QiVec_all(Qi, vec_all_g, vec_all_e, Qivec_all_g, Qivec_all_e);
+  //assert(Qivec_all_g);
+  //assert(Qivec_all_e);
+}
+
+unittest{
+
+  DMatrix Qi;
+  DMatrix mat_all_g;
+  DMatrix mat_all_e;
+  DMatrix Qimat_all_g;
+  DMatrix Qimat_all_e;
+
+  //Calc_QiMat_all(Qi, mat_all_g, mat_all_e, Qimat_all_g, Qimat_all_e);
+  //assert(Qimat_all_g);
+  //assert(Qimat_all_e);
+
+}
+
+unittest{
+
+  DMatrix eval;
+  DMatrix Hiy;
+  DMatrix QixHiy;
+  DMatrix xHiDHiy_all_g;
+  DMatrix xHiDHiy_all_e;
+  DMatrix xHiDHixQixHiy_all_g;
+  DMatrix xHiDHixQixHiy_all_e;
+  size_t i;
+  size_t j;
+  double yPDPy_g;
+  double yPDPy_e;
+
+  //Calc_yPDPy(eval, Hiy, QixHiy, xHiDHiy_all_g, xHiDHiy_all_e, xHiDHixQixHiy_all_g, xHiDHixQixHiy_all_e, i, j, yPDPy_g, yPDPy_e);
+  //assert(yPDPy_e);
+  //assert(yPDPy_g);
+
+}
+
+unittest{
+
+  DMatrix eval;
+  DMatrix Hi;
+  DMatrix xHi;
+  DMatrix Hiy;
+  DMatrix QixHiy;
+  DMatrix xHiDHiy_all_g;
+  DMatrix xHiDHiy_all_e;
+  DMatrix QixHiDHiy_all_g;
+  DMatrix QixHiDHiy_all_e;
+  DMatrix xHiDHixQixHiy_all_g;
+  DMatrix xHiDHixQixHiy_all_e;
+  DMatrix QixHiDHixQixHiy_all_g;
+  DMatrix QixHiDHixQixHiy_all_e;
+  DMatrix xHiDHiDHiy_all_gg;
+  DMatrix xHiDHiDHiy_all_ee;
+  DMatrix xHiDHiDHiy_all_ge;
+  DMatrix xHiDHiDHix_all_gg;
+  DMatrix xHiDHiDHix_all_ee;
+  DMatrix xHiDHiDHix_all_ge;
+  size_t i1;
+  size_t j1;
+  size_t i2;
+  size_t j2;
+  double yPDPDPy_gg, yPDPDPy_ee, yPDPDPy_ge;
+  //Calc_yPDPDPy(eval, Hi, xHi, Hiy, QixHiy, xHiDHiy_all_g, xHiDHiy_all_e,
+  //             QixHiDHiy_all_g, QixHiDHiy_all_e, xHiDHixQixHiy_all_g,
+  //             xHiDHixQixHiy_all_e, QixHiDHixQixHiy_all_g, QixHiDHixQixHiy_all_e,
+  //             xHiDHiDHiy_all_gg,xHiDHiDHiy_all_ee, xHiDHiDHiy_all_ge,
+  //             xHiDHiDHix_all_gg, xHiDHiDHix_all_ee, xHiDHiDHix_all_ge,
+  //             i1, j1, i2, j2, yPDPDPy_gg, yPDPDPy_ee, yPDPDPy_ge);
+  //assert(yPDPDPy_gg);
+  //assert(yPDPDPy_ee);
+  //assert(yPDPDPy_ge);
+
+}
+
+unittest{
+
+  DMatrix Hessian_inv;
+  DMatrix Qi;
+  DMatrix QixHiDHix_all_g;
+  DMatrix QixHiDHix_all_e;
+  DMatrix xHiDHiDHix_all_gg;
+  DMatrix xHiDHiDHix_all_ee;
+  DMatrix xHiDHiDHix_all_ge;
+  size_t d_size;
+  double crt_a, crt_b, crt_c;
+
+  //CalcCRT(Hessian_inv, Qi, QixHiDHix_all_g, QixHiDHix_all_e, xHiDHiDHix_all_gg, xHiDHiDHix_all_ee,
+  //        xHiDHiDHix_all_ge, d_size, crt_a, crt_b, crt_c);
+  //assert(crt_a);
+  //assert(crt_b);
+  //assert(crt_c);
+
+}
+
+unittest{
+
+  DMatrix Hessian_inv;
+  DMatrix gradient;
+  double step_scale;
+  DMatrix V_g;
+  DMatrix V_e;
+
+  //UpdateVgVe(Hessian_inv, gradient, step_scale, V_g, V_e);
+  //assert(V_g);
+  //assert(V_e);
+
+}
+
+unittest{
+
+  size_t mode;
+  size_t d_size;
+  double p_value;
+  double crt_a, crt_b, crt_c;
+
+  //double pcrt = PCRT(mode, d_size, p_value, crt_a, crt_b, crt_c);
+  //assert(pcrt == 0);
+
+}
+
+unittest{
+
+  DMatrix eval;
+  DMatrix xHiy;
+  DMatrix D_l;
+  DMatrix UltVehiY;
+  DMatrix Qi;
+
+  //double logl = MphCalcLogL(eval, xHiy, D_l, UltVehiY, Qi);
+  //assert(logl == 0);
+
+}
+
+unittest{
+
+  DMatrix eval;
+  DMatrix D_l;
+  DMatrix X;
+  DMatrix Qi;
+
+  //double qi = CalcQi(eval, D_l, X, Qi);
+  //assert(qi == 0);
+  //assert(Qi == DMatrix([], []));
+
+}
+
+unittest{
+
+  DMatrix eval;
+  DMatrix D_l;
+  DMatrix X;
+  DMatrix UltVehiY;
+  DMatrix xHiy;
+
+  //CalcXHiY(eval, D_l, X, UltVehiY, xHiy);
+  //assert(xHiy == DMatrix([], []));
+
+}
+
+unittest{
+
+  DMatrix eval;
+  DMatrix D_l;
+  DMatrix OmegaU;
+  DMatrix OmegaE;
+
+  //CalcOmega(eval, D_l, OmegaU,  OmegaE);
+  //assert(OmegaU);
+  //assert(OmegaE);
+
+}
+
+unittest{
+
+  DMatrix X;
+  DMatrix XXti;
+  DMatrix UltVehiY;
+  DMatrix UltVehiU;
+  DMatrix UltVehiBX;
+  DMatrix UltVehiB;
+
+  //UpdateL_B(X, XXti, UltVehiY, UltVehiU, UltVehiBX, UltVehiB);
+  //assert(UltVehiBX);
+  //assert(UltVehiB);
+
+}
+
+unittest{
+
+  DMatrix xHiy;
+  DMatrix Qi;
+  DMatrix UltVehiB;
+  //UpdateRL_B(xHiy, Qi, UltVehiB);
+  //assert(UltVehiB);
+
+}
+
+unittest{
+
+  DMatrix OmegaE;
+  DMatrix UltVehiY;
+  DMatrix UltVehiBX;
+  DMatrix UltVehiU;
+
+  //UpdateU(OmegaE, UltVehiY, UltVehiBX, UltVehiU);
+  //assert(UltVehiU);
+
+}
+
+unittest{
+
+  DMatrix UltVehiY;
+  DMatrix UltVehiBX;
+  DMatrix UltVehiU;
+  DMatrix UltVehiE;
+
+  //UpdateE(UltVehiY, UltVehiBX, UltVehiU, UltVehiE);
+  //assert(UltVehiE);
+
+}
+
+unittest{
+
+  DMatrix eval;
+  DMatrix U;
+  DMatrix E;
+  DMatrix Sigma_uu;
+  DMatrix Sigma_ee;
+  DMatrix V_g;
+  DMatrix V_e;
+
+  //UpdateV(eval, U, E, Sigma_uu, Sigma_ee, V_g, V_e);
+  //assert(V_g);
+  //assert(V_e);
+
+}
+
+unittest{
+
+  char func_name;
+  DMatrix eval;
+  DMatrix D_l;
+  DMatrix X;
+  DMatrix OmegaU;
+  DMatrix OmegaE;
+  DMatrix UltVeh;
+  DMatrix Qi;
+  DMatrix Sigma_uu;
+  DMatrix Sigma_ee;
+
+  //CalcSigma(func_name, eval, D_l,  X, OmegaU,  OmegaE,
+               //UltVeh, Qi, Sigma_uu, Sigma_ee);
+  //assert(Sigma_uu);
+  //assert(Sigma_ee);
+
+}
+
+unittest{
+
+  DMatrix eval;
+  DMatrix X;
+  DMatrix V_g;
+  DMatrix V_e;
+  DMatrix Hi_all;
+  DMatrix Qi;
+  double logdet_H, logdet_Q;
+
+  //CalcHiQi(eval, X, V_g,  V_e, Hi_all, Qi, logdet_H, logdet_Q);
+  //assert(Qi);
+  //assert(logdet_H);
+  //assert(logdet_Q);
+
+}
+
+unittest{
+
+  DMatrix Y;
+  DMatrix Hi_all;
+  DMatrix Hiy_all;
+  //Calc_Hiy_all(Y, Hi_all, Hiy_all);
+  //assert(Hiy_all);
+
+}
+
+unittest{
+
+  DMatrix X;
+  DMatrix Hi_all;
+  DMatrix xHi_all;
+  //Calc_xHi_all(X, Hi_all, xHi_all);
+  //assert(xHi_all);
+
+}
+
+unittest{
+
+  DMatrix Y;
+  DMatrix Hiy_all;
+  //double yHiy = Calc_yHiy(Y, Hiy_all);
+  //assert(yHiy);
+
+}
+
+unittest{
+
+  DMatrix Y;
+  DMatrix xHi;
+  DMatrix xHiy;
+  //Calc_xHiy(Y, xHi, xHiy);
+  //assert(xHiy);
+
+}
+
+unittest{
+
+  DMatrix V_g;
+  DMatrix V_e;
+  DMatrix D_l;
+  DMatrix UltVeh;
+  DMatrix UltVehi;
+  //double val = EigenProc(V_g, V_e, D_l, UltVeh, UltVehi);
+  //assert(val);
+  //assert(D_l);
+  //assert(UltVeh);
+  //assert(UltVehi);
+
+}
+
+unittest{
+
+  DMatrix eval;
+  DMatrix Qi;
+  DMatrix Hi;
+  DMatrix xHiDHix_all_g;
+  DMatrix xHiDHix_all_e;
+  size_t i;
+  size_t j;
+  double tPD_g, tPD_e;
+  //Calc_tracePD(eval, Qi, Hi, xHiDHix_all_g, xHiDHix_all_e, i, j, tPD_g, tPD_e);
+  //assert(tPD_g);
+  //assert(tPD_e);
+
+}
+
+unittest{
+
+  DMatrix eval;
+  DMatrix Qi;
+  DMatrix Hi;
+  DMatrix xHi;
+  DMatrix QixHiDHix_all_g;
+  DMatrix QixHiDHix_all_e;
+  DMatrix xHiDHiDHix_all_gg;
+  DMatrix xHiDHiDHix_all_ee;
+  DMatrix xHiDHiDHix_all_ge;
+  size_t i1, j1, i2, j2;
+  double tPDPD_gg, tPDPD_ee, tPDPD_ge;
+
+  //Calc_tracePDPD(eval, Qi, Hi, xHi, QixHiDHix_all_g, QixHiDHix_all_e, xHiDHiDHix_all_gg, xHiDHiDHix_all_ee, xHiDHiDHix_all_ge,
+  //                i1, j1, i2, j2, tPDPD_gg, tPDPD_ee, tPDPD_ge);
+  //assert(tPDPD_gg);
+  //assert(tPDPD_ee);
+  //assert(tPDPD_ge);
+
+}
+
+unittest{
+
+  DMatrix eval;
+  DMatrix Hi;
+  size_t i;
+  size_t j;
+  double tHiD_g;
+  double tHiD_e;
+  //Calc_traceHiD(eval, Hi, i, j, tHiD_g, tHiD_e);
+
+  //assert(tHiD_g);
+  //assert(tHiD_e);
+
+}
+
+unittest{
+
+  DMatrix eval;
+  DMatrix Hi;
+  size_t i1;
+  size_t j1;
+  size_t i2;
+  size_t j2;
+  double tHiDHiD_gg, tHiDHiD_ee, tHiDHiD_ge;
+
+  //Calc_traceHiDHiD(eval, Hi, i1, j1, i2, j2, tHiDHiD_gg, tHiDHiD_ee, tHiDHiD_ge);
+  //assert(tHiDHiD_gg);
+  //assert(tHiDHiD_ee);
+  //assert(tHiDHiD_ge);
+
+}
+
+unittest{
+
+  DMatrix eval;
+  DMatrix xHi;
+  DMatrix Hiy;
+  size_t i;
+  size_t j;
+  DMatrix xHiDHiy_g;
+  DMatrix xHiDHiy_e;
+
+  //Calc_xHiDHiy(eval, xHi, Hiy, i, j, xHiDHiy_g, xHiDHiy_e);
+  //assert(xHiDHiy_g);
+  //assert(xHiDHiy_e);
+
+}
+
+unittest{
+
+  DMatrix eval;
+  DMatrix xHi;
+  size_t i;
+  size_t j;
+  DMatrix xHiDHix_g;
+  DMatrix xHiDHix_e;
+
+  //Calc_xHiDHix(eval, xHi, i, j, xHiDHix_g, xHiDHix_e);
+  //assert(xHiDHix_g);
+  //assert(xHiDHix_e);
+
+}
+
+unittest{
+
+  DMatrix eval;
+  DMatrix Hi;
+  DMatrix xHi;
+  DMatrix Hiy;
+  size_t i1;
+  size_t j1;
+  size_t i2;
+  size_t j2;
+  DMatrix xHiDHiDHiy_gg;
+  DMatrix xHiDHiDHiy_ee;
+  DMatrix xHiDHiDHiy_ge;
+
+  //Calc_xHiDHiDHiy(eval, Hi, xHi, Hiy, i1, j1, i2, j2, xHiDHiDHiy_gg, xHiDHiDHiy_ee, xHiDHiDHiy_ge);
+  //assert(xHiDHiDHiy_gg);
+  //assert(xHiDHiDHiy_ee);
+  //assert(xHiDHiDHiy_ge);
+
+}
+
+unittest{
+
+  DMatrix eval;
+  DMatrix Hi;
+  DMatrix xHi;
+  size_t i1;
+  size_t j1;
+  size_t i2;
+  size_t j2;
+  DMatrix xHiDHiDHix_gg;
+  DMatrix xHiDHiDHix_ee;
+  DMatrix xHiDHiDHix_ge;
+
+  //Calc_xHiDHiDHix(eval, Hi, xHi, i1, j1, i2, j2, xHiDHiDHix_gg, xHiDHiDHix_ee,  xHiDHiDHix_ge);
+  //assert(xHiDHiDHix_gg);
+  //assert(xHiDHiDHix_ee);
+  //assert(xHiDHiDHix_ge);
+
+}
+
+unittest{
+
+  DMatrix eval;
+  DMatrix Hiy;
+  size_t i;
+  size_t j;
+  double yHiDHiy_g;
+  double yHiDHiy_e;
+
+  //Calc_yHiDHiy(eval, Hiy, i, j, yHiDHiy_g, yHiDHiy_e);
+  //assert(yHiDHiy_g);
+  //assert(yHiDHiy_e);
+
+}
+
+unittest{
+
+  DMatrix eval;
+  DMatrix Hi;
+  DMatrix Hiy;
+  size_t i1;
+  size_t j1;
+  size_t i2;
+  size_t j2;
+  double yHiDHiDHiy_gg;
+  double yHiDHiDHiy_ee;
+  double yHiDHiDHiy_ge;
+
+  //Calc_yHiDHiDHiy(eval, Hi, Hiy, i1, j1, i2, j2, yHiDHiDHiy_gg, yHiDHiDHiy_ee, yHiDHiDHiy_ge);
+  //assert(yHiDHiDHiy_gg);
+  //assert(yHiDHiDHiy_ee);
+  //assert(yHiDHiDHiy_ge);
+
+}
