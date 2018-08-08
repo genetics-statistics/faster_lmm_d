@@ -13,6 +13,7 @@ import std.exception: enforce;
 import std.math: sqrt, round;
 import std.stdio;
 import std.typecons; // for Tuples
+import core.stdc.stdlib : exit;
 
 import cblas : gemm, Transpose, Order, Uplo, cblas_ddot, cblas_daxpy, cblas_dger, cblas_dsyr, cblas_dsyrk;
 
@@ -25,8 +26,8 @@ extern (C) {
   int LAPACKE_dgetrf (int matrix_layout, int m, int n, double* a, int lda, int* ipiv);
   double EIGEN_MINVALUE = 1e-10;
   void dsyev_(char* jobz,  char* uplo, int* n, double *a, int* lda, double *w, double *work, int* lwork, int* info);
-  void dsyevr_(char* jobz, char* range, char* uplo, int* n, double *a, int* lda, double *vl, 
-               double *vu, int *il, int *iu, double* abstol, int* m, double *w, double *z, 
+  void dsyevr_(char* jobz, char* range, char* uplo, int* n, double *a, int* lda, double *vl,
+               double *vu, int *il, int *iu, double* abstol, int* m, double *w, double *z,
                int* ldz, int *isuppz, double *work, int* lwork, int *iwork, int *liwork, int* info);
   int LAPACKE_dsyev (int matrix_layout, char jobz, char uplo, int n,
                       double* a, int lda, double* z);
@@ -128,16 +129,16 @@ DMatrix ger(const double alpha, const DMatrix X , const DMatrix Y , const DMatri
 DMatrix syr(const double alpha, const DMatrix X, const DMatrix A ){
   assert(A.rows == A.cols);
   double[] elements = A.elements.dup;
-  cblas_dsyr(Order.RowMajor, Uplo.Upper, to!int(A.rows), alpha, X.elements.ptr, 1, elements.ptr, to!int(A.rows)); 
+  cblas_dsyr(Order.RowMajor, Uplo.Upper, to!int(A.rows), alpha, X.elements.ptr, 1, elements.ptr, to!int(A.rows));
   return DMatrix(A.shape, elements);
 }
 
-//compute a rank-k update of the symmetric matrix C, C = alpha A A^T + beta C 
+//compute a rank-k update of the symmetric matrix C, C = alpha A A^T + beta C
 
 DMatrix syrk(const double alpha, const DMatrix A, double beta, const DMatrix C){
   double[] elements = C.elements.dup();
-  cblas_dsyrk(Order.RowMajor, Uplo.Upper, Transpose.Trans, to!int(C.rows), to!int(A.cols), alpha, A.elements.ptr, to!int(A.rows), beta, elements.ptr, to!int(C.rows)); 
-  return DMatrix(A.shape, elements);
+  cblas_dsyrk(Order.RowMajor, Uplo.Upper, Transpose.NoTrans, to!int(C.rows), to!int(A.cols), alpha, A.elements.ptr, to!int(A.cols), beta, elements.ptr, to!int(C.rows));
+  return DMatrix(C.shape, elements);
 }
 
 /*
@@ -365,7 +366,8 @@ body {
 
 // Eigenvalue decomposition, matrix A is destroyed. Returns eigenvalues in
 // 'eval'. Also returns matrix 'evec' (U).
-void lapack_eigen_symmv(DMatrix A, ref DMatrix eval, ref DMatrix evec, const size_t flag_largematrix) {
+void lapack_eigen_symmv(const DMatrix A_const, ref DMatrix eval, ref DMatrix evec, const size_t flag_largematrix) {
+  DMatrix A = dup_dmatrix(A_const);
   if (flag_largematrix == 1) {
     int N = to!int(A.shape[0]), LDA = to!int(A.shape[0]), INFO, LWORK = -1;
     char JOBZ = 'V', UPLO = 'L';
@@ -383,10 +385,7 @@ void lapack_eigen_symmv(DMatrix A, ref DMatrix eval, ref DMatrix evec, const siz
       return;
     }
 
-    //gsl_matrix_view
-    DMatrix A_sub = get_sub_dmatrix(A, 0, 0, N, N);
-    //gsl_matrix_memcpy(evec, &A_sub.matrix);
-    //gsl_matrix_transpose(evec);
+    evec = get_sub_dmatrix(A, 0, 0, N, N).T;
 
   } else {
     int N = to!int(A.shape[0]), LDA = to!int(A.shape[0]), LDZ = to!int(A.shape[0]), INFO;
@@ -730,4 +729,18 @@ unittest{
   assert(cpu_mat_mult(p, 0, s, 1) == matrix_mult(  p, s.T));
   assert(cpu_mat_mult(p, 1, r, 0) == matrix_mult(p.T,   r));
   assert(cpu_mat_mult(p, 1, q, 1) == matrix_mult(p.T, q.T));
+
+  size_t flag_largematrix = 0;
+  flag_largematrix = 1;
+  DMatrix A_mat = DMatrix([2,2], [101, 78,
+                                  -11, 26]);
+  DMatrix eval = DMatrix([1,2], [1,2]);
+  DMatrix evec = DMatrix([2,2], [1,2, 3, 4]);
+
+  lapack_eigen_symmv(A_mat, eval, evec, flag_largematrix);
+  writeln(A_mat);
+  writeln(eval);
+  writeln(evec);
+  //assert(eval == DMatrix([2,2], [1,2]));
+  //assert(evec == DMatrix([2,2], [1,2]));
 }

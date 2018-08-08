@@ -25,6 +25,7 @@ alias fwrite = std.stdio.write;
 import std.typecons;
 import std.experimental.logger;
 import std.string;
+import std.zlib;
 
 import faster_lmm_d.dmatrix;
 import faster_lmm_d.gemma;
@@ -43,7 +44,7 @@ void lm_run(const string option_snps, const string option_pheno, const string op
 
   writeln("reading pheno " , option_pheno);
   auto pheno = ReadFile_pheno(option_pheno, [1]);
-  
+
   size_t n_cvt;
   int[] indicator_cvt;
 
@@ -60,7 +61,7 @@ void lm_run(const string option_snps, const string option_pheno, const string op
   string[] setSnps = ReadFile_snps(option_snps);
   //writeln(setSnps);
   string[string] mapRS2chr;
-  size_t[string] mapRS2bp; 
+  size_t[string] mapRS2bp;
   double[string] mapRS2cM;
   ReadFile_anno(option_snps, mapRS2chr, mapRS2bp, mapRS2cM);
 
@@ -104,7 +105,7 @@ void lm_run(const string option_snps, const string option_pheno, const string op
   }
 }
 
-void lm_write_files(SUMSTAT[] sumStat, const string file_gene, const SNPINFO[] snpInfo, 
+void lm_write_files(SUMSTAT[] sumStat, const string file_gene, const SNPINFO[] snpInfo,
                     const int[] indicator_snp, const size_t ni_test, const size_t lm_mode) {
   // define later
   string path_out = "";
@@ -163,7 +164,7 @@ void lm_write_files(SUMSTAT[] sumStat, const string file_gene, const SNPINFO[] s
             "\t",
             "se",
             "\t",
-            "p_wald", 
+            "p_wald",
             "\n");
     } else if (lm_mode == 2) {
       fwrite("p_lrt", "\n");
@@ -194,7 +195,7 @@ void lm_write_files(SUMSTAT[] sumStat, const string file_gene, const SNPINFO[] s
         continue;
       }
 
-      fwrite(snpInfo[i].chr, "\t", snpInfo[i].rs_number, "\t", 
+      fwrite(snpInfo[i].chr, "\t", snpInfo[i].rs_number, "\t",
             snpInfo[i].base_position, "\t", snpInfo[i].n_miss, "\t",
             ni_test - snpInfo[i].n_miss, "\t", snpInfo[i].a_minor, "\t",
             snpInfo[i].a_major, "\t", snpInfo[i].maf,"\t");
@@ -249,7 +250,7 @@ double CalcvPv(const DMatrix WtWi, const DMatrix Wty, const DMatrix y) {
 }
 
 // Calculate p-values and beta/se in a linear model.
-alias Tuple!(const double, "beta", const double, "se", const double, "p_wald", 
+alias Tuple!(const double, "beta", const double, "se", const double, "p_wald",
        const double, "p_lrt", const double, "p_score")Pvals;
 
 Pvals LmCalcP(const size_t lm_mode, const double yPwy, const double xPwy,
@@ -261,7 +262,7 @@ Pvals LmCalcP(const size_t lm_mode, const double yPwy, const double xPwy,
   double p_wald = gsl_cdf_fdist_Q(beta * beta / (se_wald * se_wald), 1.0, df);
   double p_score = gsl_cdf_fdist_Q(beta * beta / (se_score * se_score), 1.0, df);
   double p_lrt = gsl_cdf_chisq_Q(to!double(n_size) * (mlog(yPwy) - mlog(yPxy)), 1);
-  double se = (lm_mode == 3 ? se_score : se_wald); 
+  double se = (lm_mode == 3 ? se_score : se_wald);
   return Pvals(beta, se, p_wald, p_lrt, p_score);
 }
 
@@ -275,7 +276,7 @@ void LmCalcP2(const DMatrix WtWi, const DMatrix Wty,
   DMatrix WtWiWtx = matrix_mult(WtWi, Wtx_collect.T);
 
   DMatrix d = matrix_mult(WtWiWtx.T, Wtx_collect.T).get_diagonal; //check shape
-  xPwx = xPwx - d; // subtract_dmatrix 
+  xPwx = xPwx - d; // subtract_dmatrix
   DMatrix d2 = matrix_mult(WtWiWtx.T, Wty);
   xPwy = subtract_dmatrix(xPwy, d2); // subtract_dmatrix_num
 
@@ -291,7 +292,7 @@ void LmCalcP2(const DMatrix WtWi, const DMatrix Wty,
     double p_wald = gsl_cdf_fdist_Q(beta * beta / (se_wald * se_wald), 1.0, df);
     double p_score = gsl_cdf_fdist_Q(beta * beta / (se_score * se_score), 1.0, df);
     double p_lrt = gsl_cdf_chisq_Q(to!double(n_size) * (mlog(yPwy) - mlog(yPxy.elements[i])), 1);
-    double se = (lm_mode == 3 ? se_score : se_wald); 
+    double se = (lm_mode == 3 ? se_score : se_wald);
     sumStat ~= SUMSTAT(beta, se, 0.0, 0.0, p_wald, p_lrt, p_score, -0.0);
   }
   writeln(sumStat[0]);
@@ -332,7 +333,7 @@ void lm_analyze_gene(const string file_gene, const DMatrix W, const DMatrix x) {
 
   for (size_t t = 0; t < ng_total; t++) {
     line = infile.readln();
-   
+
     auto ch_ptr = line.split("\t");
     rs = ch_ptr[0];
 
@@ -367,7 +368,7 @@ SUMSTAT[] lm_analyze_bimbam(const string file_geno, const DMatrix W, const DMatr
                             const size_t ni_test, const size_t ni_total) {
 
   writeln("entered lm_analyze_bimbam");
-  
+
   SUMSTAT[] sumStat;
   SNPINFO[] snpInfo;
 
@@ -392,7 +393,7 @@ SUMSTAT[] lm_analyze_bimbam(const string file_geno, const DMatrix W, const DMatr
   // Start reading genotypes and analyze.
   int t = 0;
   foreach (line; input.byLine) {
-   
+
     if (indicator_snp[t] == 0) {
       t++;
       continue;
@@ -434,7 +435,7 @@ SUMSTAT[] lm_analyze_bimbam(const string file_geno, const DMatrix W, const DMatr
     DMatrix Wtx = matrix_mult(W.T, x);
 
     auto vPv = CalcvPv(WtWi, Wty, Wtx, y, x);
-    auto p = LmCalcP(lm_mode - 50, yPwy, vPv.y, vPv.x, df, W.shape[0]);
+    auto p = LmCalcP(lm_mode, yPwy, vPv.y, vPv.x, df, W.shape[0]);
 
     // Store summary data.
     SUMSTAT SNPs = SUMSTAT(p.beta, p.se, 0.0, 0.0, p.p_wald, p.p_lrt, p.p_score, -0.0);
@@ -460,7 +461,7 @@ SUMSTAT[] lm_analyze_bimbam_batched(const string file_geno, const DMatrix W, con
   }
 
   size_t msize=5000;
-  
+
   SUMSTAT[] sumStat;
   SNPINFO[] snpInfo;
 
@@ -493,7 +494,7 @@ SUMSTAT[] lm_analyze_bimbam_batched(const string file_geno, const DMatrix W, con
   DMatrix Wtx_collect = DMatrix([msize, W.shape[1]], []);
   if(expected_batch_count == batch_count){ msize = total_snps % msize;}
   foreach (line; input.byLine) {
-   
+
     if (indicator_snp[t] == 0) {
       t++;
       continue;
@@ -543,7 +544,7 @@ SUMSTAT[] lm_analyze_bimbam_batched(const string file_geno, const DMatrix W, con
       }
       else{
         LmCalcP2(WtWi, Wty, Wtx_collect, y, x_collect, lm_mode,  yPwy, df, W.shape[0]);
-      } 
+      }
       batch_count++;
       if(expected_batch_count == batch_count){ msize = total_snps % msize;}
       x_collect = DMatrix([msize , ni_test],[]);
@@ -563,10 +564,227 @@ SUMSTAT[] lm_analyze_bimbam_batched(const string file_geno, const DMatrix W, con
   return sumStat;
 }
 
+void Analyzebgen( const string file_oxford, const DMatrix W, const DMatrix y,
+                  const DMatrix WtWi, const DMatrix Wty,
+                  const int[] indicator_idv, const int[] indicator_snp,
+                  const size_t ni_test, const size_t ni_total){
+
+  string file_bgen = file_oxford ~ ".bgen";
+  File infile = File(file_bgen);
+
+  SUMSTAT[] sumStat;
+
+  string line;
+  char *ch_ptr;
+
+  int lm_mode = 0;
+  double beta=0, se=0, p_wald=0, p_lrt=0, p_score=0;
+  int n_miss, c_phen;
+  double geno, x_mean;
+
+  //calculate some basic quantities
+  double yPwy, xPwy, xPwx;
+  double df= to!double(W.shape[0] - W.shape[1] - 1.0);
+
+  DMatrix x =  zeros_dmatrix(1, W.shape[0]);
+  DMatrix x_miss = zeros_dmatrix(1, W.shape[1]);
+
+  DMatrix WtW = zeros_dmatrix(W.shape[1], W.shape[1]);
+  DMatrix Wtx = zeros_dmatrix(1, W.shape[1]);
+
+  WtW = matrix_mult(W.T, W);
+
+  yPwy = CalcvPv(WtWi, Wty, y);
+
+  // read in header
+  uint* bgen_snp_block_offset;
+  uint* bgen_header_length;
+  uint* bgen_nsamples;
+  uint* bgen_nsnps;
+  uint* bgen_flags;
+
+  //infile.read(reinterpret_cast<char*>(&bgen_snp_block_offset),4);
+  bgen_snp_block_offset = cast(uint*)infile.rawRead(new char[4]);
+
+  //infile.read(reinterpret_cast<char*>(&bgen_header_length),4);
+  bgen_header_length = cast(uint*)infile.rawRead(new char[4]);
+  bgen_snp_block_offset -= 4;
+
+  //infile.read(reinterpret_cast<char*>(&bgen_nsnps),4);
+  bgen_nsnps = cast(uint*)infile.rawRead(new char[4]);
+  bgen_snp_block_offset -= 4;
+
+  //infile.read(reinterpret_cast<char*>(&bgen_nsamples),4);
+  bgen_nsamples = cast(uint*)infile.rawRead(new char[4]);
+  bgen_snp_block_offset-=4;
+
+  //infile.ignore( 4 + bgen_header_length - 20);
+  size_t ignore = 4 + cast(size_t)bgen_header_length - 20; // check
+  infile.rawRead( new char[ignore]);
+
+  bgen_snp_block_offset -= ignore;
+
+  //infile.read(reinterpret_cast<char*>(&bgen_flags),4);
+  bgen_flags = cast(uint*)infile.rawRead(new char[4]);
+  bgen_snp_block_offset -= 4;
+
+  bool CompressedSNPBlocks; // check TODO  = bgen_flags&0x1;
+//  bool LongIds=bgen_flags&0x4; // Prev. commented
+
+  //infile.ignore(bgen_snp_block_offset);
+  infile.rawRead(new char[cast(size_t)bgen_snp_block_offset]);
+
+  double bgen_geno_prob_AA,
+         bgen_geno_prob_AB,
+         bgen_geno_prob_BB,
+         bgen_geno_prob_non_miss;
+
+  uint* bgen_N;
+  ushort* bgen_LS;
+  ushort* bgen_LR;
+  ushort* bgen_LC;
+  uint* bgen_SNP_pos;
+  uint* bgen_LA;
+  string bgen_A_allele;
+  uint* bgen_LB;
+  string bgen_B_allele;
+  uint* bgen_P;
+  size_t unzipped_data_size;
+  string id;
+  string rs;
+  string chr;
+  writeln("Warning: WJA hard coded SNP missingness threshold of 10%");
+
+  //start reading genotypes and analyze
+  for (size_t t=0; t < indicator_snp.length; ++t)
+  {
+
+//    if (t>1) {break;}
+
+    // read SNP header
+    id = [];
+    rs = [];
+    chr = [];
+    bgen_A_allele = [];
+    bgen_B_allele = [];
+
+    //infile.read(reinterpret_cast<char*>(&bgen_N),4);
+    //infile.read(reinterpret_cast<char*>(&bgen_LS),2);
+    bgen_N = cast(uint*)infile.rawRead(new char[4]);
+    bgen_LS = cast(ushort*)infile.rawRead(new char[2]);
+
+    //id.resize(bgen_LS);
+    //infile.read(&id[0], bgen_LS);
+
+    bgen_LR = cast(ushort*)infile.rawRead(new char[2]);
+    //rs.resize(bgen_LR);
+    rs = cast(string)infile.rawRead(new char[cast(size_t)bgen_LR]);
+
+    bgen_LC = cast(ushort*)infile.rawRead(new char[2]);
+    //chr.resize(bgen_LC);
+    chr = cast(string)infile.rawRead(new char[cast(size_t)bgen_LC]);
+
+    bgen_SNP_pos = cast(uint*)infile.rawRead(new char[4]);
+
+    bgen_LA = cast(uint*)infile.rawRead(new char[4]);
+    //bgen_A_allele.resize(bgen_LA);
+    bgen_A_allele = cast(string)infile.rawRead(new char[cast(size_t)bgen_LA]);
+
+
+    bgen_LB = cast(uint*)infile.rawRead(new char[4]);
+    //bgen_B_allele.resize(bgen_LB);
+    bgen_B_allele = cast(string)infile.rawRead(new char[cast(size_t)bgen_LB]);
+
+    ushort* unzipped_data;// = new ushort[3 * cast(size_t)bgen_N];
+
+    if (indicator_snp[t]==0) {
+      if(CompressedSNPBlocks)
+        bgen_P = cast(uint*)infile.rawRead(new char[4]);
+      else
+        //bgen_P = cast(uint*)(6 * bgen_N);
+
+      infile.rawRead(new char[cast(size_t)bgen_P]);
+
+      continue;
+    }
+
+
+    if(CompressedSNPBlocks)
+    {
+      //infile.read(reinterpret_cast<char*>(&bgen_P),4);
+      bgen_P = cast(uint*)infile.rawRead(new char[4]);
+      ushort* zipped_data; // = new ushort[cast(size_t)bgen_P];
+
+      //unzipped_data_size=6*bgen_N;
+      //infile.read(reinterpret_cast<char*>(zipped_data),bgen_P);
+      unzipped_data_size= 6 * cast(size_t)bgen_N;
+      zipped_data = cast(ushort*)infile.rawRead(new char[cast(size_t)bgen_P]);
+
+      //int result = uncompress(reinterpret_cast<Bytef*>(unzipped_data), reinterpret_cast<uLongf*>(&unzipped_data_size), reinterpret_cast<Bytef*>(zipped_data), static_cast<uLong> (bgen_P));
+      int result; // = uncompress(unzipped_data, unzipped_data_size, zipped_data, bgen_P);
+      //assert(result == Z_OK);
+
+    }
+    else
+    {
+      //bgen_P = 6 * cast(uint)bgen_N; TODO
+      unzipped_data = cast(ushort*)infile.rawRead(new char[cast(size_t)bgen_P]);
+    }
+
+    x_mean=0.0; c_phen=0; n_miss=0;
+    x_miss = zeros_dmatrix(x_miss.shape[0], x_miss.shape[1]);
+
+    for (size_t i=0; i < cast(size_t)bgen_N; ++i) {
+      if (indicator_idv[i]==0) {continue;}
+
+
+        bgen_geno_prob_AA = to!double(unzipped_data[i*3])/32768.0;
+        bgen_geno_prob_AB = to!double(unzipped_data[i*3+1])/32768.0;
+        bgen_geno_prob_BB = to!double(unzipped_data[i*3+2])/32768.0;
+        // WJA
+        bgen_geno_prob_non_miss=bgen_geno_prob_AA+bgen_geno_prob_AB+bgen_geno_prob_BB;
+        if (bgen_geno_prob_non_miss<0.9) {x_miss.elements[c_phen] = 0.0; n_miss++;}
+        else {
+
+          bgen_geno_prob_AA /= bgen_geno_prob_non_miss;
+          bgen_geno_prob_AB /= bgen_geno_prob_non_miss;
+          bgen_geno_prob_BB /= bgen_geno_prob_non_miss;
+
+          geno = 2.0 * bgen_geno_prob_BB + bgen_geno_prob_AB;
+
+          x.elements[c_phen] = geno;
+          x_miss.elements[c_phen] = 1.0;
+          x_mean+=geno;
+      }
+      c_phen++;
+    }
+
+    x_mean /= to!double(ni_test-n_miss);
+
+    for (size_t i=0; i < ni_test; ++i) {
+      if(x_miss.elements[i]==0) {x.elements[i] = x_mean;}
+      geno = x.elements[i];
+      if (x_mean>1) {
+        x.elements[i] = 2 - geno;
+      }
+    }
+
+
+    //calculate statistics
+    Wtx = matrix_mult(W.T, x.T); // check
+    vPvResult res = CalcvPv(WtWi, Wty, Wtx, y, x); // chec xPwy and xPwx order
+    Pvals p = LmCalcP(lm_mode, yPwy, res.y, res.x, df, W.shape[0]);
+    //store summary data
+    SUMSTAT SNPs = SUMSTAT(p.beta, p.se, 0.0, 0.0, p.p_wald, p.p_lrt, p.p_score, 0);
+    sumStat ~= SNPs;
+  }
+
+  return;
+}
 
 
 void lm_analyze_plink(const string file_bfile, const DMatrix W, const DMatrix y) {
-  
+
   writeln("entered lm_analyze_plink");
 
   size_t ni_total, ni_test;
@@ -720,9 +938,9 @@ void check_lm_results(SUMSTAT[] sumStat){
   enforce(modDiff(sumStat[$-2].beta,    0.145594)<0.001);
   enforce(modDiff(sumStat[$-2].p_wald,  0.22889)<0.001);
   enforce(modDiff(sumStat[$-2].p_score, 0.220097)<0.001);
-  enforce(modDiff(sumStat[$-1].beta,    0.145594)<0.001);    
-  enforce(modDiff(sumStat[$-1].p_wald,  0.22889)<0.001);    
-  enforce(modDiff(sumStat[$-1].p_score, 0.220097)<0.001);    
+  enforce(modDiff(sumStat[$-1].beta,    0.145594)<0.001);
+  enforce(modDiff(sumStat[$-1].p_wald,  0.22889)<0.001);
+  enforce(modDiff(sumStat[$-1].p_score, 0.220097)<0.001);
 
   writeln("Linear Model tests pass!");
 }
