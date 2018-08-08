@@ -39,7 +39,10 @@ For ArrayFire backend, Faster_LMM_D uses [arrayfire-d](https://github.com/arrayf
 
 `faster_lmm_d` is written in the fast D language and requires a D
 compiler. At the moment we also use openblas (>0.2.19), lapacke, gsl
-and a bunch of D libraries.
+and a bunch of D libraries that are installed with the dub tool.
+
+* ldc D compiler for LLVM >= 1.10.0
+* dub >= 1.7.0
 
 ### On Debian/Ubuntu
 
@@ -70,7 +73,14 @@ git clone https://github.com/prasunanand/faster_lmm_d
 cd faster_lmm_d
 ```
 
-Fetch dependencies and compile
+Fetch dependencies using the dub tool (on a non-CUDA system you may get errors which
+can be ignored). Currently the versions are fixated, see the Makefile.
+
+```sh
+dub
+```
+
+and compile
 
 CPU Backend:
 ```sh
