@@ -819,6 +819,300 @@ Geno_result ReadFile_geno1(const string geno_fn, const ulong ni_total, const DMa
   return Geno_result(indicator_snp, snpInfo);
 }
 
+bool ReadFile_bgen(const string file_bgen, const string[] setSnps,
+                   const DMatrix W, ref int[] indicator_idv,
+                   int[] indicator_snp, SNPINFO[] snpInfo,
+                   const double maf_level, const double miss_level,
+                   const double hwe_level, const double r2_level,
+                   size_t ns_test) {
+  writeln("entered ReadFile_bgen");
+  indicator_snp = [];
+
+  File infile = File(file_bgen);
+
+  DMatrix genotype = zeros_dmatrix(1, W.shape[0]);
+  DMatrix genotype_miss = zeros_dmatrix(1, W.shape[0]);
+  DMatrix WtWiWtx = zeros_dmatrix(1, W.shape[1]);
+
+  double WtWi= 1/vector_ddot(W, W);
+  // Read in header.
+
+  uint* bgen_snp_block_offset;
+  uint* bgen_header_length;
+  uint* bgen_nsamples;
+  uint* bgen_nsnps;
+  uint* bgen_flags;
+  writeln("ALL SET!");
+
+  //infile.read(reinterpret_cast<char*>(&bgen_snp_block_offset),4);
+  bgen_snp_block_offset = cast(uint*)infile.rawRead(new char[4]);
+
+  //infile.read(reinterpret_cast<char*>(&bgen_header_length),4);
+  bgen_header_length = cast(uint*)infile.rawRead(new char[4]);
+  bgen_snp_block_offset -= 4;
+
+  //infile.read(reinterpret_cast<char*>(&bgen_nsnps),4);
+  bgen_nsnps = cast(uint*)infile.rawRead(new char[4]);
+  bgen_snp_block_offset -= 4;
+
+  //infile.read(reinterpret_cast<char*>(&bgen_nsamples),4);
+  bgen_nsamples = cast(uint*)infile.rawRead(new char[4]);
+  bgen_snp_block_offset-=4;
+
+  //infile.ignore( 4 + bgen_header_length - 20);
+  size_t ignore = 4 + cast(size_t)bgen_header_length - 20; // check
+  infile.rawRead( new char[ignore]);
+
+  bgen_snp_block_offset -= ignore;
+
+  //infile.read(reinterpret_cast<char*>(&bgen_flags),4);
+  bgen_flags = cast(uint*)infile.rawRead(new char[4]);
+  bgen_snp_block_offset -= 4;
+
+  bool CompressedSNPBlocks; // check TODO  = bgen_flags&0x1;
+  bool LongIds; // check TODO = bgen_flags & 0x4;
+
+  if (!LongIds) {
+    return false;
+  }
+
+  infile.rawRead(new char[cast(size_t)bgen_snp_block_offset]);
+
+  ns_test = 0;
+  size_t ns_total = cast(size_t)(bgen_nsnps);
+  snpInfo = [];
+  string rs;
+  long b_pos;
+  string chr;
+  string major;
+  string minor;
+  string id;
+  double v_x, v_w;
+  int c_idv = 0;
+  double maf, geno, geno_old;
+  size_t n_miss;
+  size_t n_0, n_1, n_2;
+  int flag_poly;
+  double bgen_geno_prob_AA, bgen_geno_prob_AB;
+  double bgen_geno_prob_BB, bgen_geno_prob_non_miss;
+  // Total number of samples in phenotype file.
+  size_t ni_total = indicator_idv.length;
+  // Number of samples to use in test.
+  size_t ni_test = 0;
+  uint* bgen_N;
+  ushort* bgen_LS;
+  ushort* bgen_LR;
+  ushort* bgen_LC;
+  uint* bgen_SNP_pos;
+  uint* bgen_LA;
+  string bgen_A_allele;
+  uint* bgen_LB;
+  string bgen_B_allele;
+  uint* bgen_P;
+  size_t unzipped_data_size;
+
+
+  for (size_t i = 0; i < ni_total; ++i) {
+    ni_test += indicator_idv[i];
+  }
+
+  for (size_t t = 0; t < ns_total; ++t) {
+    id = [];
+    rs = [];
+    chr = [];
+    bgen_A_allele = [];
+    bgen_B_allele = [];
+
+    //infile.read(reinterpret_cast<char*>(&bgen_N),4);
+    //infile.read(reinterpret_cast<char*>(&bgen_LS),2);
+    bgen_N = cast(uint*)infile.rawRead(new char[4]);
+    bgen_LS = cast(ushort*)infile.rawRead(new char[2]);
+
+    //id.resize(bgen_LS);
+    //infile.read(&id[0], bgen_LS);
+
+    bgen_LR = cast(ushort*)infile.rawRead(new char[2]);
+    //rs.resize(bgen_LR);
+    rs = cast(string)infile.rawRead(new char[cast(size_t)bgen_LR]);
+
+    bgen_LC = cast(ushort*)infile.rawRead(new char[2]);
+    //chr.resize(bgen_LC);
+    chr = cast(string)infile.rawRead(new char[cast(size_t)bgen_LC]);
+
+    bgen_SNP_pos = cast(uint*)infile.rawRead(new char[4]);
+
+    bgen_LA = cast(uint*)infile.rawRead(new char[4]);
+    //bgen_A_allele.resize(bgen_LA);
+    bgen_A_allele = cast(string)infile.rawRead(new char[cast(size_t)bgen_LA]);
+
+
+    bgen_LB = cast(uint*)infile.rawRead(new char[4]);
+    //bgen_B_allele.resize(bgen_LB);
+    bgen_B_allele = cast(string)infile.rawRead(new char[cast(size_t)bgen_LB]);
+
+
+     // Should we switch according to MAF?
+    minor = bgen_B_allele;
+    major = bgen_A_allele;
+    //b_pos = to!long(bgen_SNP_pos);
+
+    ushort* unzipped_data;// = new ushort[3 * cast(size_t)bgen_N];
+
+    if (setSnps.length != 0 && setSnps.count(rs) == 0) {
+      //SNPINFO sInfo = SNPINFO(
+      //    "-9", rs,
+      //    -9, -9,
+      //    minor, major,
+      //    -9, -9,   -9);
+      //snpInfo ~= sInfo;
+      indicator_snp ~= 0;
+      if (CompressedSNPBlocks){
+        bgen_P = cast(uint*)infile.rawRead(new char[4]);
+      }
+      else{
+        //bgen_P = 6 * bgen_N;
+      }
+      infile.rawRead(new char[cast(size_t)bgen_P]);
+      continue;
+    }
+    if (CompressedSNPBlocks) {
+      //infile.read(reinterpret_cast<char*>(&bgen_P),4);
+      bgen_P = cast(uint*)infile.rawRead(new char[4]);
+      ushort* zipped_data; // = new ushort[cast(size_t)bgen_P];
+
+      //unzipped_data_size=6*bgen_N;
+      //infile.read(reinterpret_cast<char*>(zipped_data),bgen_P);
+      unzipped_data_size= 6 * cast(size_t)bgen_N;
+      zipped_data = cast(ushort*)infile.rawRead(new char[cast(size_t)bgen_P]);
+
+      //int result = uncompress(reinterpret_cast<Bytef *>(unzipped_data), reinterpret_cast<uLongf *>(&unzipped_data_size), reinterpret_cast<Bytef *>(zipped_data), to!ulong(bgen_P));
+      int result; // = uncompress(unzipped_data, unzipped_data_size, zipped_data, to!ulong(bgen_P));
+      //assert(result == Z_OK);
+    }
+    else {
+      //bgen_P = 6 * cast(uint)bgen_N; TODO
+      unzipped_data = cast(ushort*)infile.rawRead(new char[cast(size_t)bgen_P]);
+    }
+    maf = 0;
+    n_miss = 0;
+    flag_poly = 0;
+    geno_old = -9;
+    n_0 = 0;
+    n_1 = 0;
+    n_2 = 0;
+    c_idv = 0;
+    genotype_miss = zeros_dmatrix(genotype_miss.shape[0], genotype_miss.shape[1]);
+    for (size_t i = 0; i < cast(size_t)bgen_N; ++i) {
+       // CHECK this set correctly!
+      if (indicator_idv[i] == 0) {
+        continue;
+      }
+      bgen_geno_prob_AA = to!double(unzipped_data[i * 3]) / 32768.0;
+      bgen_geno_prob_AB =
+          to!double(unzipped_data[i * 3 + 1]) / 32768.0;
+      bgen_geno_prob_BB =
+          to!double(unzipped_data[i * 3 + 2]) / 32768.0;
+      bgen_geno_prob_non_miss =
+          bgen_geno_prob_AA + bgen_geno_prob_AB + bgen_geno_prob_BB;
+
+      // CHECK 0.1 OK.
+
+      if (bgen_geno_prob_non_miss < 0.9) {
+        genotype_miss.elements[c_idv] = 1;
+        n_miss++;
+        c_idv++;
+        continue;
+      }
+
+      bgen_geno_prob_AA /= bgen_geno_prob_non_miss;
+      bgen_geno_prob_AB /= bgen_geno_prob_non_miss;
+      bgen_geno_prob_BB /= bgen_geno_prob_non_miss;
+
+      geno = 2.0 * bgen_geno_prob_BB + bgen_geno_prob_AB;
+
+      if (geno >= 0 && geno <= 0.5) {
+        n_0++;
+      }
+      if (geno > 0.5 && geno < 1.5) {
+        n_1++;
+      }
+      if (geno >= 1.5 && geno <= 2.0) {
+        n_2++;
+      }
+
+      genotype.elements[c_idv] = geno;
+
+      // CHECK WHAT THIS DOES.
+      if (flag_poly == 0) {
+        geno_old = geno;
+        flag_poly = 2;
+      }
+
+      if (flag_poly == 2 && geno != geno_old) {
+        flag_poly = 1;
+      }
+
+      maf += geno;
+      c_idv++;
+    }
+
+    maf /= 2.0 * to!double(ni_test - n_miss);
+
+    SNPINFO sInfo; // = SNPINFO(chr, rs,
+                       //-9,     b_pos, // this is cM in bimbam
+                       //minor,  major,
+                       //n_miss, to!double(n_miss) / to!double(ni_test),
+                       //maf ); //,    ni_test - n_miss,
+                       //0,      file_pos);
+
+    snpInfo ~= sInfo;
+    if (to!double(n_miss) / to!double(ni_test) > miss_level) {
+      indicator_snp ~= 0;
+      continue;
+    }
+
+    if ((maf < maf_level || maf > (1.0 - maf_level)) && maf_level != -1) {
+      indicator_snp ~= 0;
+      continue;
+    }
+    if (flag_poly != 1) {
+      indicator_snp ~= 0;
+      continue;
+    }
+    if (hwe_level != 0 && maf_level != -1) {
+      if (CalcHWE(to!int(n_0), to!int(n_2), to!int(n_1)) < hwe_level) {
+        indicator_snp ~= 0;
+        continue;
+      }
+    }
+
+    // Filter SNP if it is correlated with W unless W has
+    // only one column, of 1s.
+    for (size_t i = 0; i < genotype.size; ++i) {
+      if (genotype_miss.elements[i] == 1) {
+        geno = maf * 2.0;
+        genotype.elements[i] = geno;
+      }
+    }
+
+    double Wtx = vector_ddot(W, genotype);
+
+    v_x = vector_ddot(genotype, genotype);
+    v_w = Wtx * Wtx * WtWi;
+
+    //r2_level
+    if (W.shape[1] != 1 && v_w / v_x >= r2_level) {
+      indicator_snp ~= 0;
+      continue;
+    }
+
+    indicator_snp ~= 1;
+    ns_test++;
+
+  }
+  return true;
+}
+
 
 // Read bimbam annotation file which consists of rows of SNP, POS and CHR
 bool ReadFile_anno(const string file_anno, ref string[string] mapRS2chr,
