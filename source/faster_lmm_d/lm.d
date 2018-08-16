@@ -78,8 +78,8 @@ void lm_run(const string option_snps, const string option_pheno, const string op
   DMatrix W = zeros_dmatrix(ni_test, n_cvt);
   CopyCvtPhen(W, Y, indicators.indicator_idv, indicators.indicator_cvt, cvt, pheno.pheno, n_ph, n_cvt, 0);
 
-  auto geno_result = ReadFile_geno1(option_geno, ni_total, W, indicators.indicator_idv, setSnps, mapRS2chr, mapRS2bp, mapRS2cM);
-  //auto geno_result = ReadFile_bgen(option_geno, ni_total, W, indicators.indicator_idv, setSnps, mapRS2chr, mapRS2bp, mapRS2cM);
+  //auto geno_result = ReadFile_geno1(option_geno, ni_total, W, indicators.indicator_idv, setSnps, mapRS2chr, mapRS2bp, mapRS2cM);
+  auto geno_result = ReadFile_bgen(option_geno, ni_total, W, indicators.indicator_idv, setSnps, mapRS2chr, mapRS2bp, mapRS2cM);
   int[] indicator_snp = geno_result.indicator_snp;
   SNPINFO[] snpInfo = geno_result.snpInfo;
   writeln(snpInfo.length);
@@ -100,7 +100,7 @@ void lm_run(const string option_snps, const string option_pheno, const string op
     } else {
       DMatrix Wty = matrix_mult(W.T, Y_col);
       sumStat = lm_analyze_bimbam(option_geno, W, Y_col, WtWi, Wty, indicators.indicator_idv, indicator_snp, ni_test, ni_total);
-      //lm_analyze_bgen(option_geno, W, Y_col, WtWi, Wty, indicators.indicator_idv, indicator_snp, ni_test, ni_total);
+      lm_analyze_bgen(option_geno, W, Y_col, WtWi, Wty, indicators.indicator_idv, indicator_snp, ni_test, ni_total);
     }
 
     //lm_write_files(sumStat, option_geno, snpInfo, indicator_snp, ni_test, lm_mode);

@@ -25,6 +25,7 @@ import std.stdio;
 import std.typecons;
 import std.experimental.logger;
 import std.string;
+import std.zlib;
 
 import faster_lmm_d.dmatrix;
 import faster_lmm_d.gemma_lmm;
@@ -873,18 +874,41 @@ Geno_result ReadFile_bgen(const string file_bgen, const ulong ni_total,
   uint bgen_flags = infile.rawRead(new uint[1])[0];
   bgen_snp_block_offset -= 4;
 
-  bool CompressedSNPBlocks = (bgen_flags) & 0x1;
-  writeln(CompressedSNPBlocks);
+  uint CompressedSNPBlocks = (bgen_flags) & 3;
+  writeln("CompressedSNPBlocks => ", CompressedSNPBlocks);
+  uint layout = (bgen_flags & (15 << 2)) >> 2;
+  writeln("layout =>", layout);
+  uint sample_ids_presence = (bgen_flags & (1 << 31)) >> 31;
+  writeln("sample_ids_presence => ", sample_ids_presence);
   uint LongIds = (bgen_flags) & 0x4;
-  writeln(LongIds);
+  //writeln(LongIds);
 
-  //if (!LongIds) {
-  //  exit(0);
-  //}
+  if (layout == 0) {
+    writeln("This value is not supported");
+    exit(0);
+  }
 
   //infile.rawRead(new char[bgen_snp_block_offset]);
-  //writeln(bgen_snp_block_offset);
+  writeln(bgen_snp_block_offset);
 
+  // sample identifier block
+
+  uint bgen_LSI =  infile.rawRead(new uint[1])[0];
+  bgen_snp_block_offset -= 4;
+  writeln("bgen_LSI => ", bgen_LSI);
+  uint N = infile.rawRead(new uint[1])[0];
+  bgen_snp_block_offset -= bgen_LSI;
+  writeln("N => ", N);
+  for(uint i = 0; i <N; i++){
+    ushort bgen_LS1_length = infile.rawRead(new ushort[1])[0];
+    //writeln("bgen_LS1_length => ", bgen_LS1_length);
+    string bgen_LS1 = cast(string)infile.rawRead(new char[bgen_LS1_length]);
+    //writeln("bgen_LS1 =>", bgen_LS1);
+  }
+  writeln("bgen_snp_block_offset", bgen_snp_block_offset);
+
+
+  // variants
   size_t ns_test = 0;
   size_t ns_total = bgen_nsnps;
   snpInfo = [];
@@ -917,6 +941,10 @@ Geno_result ReadFile_bgen(const string file_bgen, const ulong ni_total,
   uint bgen_P;
   size_t unzipped_data_size;
 
+  if(layout == 1){
+    bgen_N = infile.rawRead(new uint[1])[0];
+    writeln("bgen_N => ", bgen_N);
+  }
 
   for (size_t i = 0; i < ni_total; ++i) {
     ni_test += indicator_idv[i];
@@ -930,29 +958,36 @@ Geno_result ReadFile_bgen(const string file_bgen, const ulong ni_total,
     bgen_A_allele = [];
     bgen_B_allele = [];
 
-    bgen_N = infile.rawRead(new uint[1])[0];
-    writeln("bgen_N => ", bgen_N);
+
 
     bgen_LS = infile.rawRead(new ushort[1])[0];
+    writeln("bgen_LS => ", bgen_LS);
+    //writeln(infile.rawRead(new char[bgen_LS]));
     id =  cast(string)infile.rawRead(new char[bgen_LS]);
     writeln("id => ", id);
 
+    //exit(0);
     bgen_LR = infile.rawRead(new ushort[1])[0];
-    rs = cast(string)infile.rawRead(new char[bgen_LR]);
-    writeln("rs => ", rs);
+    writeln("bgen_LR => ", bgen_LR);
+    char[] rs1 = infile.rawRead(new char[bgen_LR]);
+    writeln("rs => ", rs1);
 
     bgen_LC = infile.rawRead(new ushort[1])[0];
     chr = cast(string)infile.rawRead(new char[bgen_LC]);
+    writeln("chr =>", chr);
 
     bgen_SNP_pos = infile.rawRead(new uint[1])[0];
 
+    ushort K = infile.rawRead(new short[1])[0];
+
     bgen_LA = infile.rawRead(new uint[1])[0];
     bgen_A_allele = cast(string)infile.rawRead(new char[bgen_LA]);
+    writeln("Reference allele => ", bgen_LA);
 
 
     bgen_LB = infile.rawRead(new uint[1])[0];
     bgen_B_allele = cast(string)infile.rawRead(new char[bgen_LB]);
-
+    writeln("Alternate allele => ", bgen_LB);
 
      // Should we switch according to MAF?
     minor = bgen_B_allele;
@@ -969,7 +1004,7 @@ Geno_result ReadFile_bgen(const string file_bgen, const ulong ni_total,
       //    -9, -9,   -9);
       //snpInfo ~= sInfo;
       indicator_snp ~= 0;
-      if (CompressedSNPBlocks){
+      if (CompressedSNPBlocks == 0){
         bgen_P = infile.rawRead(new uint[1])[0];
       }
       else{
@@ -978,21 +1013,21 @@ Geno_result ReadFile_bgen(const string file_bgen, const ulong ni_total,
       infile.rawRead(new char[cast(size_t)bgen_P]);
       continue;
     }
-    if (CompressedSNPBlocks) {
+    if (CompressedSNPBlocks == 2) {
       bgen_P = infile.rawRead(new uint[1])[0];
-      ushort* zipped_data; // = new ushort[cast(size_t)bgen_P];
+      //ushort* zipped_data; // = new ushort[cast(size_t)bgen_P];
 
       unzipped_data_size= 6 * bgen_N;
       //infile.read(reinterpret_cast<char*>(zipped_data),bgen_P);
-      zipped_data = cast(ushort*)infile.rawRead(new char[bgen_P]);
-
+      ushort[] zipped_data = infile.rawRead(new ushort[bgen_P/2]);  // ushort = 2 * char
+      writeln(zipped_data);
       //int result = uncompress(reinterpret_cast<Bytef *>(unzipped_data), reinterpret_cast<uLongf *>(&unzipped_data_size), reinterpret_cast<Bytef *>(zipped_data), to!ulong(bgen_P));
-      int result; // = uncompress(unzipped_data, unzipped_data_size, zipped_data, to!ulong(bgen_P));
+      unzipped_data = cast(ushort*)uncompress(cast(void[])zipped_data, to!ulong(bgen_P));
       //assert(result == Z_OK);
     }
     else {
       bgen_P = 6 * bgen_N;
-      unzipped_data = cast(ushort*)infile.rawRead(new char[bgen_P]);
+      unzipped_data = cast(ushort*)infile.rawRead(new ushort[bgen_P/2]);
     }
     maf = 0;
     n_miss = 0;
