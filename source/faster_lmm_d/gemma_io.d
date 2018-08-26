@@ -25,6 +25,7 @@ import std.stdio;
 import std.typecons;
 import std.experimental.logger;
 import std.string;
+import std.zlib;
 
 import faster_lmm_d.dmatrix;
 import faster_lmm_d.gemma_lmm;
@@ -815,6 +816,335 @@ Geno_result ReadFile_geno1(const string geno_fn, const ulong ni_total, const DMa
 
     indicator_snp ~= 1;
     ns_test++;
+  }
+  return Geno_result(indicator_snp, snpInfo);
+}
+
+Geno_result ReadFile_bgen(const string file_bgen, const ulong ni_total,
+                   const DMatrix W, const int[] indicator_idv,
+                   string[] setSnps, string[string] mapRS2chr, size_t[string] mapRS2bp, double[string] mapRS2cM){
+  //                 const double maf_level, const double miss_level,
+  //                 const double hwe_level, const double r2_level,
+  //                 size_t ns_test) {
+  //const string geno_fn, const ulong ni_total, const DMatrix W, const int[] indicator_idv,
+  //                        string[] setSnps, string[string] mapRS2chr, size_t[string] mapRS2bp, double[string] mapRS2cM
+  writeln("entered ReadFile_bgen");
+  const double maf_level = 0.01;
+  const double miss_level = 0.05;
+  const double hwe_level = 0;
+  const double r2_level = 0.9999;
+  SNPINFO[] snpInfo;
+
+  int[] indicator_snp;
+
+  File infile = File(file_bgen ~ ".bgen");
+
+  DMatrix genotype = zeros_dmatrix(1, W.shape[0]);
+  DMatrix genotype_miss = zeros_dmatrix(1, W.shape[0]);
+  DMatrix WtWiWtx = zeros_dmatrix(1, W.shape[1]);
+
+  double WtWi= 1/vector_ddot(W, W);
+  // Read in header.
+
+  writeln("ALL SET!");
+
+  //The first four bytes
+  uint bgen_snp_block_offset = infile.rawRead(new uint[1])[0];
+
+  //The header block
+  uint bgen_header_length = infile.rawRead(new uint[1])[0];
+  writeln("bgen_header_length => ", bgen_header_length);
+  assert(bgen_header_length <= bgen_snp_block_offset);
+  bgen_snp_block_offset -= 4;
+  uint bgen_nsnps = infile.rawRead(new uint[1])[0];
+  writeln("No. of variant = > ", bgen_header_length);
+  bgen_snp_block_offset -= 4;
+  uint bgen_nsamples = infile.rawRead(new uint[1])[0];
+  writeln("No. of samples = > ", bgen_nsamples);
+  bgen_snp_block_offset-=4;
+  char[] magic_chars = infile.rawRead(new char[4]);
+  writeln(magic_chars);
+
+  size_t ignore = bgen_header_length - 20; // check
+  if(ignore != 0)
+    infile.rawRead(new char[ignore]);
+  bgen_snp_block_offset -= ignore;
+
+  //BitArray bgen_flags = BitArray(32, cast(ulong*)infile.rawRead(new char[4]));
+  uint bgen_flags = infile.rawRead(new uint[1])[0];
+  bgen_snp_block_offset -= 4;
+
+  uint CompressedSNPBlocks = (bgen_flags) & 3;
+  writeln("CompressedSNPBlocks => ", CompressedSNPBlocks);
+  uint layout = (bgen_flags & (15 << 2)) >> 2;
+  writeln("layout =>", layout);
+  uint sample_ids_presence = (bgen_flags & (1 << 31)) >> 31;
+  writeln("sample_ids_presence => ", sample_ids_presence);
+  uint LongIds = (bgen_flags) & 0x4;
+  //writeln(LongIds);
+
+  if (layout == 0) {
+    writeln("This value is not supported");
+    exit(0);
+  }
+
+  //infile.rawRead(new char[bgen_snp_block_offset]);
+  writeln(bgen_snp_block_offset);
+
+  // sample identifier block
+
+  uint bgen_LSI =  infile.rawRead(new uint[1])[0];
+  bgen_snp_block_offset -= 4;
+  writeln("bgen_LSI => ", bgen_LSI);
+  uint N = infile.rawRead(new uint[1])[0];
+  bgen_snp_block_offset -= bgen_LSI;
+  writeln("N => ", N);
+  for(uint i = 0; i <N; i++){
+    ushort bgen_LS1_length = infile.rawRead(new ushort[1])[0];
+    //writeln("bgen_LS1_length => ", bgen_LS1_length);
+    string bgen_LS1 = cast(string)infile.rawRead(new char[bgen_LS1_length]);
+    //writeln("bgen_LS1 =>", bgen_LS1);
+  }
+  writeln("bgen_snp_block_offset", bgen_snp_block_offset);
+
+
+  // variants
+  size_t ns_test = 0;
+  size_t ns_total = bgen_nsnps;
+  snpInfo = [];
+  string rs;
+  long b_pos;
+  string chr;
+  string major;
+  string minor;
+  string id;
+  double v_x, v_w;
+  int c_idv = 0;
+  double maf, geno, geno_old;
+  size_t n_miss;
+  size_t n_0, n_1, n_2;
+  int flag_poly;
+  double bgen_geno_prob_AA, bgen_geno_prob_AB;
+  double bgen_geno_prob_BB, bgen_geno_prob_non_miss;
+  // Total number of samples in phenotype file.
+  // Number of samples to use in test.
+  size_t ni_test = 0;
+  uint bgen_N;
+  ushort bgen_LS;
+  ushort bgen_LR;
+  ushort bgen_LC;
+  uint bgen_SNP_pos;
+  uint bgen_LA;
+  string bgen_A_allele;
+  uint bgen_LB;
+  string bgen_B_allele;
+  uint bgen_P;
+  size_t unzipped_data_size;
+
+  if(layout == 1){
+    bgen_N = infile.rawRead(new uint[1])[0];
+    writeln("bgen_N => ", bgen_N);
+  }
+
+  for (size_t i = 0; i < ni_total; ++i) {
+    ni_test += indicator_idv[i];
+  }
+  writeln(ni_test);
+
+  for (size_t t = 0; t < ns_total; ++t) {
+    id = [];
+    rs = [];
+    chr = [];
+    bgen_A_allele = [];
+    bgen_B_allele = [];
+
+
+
+    bgen_LS = infile.rawRead(new ushort[1])[0];
+    writeln("bgen_LS => ", bgen_LS);
+    //writeln(infile.rawRead(new char[bgen_LS]));
+    id =  cast(string)infile.rawRead(new char[bgen_LS]);
+    writeln("id => ", id);
+
+    //exit(0);
+    bgen_LR = infile.rawRead(new ushort[1])[0];
+    writeln("bgen_LR => ", bgen_LR);
+    char[] rs1 = infile.rawRead(new char[bgen_LR]);
+    writeln("rs => ", rs1);
+
+    bgen_LC = infile.rawRead(new ushort[1])[0];
+    chr = cast(string)infile.rawRead(new char[bgen_LC]);
+    writeln("chr =>", chr);
+
+    bgen_SNP_pos = infile.rawRead(new uint[1])[0];
+
+    ushort K = infile.rawRead(new short[1])[0];
+
+    bgen_LA = infile.rawRead(new uint[1])[0];
+    bgen_A_allele = cast(string)infile.rawRead(new char[bgen_LA]);
+    writeln("Reference allele => ", bgen_LA);
+
+
+    bgen_LB = infile.rawRead(new uint[1])[0];
+    bgen_B_allele = cast(string)infile.rawRead(new char[bgen_LB]);
+    writeln("Alternate allele => ", bgen_LB);
+
+     // Should we switch according to MAF?
+    minor = bgen_B_allele;
+    major = bgen_A_allele;
+    b_pos = bgen_SNP_pos;
+
+    ushort* unzipped_data;// = new ushort[3 * cast(size_t)bgen_N];
+
+    if (setSnps.length != 0 && setSnps.count(rs) == 0) {
+      //SNPINFO sInfo = SNPINFO(
+      //    "-9", rs,
+      //    -9, -9,
+      //    minor, major,
+      //    -9, -9,   -9);
+      //snpInfo ~= sInfo;
+      indicator_snp ~= 0;
+      if (CompressedSNPBlocks == 0){
+        bgen_P = infile.rawRead(new uint[1])[0];
+      }
+      else{
+        bgen_P = 6 * bgen_N;
+      }
+      infile.rawRead(new char[cast(size_t)bgen_P]);
+      continue;
+    }
+    if (CompressedSNPBlocks == 2) {
+      bgen_P = infile.rawRead(new uint[1])[0];
+      //ushort* zipped_data; // = new ushort[cast(size_t)bgen_P];
+
+      unzipped_data_size= 6 * bgen_N;
+      //infile.read(reinterpret_cast<char*>(zipped_data),bgen_P);
+      ushort[] zipped_data = infile.rawRead(new ushort[bgen_P/2]);  // ushort = 2 * char
+      writeln(zipped_data);
+      //int result = uncompress(reinterpret_cast<Bytef *>(unzipped_data), reinterpret_cast<uLongf *>(&unzipped_data_size), reinterpret_cast<Bytef *>(zipped_data), to!ulong(bgen_P));
+      unzipped_data = cast(ushort*)uncompress(cast(void[])zipped_data, to!ulong(bgen_P));
+      //assert(result == Z_OK);
+    }
+    else {
+      bgen_P = 6 * bgen_N;
+      unzipped_data = cast(ushort*)infile.rawRead(new ushort[bgen_P/2]);
+    }
+    maf = 0;
+    n_miss = 0;
+    flag_poly = 0;
+    geno_old = -9;
+    n_0 = 0;
+    n_1 = 0;
+    n_2 = 0;
+    c_idv = 0;
+    genotype_miss = zeros_dmatrix(genotype_miss.shape[0], genotype_miss.shape[1]);
+    for (size_t i = 0; i < cast(size_t)bgen_N; ++i) {
+       // CHECK this set correctly!
+      if (indicator_idv[i] == 0) {
+        continue;
+      }
+      bgen_geno_prob_AA = to!double(unzipped_data[i * 3]) / 32768.0;
+      bgen_geno_prob_AB =
+          to!double(unzipped_data[i * 3 + 1]) / 32768.0;
+      bgen_geno_prob_BB =
+          to!double(unzipped_data[i * 3 + 2]) / 32768.0;
+      bgen_geno_prob_non_miss =
+          bgen_geno_prob_AA + bgen_geno_prob_AB + bgen_geno_prob_BB;
+
+      // CHECK 0.1 OK.
+
+      if (bgen_geno_prob_non_miss < 0.9) {
+        genotype_miss.elements[c_idv] = 1;
+        n_miss++;
+        c_idv++;
+        continue;
+      }
+
+      bgen_geno_prob_AA /= bgen_geno_prob_non_miss;
+      bgen_geno_prob_AB /= bgen_geno_prob_non_miss;
+      bgen_geno_prob_BB /= bgen_geno_prob_non_miss;
+
+      geno = 2.0 * bgen_geno_prob_BB + bgen_geno_prob_AB;
+
+      if (geno >= 0 && geno <= 0.5) {
+        n_0++;
+      }
+      if (geno > 0.5 && geno < 1.5) {
+        n_1++;
+      }
+      if (geno >= 1.5 && geno <= 2.0) {
+        n_2++;
+      }
+
+      genotype.elements[c_idv] = geno;
+
+      // CHECK WHAT THIS DOES.
+      if (flag_poly == 0) {
+        geno_old = geno;
+        flag_poly = 2;
+      }
+
+      if (flag_poly == 2 && geno != geno_old) {
+        flag_poly = 1;
+      }
+
+      maf += geno;
+      c_idv++;
+    }
+
+    maf /= 2.0 * to!double(ni_test - n_miss);
+
+    SNPINFO sInfo = SNPINFO(chr, rs,
+                       -9.0,     b_pos, // this is cM in bimbam
+                       minor,  major,
+                       n_miss, to!double(n_miss) / to!double(ni_test),
+                       maf ,    ni_test - n_miss,
+                       0,      0); // check
+
+    snpInfo ~= sInfo;
+    if (to!double(n_miss) / to!double(ni_test) > miss_level) {
+      indicator_snp ~= 0;
+      continue;
+    }
+
+    if ((maf < maf_level || maf > (1.0 - maf_level)) && maf_level != -1) {
+      indicator_snp ~= 0;
+      continue;
+    }
+    if (flag_poly != 1) {
+      indicator_snp ~= 0;
+      continue;
+    }
+    if (hwe_level != 0 && maf_level != -1) {
+      if (CalcHWE(to!int(n_0), to!int(n_2), to!int(n_1)) < hwe_level) {
+        indicator_snp ~= 0;
+        continue;
+      }
+    }
+
+    // Filter SNP if it is correlated with W unless W has
+    // only one column, of 1s.
+    for (size_t i = 0; i < genotype.size; ++i) {
+      if (genotype_miss.elements[i] == 1) {
+        geno = maf * 2.0;
+        genotype.elements[i] = geno;
+      }
+    }
+
+    double Wtx = vector_ddot(W, genotype);
+
+    v_x = vector_ddot(genotype, genotype);
+    v_w = Wtx * Wtx * WtWi;
+
+    //r2_level
+    if (W.shape[1] != 1 && v_w / v_x >= r2_level) {
+      indicator_snp ~= 0;
+      continue;
+    }
+
+    indicator_snp ~= 1;
+    ns_test++;
+
   }
   return Geno_result(indicator_snp, snpInfo);
 }

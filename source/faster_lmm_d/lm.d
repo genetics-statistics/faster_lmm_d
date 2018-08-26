@@ -78,7 +78,8 @@ void lm_run(const string option_snps, const string option_pheno, const string op
   DMatrix W = zeros_dmatrix(ni_test, n_cvt);
   CopyCvtPhen(W, Y, indicators.indicator_idv, indicators.indicator_cvt, cvt, pheno.pheno, n_ph, n_cvt, 0);
 
-  auto geno_result = ReadFile_geno1(option_geno, ni_total, W, indicators.indicator_idv, setSnps, mapRS2chr, mapRS2bp, mapRS2cM);
+  //auto geno_result = ReadFile_geno1(option_geno, ni_total, W, indicators.indicator_idv, setSnps, mapRS2chr, mapRS2bp, mapRS2cM);
+  auto geno_result = ReadFile_bgen(option_geno, ni_total, W, indicators.indicator_idv, setSnps, mapRS2chr, mapRS2bp, mapRS2cM);
   int[] indicator_snp = geno_result.indicator_snp;
   SNPINFO[] snpInfo = geno_result.snpInfo;
   writeln(snpInfo.length);
@@ -98,7 +99,8 @@ void lm_run(const string option_snps, const string option_pheno, const string op
       lm_analyze_plink(option_geno, W, Y_col);
     } else {
       DMatrix Wty = matrix_mult(W.T, Y_col);
-      sumStat = lm_analyze_bimbam_batched(option_geno, W, Y_col, WtWi, Wty, indicators.indicator_idv, indicator_snp, ni_test, ni_total);
+      sumStat = lm_analyze_bimbam(option_geno, W, Y_col, WtWi, Wty, indicators.indicator_idv, indicator_snp, ni_test, ni_total);
+      lm_analyze_bgen(option_geno, W, Y_col, WtWi, Wty, indicators.indicator_idv, indicator_snp, ni_test, ni_total);
     }
 
     //lm_write_files(sumStat, option_geno, snpInfo, indicator_snp, ni_test, lm_mode);
@@ -564,10 +566,10 @@ SUMSTAT[] lm_analyze_bimbam_batched(const string file_geno, const DMatrix W, con
   return sumStat;
 }
 
-void Analyzebgen( const string file_oxford, const DMatrix W, const DMatrix y,
-                  const DMatrix WtWi, const DMatrix Wty,
-                  const int[] indicator_idv, const int[] indicator_snp,
-                  const size_t ni_test, const size_t ni_total){
+void lm_analyze_bgen( const string file_oxford, const DMatrix W, const DMatrix y,
+                      const DMatrix WtWi, const DMatrix Wty,
+                      const int[] indicator_idv, const int[] indicator_snp,
+                      const size_t ni_test, const size_t ni_total){
 
   string file_bgen = file_oxford ~ ".bgen";
   File infile = File(file_bgen);
@@ -602,6 +604,7 @@ void Analyzebgen( const string file_oxford, const DMatrix W, const DMatrix y,
   uint* bgen_nsamples;
   uint* bgen_nsnps;
   uint* bgen_flags;
+  writeln("ALL SET!");
 
   //infile.read(reinterpret_cast<char*>(&bgen_snp_block_offset),4);
   bgen_snp_block_offset = cast(uint*)infile.rawRead(new char[4]);
