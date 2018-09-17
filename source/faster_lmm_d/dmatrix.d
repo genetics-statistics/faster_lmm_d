@@ -105,6 +105,13 @@ DMatrix get_diagonal(const DMatrix input){
   return DMatrix([input.rows, 1], elements);
 }
 
+void set_diagonal(ref DMatrix input, const DMatrix diagonal){
+  assert(input.rows == input.cols);
+  foreach(i; 0..input.rows){
+    input.elements[i*input.rows + i] = diagonal.elements[i];
+  }
+}
+
 DMatrix sigmoid(const DMatrix input) {
   m_items total_items = input.size();
   double[] elements = new double[total_items];
@@ -334,6 +341,7 @@ bool eqeq(const DMatrix lha, const DMatrix rha) {
   foreach(index, s; lha.elements) {
     double rem = s -rha.elements[index];
     if(abs(rem) > 0.001) {
+      writeln("index", index);
       return false;
     }
   }
