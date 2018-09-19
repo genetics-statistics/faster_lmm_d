@@ -80,7 +80,10 @@ DMatrix CalcPab(const size_t n_cvt, const size_t e_mode, const DMatrix Hi_eval,
           ps_bw = accessor(Pab, p - 1, index_bw);
           ps_ww = accessor(Pab, p - 1, index_ww);
 
-          p_ab = ps_ab - ps_aw * ps_bw / ps_ww;
+          if (ps_ww != 0.0)
+            p_ab = ps_ab - ps_aw * ps_bw / ps_ww;
+          else
+            p_ab = ps_ab;
           Pab.elements[p * Pab.cols + index_ab] = p_ab;
         }
       }
@@ -118,7 +121,10 @@ DMatrix calc_Pab_batched(const size_t n_cvt, const DMatrix Hi_eval, const DMatri
             ps_bw = accessor(Pab, row_no, index_bw);
             ps_ww = accessor(Pab, row_no, index_ww);
 
-            p_ab = ps_ab - ps_aw * ps_bw / ps_ww;
+            if (ps_ww != 0.0)
+              p_ab = ps_ab - ps_aw * ps_bw / ps_ww;
+            else
+              p_ab = ps_ab;
             Pab.elements[(row_no + 1) * Pab.cols + index_ab] = p_ab;
           }
         }
@@ -160,8 +166,11 @@ DMatrix CalcPPab(const size_t n_cvt, const size_t e_mode,
           ps2_bw = accessor(PPab, p - 1, index_bw);
           ps2_ww = accessor(PPab, p - 1, index_ww);
 
-          p2_ab = ps2_ab + ps_aw * ps_bw * ps2_ww / (ps_ww * ps_ww);
-          p2_ab -= (ps_aw * ps2_bw + ps_bw * ps2_aw) / ps_ww;
+          p2_ab = ps2_ab;
+          if (ps_ww != 0.0) {
+            p2_ab = ps2_ab + ps_aw * ps_bw * ps2_ww / (ps_ww * ps_ww);
+            p2_ab -= (ps_aw * ps2_bw + ps_bw * ps2_aw) / ps_ww;
+          }
           PPab.elements[p * PPab.cols + index_ab] = p2_ab;
         }
       }
@@ -207,13 +216,15 @@ DMatrix CalcPPPab(const size_t n_cvt, const size_t e_mode,
           ps3_bw = accessor(PPPab, p - 1, index_bw);
           ps3_ww = accessor(PPPab, p - 1, index_ww);
 
-          p3_ab = ps3_ab -
-                  ps_aw * ps_bw * ps2_ww * ps2_ww / (ps_ww * ps_ww * ps_ww);
-          p3_ab -= (ps_aw * ps3_bw + ps_bw * ps3_aw + ps2_aw * ps2_bw) / ps_ww;
-          p3_ab += (ps_aw * ps2_bw * ps2_ww + ps_bw * ps2_aw * ps2_ww +
-                    ps_aw * ps_bw * ps3_ww) /
-                   (ps_ww * ps_ww);
-
+          p3_ab = ps3_ab;
+          if (ps_ww != 0.0) {
+            p3_ab = ps3_ab -
+              ps_aw * ps_bw * ps2_ww * ps2_ww / (ps_ww * ps_ww * ps_ww);
+            p3_ab -= (ps_aw * ps3_bw + ps_bw * ps3_aw + ps2_aw * ps2_bw) / ps_ww;
+            p3_ab += (ps_aw * ps2_bw * ps2_ww + ps_bw * ps2_aw * ps2_ww +
+                      ps_aw * ps_bw * ps3_ww) /
+              (ps_ww * ps_ww);
+          }
           PPPab.elements[p* PPPab.cols + index_ab] = p3_ab;
         }
       }
