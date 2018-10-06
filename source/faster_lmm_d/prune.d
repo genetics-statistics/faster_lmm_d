@@ -15,12 +15,10 @@ void down_sampler(const string geno_fn, const ulong ni_total, const DMatrix W, c
                           string[] setSnps, string[string] mapRS2chr, size_t[string] mapRS2bp, double[string] mapRS2cM){
 
   writeln("ReadFile_geno", geno_fn);
-  int[] indicator_snp;
 
   File outfile = File("geno.txt", "w");
 
   size_t ns_test;
-  SNPINFO[] snpInfo;
   const double maf_level = 0.01;
   const double miss_level = 0.05;
   const double hwe_level = 0;
@@ -60,13 +58,6 @@ void down_sampler(const string geno_fn, const ulong ni_total, const DMatrix W, c
     auto chr_val = ch_ptr[3..$];
 
     if (setSnps.length != 0 && setSnps.count(rs) == 0) {
-
-      // if SNP in geno but not in -snps we add an missing value
-      SNPINFO sInfo = SNPINFO("-9", rs, -9, -9, minor, major,
-                                0,  -9, -9, 0, 0, file_pos);
-      snpInfo ~= sInfo;
-      indicator_snp ~= 0;
-
       file_pos++;
 
       continue;
@@ -125,32 +116,22 @@ void down_sampler(const string geno_fn, const ulong ni_total, const DMatrix W, c
 
     maf /= 2.0 * to!double(ni_test - n_miss);
 
-    snpInfo ~= SNPINFO(chr,    rs,
-                       cM,     b_pos,
-                       minor,  major,
-                       n_miss, to!double(n_miss) / to!double(ni_test),
-                       maf,    ni_test - n_miss,
-                       0,      file_pos);
     file_pos++;
 
     if (to!double(n_miss) / to!double(ni_test) > miss_level) {
-      indicator_snp ~= 0;
       continue;
     }
 
     if ((maf < maf_level || maf > (1.0 - maf_level)) && maf_level != -1) {
-      indicator_snp ~= 0;
       continue;
     }
 
     if (flag_poly != 1) {
-      indicator_snp ~= 0;
       continue;
     }
 
     if (hwe_level != 0 && maf_level != -1) {
       if (CalcHWE(n_0, n_2, n_1) < hwe_level) {
-        indicator_snp ~=0;
         continue;
       }
     }
@@ -171,11 +152,9 @@ void down_sampler(const string geno_fn, const ulong ni_total, const DMatrix W, c
 
     //r2_level
     if (W.shape[1] != 1 && v_w / v_x >= r2_level) {
-      indicator_snp ~= 0;
       continue;
     }
 
-    indicator_snp ~= 1;
     ns_test++;
     outfile.writeln(line);
   }
