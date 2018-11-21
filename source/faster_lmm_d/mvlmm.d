@@ -376,15 +376,11 @@ void analyze_bimbam_mvlmm(const DMatrix U, const DMatrix eval,
       continue;
     }
 
-    //ch_ptr = strtok_safe((char *)line.c_str(), " , \t");
-    //ch_ptr = strtok_safe(NULL, " , \t");
-    //ch_ptr = strtok_safe(NULL, " , \t");
-
     x_mean = 0.0;
     c_phen = 0;
     n_miss = 0;
     //gsl_vector_set_zero(x_miss);
-    auto chr = to!string(line).split(",");
+    auto chr = to!string(line).split(",")[3..$];
     for (size_t i = 0; i < ni_total; ++i) {
       ch_ptr = chr[i];
       if (indicator_idv[i] == 0) {
@@ -1941,6 +1937,7 @@ void UpdateVgVe(const DMatrix Hessian_inv, const DMatrix gradient,
   // Save Vg and Ve.
   for (size_t i = 0; i < d_size; i++) {
     for (size_t j = 0; j < d_size; j++) {
+
       if (j < i) {
         continue;
       }
@@ -2842,6 +2839,7 @@ double Calc_yHiy(const DMatrix Y, const DMatrix Hiy_all) {
 
 // Calculate the vector xHiy.
 void Calc_xHiy(const DMatrix Y, const DMatrix xHi, ref DMatrix xHiy) {
+  //xHiy is a vector;
   writeln("in Calc_xHiy");
   xHiy = zeros_dmatrix(xHiy.shape[0], xHiy.shape[1]);
 
@@ -3034,6 +3032,7 @@ void Calc_traceHiDHiD(const DMatrix eval, const DMatrix Hi,
                       const size_t i1, const size_t j1, const size_t i2,
                       const size_t j2, ref double tHiDHiD_gg, ref double tHiDHiD_ee,
                       ref double tHiDHiD_ge) {
+  writeln("in Calc_traceHiDHiD");
   tHiDHiD_gg = 0.0;
   tHiDHiD_ee = 0.0;
   tHiDHiD_ge = 0.0;
@@ -3560,21 +3559,31 @@ unittest{
 }
 
 unittest{
-  size_t em_iter;
-  double em_prec;
-  size_t nr_iter;
-  double nr_prec;
-  DMatrix eval;
-  DMatrix X;
-  DMatrix Y;
-  double l_min;
-  double l_max;
-  size_t n_region;
-  DMatrix V_g;
-  DMatrix V_e;
-  DMatrix B;
+
+  size_t em_iter = 10; //check
+  double em_prec = 0;
+  size_t nr_iter = 0;
+  double nr_prec = 0;
+  double l_min = 1e-05;
+  double l_max = 100000;
+  size_t n_region = 10;
+  DMatrix X = DMatrix([5, 5], [ 14, -3,  5, 92, 91,
+                                71, 65, 53, 77, 17,
+                               -62,  4, 26, 16,-10,
+                                27, 43, -9, 46, 27,
+                                39, 47, 11, 78, 62 ]);
+  DMatrix Y = DMatrix([3,5], [7, 12, 1, -9 , 6,
+                               17, 212, 11, -14 , 61,
+                               33, 42, 10, -09 , 6]);
+
+  DMatrix eval = DMatrix([5,1], [7, 12, 1, -9 , 6]);
+
+  DMatrix V_g = zeros_dmatrix(5, 5);
+  DMatrix V_e = zeros_dmatrix(5, 5);
+  DMatrix B = zeros_dmatrix(5, 5);
 
   //MphInitial(em_iter, em_prec, nr_iter, nr_prec, eval, X, Y, l_min, l_max, n_region, V_g, V_e, B);
+  //write("V_g = ", V_g);
   //assert(V_g == DMatrix([], []));
   //assert(V_e == DMatrix([], []));
   //assert(B == DMatrix([], []));
@@ -3714,23 +3723,35 @@ unittest{
 
 unittest{
 
-  DMatrix eval;
-  DMatrix U;
-  DMatrix E;
-  DMatrix Sigma_uu;
-  DMatrix Sigma_ee;
-  DMatrix V_g;
-  DMatrix V_e;
+  DMatrix eval = DMatrix([3,1], [17, 11, 102]);
+  DMatrix U = DMatrix([3,3], [ 3,  1, 13,
+                               4,  5, 70,
+                              12, 46,-22]);
+  DMatrix E = DMatrix([3,3], [ 8, 21, 56,
+                              12, 46,-22,
+                              24, 91, 170]);
+  DMatrix Sigma_uu = DMatrix([3,3], [15, 25, 8, 15, 25, 8, 15, 25, 8]);
+  DMatrix Sigma_ee = DMatrix([3,3], [ 5, 12,61, 15, 25, 8, 61, 15, 25]);
+  DMatrix V_g = zeros_dmatrix(3,3);
+  DMatrix V_e = zeros_dmatrix(3,3);
 
-  //UpdateV(eval, U, E, Sigma_uu, Sigma_ee, V_g, V_e);
-  //assert(V_g);
-  //assert(V_e);
+  UpdateV(eval, U, E, Sigma_uu, Sigma_ee, V_g, V_e);
+  //writeln("V_g = ", V_g);
+  //writeln("V_e = ", V_e);
+  //assert(eqeq(V_g, DMatrix([3, 3], [5.75906, 11.694,  3.83185,
+  //                                  8.36067, 25.4177, 5.54486,
+  //                                  6.16518, 11.2115, 71.1931])
+  //       ));
+  //assert(eqeq(V_e, DMatrix([3, 3], [1215.33, -52.6667, 3894.67,
+  //                                 -51.6667, 923,       247.333,
+  //                                3894.67,   249.667, 12594])
+  //       ));
 
 }
 
 unittest{
 
-  char func_name;
+  char func_name = 'L';
   size_t max_iter;
   double max_prec;
   DMatrix eval;
@@ -3765,16 +3786,31 @@ unittest{
 
 unittest{
 
-  DMatrix Hessian_inv = DMatrix([3, 3], [ 4,  7, 11,
+  DMatrix Hessian_inv = DMatrix([12, 3], [ 4, 17, 111,
+                                          12, 21, 12,
+                                          76, 12, 124,
+                                          41, 17, 11,
+                                          12, 11, 102,
+                                          76, 12, 24,
+                                          14, 72, 18,
                                           12, 11, 12,
+                                          16, 12, 19,
+                                          4,   7, 10,
+                                          23, 21, 12,
                                           76, 12, 24 ]);
-  DMatrix gradient = zeros_dmatrix(3, 1);
+  size_t v_size = 3 * (3 + 1) / 2;
+  DMatrix gradient = zeros_dmatrix(v_size*2, 1);
   double step_scale = 0.2;
-  DMatrix V_g;
-  DMatrix V_e;
+  DMatrix V_g = DMatrix([3,3], [12, 13, 556,
+                                81,  8,  99,
+                               -11, 12,  06]);
+  DMatrix V_e = DMatrix([3,3], [15,  1, -26,
+                                71, -8,   9,
+                              -101, 33,   6]);
 
-  //UpdateVgVe(Hessian_inv, gradient, step_scale, V_g, V_e);
-  //assert(V_g);
+  UpdateVgVe(Hessian_inv, gradient, step_scale, V_g, V_e);
+  writeln("V_g => ", V_g);
+  //assert(eqeq(V_g, DMatrix([], [])));
   //assert(V_e);
 
 }
@@ -4066,9 +4102,8 @@ unittest{
   double crt_b = 0.88;
   double crt_c = 0.32;
 
-  //double pcrt = PCRT(mode, d_size, p_value, crt_a, crt_b, crt_c);
-  //assert(pcrt == 0);
-
+  double pcrt = PCRT(mode, d_size, p_value, crt_a, crt_b, crt_c);
+  assert(abs(pcrt - 0.699685) < 1e-03);
 }
 
 unittest{
@@ -4080,7 +4115,6 @@ unittest{
   DMatrix Qi = zeros_dmatrix(3,3);
 
   double logl = MphCalcLogL(eval, xHiy, D_l, UltVehiY, Qi);
-  writeln(logl);
   assert(abs(logl - (-29.1664)) <= 1e-03);
 
 }
@@ -4089,122 +4123,171 @@ unittest{
 
 unittest{
 
-  DMatrix Y;
-  DMatrix Hi_all;
-  DMatrix Hiy_all;
-  //Calc_Hiy_all(Y, Hi_all, Hiy_all);
-  //assert(Hiy_all);
+  DMatrix Y = DMatrix([3,3], [ 11,2,11,
+                              21, 12, 13,
+                              99, 78, 62]);
+  DMatrix Hi_all = DMatrix([6,6], [5, 12, 32,  0, -9, 9,
+                                  12, 90, 32, 82, 88, 11,
+                                  64, 98, 67,  75, -10, 12,
+                                  18, 67, 88, -175, 39, -3,
+                                  15, 44, 56, 75, -9, -55,
+                                -975, 15, 89, 75, 11, -13,
+                                   ]);
+
+  DMatrix Hiy_all = DMatrix([3,3], [ 99, -78, 26,
+                                   121,  66,  3,
+                                    45,  72, 11]);
+  Calc_Hiy_all(Y, Hi_all, Hiy_all);
+  assert(eqeq(Hiy_all, DMatrix([3, 3], [3475,  594, 3286,
+                                        5190, 2078, 6132,
+                                        9395,  966, 6525])));
 
 }
 
 unittest{
 
-  DMatrix X;
-  DMatrix Hi_all;
-  DMatrix xHi_all;
+  DMatrix X = DMatrix([2,3], [ 11,2,11,
+                              99, 78, 62]);
+  DMatrix xHi_all = zeros_dmatrix(12,12);
+  //DMatrix([6,6], [5, 12, 32,  0, -9, 9,
+  //                                12, 90, 32, 82, 88, 11,
+  //                                64, 98, 67,  75, -10, 12,
+  //                                18, 67, 88, -175, 39, -3,
+  //                                15, 44, 56, 75, -9, -55,
+  //                              -975, 15, 89, 75, 11, -13,
+  //                                 ]);
+  DMatrix Hi_all = DMatrix([2,3], [ 99, -78, 26,
+                                    45,  72, 11]);
   //Calc_xHi_all(X, Hi_all, xHi_all);
-  //assert(xHi_all);
+  //write("xHi_all => ", xHi_all);
+  //assert(xHi_all == DMatrix([], []));
 
 }
 
 unittest{
 
-  DMatrix Y;
-  DMatrix Hiy_all;
-  //double yHiy = Calc_yHiy(Y, Hiy_all);
-  //assert(yHiy);
+  DMatrix Y = DMatrix([2,3], [ 11,  2, 11,
+                               99, 78, 62]);
+  DMatrix Hiy_all = DMatrix([6,6], [5, 12, 32,    0,  -9,   9,
+                                   12, 90, 32,   82,  88,  11,
+                                   64, 98, 67,   75, -10,  12,
+                                   18, 67, 88, -175,  39,  -3,
+                                   15, 44, 56,   75,  -9, -55,
+                                 -975, 15, 89,   75,  11, -13]);
+  double yHiy = Calc_yHiy(Y, Hiy_all);
+  assert(yHiy == 10623);
+}
+
+unittest{
+
+  DMatrix Y = DMatrix([3,3], [ 11,  2, 11,
+                              121,  66,  3,
+                               99, 78, 62]);
+  DMatrix x = DMatrix([3,1], [15, 16, 7]);
+  DMatrix Hi = DMatrix([1,9], [3, 5, 89, 1, 21, 12, 54, -7, 82]);
+  DMatrix xHi = matrix_mult(x, Hi);
+  DMatrix xHiy = DMatrix([3,1], [5, 6, 7]);
+  Calc_xHiy(Y, xHi, xHiy);
+  assert(eqeq(xHiy, DMatrix([3, 1], [261450, 278880, 122010])));
 
 }
 
 unittest{
 
-  DMatrix Y;
-  DMatrix xHi;
-  DMatrix xHiy;
-  //Calc_xHiy(Y, xHi, xHiy);
-  //assert(xHiy);
-
-}
-
-unittest{
-
-  DMatrix eval;
-  DMatrix Qi;
-  DMatrix Hi;
-  DMatrix xHiDHix_all_g;
-  DMatrix xHiDHix_all_e;
-  size_t i;
-  size_t j;
+  DMatrix eval = DMatrix([27,1], [102, -19, -12, 19, 24, 72, -19, 14, 24,
+                                  102, -19, -12, 19, 24, 72, -19, 14, 24,
+                                  102, -19, -12, 19, 24, 72, -19, 14, 24]);
+  DMatrix Qi = zeros_dmatrix(4,4);
+  DMatrix Hi = zeros_dmatrix(2,28);
+  DMatrix xHiDHix_all_g = zeros_dmatrix(4, 12);
+  DMatrix xHiDHix_all_e = zeros_dmatrix(4, 12);
+  size_t i = 0;
+  size_t j = 0;
   double tPD_g, tPD_e;
-  //Calc_tracePD(eval, Qi, Hi, xHiDHix_all_g, xHiDHix_all_e, i, j, tPD_g, tPD_e);
-  //assert(tPD_g);
-  //assert(tPD_e);
+  Calc_tracePD(eval, Qi, Hi, xHiDHix_all_g, xHiDHix_all_e, i, j, tPD_g, tPD_e);
+  writeln("tPD_g  => ", tPD_g);
+  writeln("tPD_e  => ", tPD_e);
+  assert(tPD_g == 0);  // TODO => Get rid of zeros matrix
+  assert(tPD_e == 0);
 
 }
 
 unittest{
+  DMatrix eval = DMatrix([27,1], [102, -19, -12, 19, 24, 72, -19, 14, 24,
+                                  102, -19, -12, 19, 24, 72, -19, 14, 24,
+                                  102, -19, -12, 19, 24, 72, -19, 14, 24]);
+  DMatrix Qi = zeros_dmatrix(4,4);
+  DMatrix Hi = zeros_dmatrix(2,28);
+  DMatrix xHi = zeros_dmatrix(4,28);
 
-  DMatrix eval;
-  DMatrix Qi;
-  DMatrix Hi;
-  DMatrix xHi;
-  DMatrix QixHiDHix_all_g;
-  DMatrix QixHiDHix_all_e;
-  DMatrix xHiDHiDHix_all_gg;
-  DMatrix xHiDHiDHix_all_ee;
-  DMatrix xHiDHiDHix_all_ge;
+  DMatrix QixHiDHix_all_g = zeros_dmatrix(4, 12);
+  DMatrix QixHiDHix_all_e = zeros_dmatrix(4, 12);
+  DMatrix xHiDHiDHix_all_gg = zeros_dmatrix(4, 12);
+  DMatrix xHiDHiDHix_all_ee = zeros_dmatrix(4, 12);
+  DMatrix xHiDHiDHix_all_ge = zeros_dmatrix(4, 12);
   size_t i1, j1, i2, j2;
   double tPDPD_gg, tPDPD_ee, tPDPD_ge;
 
-  //Calc_tracePDPD(eval, Qi, Hi, xHi, QixHiDHix_all_g, QixHiDHix_all_e, xHiDHiDHix_all_gg, xHiDHiDHix_all_ee, xHiDHiDHix_all_ge,
-  //                i1, j1, i2, j2, tPDPD_gg, tPDPD_ee, tPDPD_ge);
-  //assert(tPDPD_gg);
-  //assert(tPDPD_ee);
-  //assert(tPDPD_ge);
+  Calc_tracePDPD(eval, Qi, Hi, xHi, QixHiDHix_all_g, QixHiDHix_all_e,
+                 xHiDHiDHix_all_gg, xHiDHiDHix_all_ee, xHiDHiDHix_all_ge,
+                 i1, j1, i2, j2,
+                 tPDPD_gg, tPDPD_ee, tPDPD_ge);  // TODO => Get rid of zeros matrix
+  assert(tPDPD_gg == 0);
+  assert(tPDPD_ee == 0);
+  assert(tPDPD_ge == 0);
 
 }
 
 unittest{
 
-  DMatrix eval = DMatrix([3,1], [17, 11, 102]);
-  DMatrix Hi = zeros_dmatrix(3, 1);
-  size_t i = 2;
-  size_t j = 1;
+
+  DMatrix eval = DMatrix([27,1], [102, -19, -12, 19, 24, 72, -19, 14, 24,
+                                  102, -19, -12, 19, 24, 72, -19, 14, 24,
+                                  102, -19, -12, 19, 24, 72, -19, 14, 24]);
+  DMatrix Hi = zeros_dmatrix(2,28);
+  DMatrix xHiDHix_all_g = zeros_dmatrix(4, 12);
+  DMatrix xHiDHix_all_e = zeros_dmatrix(4, 12);
+  size_t i = 0;
+  size_t j = 0;
   double tHiD_g = 0;
   double tHiD_e = 0;
-  //Calc_traceHiD(eval, Hi, i, j, tHiD_g, tHiD_e);
+  Calc_traceHiD(eval, Hi, i, j, tHiD_g, tHiD_e);
 
-  assert(tHiD_g == 0);
+  assert(tHiD_g == 0);  // TODO => Get rid of zeros matrix
   assert(tHiD_e == 0);
 
 }
 
 unittest{
 
-  DMatrix eval = DMatrix([3,1], [17, 11, 102]);
-  DMatrix Hi = zeros_dmatrix(3, 1);
+  DMatrix eval = DMatrix([27,1], [102, -19, -12, 19, 24, 72, -19, 14, 24,
+                                  102, -19, -12, 19, 24, 72, -19, 14, 24,
+                                  102, -19, -12, 19, 24, 72, -19, 14, 24]);
+  DMatrix Hi = zeros_dmatrix(2,28);
   size_t i1 = 0;
-  size_t j1 = 1;
-  size_t i2 = 1;
-  size_t j2 = 2;
+  size_t j1 = 0;
+  size_t i2 = 0;
+  size_t j2 = 0;
   double tHiDHiD_gg = 0, tHiDHiD_ee = 0, tHiDHiD_ge = 0;
 
-  //Calc_traceHiDHiD(eval, Hi, i1, j1, i2, j2, tHiDHiD_gg, tHiDHiD_ee, tHiDHiD_ge);
-  //assert(tHiDHiD_gg);
-  //assert(tHiDHiD_ee);
-  //assert(tHiDHiD_ge);
+  Calc_traceHiDHiD(eval, Hi, i1, j1, i2, j2, tHiDHiD_gg, tHiDHiD_ee, tHiDHiD_ge);
+  assert(tHiDHiD_gg == 0);
+  assert(tHiDHiD_ee == 0);
+  assert(tHiDHiD_ge == 0);
 
 }
 
 unittest{
+  DMatrix eval = DMatrix([27,1], [102, -19, -12, 19, 24, 72, -19, 14, 24,
+                                  102, -19, -12, 19, 24, 72, -19, 14, 24,
+                                  102, -19, -12, 19, 24, 72, -19, 14, 24]);
+  DMatrix Hiy = zeros_dmatrix(2,28);
+  DMatrix xHi = zeros_dmatrix(4,28);
 
-  DMatrix eval = DMatrix([3,1], [17, 11, 102]);
-  DMatrix xHi = zeros_dmatrix(3, 1);
-  DMatrix Hiy = zeros_dmatrix(3, 1);
   size_t i = 0;
-  size_t j = 1;
-  DMatrix xHiDHiy_g;
-  DMatrix xHiDHiy_e;
+  size_t j = 0;
+  DMatrix xHiDHiy_g = zeros_dmatrix(3,3);
+  DMatrix xHiDHiy_e = zeros_dmatrix(3,3);
 
   //Calc_xHiDHiy(eval, xHi, Hiy, i, j, xHiDHiy_g, xHiDHiy_e);
   //assert(xHiDHiy_g);
