@@ -1294,6 +1294,7 @@ void CalcDev(const char func_name, const DMatrix eval, const DMatrix Qi,
 void Calc_xHiDHiy_all(const DMatrix eval, const DMatrix xHi, const DMatrix Hiy,
                       ref DMatrix xHiDHiy_all_g, ref DMatrix xHiDHiy_all_e) {
   writeln("in Calc_xHiDHiy_all");
+
   xHiDHiy_all_g = zeros_dmatrix(xHiDHiy_all_g.shape[0], xHiDHiy_all_g.shape[1]);
   xHiDHiy_all_e = zeros_dmatrix(xHiDHiy_all_e.shape[0], xHiDHiy_all_e.shape[1]);
 
@@ -1351,6 +1352,7 @@ void Calc_xHiDHiDHiy_all(const size_t v_size, const DMatrix eval, const DMatrix 
                          const DMatrix Hiy, ref DMatrix xHiDHiDHiy_all_gg,
                          ref DMatrix xHiDHiDHiy_all_ee, ref DMatrix xHiDHiDHiy_all_ge) {
   writeln("in Calc_xHiDHiDHiy_all");
+
   xHiDHiDHiy_all_gg = zeros_dmatrix(xHiDHiDHiy_all_gg.shape[0], xHiDHiDHiy_all_gg.shape[1]);
   xHiDHiDHiy_all_ee = zeros_dmatrix(xHiDHiDHiy_all_ee.shape[0], xHiDHiDHiy_all_ee.shape[1]);
   xHiDHiDHiy_all_ge = zeros_dmatrix(xHiDHiDHiy_all_ge.shape[0], xHiDHiDHiy_all_ge.shape[1]);
@@ -3079,6 +3081,7 @@ void Calc_traceHiDHiD(const DMatrix eval, const DMatrix Hi,
 void Calc_xHiDHiy(const DMatrix eval, const DMatrix xHi,
                   const DMatrix Hiy, const size_t i, const size_t j,
                   ref DMatrix xHiDHiy_g, ref DMatrix xHiDHiy_e) {
+  writeln("in Calc_xHiDHiy");
   xHiDHiy_g = zeros_dmatrix(xHiDHiy_g.shape[0], xHiDHiy_g.shape[1]);
   xHiDHiy_e = zeros_dmatrix(xHiDHiy_e.shape[0], xHiDHiy_e.shape[1]);
 
@@ -3217,6 +3220,7 @@ void Calc_xHiDHiDHix(const DMatrix eval, const DMatrix Hi,
                      const size_t i2, const size_t j2,
                      ref DMatrix xHiDHiDHix_gg, ref DMatrix xHiDHiDHix_ee,
                      ref DMatrix xHiDHiDHix_ge) {
+  writeln("in Calc_xHiDHiDHix");
   xHiDHiDHix_gg = zeros_dmatrix(xHiDHiDHix_gg.shape[0], xHiDHiDHix_gg.shape[1]);
   xHiDHiDHix_ee = zeros_dmatrix(xHiDHiDHix_ee.shape[0], xHiDHiDHix_ee.shape[1]);
   xHiDHiDHix_ge = zeros_dmatrix(xHiDHiDHix_ge.shape[0], xHiDHiDHix_ge.shape[1]);
@@ -3300,6 +3304,7 @@ void Calc_xHiDHiDHix(const DMatrix eval, const DMatrix Hi,
       }
     }
   }
+  writeln("out");
 
   return;
 }
@@ -3916,16 +3921,41 @@ unittest{
 }
 
 unittest{
+  //[427, 1] [8, 1708] [4, 427] [8, 10] [8, 10]
+  DMatrix eval = DMatrix([2,1], [102, -19]);
+  DMatrix x = DMatrix([8, 1], [71, 3, 75, 12, -22, 234, 67, 12]);
+  DMatrix Hi = DMatrix([1, 8], [32, 5, 12, -2, 71, 4, 88, -21]);
+  DMatrix xHi = matrix_mult(x, Hi);
+  DMatrix Hiy = ones_dmatrix(4,  2);
 
-  DMatrix eval = DMatrix([3,1], [17, 11, 102]);
-  DMatrix xHi = zeros_dmatrix(3,1);
-  DMatrix Hiy = zeros_dmatrix(3,1);
-  DMatrix xHiDHiy_all_g = zeros_dmatrix(3,1);
-  DMatrix xHiDHiy_all_e = zeros_dmatrix(3,1);
+  size_t i = 0;
+  size_t j = 0;
+  DMatrix xHiDHiy_all_g = ones_dmatrix(8,10);
+  DMatrix xHiDHiy_all_e = ones_dmatrix(8,10);
 
-  //Calc_xHiDHiy_all(eval, xHi, Hiy, xHiDHiy_all_g, xHiDHiy_all_e);
-  //assert(xHiDHiy_all_g = DMatrix([], []));
-  //assert(xHiDHiy_all_e = DMatrix([], []));
+  Calc_xHiDHiy_all(eval, xHi, Hiy, xHiDHiy_all_g, xHiDHiy_all_e);
+  writeln("xHiDHiy_all_g => ", xHiDHiy_all_g);
+  writeln("xHiDHiy_all_e => ", xHiDHiy_all_e);
+  assert(xHiDHiy_all_g == DMatrix([8, 10], [135965,  136604,  143065, 134332,  30814,  37914,  29181, -31808,
+                                            -33441,   13845,    5745,   5772,   6045,   5676,   1302,   1602,
+                                              1233,   -1344,   -1413,    585, 143625, 144300, 151125, 141900,
+                                             32550,   40050,   30825, -33600, -35325,  14625,  22980,  23088,
+                                             24180,   22704,    5208,   6408,   4932,  -5376,  -5652,   2340,
+                                            -42130,  -42328,  -44330, -41624,  -9548, -11748,  -9042,   9856,
+                                             10362,   -4290,  448110, 450216, 471510, 442728, 101556, 124956,
+                                             96174, -104832, -110214,  45630, 128305, 128908, 135005, 126764,
+                                             29078,   35778,   27537, -30016, -31557,  13065,  22980,  23088,
+                                             24180,   22704,    5208,   6408,   4932,  -5376,  -5652,   2340]));
+  assert(xHiDHiy_all_e == DMatrix([8, 10], [7313,  7952, 14413,  5680,   639,  7739,  -994,  7100,
+                                            5467, -1633,   309,   336,   609,   240,    27,   327,
+                                             -42,   300,   231,   -69,  7725,  8400, 15225,  6000,
+                                             675,  8175, -1050,  7500,  5775, -1725,  1236,  1344,
+                                            2436,   960,   108,  1308,  -168,  1200,   924,  -276,
+                                           -2266, -2464, -4466, -1760,  -198, -2398,   308, -2200,
+                                           -1694,   506, 24102, 26208, 47502, 18720,  2106, 25506,
+                                           -3276, 23400, 18018, -5382,  6901,  7504, 13601,  5360,
+                                             603,  7303,  -938,  6700,  5159, -1541,  1236,  1344,
+                                            2436,   960,   108,  1308,  -168,  1200,   924,  -276]));
 }
 
 unittest{
@@ -3942,30 +3972,42 @@ unittest{
 //
 unittest{
 
-  size_t v_size = 0;
-  DMatrix eval = DMatrix([3,1], [17, 11, 102]);
-  DMatrix Hi = zeros_dmatrix(3, 1);
-  DMatrix xHi = zeros_dmatrix(3, 1);
-  DMatrix Hiy = zeros_dmatrix(3, 1);
-  DMatrix xHiDHiDHiy_all_gg = zeros_dmatrix(3, 1);
-  DMatrix xHiDHiDHiy_all_ee = zeros_dmatrix(3, 1);
-  DMatrix xHiDHiDHiy_all_ge = zeros_dmatrix(3, 1);
+  size_t v_size = 10;
 
+  DMatrix eval = DMatrix([2,1], [102, -19]);
+  DMatrix x = DMatrix([8, 1], [71, 3, 75, 12, -22, 234, 67, 12]);
+  DMatrix Hi = DMatrix([1, 8], [32, 5, 12, -2, 71, 4, 88, -21]);
+  DMatrix xHi = matrix_mult(x, Hi);
+  DMatrix Hiy = ones_dmatrix(4,  2);
+
+  DMatrix xHiDHiDHiy_all_gg = zeros_dmatrix(8, 100);
+  DMatrix xHiDHiDHiy_all_ee = zeros_dmatrix(8, 100);
+  DMatrix xHiDHiDHiy_all_ge = zeros_dmatrix(8, 100);
+
+  // TODO
   //Calc_xHiDHiDHiy_all(v_size, eval, Hi, xHi, Hiy, xHiDHiDHiy_all_gg, xHiDHiDHiy_all_ee, xHiDHiDHiy_all_ge);
-  //assert(xHiDHiDHiy_all_gg);
-  //assert(xHiDHiDHiy_all_ee);
-  //assert(xHiDHiDHiy_all_ge);
+  //writeln("xHiDHiDHiy_all_gg => ", xHiDHiDHiy_all_gg);
+  //writeln("xHiDHiDHiy_all_ee => ", xHiDHiDHiy_all_ee);
+  //writeln("xHiDHiDHiy_all_ge => ", xHiDHiDHiy_all_ge);
+
+  //assert(xHiDHiDHiy_all_gg == DMatrix([], []));
+  //assert(xHiDHiDHiy_all_ee == DMatrix([], []));
+  //assert(xHiDHiDHiy_all_ge == DMatrix([], []));
 }
 
 unittest{
 
-  size_t v_size;
-  DMatrix eval = DMatrix([3,1], [17, 11, 102]);
-  DMatrix Hi = zeros_dmatrix(3, 1);
-  DMatrix xHi = zeros_dmatrix(3, 1);
-  DMatrix xHiDHiDHix_all_gg = zeros_dmatrix(3, 1);
-  DMatrix xHiDHiDHix_all_ee = zeros_dmatrix(3, 1);
-  DMatrix xHiDHiDHix_all_ge = zeros_dmatrix(3, 1);
+  size_t v_size = 10;
+  DMatrix eval = DMatrix([2,1], [102, -19]);
+  DMatrix x = DMatrix([8, 2], [71, 3, 75, 12, -22, 234, 67, 12,
+                               11, 32, 7, 22,  -2,  -5, 12, 10]);
+  DMatrix Hi = DMatrix([2, 8], [32, 5, 12, -2, 71, 4, 88, -21,
+                                11, 32, 7, 22,  -2,  -5, 12, 10]);
+  DMatrix xHi = matrix_mult(x, Hi);
+
+  DMatrix xHiDHiDHix_all_gg = zeros_dmatrix(100, 8);
+  DMatrix xHiDHiDHix_all_ee = zeros_dmatrix(100, 8);
+  DMatrix xHiDHiDHix_all_ge = zeros_dmatrix(100, 8);
 
   //Calc_xHiDHiDHix_all(v_size, eval, Hi, xHi, xHiDHiDHix_all_gg, xHiDHiDHix_all_ee, xHiDHiDHix_all_ge);
   //assert(xHiDHiDHix_all_gg);
@@ -3989,28 +4031,31 @@ unittest{
 //
 unittest{
 
-  DMatrix Qi = zeros_dmatrix(3, 3);
-  DMatrix vec_all_g = zeros_dmatrix(3, 1);
-  DMatrix vec_all_e = zeros_dmatrix(3, 1);
+  DMatrix Qi =  DMatrix([3, 1], [25, 12, -19]);
+  DMatrix vec_all_g = DMatrix([3, 1], [10, 11, 2]);
+  DMatrix vec_all_e =  DMatrix([3, 1], [4, 7, 19]);
   DMatrix Qivec_all_g = zeros_dmatrix(3, 1);
   DMatrix Qivec_all_e = zeros_dmatrix(3, 1);
 
-  //Calc_QiVec_all(Qi, vec_all_g, vec_all_e, Qivec_all_g, Qivec_all_e);
-  //assert(Qivec_all_g);
-  //assert(Qivec_all_e);
+  Calc_QiVec_all(Qi, vec_all_g, vec_all_e, Qivec_all_g, Qivec_all_e);
+
+  assert(Qivec_all_g == DMatrix([3, 1], [250, 120, -190]));
+  assert(Qivec_all_e == DMatrix([3, 1], [100, 48, -76]));
+
 }
 
 unittest{
 
-  DMatrix Qi = zeros_dmatrix(3, 3);
-  DMatrix mat_all_g = zeros_dmatrix(3, 1);
-  DMatrix mat_all_e = zeros_dmatrix(3, 1);
-  DMatrix Qimat_all_g = zeros_dmatrix(3, 1);
-  DMatrix Qimat_all_e = zeros_dmatrix(3, 1);
+  DMatrix Qi = DMatrix([2, 2], [91, 25, 12, -19]);
+  DMatrix mat_all_g = DMatrix([2, 2], [10, 11, 21, 18]);
+  DMatrix mat_all_e = DMatrix([2, 2], [4, 9, 11, 12]);
+  DMatrix Qimat_all_g = zeros_dmatrix(2, 2);
+  DMatrix Qimat_all_e = zeros_dmatrix(2, 2);
 
-  //Calc_QiMat_all(Qi, mat_all_g, mat_all_e, Qimat_all_g, Qimat_all_e);
-  //assert(Qimat_all_g);
-  //assert(Qimat_all_e);
+  Calc_QiMat_all(Qi, mat_all_g, mat_all_e, Qimat_all_g, Qimat_all_e);
+
+  assert(Qimat_all_g == DMatrix([2, 2], [1435, 1451, -279, -210]));
+  assert(Qimat_all_e == DMatrix([2, 2], [639, 1119, -161, -120]));
 
 }
 
@@ -4025,8 +4070,8 @@ unittest{
   DMatrix xHiDHixQixHiy_all_e;
   size_t i;
   size_t j;
-  double yPDPy_g;
-  double yPDPy_e;
+  double yPDPy_g = 0;
+  double yPDPy_e = 0;
 
   //Calc_yPDPy(eval, Hiy, QixHiy, xHiDHiy_all_g, xHiDHiy_all_e, xHiDHixQixHiy_all_g, xHiDHixQixHiy_all_e, i, j, yPDPy_g, yPDPy_e);
   //assert(yPDPy_e);
