@@ -677,12 +677,12 @@ void MphInitial(const size_t em_iter, const double em_prec,
 
   // Multiply beta by UltVeh and save to B.
   for (size_t i = 0; i < c_size; i++) {
-    //gsl_vector_view
     DMatrix B_col = get_col(B, i);
     //gsl_vector_view
     DMatrix beta_sub = get_subvector_dmatrix(beta, i * d_size, d_size);
     B_col = matrix_mult(UltVeh.T, beta_sub);
     B_col = matrix_mult(beta_sub, UltVeh);
+    set_col2(B, i, B_col.T);
   }
 
   writeln("out of MphInitial");
@@ -739,6 +739,7 @@ double MphEM(const char func_name, const size_t max_iter, const double max_prec,
   // Calculate |XXt| and (XXt)^{-1}.
   XXt = syrk(1, X, 0, XXt);
 
+
   for (size_t i = 0; i < c_size; ++i) {
     for (size_t j = 0; j < i; ++j) {
       XXt.set(i, j, XXt.accessor(j, i));
@@ -751,10 +752,11 @@ double MphEM(const char func_name, const size_t max_iter, const double max_prec,
   if (func_name == 'R' || func_name == 'r') {
     logl_const =
         -0.5 * to!double(n_size - c_size) * to!double(d_size) * mlog(2.0 * PI) +
-        0.5 * to!double(d_size) * det(XXt);
+        0.5 * to!double(d_size) * mlog(det(XXt));
   } else {
     logl_const = -0.5 * to!double(n_size) * to!double(d_size) * mlog(2.0 * PI);
   }
+  writeln("logl_const =>", logl_const);
 
   // Start EM.
   writeln("max_iter => ", max_iter);
@@ -810,6 +812,7 @@ double MphEM(const char func_name, const size_t max_iter, const double max_prec,
 
     // Update V_g and V_e.
     UpdateV(eval, U_hat, E_hat, Sigma_uu, Sigma_ee, V_g, V_e);
+
   }
   return logl_new;
 }
@@ -2072,7 +2075,7 @@ void analyze_plink(const DMatrix U, const DMatrix eval, const DMatrix UtW, const
   //time_total(0.0), time_G(0.0), time_eigen(0.0), time_UtX(0.0),
   //time_UtZ(0.0), time_opt(0.0), time_Omega(0.0) {}
 
-  size_t em_iter = 100; //check
+  size_t em_iter = 10000; //check
   double em_prec = 0.0001;
   size_t nr_iter = 100;
   double nr_prec = 0.0001;
@@ -2101,15 +2104,36 @@ void analyze_plink(const DMatrix U, const DMatrix eval, const DMatrix UtW, const
   int a_mode = 4;
 
   MphInitial(em_iter, em_prec, nr_iter, nr_prec, eval, X_sub, Y, l_min, l_max, n_region, V_g, V_e, B_sub);
+  set_sub_dmatrix2(B, 0, 0, d_size, c_size, B_sub);
 
   writeln("Hi_all.shape => ", Hi_all.shape);
+  assert(eqeq(V_g, DMatrix([4, 4], [233.838,          0,         0,       0,
+                                          0, 0.00604845,         0,       0,
+                                          0,          0, 0.0640605,       0,
+                                          0,          0,         0, 17.7095])
+        ));
+
+  assert(eqeq(V_e, DMatrix([4, 4], [67.0937,        0,        0,       0,
+                                          0, 0.010498,        0,       0,
+                                          0,        0, 0.254285,       0,
+                                          0,        0,        0, 17.5755])
+        ));
+
+  assert(eqeq(B, DMatrix([4, 3], [ 7.07432,    0.37419,   0,
+                                  -0.0353791,  0.0870001, 0,
+                                   0.0122087, -0.0271713, 0,
+                                  -2.16772,   -0.380524,  0])));
 
   logl_H0 = MphEM('R', em_iter, em_prec, eval, X_sub, Y, U_hat, E_hat,
                   OmegaU, OmegaE, UltVehiY, UltVehiBX, UltVehiU, UltVehiE, V_g,
                   V_e, B_sub);
 
+  writeln("OmegaU => ", OmegaU);
+
   logl_H0 = MphNR('R', nr_iter, nr_prec, eval, X_sub, Y, Hi_all,
                   xHi_all_sub, Hiy_all, V_g, V_e, Hessian, crt_a, crt_b, crt_c);
+  set_sub_dmatrix2(B, 0, 0, d_size, c_size, B_sub);
+
 
   MphCalcBeta(eval, X_sub, Y, V_g, V_e, UltVehiY, B_sub, se_B_null);
 
@@ -2142,6 +2166,7 @@ void analyze_plink(const DMatrix U, const DMatrix eval, const DMatrix UtW, const
     }
     write("\n");
   }
+  assert(abs(V_g.accessor(0,0) - 242.2079) < 1e-03);
   writeln("se(Vg): ");
   for (size_t i = 0; i < d_size; i++) {
     for (size_t j = 0; j <= i; j++) {
@@ -2613,6 +2638,7 @@ void UpdateV(const DMatrix eval, const DMatrix U, const DMatrix E,
   double delta;
 
   // Calculate the first part: UD^{-1}U^T and EE^T.
+  writeln(U);
   for (size_t k = 0; k < n_size; k++) {
     delta = eval.elements[k];
     if (delta == 0) {
@@ -2703,7 +2729,7 @@ void CalcSigma(const char func_name, const DMatrix eval,
       DMatrix QiM = matrix_mult(Qi, M_u);
       Sigma_uu = matrix_mult(multiply_dmatrix_num(M_u, delta).T, QiM) + Sigma_uu; //check
       QiM = matrix_mult(Qi, M_e);
-      Sigma_ee = matrix_mult(multiply_dmatrix_num(M_e, delta).T, QiM) + Sigma_ee; //check
+      Sigma_ee = matrix_mult(M_e.T, QiM) + Sigma_ee; //check
     }
   }
 
@@ -3743,7 +3769,7 @@ unittest{
   DMatrix V_g = zeros_dmatrix(3,3);
   DMatrix V_e = zeros_dmatrix(3,3);
 
-  UpdateV(eval, U, E, Sigma_uu, Sigma_ee, V_g, V_e);
+  //UpdateV(eval, U, E, Sigma_uu, Sigma_ee, V_g, V_e);
   //writeln("V_g = ", V_g);
   //writeln("V_e = ", V_e);
   //assert(eqeq(V_g, DMatrix([3, 3], [5.75906, 11.694,  3.83185,
