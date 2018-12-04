@@ -16,19 +16,14 @@ import std.typecons; // for Tuples
 import core.stdc.stdlib : exit;
 
 import cblas : gemm, Transpose, Order, Uplo, cblas_ddot, cblas_daxpy, cblas_dger, cblas_dsyr, cblas_dsyr2, cblas_dsyrk;
+import lapack.lapack;
 
 import faster_lmm_d.dmatrix;
 import faster_lmm_d.helpers;
 
 extern (C) {
-  void dgetrf_ (int* m, int* n, double* a, int* lda, int* ipiv, int* info);
-  void dgetri_ (int* n, double* a, int* lda, const(int)* ipiv, double* work, int* lwork, int* info);
   int LAPACKE_dgetrf (int matrix_layout, int m, int n, double* a, int lda, int* ipiv);
   double EIGEN_MINVALUE = 1e-10;
-  void dsyev_(char* jobz,  char* uplo, int* n, double *a, int* lda, double *w, double *work, int* lwork, int* info);
-  void dsyevr_(char* jobz, char* range, char* uplo, int* n, double *a, int* lda, double *vl,
-               double *vu, int *il, int *iu, double* abstol, int* m, double *w, double *z,
-               int* ldz, int *isuppz, double *work, int* lwork, int *iwork, int *liwork, int* info);
   int LAPACKE_dsyev (int matrix_layout, char jobz, char uplo, int n,
                       double* a, int lda, double* z);
   int LAPACKE_dsyevr (int matrix_layout, char jobz, char range, char uplo, int n,
@@ -388,7 +383,7 @@ void lapack_eigen_symmv(const DMatrix A_const, ref DMatrix eval, ref DMatrix eve
 
     LWORK = 3 * N;
     double[] WORK = new double[LWORK];
-    dsyev_(&JOBZ, &UPLO, &N, A.elements.ptr, &LDA, eval.elements.ptr, WORK.ptr, &LWORK, &INFO);
+    dsyev_(JOBZ, UPLO, N, A.elements.ptr, LDA, eval.elements.ptr, WORK.ptr, LWORK, INFO);
     if (INFO != 0) {
       writeln("Eigen decomposition unsuccessful in lapack_eigen_symmv.");
       return;
@@ -416,9 +411,11 @@ void lapack_eigen_symmv(const DMatrix A_const, ref DMatrix eval, ref DMatrix eve
     double[] WORK_temp = new double[1];
     int[] IWORK_temp = new int[1];
 
-    dsyevr_(&JOBZ, &RANGE, &UPLO, &N, A.elements.ptr, &LDA, &VL, &VU, &IL, &IU,
-            &ABSTOL, &M, eval.elements.ptr, evec.elements.ptr, &LDZ, ISUPPZ.ptr, WORK_temp.ptr,
-            &LWORK, IWORK_temp.ptr, &LIWORK, &INFO);
+    dsyevr_(JOBZ, RANGE, UPLO, N, A.elements.ptr, LDA, &VL, &VU, &IL, &IU,
+            ABSTOL, M, eval.elements.ptr, evec.elements.ptr, LDZ, ISUPPZ.ptr, WORK_temp.ptr,
+            LWORK, IWORK_temp.ptr, &LIWORK, INFO);
+
+
     if (INFO != 0) {
       writeln("Work space estimate unsuccessful in lapack_eigen_symmv.");
       return;
@@ -429,9 +426,9 @@ void lapack_eigen_symmv(const DMatrix A_const, ref DMatrix eval, ref DMatrix eve
     double[] WORK = new double[LWORK];
     int[] IWORK = new int[LIWORK];
 
-    dsyevr_(&JOBZ, &RANGE, &UPLO, &N, A.elements.ptr, &LDA, &VL, &VU, &IL, &IU,
-            &ABSTOL, &M, eval.elements.ptr, evec.elements.ptr, &LDZ, ISUPPZ.ptr, WORK.ptr, &LWORK,
-            IWORK.ptr, &LIWORK, &INFO);
+    dsyevr_(JOBZ, RANGE, UPLO, N, A.elements.ptr, LDA, &VL, &VU, &IL, &IU,
+            ABSTOL, M, eval.elements.ptr, evec.elements.ptr, LDZ, ISUPPZ.ptr, WORK.ptr,
+            LWORK, IWORK.ptr, &LIWORK, INFO);
     if (INFO != 0) {
       writeln("Eigen decomposition unsuccessful in lapack_eigen_symmv.");
       return;

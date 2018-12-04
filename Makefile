@@ -34,23 +34,24 @@ ifeq ($(ARRAYFIRE),1)
 endif
 
 DUB_INCLUDE = \
--I~/.dub/packages/dstats-1.0.5/dstats/source/ \
--I~/.dub/packages/gsl-0.1.8/gsl/source/ \
 -I~/.dub/packages/cblas-1.0.0/cblas/source/ \
+-I~/.dub/packages/dstats-1.0.5/dstats/source/ \
 -I~/.dub/packages/dyaml-0.6.5/dyaml/source/ \
--I~/.dub/packages/tinyendian-0.1.2/tinyendian/source/ \
--I~/.dub/packages/resusage-0.2.7/resusage/source/
+-I~/.dub/packages/gsl-0.1.8/gsl/source/ \
+-I~/.dub/packages/lapack-0.0.6/lapack/source \
+-I~/.dub/packages/resusage-0.2.8/resusage/source/ \
+-I~/.dub/packages/tinyendian-0.1.2/tinyendian/source
 
 DUB_LIBS = \
 $(HOME)/.dub/packages/dstats-1.0.5/dstats/libdstats.a \
 $(HOME)/.dub/packages/dyaml-0.6.5/dyaml/libdyaml.a \
-$(HOME)/.dub/packages/gsl-0.1.8/gsl/libgsl.a \
-$(HOME)/.dub/packages/tinyendian-0.1.2/tinyendian/libtinyendian.a \
-$(HOME)/.dub/packages/resusage-0.2.7/resusage/lib/libresusage.a
+$(HOME)/.dub/packages/dstats-1.0.5/dstats/libdstats.a \
+$(HOME)/.dub/packages/resusage-0.2.8/resusage/lib/libresusage.a \
+$(HOME)/.dub/packages/tinyendian-0.1.2/tinyendian/libtinyendian.a
 
 DFLAGS = -wi -I./source $(DUB_INCLUDE)
 RPATH  =
-LIBS   = -L=-llapacke -L=-lblas -L=-lgsl -L=-lgslcblas -L=-lm -L=-lopenblas -L=-lm -L=-lgslcblas
+LIBS   = -L=-llapacke -L=-llapack -L=-lblas -L=-lgsl -L=-lgslcblas -L=-lm -L=-lopenblas -L=-lm -L=-lgslcblas
 SRC    = $(wildcard source/faster_lmm_d/*.d  source/test/*.d)
 IR     = $(wildcard source/faster_lmm_d/*.ll source/test/*.ll)
 BC     = $(wildcard source/faster_lmm_d/*.bc source/test/*.bc)
