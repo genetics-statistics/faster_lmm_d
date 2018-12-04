@@ -3,10 +3,12 @@ language: d
 addons:
   apt:
     packages:
-      - libopenblas-dev 
+      - liblapack-dev
+      - liblapack3
+      - liblapacke
+      - liblapacke-dev
+      - libopenblas-dev
       - libgsl0-dev
-      - liblapacke-dev
-      - liblapacke-dev
       - nvidia-cuda-dev
       - google-perftools
       - libgoogle-perftools-dev

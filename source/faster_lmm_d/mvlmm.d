@@ -66,6 +66,7 @@ void mvlmm_run(string option_kinship, string option_pheno, string option_covar, 
   writeln("reading kinship " , option_kinship);
   DMatrix G = read_covariate_matrix_from_file(option_kinship);
 
+  CenterMatrix(G);
   auto k = kvakve(G);
   DMatrix eval = k.kva;
   DMatrix U = k.kve;
@@ -100,13 +101,443 @@ void mvlmm_run(string option_kinship, string option_pheno, string option_covar, 
 
   DMatrix Y = zeros_dmatrix(ni_test, n_ph);
   DMatrix W = zeros_dmatrix(ni_test, n_cvt);
-  CopyCvtPhen(W, Y, indicators.indicator_idv, indicators.indicator_cvt, cvt, pheno.pheno, n_ph, n_cvt, 0);
+  CopyCvtPhen2(W, Y, indicators.indicator_idv, indicators.indicator_cvt, cvt, pheno.pheno, n_ph, n_cvt, 0);
 
   auto geno_result = readfile_bed(option_bfile ~ ".bed", setSnps, W, indicators.indicator_idv, snpInfo, maf_level, miss_level, hwe_level, r2_level, ns_test);
   writeln("calculated snpInfo");
   snpInfo = geno_result.snpInfo;
 
-  DMatrix UtW = matrix_mult(U.T, indicators.cvt);
+  DMatrix UtW = matrix_mult(U.T, W);
+
+//  UtW.elements = [
+//  1.04774, -20.664,
+//0.0484649, -9.12638e-15,
+//0.000416581, -3.28071e-14,
+//0.0632165, 3.54161e-14,
+//0.0518891, -2.13163e-14,
+//0.0284744, 1.28161e-14,
+//0.0259649, -3.30899e-16,
+//-0.0806479, -2.90566e-15,
+//-0.0365475, -6.99441e-15,
+//0.299621, 2.77556e-16,
+//-0.240656, 2.22045e-16,
+//0.112296, 1.11022e-15,
+//-0.0641494, -5.55112e-16,
+//0.326486, 1.11022e-15,
+//0.0792563, -5.27356e-16,
+//0.0950814, 7.77156e-16,
+//-0.101928, 5.55112e-16,
+//0.185379, -6.80012e-16,
+//-0.0293892, -1.22125e-15,
+//0.089813, 5.55112e-17,
+//0.0179631, 1.11022e-16,
+//0.12536, -6.66134e-16,
+//0.246037, 0,
+//0.0418324, 3.88578e-16,
+//0.226313, -1.66533e-16,
+//0.126306, 6.66134e-16,
+//-0.110944, 3.747e-16,
+//0.0655991, -1.66533e-16,
+//0.015244, -1.11022e-15,
+//-0.21912, 1.48492e-15,
+//-0.351667, 8.32667e-16,
+//0.184053, -3.33067e-16,
+//0.036866, 8.39606e-16,
+//0.123818, 1.22125e-15,
+//-0.0278326, -1.55431e-15,
+//-0.158252, -4.61436e-16,
+//0.240571, -1.33227e-15,
+//0.106897, -7.77156e-16,
+//-0.323911, -1.52656e-16,
+//0.166513, 1.27676e-15,
+//-0.0645395, 1.38778e-15,
+//-0.0329447, 1.66533e-15,
+//0.333249, -6.66134e-16,
+//0.0136169, 1.02002e-15,
+//-0.158758, -5.55112e-17,
+//-0.132704, -2.77556e-16,
+//0.155516, 1.16573e-15,
+//-0.179699, -7.21645e-16,
+//-0.0996718, -5.41234e-16,
+//0.00864684, -1.88738e-15,
+//-0.102787, 1.65493e-15,
+//-0.0278947, -2.66454e-15,
+//0.0872279, -2.88658e-15,
+//0.120509, 1.55431e-15,
+//-0.14885, 1.16573e-15,
+//-0.0345484, -1.44329e-15,
+//0.0651029, -2.02529e-16,
+//0.155724, 0,
+//-0.102426, -8.88178e-16,
+//-0.228685, -5.55112e-16,
+//-0.299936, -6.10623e-16,
+//-0.0321514, 4.16334e-17,
+//0.165453, -2.16493e-15,
+//-0.159911, -7.21645e-16,
+//-0.0226274, -1.33227e-15,
+//0.0562987, 5.55112e-17,
+//-0.0852282, 9.15934e-16,
+//0.277015, 1.33227e-15,
+//0.00831572, -3.33067e-16,
+//0.164991, 7.49401e-16,
+//-0.00834529, 1.14492e-16,
+//0.0337915, -1.11022e-16,
+//0.0901898, 2.22045e-16,
+//-0.133731, 8.88178e-16,
+//-0.116806, -1.11022e-16,
+//-0.0720402, -1.11022e-16,
+//0.0116207, -4.44089e-16,
+//-0.185795, -1.01308e-15,
+//0.225521, 6.66134e-16,
+//-0.0943547, -6.10623e-16,
+//0.0366363, -1.97065e-15,
+//0.0125015, 1.22125e-15,
+//0.16197, 7.21645e-16,
+//0.325751, -1.11022e-15,
+//0.348188, -2.22045e-16,
+//-0.0753012, 6.93889e-17,
+//-0.148793, -6.66134e-16,
+//-0.279753, 7.77156e-16,
+//-0.431571, 5.55112e-16,
+//0.0811125, -1.16573e-15,
+//-0.114862, 1.13798e-15,
+//0.100284, -2.77556e-17,
+//-0.206442, 7.21645e-16,
+//0.262677, -2.77556e-16,
+//-0.282948, 5.75928e-16,
+//-0.141572, -1.9984e-15,
+//0.108607, -1.66533e-16,
+//0.0392561, 9.99201e-16,
+//-0.0583558, 5.55112e-17,
+//-0.204049, 2.77556e-16,
+//0.0693018, -2.27596e-15,
+//-0.211993, -7.21645e-16,
+//-0.0217715, -1.85962e-15,
+//-0.00103216, 1.55431e-15,
+//-0.110504, -1.09635e-15,
+//-0.137026, -1.60982e-15,
+//0.219077, 3.22659e-16,
+//-0.0823219, 4.44089e-16,
+//-0.0873333, 1.4988e-15,
+//0.256955, -6.07153e-16,
+//0.147301, 3.33067e-16,
+//0.298501, 8.88178e-16,
+//-0.135762, -1.22125e-15,
+//-0.0317334, -9.54098e-16,
+//0.166275, 3.33067e-16,
+//-0.130798, -1.11022e-15,
+//-0.0679581, -6.10623e-16,
+//0.165556, 2.22045e-16,
+//-0.0577819, 1.83187e-15,
+//0.113983, -4.92661e-16,
+//0.0994765, 2.22045e-16,
+//-0.0281641, 1.97932e-15,
+//-0.11275, -1.26288e-15,
+//0.0683234, -4.44089e-16,
+//0.064661, -2.22045e-16,
+//-0.25972, -2.22045e-16,
+//-0.210536, 6.10623e-16,
+//-0.273007, 2.27596e-15,
+//0.387666, -1.55431e-15,
+//0.149211, 8.88178e-16,
+//-0.0242697, -2.35922e-15,
+//-0.00962636, 1.38778e-17,
+//0.0134239, 4.44089e-16,
+//-0.0650054, 1.88738e-15,
+//0.036256, 2.10942e-15,
+//-0.0400073, 6.10623e-16,
+//-0.0158883, -5.55112e-17,
+//0.0201622, 5.55112e-16,
+//0.0778596, 1.11022e-16,
+//-0.0297186, -2.38698e-15,
+//0.0479823, -1.16573e-15,
+//0.196173, 1.7486e-15,
+//-0.181867, 5.55112e-17,
+//0.202616, -5.55112e-16,
+//-0.0332085, -3.88578e-16,
+//0.0932427, 3.33067e-16,
+//-0.0966775, -3.33067e-16,
+//-0.0408566, -4.16334e-16,
+//-0.0936351, 6.48787e-16,
+//-0.089639, 1.59595e-15,
+//-0.231495, -1.55431e-15,
+//0.35408, 1.13798e-15,
+//-0.00921503, 8.32667e-17,
+//0.0515647, 9.99201e-16,
+//0.0986202, 1.11022e-15,
+//0.0574556, -9.4369e-16,
+//0.0156949, 1.11022e-16,
+//-0.280903, -2.02616e-15,
+//-0.0415164, -6.10623e-16,
+//-0.140003, -3.88578e-16,
+//0.0193923, 1.66533e-16,
+//-0.0511323, 8.32667e-17,
+//0.1458, -1.66533e-15,
+//-0.0529923, 1.96718e-15,
+//0.110273, 8.32667e-17,
+//-0.0105361, -3.19189e-16,
+//-0.0309588, 1.9984e-15,
+//0.060729, -1.41553e-15,
+//0.126946, -8.32667e-16,
+//0.091658, 1.22125e-15,
+//0.0509203, -1.44329e-15,
+//-0.186698, -9.4369e-16,
+//0.0450912, 4.44089e-16,
+//0.0473551, 1.11022e-16,
+//-0.0248329, 7.21645e-16,
+//0.150307, 1.77636e-15,
+//0.0904929, 1.66533e-16,
+//-0.0817799, -3.33067e-16,
+//0.114968, 2.35922e-16,
+//-0.022486, 6.66134e-16,
+//0.0521187, -9.99201e-16,
+//0.00250525, -8.60423e-16,
+//-0.229414, 2.44249e-15,
+//0.00606764, 7.91034e-16,
+//0.305888, -1.22125e-15,
+//-0.0802275, -5.55112e-17,
+//-0.270664, -3.33067e-16,
+//-0.117097, -5.82867e-16,
+//0.0251498, -1.11022e-16,
+//-0.0123616, -1.58207e-15,
+//-0.193647, 9.99201e-16,
+//-0.0439658, 8.88178e-16,
+//-0.0126018, 6.10623e-16,
+//-0.0533495, 1.11022e-15,
+//0.127873, 4.996e-16,
+//0.126205, -2.77556e-16,
+//-0.0435459, -1.94289e-15,
+//0.167305, -5.55112e-16,
+//-0.0655107, 1.72085e-15,
+//-0.118092, -1.55431e-15,
+//-0.12086, -1.88044e-15,
+//-0.0769805, 2.22045e-15,
+//0.00706194, -3.94129e-15,
+//0.0635352, -4.44089e-16,
+//-0.0402513, 5.55112e-16,
+//0.0384016, -2.55351e-15,
+//0.072119, -1.26288e-15,
+//0.216832, 3.33067e-16,
+//0.0280736, -2.22045e-16,
+//0.00571471, 0,
+//0.0260099, 2.77556e-17,
+//-0.145721, 1.16573e-15,
+//-0.0311977, -8.32667e-17,
+//0.23217, 6.66134e-16,
+//-0.100152, -2.77556e-17,
+//0.401573, -2.22045e-16,
+//-0.077826, 8.04912e-16,
+//-0.1813, -7.21645e-16,
+//0.127967, -7.77156e-16,
+//-0.117759, -8.32667e-16,
+//-0.0393899, 1.32533e-15,
+//0.463826, -2.38698e-15,
+//0.0370782, -8.88178e-16,
+//0.0851465, 1.11022e-16,
+//-0.116423, 8.32667e-17,
+//0.208108, -1.11022e-16,
+//0.0044507, 1.27676e-15,
+//-0.435159, -1.33227e-15,
+//-0.0683873, -5.55112e-16,
+//0.0143964, -9.15934e-16,
+//0.144795, -5.55112e-16,
+//0.477931, -7.21645e-16,
+//0.0783359, -4.44089e-16,
+//0.182963, 1.94289e-16,
+//-0.138703, 1.29063e-15,
+//-0.36371, 1.16573e-15,
+//-0.155345, 1.66533e-16,
+//-0.193398, -4.44089e-16,
+//-0.103289, -1.88738e-15,
+//0.045557, -1.249e-16,
+//-0.264733, 2.22045e-16,
+//0.107154, 4.44089e-16,
+//0.121808, 1.3288e-15,
+//0.252351, 2.22045e-16,
+//-0.0842843, -1.26288e-15,
+//0.34618, -1.55431e-15,
+//-0.0476203, 1.11022e-16,
+//0.101377, -1.66533e-16,
+//-0.274125, -8.88178e-16,
+//0.024616, 1.69309e-15,
+//0.0638604, 5.55112e-16,
+//0.324758, -1.11022e-16,
+//0.105861, 4.44089e-16,
+//-0.0107999, 2.74086e-16,
+//0.231998, 2.08167e-17,
+//-0.0285866, 1.72085e-15,
+//-0.0600147, 1.11022e-16,
+//0.159975, -1.27676e-15,
+//0.00418818, -6.93889e-16,
+//0.00932016, 4.09395e-16,
+//-0.055018, 5.96745e-16,
+//0.123716, -2.22045e-16,
+//0.314923, -1.55431e-15,
+//0.0810768, 5.55112e-17,
+//-0.0904006, 0,
+//0.217486, -1.72085e-15,
+//-0.298916, 3.05311e-16,
+//-0.0491712, -2.72005e-15,
+//-0.0744612, 1.66533e-16,
+//0.0523653, -2.77556e-16,
+//-0.0544762, 1.26288e-15,
+//-0.0499812, -2.55351e-15,
+//0.087009, 4.44089e-16,
+//0.0479766, 7.21645e-16,
+//0.0476955, 5.89806e-17,
+//-0.0897838, -2.91434e-16,
+//0.157289, 4.44089e-16,
+//-0.352059, -3.33067e-16,
+//-0.0144888, -1.22125e-15,
+//0.0350757, -1.30451e-15,
+//0.13382, -2.08167e-16,
+//0.0665462, 1.80411e-16,
+//-0.0162287, -1.66533e-16,
+//0.00886399, 1.33227e-15,
+//0.0466001, -2.63678e-16,
+//-0.142406, 1.11022e-16,
+//0.175957, 3.10862e-15,
+//0.127664, -2.77556e-17,
+//-0.0604863, 3.33067e-16,
+//0.00228801, 8.88178e-16,
+//0.541258, 1.44329e-15,
+//0.0426972, -1.55431e-15,
+//-0.33589, -2.44249e-15,
+//0.107239, 9.99201e-16,
+//0.0462346, 2.33147e-15,
+//-0.117672, 1.66533e-16,
+//0.0293998, -1.60982e-15,
+//0.0693141, -1.11022e-15,
+//0.155935, -3.33067e-16,
+//0.153233, -1.11022e-15,
+//0.0460182, 6.10623e-16,
+//0.0426724, -3.88578e-15,
+//-0.200843, -1.44329e-15,
+//0.209166, 3.88578e-16,
+//-0.234229, 1.66533e-16,
+//-0.0634759, 2.22045e-16,
+//-0.0743495, 7.77156e-16,
+//0.365579, 0,
+//-0.11922, -1.9984e-15,
+//-0.272081, -4.996e-16,
+//0.0472867, -1.22125e-15,
+//-0.0279261, 5.55112e-16,
+//-0.0554721, -6.66134e-16,
+//-0.101508, -1.11022e-16,
+//0.00892213, 1.55431e-15,
+//-0.002375, 1.22125e-15,
+//0.124599, 7.77156e-16,
+//-0.300801, -1.66533e-16,
+//0.0785298, 3.33067e-16,
+//-0.0441663, -6.66134e-16,
+//-0.0719116, -7.77156e-16,
+//0.120047, 7.21645e-16,
+//-0.218038, 1.66533e-16,
+//-0.242717, 2.08167e-17,
+//-0.236601, 6.66134e-16,
+//0.145305, 9.99201e-16,
+//-0.0313118, -2.22045e-16,
+//-0.157147, 2.22045e-16,
+//0.0212747, 1.66533e-16,
+//0.172, 4.44089e-16,
+//-0.10444, 5.55112e-16,
+//-0.0104005, -9.99201e-16,
+//0.0106382, -6.66134e-16,
+//-0.371425, 1.22125e-15,
+//-0.0716312, 8.60423e-16,
+//0.0884496, 4.44089e-16,
+//0.0295806, -1.66533e-16,
+//0.0594865, 2.77556e-16,
+//0.0521836, 9.99201e-16,
+//0.167825, -1.48492e-15,
+//0.0418652, 1.11022e-15,
+//0.131241, -5.55112e-16,
+//-0.012387, -7.07767e-16,
+//-0.355553, -9.71445e-17,
+//0.226288, -7.21645e-16,
+//-0.240583, 2.22045e-16,
+//0.260372, -4.996e-16,
+//-0.0459446, -5.23886e-16,
+//-0.101326, 8.60423e-16,
+//-0.0900788, 5.55112e-16,
+//-0.118763, -1.05471e-15,
+//0.0459559, -4.44089e-16,
+//-0.026792, -1.77636e-15,
+//-0.113239, -1.55431e-15,
+//-0.133611, -4.44089e-16,
+//-0.222749, 5.55112e-17,
+//0.171963, 7.21645e-16,
+//-0.138987, -1.80411e-15,
+//-0.28028, -9.99201e-16,
+//-0.130867, 6.66134e-16,
+//0.0723886, -1.09635e-15,
+//0.0826658, -9.99201e-16,
+//0.0238484, 4.92661e-16,
+//-0.456946, -1.38778e-16,
+//0.097588, -4.44089e-16,
+//-0.0314265, 0,
+//0.0248304, -4.02456e-16,
+//-0.0207266, 1.63411e-15,
+//-5.81854e-05, 1.38778e-15,
+//-0.0810348, -2.22045e-16,
+//-0.160654, -9.4369e-16,
+//0.0479146, -1.41553e-15,
+//0.046027, 8.60423e-16,
+//0.0938735, -2.22045e-16,
+//-0.257437, -1.77636e-15,
+//-0.021346, -1.33227e-15,
+//-0.121037, -1.4988e-15,
+//-0.0710651, -1.05471e-15,
+//0.0618733, -1.80411e-16,
+//0.224585, -7.77156e-16,
+//-0.102347, 1.22125e-15,
+//0.271575, 2.67147e-16,
+//-0.0471962, 3.67761e-16,
+//0.0926506, 1.66533e-16,
+//0.0799867, 1.4988e-15,
+//-0.224081, -5.55112e-16,
+//0.229322, 7.77156e-16,
+//-0.102526, -1.60982e-15,
+//-0.125664, 5.55112e-16,
+//0.0271653, 6.66134e-16,
+//0.0314906, 2.35922e-16,
+//-0.196126, 5.82867e-16,
+//0.139307, 1.33227e-15,
+//-0.092007, -8.88178e-16,
+//-0.126495, -1.11022e-15,
+//0.307405, 3.33067e-16,
+//0.0720744, 1.83187e-15,
+//-0.148167, 2.33147e-15,
+//0.282122, 6.9042e-16,
+//-0.231652, 5.55112e-16,
+//-0.14929, -1.11022e-15,
+//0.284642, 1.38778e-15,
+//0.135768, -4.996e-16,
+//0.112836, 8.88178e-16,
+//-0.0327966, 5.55112e-16,
+//-0.144039, -5.68989e-16,
+//0.0146863, -6.66134e-16,
+//-0.151078, 1.44329e-15,
+//-0.0981422, 1.66533e-16,
+//0.224834, 1.11022e-16,
+//-0.108479, -1.4988e-15,
+//0.0700205, 8.88178e-16,
+//0.052537, -1.11022e-16,
+//-0.0381066, -5.55112e-16,
+//-0.0660803, 3.33067e-16,
+//-0.10455, -9.02056e-17,
+//0.368227, 1.38778e-15,
+//-0.00434833, -7.77156e-16,
+//-0.10541, -2.88658e-15,
+//0.299535, 4.44089e-16,
+//-0.0355702, 2.22045e-16,
+//-0.0623692, -1.44329e-15,
+//-0.333344, -1.11022e-16,
+//-0.0342057, 1.66533e-16,
+//-0.0552144, 1.60982e-15,
+//0.240776, 3.77476e-15,
+//-0.188788, 4.21885e-15
+//  ];
   writeln("UtW.shape =>", UtW.shape);
 
   DMatrix Uty = matrix_mult(U.T, Y);
@@ -376,15 +807,11 @@ void analyze_bimbam_mvlmm(const DMatrix U, const DMatrix eval,
       continue;
     }
 
-    //ch_ptr = strtok_safe((char *)line.c_str(), " , \t");
-    //ch_ptr = strtok_safe(NULL, " , \t");
-    //ch_ptr = strtok_safe(NULL, " , \t");
-
     x_mean = 0.0;
     c_phen = 0;
     n_miss = 0;
     //gsl_vector_set_zero(x_miss);
-    auto chr = to!string(line).split(",");
+    auto chr = to!string(line).split(",")[3..$];
     for (size_t i = 0; i < ni_total; ++i) {
       ch_ptr = chr[i];
       if (indicator_idv[i] == 0) {
@@ -681,12 +1108,12 @@ void MphInitial(const size_t em_iter, const double em_prec,
 
   // Multiply beta by UltVeh and save to B.
   for (size_t i = 0; i < c_size; i++) {
-    //gsl_vector_view
     DMatrix B_col = get_col(B, i);
     //gsl_vector_view
     DMatrix beta_sub = get_subvector_dmatrix(beta, i * d_size, d_size);
     B_col = matrix_mult(UltVeh.T, beta_sub);
     B_col = matrix_mult(beta_sub, UltVeh);
+    set_col2(B, i, B_col.T);
   }
 
   writeln("out of MphInitial");
@@ -743,6 +1170,7 @@ double MphEM(const char func_name, const size_t max_iter, const double max_prec,
   // Calculate |XXt| and (XXt)^{-1}.
   XXt = syrk(1, X, 0, XXt);
 
+
   for (size_t i = 0; i < c_size; ++i) {
     for (size_t j = 0; j < i; ++j) {
       XXt.set(i, j, XXt.accessor(j, i));
@@ -755,17 +1183,17 @@ double MphEM(const char func_name, const size_t max_iter, const double max_prec,
   if (func_name == 'R' || func_name == 'r') {
     logl_const =
         -0.5 * to!double(n_size - c_size) * to!double(d_size) * mlog(2.0 * PI) +
-        0.5 * to!double(d_size) * det(XXt);
+        0.5 * to!double(d_size) * mlog(det(XXt));
   } else {
     logl_const = -0.5 * to!double(n_size) * to!double(d_size) * mlog(2.0 * PI);
   }
-
+  writeln("logl_const =>", logl_const);
+  //assert(abs(logl_const -(-1545.346)) < 1e-3);
   // Start EM.
   writeln("max_iter => ", max_iter);
   for (size_t t = 0; t < max_iter; t++) {
     writeln("iter => ", t);
     logdet_Ve = EigenProc(V_g, V_e, D_l, UltVeh, UltVehi);
-
     logdet_Q = CalcQi(eval, D_l, X, Qi);
     UltVehiY = matrix_mult(UltVehi, Y);
     CalcXHiY(eval, D_l, X, UltVehiY, xHiy);
@@ -778,6 +1206,7 @@ double MphEM(const char func_name, const size_t max_iter, const double max_prec,
       logl_new += -0.5 * (logdet_Q - to!double(c_size) * logdet_Ve);
     }
     if (t != 0 && abs(logl_new - logl_old) < max_prec) {
+      writeln("break");
       break;
     }
     logl_old = logl_new;
@@ -805,9 +1234,9 @@ double MphEM(const char func_name, const size_t max_iter, const double max_prec,
     UpdateE(UltVehiY, UltVehiBX, UltVehiU, UltVehiE);
 
     // Calculate U_hat, E_hat and B.
-    U_hat = matrix_mult(UltVeh, UltVehiU);
-    E_hat = matrix_mult(UltVeh, UltVehiE);
-    B = matrix_mult(UltVeh, UltVehiB);
+    U_hat = matrix_mult(UltVeh.T, UltVehiU);
+    E_hat = matrix_mult(UltVeh.T, UltVehiE);
+    B = matrix_mult(UltVeh.T, UltVehiB);
 
     // Calculate Sigma_uu and Sigma_ee.
     CalcSigma(func_name, eval, D_l, X, OmegaU, OmegaE, UltVeh, Qi, Sigma_uu, Sigma_ee);
@@ -815,6 +1244,7 @@ double MphEM(const char func_name, const size_t max_iter, const double max_prec,
     // Update V_g and V_e.
     UpdateV(eval, U_hat, E_hat, Sigma_uu, Sigma_ee, V_g, V_e);
   }
+  writeln("logl_new => ", logl_new);
   return logl_new;
 }
 
@@ -1041,7 +1471,7 @@ double MphCalcP(const DMatrix eval, const DMatrix x_vec, const DMatrix W,
 void MphCalcBeta(const DMatrix eval, const DMatrix W, const DMatrix Y, const DMatrix V_g,
                  const DMatrix V_e, ref DMatrix UltVehiY, ref DMatrix B, ref DMatrix se_B) {
   writeln("in MphCalcBeta", Y.shape);
-  size_t n_size = eval.size, c_size = W.shape[0], d_size = W.shape[1];
+  size_t n_size = eval.size, c_size = W.shape[0], d_size = V_g.shape[0];
   size_t dc_size = d_size * c_size;
   double delta, dl, d, dy, dw; // , logdet_Ve, logdet_Q;
 
@@ -1067,14 +1497,9 @@ void MphCalcBeta(const DMatrix eval, const DMatrix W, const DMatrix Y, const DMa
   // Calculate Qi and log|Q|.
   // double logdet_Q = CalcQi(eval, D_l, W, Qi);
   CalcQi(eval, D_l, W, Qi);
-  writeln("=========Y=======");
-  writeln(Y.shape);
-  writeln(UltVehi.shape);
-  writeln(W.shape);
   // Calculate UltVehiY.
   UltVehiY = matrix_mult(UltVehi, Y);
 
-  writeln(UltVehiY.shape);
   // Calculate WHiy.
   for (size_t i = 0; i < d_size; i++) {
     dl = D_l.elements[i];
@@ -1298,6 +1723,7 @@ void CalcDev(const char func_name, const DMatrix eval, const DMatrix Qi,
 void Calc_xHiDHiy_all(const DMatrix eval, const DMatrix xHi, const DMatrix Hiy,
                       ref DMatrix xHiDHiy_all_g, ref DMatrix xHiDHiy_all_e) {
   writeln("in Calc_xHiDHiy_all");
+
   xHiDHiy_all_g = zeros_dmatrix(xHiDHiy_all_g.shape[0], xHiDHiy_all_g.shape[1]);
   xHiDHiy_all_e = zeros_dmatrix(xHiDHiy_all_e.shape[0], xHiDHiy_all_e.shape[1]);
 
@@ -1355,6 +1781,7 @@ void Calc_xHiDHiDHiy_all(const size_t v_size, const DMatrix eval, const DMatrix 
                          const DMatrix Hiy, ref DMatrix xHiDHiDHiy_all_gg,
                          ref DMatrix xHiDHiDHiy_all_ee, ref DMatrix xHiDHiDHiy_all_ge) {
   writeln("in Calc_xHiDHiDHiy_all");
+
   xHiDHiDHiy_all_gg = zeros_dmatrix(xHiDHiDHiy_all_gg.shape[0], xHiDHiDHiy_all_gg.shape[1]);
   xHiDHiDHiy_all_ee = zeros_dmatrix(xHiDHiDHiy_all_ee.shape[0], xHiDHiDHiy_all_ee.shape[1]);
   xHiDHiDHiy_all_ge = zeros_dmatrix(xHiDHiDHiy_all_ge.shape[0], xHiDHiDHiy_all_ge.shape[1]);
@@ -1720,7 +2147,7 @@ void CalcCRT(const DMatrix Hessian_inv, const DMatrix Qi,
 
   DMatrix Qi_s = get_sub_dmatrix( Qi, (c_size - 1) * d_size, (c_size - 1) * d_size, d_size, d_size);
 
-  writeln(Qi);
+  //writeln(Qi);
   Qi_si = Qi_s.inverse();
 
   // Calculate correction factors.
@@ -1941,6 +2368,7 @@ void UpdateVgVe(const DMatrix Hessian_inv, const DMatrix gradient,
   // Save Vg and Ve.
   for (size_t i = 0; i < d_size; i++) {
     for (size_t j = 0; j < d_size; j++) {
+
       if (j < i) {
         continue;
       }
@@ -2050,6 +2478,8 @@ void analyze_plink(const DMatrix U, const DMatrix eval, const DMatrix UtW, const
   DMatrix se_B_null = zeros_dmatrix(d_size, c_size);
 
   DMatrix X_sub = UtW.T;
+  //writeln(UtW);
+  //exit(0);
   X = set_sub_dmatrix(X, 0, 0, c_size, n_size, X_sub);
   DMatrix B_sub = get_sub_dmatrix(B, 0, 0, d_size, c_size);
   //gsl_matrix_view
@@ -2073,7 +2503,7 @@ void analyze_plink(const DMatrix U, const DMatrix eval, const DMatrix UtW, const
   //time_total(0.0), time_G(0.0), time_eigen(0.0), time_UtX(0.0),
   //time_UtZ(0.0), time_opt(0.0), time_Omega(0.0) {}
 
-  size_t em_iter = 100; //check
+  size_t em_iter = 10000; //check
   double em_prec = 0.0001;
   size_t nr_iter = 100;
   double nr_prec = 0.0001;
@@ -2101,16 +2531,40 @@ void analyze_plink(const DMatrix U, const DMatrix eval, const DMatrix UtW, const
   // check
   int a_mode = 4;
 
+  //writeln(X_sub);
+  //exit(0);
+
   MphInitial(em_iter, em_prec, nr_iter, nr_prec, eval, X_sub, Y, l_min, l_max, n_region, V_g, V_e, B_sub);
+  set_sub_dmatrix2(B, 0, 0, d_size, c_size, B_sub);
 
   writeln("Hi_all.shape => ", Hi_all.shape);
+  assert(eqeq(V_g, DMatrix([4, 4], [233.838,          0,         0,       0,
+                                          0, 0.00604845,         0,       0,
+                                          0,          0, 0.0640605,       0,
+                                          0,          0,         0, 17.7095])
+        ));
+
+  assert(eqeq(V_e, DMatrix([4, 4], [67.0937,        0,        0,       0,
+                                          0, 0.010498,        0,       0,
+                                          0,        0, 0.254285,       0,
+                                          0,        0,        0, 17.5755])
+        ));
+
+  assert(eqeq(B, DMatrix([4, 3], [ 7.07432,    0.37419,   0,
+                                  -0.0353791,  0.0870001, 0,
+                                   0.0122087, -0.0271713, 0,
+                                  -2.16772,   -0.380524,  0])));
 
   logl_H0 = MphEM('R', em_iter, em_prec, eval, X_sub, Y, U_hat, E_hat,
                   OmegaU, OmegaE, UltVehiY, UltVehiBX, UltVehiU, UltVehiE, V_g,
                   V_e, B_sub);
 
+  writeln("OmegaU => ", OmegaU);
+
   logl_H0 = MphNR('R', nr_iter, nr_prec, eval, X_sub, Y, Hi_all,
                   xHi_all_sub, Hiy_all, V_g, V_e, Hessian, crt_a, crt_b, crt_c);
+  set_sub_dmatrix2(B, 0, 0, d_size, c_size, B_sub);
+
 
   MphCalcBeta(eval, X_sub, Y, V_g, V_e, UltVehiY, B_sub, se_B_null);
 
@@ -2143,6 +2597,7 @@ void analyze_plink(const DMatrix U, const DMatrix eval, const DMatrix UtW, const
     }
     write("\n");
   }
+  //assert(abs(V_g.accessor(0,0) - 242.2079) < 1e-03);
   writeln("se(Vg): ");
   for (size_t i = 0; i < d_size; i++) {
     for (size_t j = 0; j <= i; j++) {
@@ -2516,6 +2971,7 @@ void CalcXHiY(const DMatrix eval, const DMatrix D_l,
               const DMatrix X, const DMatrix UltVehiY,
               ref DMatrix xHiy) {
   size_t n_size = eval.size, c_size = X.shape[0], d_size = D_l.size;
+  assert(xHiy.is_vector);
 
   xHiy = zeros_dmatrix(xHiy.shape[0], xHiy.shape[1]);
 
@@ -2527,6 +2983,7 @@ void CalcXHiY(const DMatrix eval, const DMatrix D_l,
       for (size_t k = 0; k < n_size; k++) {
         x = X.accessor(j, k);
         y = UltVehiY.accessor(i, k);
+
         delta = eval.elements[k];
         d += x * y / (delta * dl + 1.0);
       }
@@ -2565,7 +3022,7 @@ void UpdateL_B(const DMatrix X, const DMatrix XXti,
                ref DMatrix UltVehiBX, ref DMatrix UltVehiB) {
   size_t c_size = X.shape[0], d_size = UltVehiY.shape[0];
 
-  //gsl_matrix_memcpy(UltVehiBX, UltVehiY);
+  UltVehiBX = dup_dmatrix(UltVehiY);
   UltVehiBX = subtract_dmatrix(UltVehiY, UltVehiU);
 
   DMatrix YUX = matrix_mult(UltVehiBX, X.T);
@@ -2575,6 +3032,7 @@ void UpdateL_B(const DMatrix X, const DMatrix XXti,
 }
 
 void UpdateRL_B(const DMatrix xHiy, const DMatrix Qi, ref DMatrix UltVehiB) {
+  assert(xHiy.is_vector);
   size_t d_size = UltVehiB.shape[0], c_size = UltVehiB.shape[1], dc_size = Qi.shape[0];
 
   // Calculate b=Qiv.
@@ -2599,7 +3057,6 @@ void UpdateE(const DMatrix UltVehiY, const DMatrix UltVehiBX,
              const DMatrix UltVehiU, ref DMatrix UltVehiE) {
   UltVehiE = subtract_dmatrix(UltVehiY, UltVehiBX);
   UltVehiE = subtract_dmatrix(UltVehiE, UltVehiU);
-
   return;
 }
 
@@ -2704,7 +3161,7 @@ void CalcSigma(const char func_name, const DMatrix eval,
       DMatrix QiM = matrix_mult(Qi, M_u);
       Sigma_uu = matrix_mult(multiply_dmatrix_num(M_u, delta).T, QiM) + Sigma_uu; //check
       QiM = matrix_mult(Qi, M_e);
-      Sigma_ee = matrix_mult(multiply_dmatrix_num(M_e, delta).T, QiM) + Sigma_ee; //check
+      Sigma_ee = matrix_mult(M_e.T, QiM) + Sigma_ee; //check
     }
   }
 
@@ -2842,6 +3299,7 @@ double Calc_yHiy(const DMatrix Y, const DMatrix Hiy_all) {
 
 // Calculate the vector xHiy.
 void Calc_xHiy(const DMatrix Y, const DMatrix xHi, ref DMatrix xHiy) {
+  //xHiy is a vector;
   writeln("in Calc_xHiy");
   xHiy = zeros_dmatrix(xHiy.shape[0], xHiy.shape[1]);
 
@@ -3034,6 +3492,7 @@ void Calc_traceHiDHiD(const DMatrix eval, const DMatrix Hi,
                       const size_t i1, const size_t j1, const size_t i2,
                       const size_t j2, ref double tHiDHiD_gg, ref double tHiDHiD_ee,
                       ref double tHiDHiD_ge) {
+  writeln("in Calc_traceHiDHiD");
   tHiDHiD_gg = 0.0;
   tHiDHiD_ee = 0.0;
   tHiDHiD_ge = 0.0;
@@ -3080,6 +3539,7 @@ void Calc_traceHiDHiD(const DMatrix eval, const DMatrix Hi,
 void Calc_xHiDHiy(const DMatrix eval, const DMatrix xHi,
                   const DMatrix Hiy, const size_t i, const size_t j,
                   ref DMatrix xHiDHiy_g, ref DMatrix xHiDHiy_e) {
+  writeln("in Calc_xHiDHiy");
   xHiDHiy_g = zeros_dmatrix(xHiDHiy_g.shape[0], xHiDHiy_g.shape[1]);
   xHiDHiy_e = zeros_dmatrix(xHiDHiy_e.shape[0], xHiDHiy_e.shape[1]);
 
@@ -3110,6 +3570,8 @@ void Calc_xHiDHiy(const DMatrix eval, const DMatrix xHi,
 
 void Calc_xHiDHix(const DMatrix eval, const DMatrix xHi, const size_t i,
                   const size_t j, ref DMatrix xHiDHix_g, ref DMatrix xHiDHix_e) {
+  //  VVI/TODO/CHECK
+  writeln("In Calc_xHiDHix");
   xHiDHix_g = zeros_dmatrix(xHiDHix_g.shape[0], xHiDHix_g.shape[1]);
   xHiDHix_e = zeros_dmatrix(xHiDHix_e.shape[0], xHiDHix_e.shape[1]);
 
@@ -3153,6 +3615,7 @@ void Calc_xHiDHiDHiy(const DMatrix eval, const DMatrix Hi,
                      const size_t i1, const size_t j1, const size_t i2,
                      const size_t j2, ref DMatrix xHiDHiDHiy_gg,
                      ref DMatrix xHiDHiDHiy_ee, ref DMatrix xHiDHiDHiy_ge) {
+  writeln("in Calc_xHiDHiy");
   xHiDHiDHiy_gg = zeros_dmatrix(xHiDHiDHiy_gg.shape[0], xHiDHiDHiy_gg.shape[1]);
   xHiDHiDHiy_ee = zeros_dmatrix(xHiDHiDHiy_ee.shape[0], xHiDHiDHiy_ee.shape[1]);
   xHiDHiDHiy_ge = zeros_dmatrix(xHiDHiDHiy_ge.shape[0], xHiDHiDHiy_ge.shape[1]);
@@ -3215,6 +3678,7 @@ void Calc_xHiDHiDHix(const DMatrix eval, const DMatrix Hi,
                      const size_t i2, const size_t j2,
                      ref DMatrix xHiDHiDHix_gg, ref DMatrix xHiDHiDHix_ee,
                      ref DMatrix xHiDHiDHix_ge) {
+  writeln("in Calc_xHiDHiDHix");
   xHiDHiDHix_gg = zeros_dmatrix(xHiDHiDHix_gg.shape[0], xHiDHiDHix_gg.shape[1]);
   xHiDHiDHix_ee = zeros_dmatrix(xHiDHiDHix_ee.shape[0], xHiDHiDHix_ee.shape[1]);
   xHiDHiDHix_ge = zeros_dmatrix(xHiDHiDHix_ge.shape[0], xHiDHiDHix_ge.shape[1]);
@@ -3298,6 +3762,7 @@ void Calc_xHiDHiDHix(const DMatrix eval, const DMatrix Hi,
       }
     }
   }
+  writeln("out");
 
   return;
 }
@@ -3560,21 +4025,31 @@ unittest{
 }
 
 unittest{
-  size_t em_iter;
-  double em_prec;
-  size_t nr_iter;
-  double nr_prec;
-  DMatrix eval;
-  DMatrix X;
-  DMatrix Y;
-  double l_min;
-  double l_max;
-  size_t n_region;
-  DMatrix V_g;
-  DMatrix V_e;
-  DMatrix B;
+
+  size_t em_iter = 10; //check
+  double em_prec = 0;
+  size_t nr_iter = 0;
+  double nr_prec = 0;
+  double l_min = 1e-05;
+  double l_max = 100000;
+  size_t n_region = 10;
+  DMatrix X = DMatrix([5, 5], [ 14, -3,  5, 92, 91,
+                                71, 65, 53, 77, 17,
+                               -62,  4, 26, 16,-10,
+                                27, 43, -9, 46, 27,
+                                39, 47, 11, 78, 62 ]);
+  DMatrix Y = DMatrix([3,5], [7, 12, 1, -9 , 6,
+                               17, 212, 11, -14 , 61,
+                               33, 42, 10, -09 , 6]);
+
+  DMatrix eval = DMatrix([5,1], [7, 12, 1, -9 , 6]);
+
+  DMatrix V_g = zeros_dmatrix(5, 5);
+  DMatrix V_e = zeros_dmatrix(5, 5);
+  DMatrix B = zeros_dmatrix(5, 5);
 
   //MphInitial(em_iter, em_prec, nr_iter, nr_prec, eval, X, Y, l_min, l_max, n_region, V_g, V_e, B);
+  //write("V_g = ", V_g);
   //assert(V_g == DMatrix([], []));
   //assert(V_e == DMatrix([], []));
   //assert(B == DMatrix([], []));
@@ -3582,7 +4057,7 @@ unittest{
 }
 
 unittest{
-  writeln("CalcXHiY test");
+  writeln("CalcXHiY test"); //   pass
 
   DMatrix eval = DMatrix([3,1], [17, 11, 102]);
   DMatrix D_l = DMatrix([3,1], [24, 120, 5]);
@@ -3592,16 +4067,16 @@ unittest{
   DMatrix UltVehiY = DMatrix([3, 3], [11, 23, 45
                                      ,44, 21, 65
                                      ,51, 29, 46]);
-  DMatrix xHiy = zeros_dmatrix(3,3);
+  DMatrix xHiy = zeros_dmatrix(9,1);
 
   CalcXHiY(eval, D_l, X, UltVehiY, xHiy);
-  assert(eqeq(xHiy, DMatrix([3, 3], [ 3.11894, 0.841722, 22.4849,
+  assert(eqeq(xHiy, DMatrix([9, 1], [ 3.11894, 0.841722, 22.4849,
                                       4.20038, 1.62754,  42.8193,
                                       4.73386, 1.80474, 49.4029])));
 }
 
 unittest{
-  writeln("CalcOmega test");
+  writeln("CalcOmega test"); // pass
   DMatrix eval = DMatrix([3,1], [17, 11, 102]);
   DMatrix D_l = DMatrix([3,1], [24, 120, 5]);
   DMatrix OmegaU = zeros_dmatrix(3,3);
@@ -3619,66 +4094,62 @@ unittest{
 }
 
 unittest{
-  writeln("UpdateRL_B Test");
-  DMatrix xHiy = DMatrix([3,3], [ 11, 23, 45,
-                                  44, 21, 65,
-                                  51, 29, 46]);
-  DMatrix Qi = DMatrix([3, 3], [ 0.320622, 0,       0,
-                                 0,        1.59957, 0,
-                                 0,        0,       0.0674936]);
-  DMatrix UltVehiB = zeros_dmatrix(3,3);
+  writeln("UpdateRL_B Test");  // pass
+  DMatrix xHiy = DMatrix([4,1], [ 11, 23, 45, 44]);
+  DMatrix Qi = DMatrix([4, 4], [ 0.320622, 0,       0,         0,
+                                 0,        1.59957, 0,         0,
+                                 0,        0,       0.0674936, 0,
+                                 0,        0,       0,         0.174226]);
+  DMatrix UltVehiB = zeros_dmatrix(2,1);
   UpdateRL_B(xHiy, Qi, UltVehiB);
   writeln(UltVehiB);
-  assert(eqeq(UltVehiB, DMatrix([3, 3], [ 3.52684, 70.3811, 3.44217,
-                                          7.37431, 33.591,  1.95731,
-                                          14.428, 103.972, 3.10471])
+  assert(eqeq(UltVehiB, DMatrix([2, 1], [3.52684, 36.7901])
         ));
 }
 
 unittest{
 
-  DMatrix UltVehiY = zeros_dmatrix(3,3);
-  DMatrix UltVehiBX = zeros_dmatrix(3,3);
-  DMatrix UltVehiU = zeros_dmatrix(3,3);
-  DMatrix OmegaE = zeros_dmatrix(3,3);
+  writeln("UpdateU Test");      // pass
+  DMatrix UltVehiY  = DMatrix([2,2] , [11, 23, 645, -10]);
+  DMatrix UltVehiBX = DMatrix([2,2] , [99, -23, 72, 20]);
+  DMatrix OmegaE    = DMatrix([2,2] , [-11, 8, 99, 21]);
+  DMatrix UltVehiU  = zeros_dmatrix(2,2);
 
   UpdateU(OmegaE, UltVehiY, UltVehiBX, UltVehiU);
-  writeln(OmegaE);
-  //assert(UltVehiU);
-
+  assert(UltVehiU == DMatrix([2, 2], [968, 368, 56727, -630]));
 }
 
 unittest{
-
-  DMatrix X = zeros_dmatrix(3,3);
-  DMatrix XXti = zeros_dmatrix(3,3);
-  DMatrix UltVehiY = zeros_dmatrix(3,3);
-  DMatrix UltVehiU = zeros_dmatrix(3,3);
-  DMatrix UltVehiBX = zeros_dmatrix(3,3);
-  DMatrix UltVehiB = zeros_dmatrix(3,3);
+  writeln("UpdateL_B Test");      // pass
+  DMatrix X         = DMatrix([2,2] , [ 1,  3, 15,  20]);
+  DMatrix XXti      = DMatrix([2,2] , [22, 13, 50,   7]);
+  DMatrix UltVehiY  = DMatrix([2,2] , [11, 23, 85, -10]);
+  DMatrix UltVehiU  = DMatrix([2,2] , [968, 368, 56727, -630]);
+  DMatrix UltVehiBX = zeros_dmatrix(2, 2);
+  DMatrix UltVehiB  = zeros_dmatrix(2, 2);
 
   UpdateL_B(X, XXti, UltVehiY, UltVehiU, UltVehiBX, UltVehiB);
-  writeln(UltVehiBX);
-  writeln(UltVehiB);
-
+  assert(UltVehiBX  == DMatrix([2, 2], [-957, -345, -56642, 620]));
+  writeln(eqeq(UltVehiB , DMatrix([2,2], [-1.10657e+06, -174681,
+                                          -4.30667e+07, -6.57278e+06])
+          ));
 }
 
 unittest{
+  writeln("UpdateE Test");  // pass
+  DMatrix UltVehiY = DMatrix([2,2] , [11, 23, 85, -10]);
+  DMatrix UltVehiBX = DMatrix([2, 2], [-957, -345, -56642, 620]);
+  DMatrix UltVehiU =  DMatrix([2,2] , [968, 36, 727, -630]);
+  DMatrix UltVehiE = zeros_dmatrix(2,2);
 
-  DMatrix UltVehiY;
-  DMatrix UltVehiBX;
-  DMatrix UltVehiU;
-  DMatrix UltVehiE;
-
-  //UpdateE(UltVehiY, UltVehiBX, UltVehiU, UltVehiE);
-  //assert(UltVehiE);
-
+  UpdateE(UltVehiY, UltVehiBX, UltVehiU, UltVehiE);
+  assert(UltVehiE == DMatrix([2, 2], [0, 332, 56000, 0]));
 }
 
 
 unittest{
 
-  writeln("Sigma");
+  writeln("CalcSigma Test"); //pass
   char func_name = 'L';
   DMatrix eval = DMatrix([3,1], [17, 11, 102]);
   DMatrix D_l = DMatrix([3,1], [24, 120, 5]);
@@ -3714,41 +4185,101 @@ unittest{
 
 unittest{
 
-  DMatrix eval;
-  DMatrix U;
-  DMatrix E;
-  DMatrix Sigma_uu;
-  DMatrix Sigma_ee;
-  DMatrix V_g;
-  DMatrix V_e;
+  writeln("UpdateV Test");          //pass
+  DMatrix eval = DMatrix([3,1], [17, 11, 102]);
+  DMatrix U = DMatrix([3,3], [ 3,  1, 13,
+                               4,  5, 70,
+                              12, 46,-22]);
+  DMatrix E = DMatrix([3,3], [ 8, 21, 56,
+                              12, 46,-22,
+                              24, 91, 170]);
+  DMatrix Sigma_uu = DMatrix([3,3], [15, 25, 8, 15, 25, 8, 15, 25, 8]);
+  DMatrix Sigma_ee = DMatrix([3,3], [ 5, 12,61, 15, 25, 8, 61, 15, 25]);
+  DMatrix V_g = zeros_dmatrix(3,3);
+  DMatrix V_e = zeros_dmatrix(3,3);
 
-  //UpdateV(eval, U, E, Sigma_uu, Sigma_ee, V_g, V_e);
-  //assert(V_g);
-  //assert(V_e);
+  UpdateV(eval, U, E, Sigma_uu, Sigma_ee, V_g, V_e);
+  writeln("V_e = ", V_e);
+  assert(eqeq(V_g, DMatrix([3, 3], [5.75906, 11.694,  3.83185,
+                                    8.36067, 25.4177, 5.54486,
+                                    6.16518, 11.2115, 71.1931])
+         ));
+  assert(eqeq(V_e, DMatrix([3, 3], [1215.333,  -52.6667, 3894.667,
+                                     -51.6667, 923,       247.333,
+                                    3894.667,  249.667, 12594])
+         ));
+
+}
+
+unittest{
+  writeln("MphCalcLogL Test"); // pass
+  DMatrix eval = DMatrix([3,1], [17, 11, 102]);
+  DMatrix D_l = DMatrix([3,1], [24, 120, 5]);
+  DMatrix xHiy = DMatrix([3,1], [2, 10, 15]);
+  DMatrix UltVehiY = DMatrix([3, 3], [11, 23, 45
+                                     ,44, 21, 65
+                                     ,51, 29, 46]);
+  DMatrix Qi = DMatrix([3, 3], [ 0.320622, 0,       0,
+                                 0,        1.59957, 0,
+                                 0,        0,       0.0674936]);
+  double logl = MphCalcLogL(eval, xHiy, D_l, UltVehiY, Qi);
+  writeln("logl =>", logl);
+  assert(abs(logl - 31.9716) <= 1e-03);
 
 }
 
 unittest{
 
-  char func_name;
-  size_t max_iter;
-  double max_prec;
-  DMatrix eval;
-  DMatrix X;
-  DMatrix Y;
-  DMatrix U_hat;
-  DMatrix E_hat;
-  DMatrix OmegaU;
-  DMatrix OmegaE;
-  DMatrix UltVehiY;
-  DMatrix UltVehiBX;
-  DMatrix UltVehiU;
-  DMatrix UltVehiE;
-  DMatrix V_g;
-  DMatrix V_e;
-  DMatrix B;
+  char func_name = 'L';
+  size_t max_iter = 10000;
+  double max_prec = 0.0001;
+  DMatrix eval = DMatrix([3,1], [17, 11, 102]);
+  DMatrix X = DMatrix([3, 3], [ 11, 23, 45,
+                                44, 21, 65,
+                                51, 29, 46]);
 
-  //MphEM(func_name, max_iter, max_prec, eval, X, Y, U_hat, E_hat, OmegaU, OmegaE, UltVehiY, UltVehiBX, UltVehiU,  UltVehiE, V_g, V_e, B);
+  DMatrix Y  = DMatrix([3, 3], [11, 1, 23
+                               ,44, 91,21
+                               ,51, 2,  9]);
+  DMatrix U_hat =  DMatrix([3, 2], [11, 23
+                               ,44, 21
+                               ,51, 29]);
+  DMatrix E_hat =  DMatrix([3, 2], [11, 23
+                               ,44, 21
+                               ,51, 29]);
+  DMatrix OmegaU = DMatrix([3, 3], [ 0.0586797, 0.090566,  0.00979992,
+                                     0.0587947, 0.0908403, 0.00980312,
+                                     0.0581395, 0.0892857, 0.00978474 ]);
+  DMatrix OmegaE = DMatrix([3, 3], [ 0.997555, 0.996226, 0.999592,
+                                     0.99951,  0.999243, 0.999918,
+                                     0.988372, 0.982143, 0.998043 ]);
+  DMatrix UltVehiY = DMatrix([3, 6], [11, 23, 45
+                                     ,44, 91,  6
+                                     ,19, 33, 25
+                                     ,24, 31, 35
+                                     , 1, 23, 97
+                                     ,51, -9, 46]);
+  DMatrix UltVehiBX = DMatrix([3, 3] , [99, -23, 23,
+                                        45,  94, 21,
+                                        12,  20, 87]);
+  DMatrix UltVehiU = DMatrix([3, 3] , [ 19,   3, 213,
+                                        88, -17, 201,
+                                        98,  12, 87]);
+  DMatrix UltVehiE= DMatrix([3, 3] , [ 29,  13, -3,
+                                        18, 7, 1,
+                                        98,  2, 8]);
+  DMatrix V_g = DMatrix([3, 3], [5.75906, 11.694,  3.83185,
+                                    8.36067, 25.4177, 5.54486,
+                                    6.16518, 11.2115, 71.1931]);
+  DMatrix V_e    = DMatrix([3, 3], [1215.333,  -52.6667, 3894.667,
+                                     -51.6667, 923,      1247.333,
+                                    3894.667,  249.667, 12594]);
+  DMatrix B  = DMatrix([3, 3], [89, 32, 14
+                                     ,66, 92, 625
+                                     ,50, -29, 18]);
+
+  //MphEM(func_name, max_iter, max_prec, eval, X, Y, U_hat, E_hat, OmegaU,
+  //OmegaE, UltVehiY, UltVehiBX, UltVehiU,  UltVehiE, V_g, V_e, B);
   //assert(U_hat);
   //assert(E_hat);
   //assert(OmegaU);
@@ -3765,16 +4296,31 @@ unittest{
 
 unittest{
 
-  DMatrix Hessian_inv = DMatrix([3, 3], [ 4,  7, 11,
+  DMatrix Hessian_inv = DMatrix([12, 3], [ 4, 17, 111,
+                                          12, 21, 12,
+                                          76, 12, 124,
+                                          41, 17, 11,
+                                          12, 11, 102,
+                                          76, 12, 24,
+                                          14, 72, 18,
                                           12, 11, 12,
+                                          16, 12, 19,
+                                          4,   7, 10,
+                                          23, 21, 12,
                                           76, 12, 24 ]);
-  DMatrix gradient = zeros_dmatrix(3, 1);
+  size_t v_size = 3 * (3 + 1) / 2;
+  DMatrix gradient = zeros_dmatrix(v_size*2, 1);
   double step_scale = 0.2;
-  DMatrix V_g;
-  DMatrix V_e;
+  DMatrix V_g = DMatrix([3,3], [12, 13, 556,
+                                81,  8,  99,
+                               -11, 12,  06]);
+  DMatrix V_e = DMatrix([3,3], [15,  1, -26,
+                                71, -8,   9,
+                              -101, 33,   6]);
 
-  //UpdateVgVe(Hessian_inv, gradient, step_scale, V_g, V_e);
-  //assert(V_g);
+  UpdateVgVe(Hessian_inv, gradient, step_scale, V_g, V_e);
+  writeln("V_g => ", V_g);
+  //assert(eqeq(V_g, DMatrix([], [])));
   //assert(V_e);
 
 }
@@ -3877,16 +4423,41 @@ unittest{
 }
 
 unittest{
+  //[427, 1] [8, 1708] [4, 427] [8, 10] [8, 10]
+  DMatrix eval = DMatrix([2,1], [102, -19]);
+  DMatrix x = DMatrix([8, 1], [71, 3, 75, 12, -22, 234, 67, 12]);
+  DMatrix Hi = DMatrix([1, 8], [32, 5, 12, -2, 71, 4, 88, -21]);
+  DMatrix xHi = matrix_mult(x, Hi);
+  DMatrix Hiy = ones_dmatrix(4,  2);
 
-  DMatrix eval = DMatrix([3,1], [17, 11, 102]);
-  DMatrix xHi = zeros_dmatrix(3,1);
-  DMatrix Hiy = zeros_dmatrix(3,1);
-  DMatrix xHiDHiy_all_g = zeros_dmatrix(3,1);
-  DMatrix xHiDHiy_all_e = zeros_dmatrix(3,1);
+  size_t i = 0;
+  size_t j = 0;
+  DMatrix xHiDHiy_all_g = ones_dmatrix(8,10);
+  DMatrix xHiDHiy_all_e = ones_dmatrix(8,10);
 
-  //Calc_xHiDHiy_all(eval, xHi, Hiy, xHiDHiy_all_g, xHiDHiy_all_e);
-  //assert(xHiDHiy_all_g = DMatrix([], []));
-  //assert(xHiDHiy_all_e = DMatrix([], []));
+  Calc_xHiDHiy_all(eval, xHi, Hiy, xHiDHiy_all_g, xHiDHiy_all_e);
+  writeln("xHiDHiy_all_g => ", xHiDHiy_all_g);
+  writeln("xHiDHiy_all_e => ", xHiDHiy_all_e);
+  assert(xHiDHiy_all_g == DMatrix([8, 10], [135965,  136604,  143065, 134332,  30814,  37914,  29181, -31808,
+                                            -33441,   13845,    5745,   5772,   6045,   5676,   1302,   1602,
+                                              1233,   -1344,   -1413,    585, 143625, 144300, 151125, 141900,
+                                             32550,   40050,   30825, -33600, -35325,  14625,  22980,  23088,
+                                             24180,   22704,    5208,   6408,   4932,  -5376,  -5652,   2340,
+                                            -42130,  -42328,  -44330, -41624,  -9548, -11748,  -9042,   9856,
+                                             10362,   -4290,  448110, 450216, 471510, 442728, 101556, 124956,
+                                             96174, -104832, -110214,  45630, 128305, 128908, 135005, 126764,
+                                             29078,   35778,   27537, -30016, -31557,  13065,  22980,  23088,
+                                             24180,   22704,    5208,   6408,   4932,  -5376,  -5652,   2340]));
+  assert(xHiDHiy_all_e == DMatrix([8, 10], [7313,  7952, 14413,  5680,   639,  7739,  -994,  7100,
+                                            5467, -1633,   309,   336,   609,   240,    27,   327,
+                                             -42,   300,   231,   -69,  7725,  8400, 15225,  6000,
+                                             675,  8175, -1050,  7500,  5775, -1725,  1236,  1344,
+                                            2436,   960,   108,  1308,  -168,  1200,   924,  -276,
+                                           -2266, -2464, -4466, -1760,  -198, -2398,   308, -2200,
+                                           -1694,   506, 24102, 26208, 47502, 18720,  2106, 25506,
+                                           -3276, 23400, 18018, -5382,  6901,  7504, 13601,  5360,
+                                             603,  7303,  -938,  6700,  5159, -1541,  1236,  1344,
+                                            2436,   960,   108,  1308,  -168,  1200,   924,  -276]));
 }
 
 unittest{
@@ -3900,33 +4471,45 @@ unittest{
   //assert(xHiDHix_all_g);
   //assert(xHiDHix_all_e);
 }
-
+//
 unittest{
 
-  size_t v_size = 0;
-  DMatrix eval = DMatrix([3,1], [17, 11, 102]);
-  DMatrix Hi = zeros_dmatrix(3, 1);
-  DMatrix xHi = zeros_dmatrix(3, 1);
-  DMatrix Hiy = zeros_dmatrix(3, 1);
-  DMatrix xHiDHiDHiy_all_gg = zeros_dmatrix(3, 1);
-  DMatrix xHiDHiDHiy_all_ee = zeros_dmatrix(3, 1);
-  DMatrix xHiDHiDHiy_all_ge = zeros_dmatrix(3, 1);
+  size_t v_size = 10;
 
+  DMatrix eval = DMatrix([2,1], [102, -19]);
+  DMatrix x = DMatrix([8, 1], [71, 3, 75, 12, -22, 234, 67, 12]);
+  DMatrix Hi = DMatrix([1, 8], [32, 5, 12, -2, 71, 4, 88, -21]);
+  DMatrix xHi = matrix_mult(x, Hi);
+  DMatrix Hiy = ones_dmatrix(4,  2);
+
+  DMatrix xHiDHiDHiy_all_gg = zeros_dmatrix(8, 100);
+  DMatrix xHiDHiDHiy_all_ee = zeros_dmatrix(8, 100);
+  DMatrix xHiDHiDHiy_all_ge = zeros_dmatrix(8, 100);
+
+  // TODO
   //Calc_xHiDHiDHiy_all(v_size, eval, Hi, xHi, Hiy, xHiDHiDHiy_all_gg, xHiDHiDHiy_all_ee, xHiDHiDHiy_all_ge);
-  //assert(xHiDHiDHiy_all_gg);
-  //assert(xHiDHiDHiy_all_ee);
-  //assert(xHiDHiDHiy_all_ge);
+  //writeln("xHiDHiDHiy_all_gg => ", xHiDHiDHiy_all_gg);
+  //writeln("xHiDHiDHiy_all_ee => ", xHiDHiDHiy_all_ee);
+  //writeln("xHiDHiDHiy_all_ge => ", xHiDHiDHiy_all_ge);
+
+  //assert(xHiDHiDHiy_all_gg == DMatrix([], []));
+  //assert(xHiDHiDHiy_all_ee == DMatrix([], []));
+  //assert(xHiDHiDHiy_all_ge == DMatrix([], []));
 }
 
 unittest{
 
-  size_t v_size;
-  DMatrix eval = DMatrix([3,1], [17, 11, 102]);
-  DMatrix Hi = zeros_dmatrix(3, 1);
-  DMatrix xHi = zeros_dmatrix(3, 1);
-  DMatrix xHiDHiDHix_all_gg = zeros_dmatrix(3, 1);
-  DMatrix xHiDHiDHix_all_ee = zeros_dmatrix(3, 1);
-  DMatrix xHiDHiDHix_all_ge = zeros_dmatrix(3, 1);
+  size_t v_size = 10;
+  DMatrix eval = DMatrix([2,1], [102, -19]);
+  DMatrix x = DMatrix([8, 2], [71, 3, 75, 12, -22, 234, 67, 12,
+                               11, 32, 7, 22,  -2,  -5, 12, 10]);
+  DMatrix Hi = DMatrix([2, 8], [32, 5, 12, -2, 71, 4, 88, -21,
+                                11, 32, 7, 22,  -2,  -5, 12, 10]);
+  DMatrix xHi = matrix_mult(x, Hi);
+
+  DMatrix xHiDHiDHix_all_gg = zeros_dmatrix(100, 8);
+  DMatrix xHiDHiDHix_all_ee = zeros_dmatrix(100, 8);
+  DMatrix xHiDHiDHix_all_ge = zeros_dmatrix(100, 8);
 
   //Calc_xHiDHiDHix_all(v_size, eval, Hi, xHi, xHiDHiDHix_all_gg, xHiDHiDHix_all_ee, xHiDHiDHix_all_ge);
   //assert(xHiDHiDHix_all_gg);
@@ -3947,31 +4530,34 @@ unittest{
   //assert(xHiDHixQixHiy_all_g);
   //assert(xHiDHixQixHiy_all_e);
 }
-
+//
 unittest{
 
-  DMatrix Qi = zeros_dmatrix(3, 3);
-  DMatrix vec_all_g = zeros_dmatrix(3, 1);
-  DMatrix vec_all_e = zeros_dmatrix(3, 1);
+  DMatrix Qi =  DMatrix([3, 1], [25, 12, -19]);
+  DMatrix vec_all_g = DMatrix([3, 1], [10, 11, 2]);
+  DMatrix vec_all_e =  DMatrix([3, 1], [4, 7, 19]);
   DMatrix Qivec_all_g = zeros_dmatrix(3, 1);
   DMatrix Qivec_all_e = zeros_dmatrix(3, 1);
 
-  //Calc_QiVec_all(Qi, vec_all_g, vec_all_e, Qivec_all_g, Qivec_all_e);
-  //assert(Qivec_all_g);
-  //assert(Qivec_all_e);
+  Calc_QiVec_all(Qi, vec_all_g, vec_all_e, Qivec_all_g, Qivec_all_e);
+
+  assert(Qivec_all_g == DMatrix([3, 1], [250, 120, -190]));
+  assert(Qivec_all_e == DMatrix([3, 1], [100, 48, -76]));
+
 }
 
 unittest{
 
-  DMatrix Qi = zeros_dmatrix(3, 3);
-  DMatrix mat_all_g = zeros_dmatrix(3, 1);
-  DMatrix mat_all_e = zeros_dmatrix(3, 1);
-  DMatrix Qimat_all_g = zeros_dmatrix(3, 1);
-  DMatrix Qimat_all_e = zeros_dmatrix(3, 1);
+  DMatrix Qi = DMatrix([2, 2], [91, 25, 12, -19]);
+  DMatrix mat_all_g = DMatrix([2, 2], [10, 11, 21, 18]);
+  DMatrix mat_all_e = DMatrix([2, 2], [4, 9, 11, 12]);
+  DMatrix Qimat_all_g = zeros_dmatrix(2, 2);
+  DMatrix Qimat_all_e = zeros_dmatrix(2, 2);
 
-  //Calc_QiMat_all(Qi, mat_all_g, mat_all_e, Qimat_all_g, Qimat_all_e);
-  //assert(Qimat_all_g);
-  //assert(Qimat_all_e);
+  Calc_QiMat_all(Qi, mat_all_g, mat_all_e, Qimat_all_g, Qimat_all_e);
+
+  assert(Qimat_all_g == DMatrix([2, 2], [1435, 1451, -279, -210]));
+  assert(Qimat_all_e == DMatrix([2, 2], [639, 1119, -161, -120]));
 
 }
 
@@ -3986,8 +4572,8 @@ unittest{
   DMatrix xHiDHixQixHiy_all_e;
   size_t i;
   size_t j;
-  double yPDPy_g;
-  double yPDPy_e;
+  double yPDPy_g = 0;
+  double yPDPy_e = 0;
 
   //Calc_yPDPy(eval, Hiy, QixHiy, xHiDHiy_all_g, xHiDHiy_all_e, xHiDHixQixHiy_all_g, xHiDHixQixHiy_all_e, i, j, yPDPy_g, yPDPy_e);
   //assert(yPDPy_e);
@@ -4066,239 +4652,287 @@ unittest{
   double crt_b = 0.88;
   double crt_c = 0.32;
 
-  //double pcrt = PCRT(mode, d_size, p_value, crt_a, crt_b, crt_c);
-  //assert(pcrt == 0);
+  double pcrt = PCRT(mode, d_size, p_value, crt_a, crt_b, crt_c);
+  assert(abs(pcrt - 0.699685) < 1e-03);
+}
+
+unittest{
+
+  DMatrix Y = DMatrix([3,3], [ 11,2,11,
+                              21, 12, 13,
+                              99, 78, 62]);
+  DMatrix Hi_all = DMatrix([6,6], [5, 12, 32,  0, -9, 9,
+                                  12, 90, 32, 82, 88, 11,
+                                  64, 98, 67,  75, -10, 12,
+                                  18, 67, 88, -175, 39, -3,
+                                  15, 44, 56, 75, -9, -55,
+                                -975, 15, 89, 75, 11, -13,
+                                   ]);
+
+  DMatrix Hiy_all = DMatrix([3,3], [ 99, -78, 26,
+                                   121,  66,  3,
+                                    45,  72, 11]);
+  Calc_Hiy_all(Y, Hi_all, Hiy_all);
+  assert(eqeq(Hiy_all, DMatrix([3, 3], [3475,  594, 3286,
+                                        5190, 2078, 6132,
+                                        9395,  966, 6525])));
 
 }
 
 unittest{
 
-  DMatrix eval = DMatrix([3,1], [17, 11, 102]);
-  DMatrix D_l = DMatrix([3,1], [24, 120, 5]);
-  DMatrix xHiy = zeros_dmatrix(3, 3);
-  DMatrix UltVehiY =  zeros_dmatrix(3, 3);
-  DMatrix Qi = zeros_dmatrix(3,3);
-
-  double logl = MphCalcLogL(eval, xHiy, D_l, UltVehiY, Qi);
-  writeln(logl);
-  assert(abs(logl - (-29.1664)) <= 1e-03);
-
-}
-
-
-
-unittest{
-
-  DMatrix Y;
-  DMatrix Hi_all;
-  DMatrix Hiy_all;
-  //Calc_Hiy_all(Y, Hi_all, Hiy_all);
-  //assert(Hiy_all);
-
-}
-
-unittest{
-
-  DMatrix X;
-  DMatrix Hi_all;
-  DMatrix xHi_all;
+  DMatrix X = DMatrix([2,3], [ 11,2,11,
+                              99, 78, 62]);
+  DMatrix xHi_all = zeros_dmatrix(12,12);
+  //DMatrix([6,6], [5, 12, 32,  0, -9, 9,
+  //                                12, 90, 32, 82, 88, 11,
+  //                                64, 98, 67,  75, -10, 12,
+  //                                18, 67, 88, -175, 39, -3,
+  //                                15, 44, 56, 75, -9, -55,
+  //                              -975, 15, 89, 75, 11, -13,
+  //                                 ]);
+  DMatrix Hi_all = DMatrix([2,3], [ 99, -78, 26,
+                                    45,  72, 11]);
   //Calc_xHi_all(X, Hi_all, xHi_all);
-  //assert(xHi_all);
+  //write("xHi_all => ", xHi_all);
+  //assert(xHi_all == DMatrix([], []));
 
 }
 
 unittest{
 
-  DMatrix Y;
-  DMatrix Hiy_all;
-  //double yHiy = Calc_yHiy(Y, Hiy_all);
-  //assert(yHiy);
+  DMatrix Y = DMatrix([2,3], [ 11,  2, 11,
+                               99, 78, 62]);
+  DMatrix Hiy_all = DMatrix([6,6], [5, 12, 32,    0,  -9,   9,
+                                   12, 90, 32,   82,  88,  11,
+                                   64, 98, 67,   75, -10,  12,
+                                   18, 67, 88, -175,  39,  -3,
+                                   15, 44, 56,   75,  -9, -55,
+                                 -975, 15, 89,   75,  11, -13]);
+  double yHiy = Calc_yHiy(Y, Hiy_all);
+  assert(yHiy == 10623);
+}
+
+unittest{
+
+  DMatrix Y = DMatrix([3,3], [ 11,  2, 11,
+                              121,  66,  3,
+                               99, 78, 62]);
+  DMatrix x = DMatrix([3,1], [15, 16, 7]);
+  DMatrix Hi = DMatrix([1,9], [3, 5, 89, 1, 21, 12, 54, -7, 82]);
+  DMatrix xHi = matrix_mult(x, Hi);
+  DMatrix xHiy = DMatrix([3,1], [5, 6, 7]);
+  Calc_xHiy(Y, xHi, xHiy);
+  assert(eqeq(xHiy, DMatrix([3, 1], [261450, 278880, 122010])));
 
 }
 
 unittest{
 
-  DMatrix Y;
-  DMatrix xHi;
-  DMatrix xHiy;
-  //Calc_xHiy(Y, xHi, xHiy);
-  //assert(xHiy);
-
-}
-
-unittest{
-
-  DMatrix eval;
-  DMatrix Qi;
-  DMatrix Hi;
-  DMatrix xHiDHix_all_g;
-  DMatrix xHiDHix_all_e;
-  size_t i;
-  size_t j;
+  DMatrix eval = DMatrix([27,1], [102, -19, -12, 19, 24, 72, -19, 14, 24,
+                                  102, -19, -12, 19, 24, 72, -19, 14, 24,
+                                  102, -19, -12, 19, 24, 72, -19, 14, 24]);
+  DMatrix Qi = zeros_dmatrix(4,4);
+  DMatrix Hi = zeros_dmatrix(2,28);
+  DMatrix xHiDHix_all_g = zeros_dmatrix(4, 12);
+  DMatrix xHiDHix_all_e = zeros_dmatrix(4, 12);
+  size_t i = 0;
+  size_t j = 0;
   double tPD_g, tPD_e;
-  //Calc_tracePD(eval, Qi, Hi, xHiDHix_all_g, xHiDHix_all_e, i, j, tPD_g, tPD_e);
-  //assert(tPD_g);
-  //assert(tPD_e);
+  Calc_tracePD(eval, Qi, Hi, xHiDHix_all_g, xHiDHix_all_e, i, j, tPD_g, tPD_e);
+  writeln("tPD_g  => ", tPD_g);
+  writeln("tPD_e  => ", tPD_e);
+  assert(tPD_g == 0);  // TODO => Get rid of zeros matrix
+  assert(tPD_e == 0);
 
 }
 
 unittest{
+  DMatrix eval = DMatrix([27,1], [102, -19, -12, 19, 24, 72, -19, 14, 24,
+                                  102, -19, -12, 19, 24, 72, -19, 14, 24,
+                                  102, -19, -12, 19, 24, 72, -19, 14, 24]);
+  DMatrix Qi = zeros_dmatrix(4,4);
+  DMatrix Hi = zeros_dmatrix(2,28);
+  DMatrix xHi = zeros_dmatrix(4,28);
 
-  DMatrix eval;
-  DMatrix Qi;
-  DMatrix Hi;
-  DMatrix xHi;
-  DMatrix QixHiDHix_all_g;
-  DMatrix QixHiDHix_all_e;
-  DMatrix xHiDHiDHix_all_gg;
-  DMatrix xHiDHiDHix_all_ee;
-  DMatrix xHiDHiDHix_all_ge;
+  DMatrix QixHiDHix_all_g = zeros_dmatrix(4, 12);
+  DMatrix QixHiDHix_all_e = zeros_dmatrix(4, 12);
+  DMatrix xHiDHiDHix_all_gg = zeros_dmatrix(4, 12);
+  DMatrix xHiDHiDHix_all_ee = zeros_dmatrix(4, 12);
+  DMatrix xHiDHiDHix_all_ge = zeros_dmatrix(4, 12);
   size_t i1, j1, i2, j2;
   double tPDPD_gg, tPDPD_ee, tPDPD_ge;
 
-  //Calc_tracePDPD(eval, Qi, Hi, xHi, QixHiDHix_all_g, QixHiDHix_all_e, xHiDHiDHix_all_gg, xHiDHiDHix_all_ee, xHiDHiDHix_all_ge,
-  //                i1, j1, i2, j2, tPDPD_gg, tPDPD_ee, tPDPD_ge);
-  //assert(tPDPD_gg);
-  //assert(tPDPD_ee);
-  //assert(tPDPD_ge);
+  Calc_tracePDPD(eval, Qi, Hi, xHi, QixHiDHix_all_g, QixHiDHix_all_e,
+                 xHiDHiDHix_all_gg, xHiDHiDHix_all_ee, xHiDHiDHix_all_ge,
+                 i1, j1, i2, j2,
+                 tPDPD_gg, tPDPD_ee, tPDPD_ge);  // TODO => Get rid of zeros matrix
+  assert(tPDPD_gg == 0);
+  assert(tPDPD_ee == 0);
+  assert(tPDPD_ge == 0);
 
 }
 
 unittest{
 
-  DMatrix eval = DMatrix([3,1], [17, 11, 102]);
-  DMatrix Hi = zeros_dmatrix(3, 1);
-  size_t i = 2;
-  size_t j = 1;
+
+  DMatrix eval = DMatrix([27,1], [102, -19, -12, 19, 24, 72, -19, 14, 24,
+                                  102, -19, -12, 19, 24, 72, -19, 14, 24,
+                                  102, -19, -12, 19, 24, 72, -19, 14, 24]);
+  DMatrix Hi = zeros_dmatrix(2,28);
+  DMatrix xHiDHix_all_g = zeros_dmatrix(4, 12);
+  DMatrix xHiDHix_all_e = zeros_dmatrix(4, 12);
+  size_t i = 0;
+  size_t j = 0;
   double tHiD_g = 0;
   double tHiD_e = 0;
-  //Calc_traceHiD(eval, Hi, i, j, tHiD_g, tHiD_e);
+  Calc_traceHiD(eval, Hi, i, j, tHiD_g, tHiD_e);
 
-  assert(tHiD_g == 0);
+  assert(tHiD_g == 0);  // TODO => Get rid of zeros matrix
   assert(tHiD_e == 0);
 
 }
 
 unittest{
 
-  DMatrix eval = DMatrix([3,1], [17, 11, 102]);
-  DMatrix Hi = zeros_dmatrix(3, 1);
+  DMatrix eval = DMatrix([27,1], [102, -19, -12, 19, 24, 72, -19, 14, 24,
+                                  102, -19, -12, 19, 24, 72, -19, 14, 24,
+                                  102, -19, -12, 19, 24, 72, -19, 14, 24]);
+  DMatrix Hi = zeros_dmatrix(2,28);
   size_t i1 = 0;
-  size_t j1 = 1;
-  size_t i2 = 1;
-  size_t j2 = 2;
+  size_t j1 = 0;
+  size_t i2 = 0;
+  size_t j2 = 0;
   double tHiDHiD_gg = 0, tHiDHiD_ee = 0, tHiDHiD_ge = 0;
 
-  //Calc_traceHiDHiD(eval, Hi, i1, j1, i2, j2, tHiDHiD_gg, tHiDHiD_ee, tHiDHiD_ge);
-  //assert(tHiDHiD_gg);
-  //assert(tHiDHiD_ee);
-  //assert(tHiDHiD_ge);
+  Calc_traceHiDHiD(eval, Hi, i1, j1, i2, j2, tHiDHiD_gg, tHiDHiD_ee, tHiDHiD_ge);
+  assert(tHiDHiD_gg == 0);
+  assert(tHiDHiD_ee == 0);
+  assert(tHiDHiD_ge == 0);
 
 }
 
 unittest{
+  DMatrix eval = DMatrix([2,1], [102, -19]);
+  DMatrix x = DMatrix([8, 1], [71, 3, 75, 12, -22, 234, 67, 12]);
+  DMatrix Hi = DMatrix([1, 8], [32, 5, 12, -2, 71, 4, 88, -21]);
+  DMatrix xHi = matrix_mult(x, Hi);
 
-  DMatrix eval = DMatrix([3,1], [17, 11, 102]);
-  DMatrix xHi = zeros_dmatrix(3, 1);
-  DMatrix Hiy = zeros_dmatrix(3, 1);
+  DMatrix Hiy = ones_dmatrix(4,  2);
+
   size_t i = 0;
-  size_t j = 1;
-  DMatrix xHiDHiy_g;
-  DMatrix xHiDHiy_e;
+  size_t j = 0;
+  DMatrix xHiDHiy_g = ones_dmatrix(8,1);
+  DMatrix xHiDHiy_e = ones_dmatrix(8,1);
 
-  //Calc_xHiDHiy(eval, xHi, Hiy, i, j, xHiDHiy_g, xHiDHiy_e);
-  //assert(xHiDHiy_g);
-  //assert(xHiDHiy_e);
+  Calc_xHiDHiy(eval, xHi, Hiy, i, j, xHiDHiy_g, xHiDHiy_e);
+  writeln("xHiDHiy_g => ", xHiDHiy_g);
+  writeln("xHiDHiy_e => ", xHiDHiy_e);
+
+  assert(eqeq(xHiDHiy_g, DMatrix([1, 8], [135965, 5745, 143625, 22980, -42130, 448110, 128305, 22980])));
+  assert(eqeq(xHiDHiy_e, DMatrix([1, 8], [7313, 309, 7725, 1236, -2266, 24102, 6901, 1236])));
 
 }
 
 unittest{
 
-  DMatrix eval = DMatrix([3,1], [17, 11, 102]);
-  DMatrix xHi = zeros_dmatrix(3, 1);
+  DMatrix eval = DMatrix([2,1], [10, -19]);
+  DMatrix x = DMatrix([8, 1], [71, 3, 75, 12, -22, 234, 67, 12]);
+  DMatrix Hi = DMatrix([1, 8], [32, 5, 12, -2, 71, 4, 88, -21]);
+  DMatrix xHi = matrix_mult(x, Hi);
   size_t i = 0;
-  size_t j = 1;
-  DMatrix xHiDHix_g;
-  DMatrix xHiDHix_e;
+  size_t j = 0;
+  DMatrix xHiDHix_g = ones_dmatrix(8,8);
+  DMatrix xHiDHix_e = ones_dmatrix(8,8);
+  Calc_xHiDHix(eval, xHi, i, j, xHiDHix_g, xHiDHix_e);
+  writeln("xHiDHiy_g => ", xHiDHix_g);
+  writeln("xHiDHiy_e => ", xHiDHix_e);
 
-  //Calc_xHiDHix(eval, xHi, i, j, xHiDHix_g, xHiDHix_e);
-  //assert(xHiDHix_g);
-  //assert(xHiDHix_e);
+  //assert(xHiDHix_g == DMatrix([], [])); // TODO
+  //assert(xHiDHix_e == DMatrix([], []));
 
 }
 
 unittest{
-
-  DMatrix eval = DMatrix([3,1], [17, 11, 102]);
-  DMatrix Hi = zeros_dmatrix(3, 1);
-  DMatrix xHi = zeros_dmatrix(3, 1);
-  DMatrix Hiy = zeros_dmatrix(3, 1);
+  DMatrix eval = DMatrix([2,1], [102, -19]);
+  DMatrix x = DMatrix([8, 1], [71, 3, 75, 12, -22, 234, 67, 12]);
+  DMatrix Hi = DMatrix([1, 8], [32, 5, 12, -2, 71, 4, 88, -21]);
+  DMatrix xHi = matrix_mult(x, Hi);
+  DMatrix Hiy = DMatrix([2, 2], [1,2,3,4]);
   size_t i1 = 0;
-  size_t j1 = 1;
-  size_t i2 = 1;
-  size_t j2 = 2;
-  DMatrix xHiDHiDHiy_gg;
-  DMatrix xHiDHiDHiy_ee;
-  DMatrix xHiDHiDHiy_ge;
+  size_t j1 = 0;
+  size_t i2 = 0;
+  size_t j2 = 0;
+  DMatrix xHiDHiDHiy_gg = ones_dmatrix(8,1); // change 8 to 2 : breaks
+  DMatrix xHiDHiDHiy_ee = ones_dmatrix(8,1);
+  DMatrix xHiDHiDHiy_ge = ones_dmatrix(8,1);
 
-  //Calc_xHiDHiDHiy(eval, Hi, xHi, Hiy, i1, j1, i2, j2, xHiDHiDHiy_gg, xHiDHiDHiy_ee, xHiDHiDHiy_ge);
-  //assert(xHiDHiDHiy_gg);
-  //assert(xHiDHiDHiy_ee);
-  //assert(xHiDHiDHiy_ge);
+  Calc_xHiDHiDHiy(eval, Hi, xHi, Hiy, i1, j1, i2, j2, xHiDHiDHiy_gg, xHiDHiDHiy_ee, xHiDHiDHiy_ge);
+  writeln("xHiDHiDHiy_gg => ", xHiDHiDHiy_gg);
+  writeln("xHiDHiDHiy_ee => ", xHiDHiDHiy_ee);
+  writeln("xHiDHiDHiy_ge => ", xHiDHiDHiy_ge);
+  //assert(xHiDHiDHiy_gg == DMatrix([], []));  // TODO
+  //assert(xHiDHiDHiy_ee == DMatrix([], []));
+  //assert(xHiDHiDHiy_ge == DMatrix([], []));
 
 }
 
 unittest{
 
-  DMatrix eval = DMatrix([3,1], [17, 11, 102]);
-  DMatrix Hi = zeros_dmatrix(3, 1);
-  DMatrix xHi = zeros_dmatrix(3, 1);
+  DMatrix eval = DMatrix([2,1], [102, -19]);
+  DMatrix x = DMatrix([8, 1], [71, 3, 75, 12, -22, 234, 67, 12]);
+  DMatrix Hi = DMatrix([1, 8], [32, 5, 12, -2, 71, 4, 88, -21]);
+  DMatrix xHi = matrix_mult(x, Hi);
   size_t i1 = 0;
-  size_t j1 = 1;
-  size_t i2 = 1;
-  size_t j2 = 2;
-  DMatrix xHiDHiDHix_gg;
-  DMatrix xHiDHiDHix_ee;
-  DMatrix xHiDHiDHix_ge;
+  size_t j1 = 0;
+  size_t i2 = 0;
+  size_t j2 = 0;
+  DMatrix xHiDHiDHix_gg = ones_dmatrix(8,8);
+  DMatrix xHiDHiDHix_ee = ones_dmatrix(8,8);
+  DMatrix xHiDHiDHix_ge = ones_dmatrix(8,8);
 
-  //Calc_xHiDHiDHix(eval, Hi, xHi, i1, j1, i2, j2, xHiDHiDHix_gg, xHiDHiDHix_ee,  xHiDHiDHix_ge);
-  //assert(xHiDHiDHix_gg);
-  //assert(xHiDHiDHix_ee);
-  //assert(xHiDHiDHix_ge);
+  Calc_xHiDHiDHix(eval, Hi, xHi, i1, j1, i2, j2, xHiDHiDHix_gg, xHiDHiDHix_ee,  xHiDHiDHix_ge);
+  writeln("xHiDHiDHix_gg => ", xHiDHiDHix_gg);
+  writeln("xHiDHiDHix_ee => ", xHiDHiDHix_ee);
+  writeln("xHiDHiDHix_ge => ", xHiDHiDHix_ge);
 
+  //assert(xHiDHiDHix_gg == DMatrix([], [])); // TODO: check
+  //assert(xHiDHiDHix_ee == DMatrix([], []));
+  //assert(xHiDHiDHix_ge == DMatrix([], []));
 }
 
 unittest{
 
-  DMatrix eval = DMatrix([3,1], [17, 11, 102]);
-  DMatrix Hiy = zeros_dmatrix(3, 1);
+  DMatrix eval = DMatrix([2,1], [102, -19]);
+  DMatrix Hiy = ones_dmatrix(4,  2);
   size_t i = 0;
   size_t j = 1;
   double yHiDHiy_g = 0;
   double yHiDHiy_e = 0;
 
-  //Calc_yHiDHiy(eval, Hiy, i, j, yHiDHiy_g, yHiDHiy_e);
-  //assert(yHiDHiy_g);
-  //assert(yHiDHiy_e);
+  Calc_yHiDHiy(eval, Hiy, i, j, yHiDHiy_g, yHiDHiy_e);
+
+  assert(yHiDHiy_g == 166);
+  assert(yHiDHiy_e == 4);
 
 }
 
 unittest{
 
-  DMatrix eval = DMatrix([3,1], [17, 11, 102]);
-  DMatrix Hi = zeros_dmatrix(3, 1);
-  DMatrix Hiy = zeros_dmatrix(3, 1);
+  DMatrix eval = DMatrix([2,1], [102, -19]);
+  DMatrix Hi = DMatrix([1, 8], [32, 5, 12, -2, 71, 4, 88, -21]);
+  DMatrix Hiy = DMatrix([2, 2], [1,2,3,4]);
   size_t i1 = 0;
-  size_t j1 = 1;
-  size_t i2 = 1;
-  size_t j2 = 2;
+  size_t j1 = 0;
+  size_t i2 = 0;
+  size_t j2 = 0;
   double yHiDHiDHiy_gg = 0;
   double yHiDHiDHiy_ee = 0;
   double yHiDHiDHiy_ge = 0;
 
-  //Calc_yHiDHiDHiy(eval, Hi, Hiy, i1, j1, i2, j2, yHiDHiDHiy_gg, yHiDHiDHiy_ee, yHiDHiDHiy_ge);
-  //assert(yHiDHiDHiy_gg);
-  //assert(yHiDHiDHiy_ee);
-  //assert(yHiDHiDHiy_ge);
+  Calc_yHiDHiDHiy(eval, Hi, Hiy, i1, j1, i2, j2, yHiDHiDHiy_gg, yHiDHiDHiy_ee, yHiDHiDHiy_ge);
 
+  assert(yHiDHiDHiy_gg == 350256);
+  assert(yHiDHiDHiy_ee == 80);
+  assert(yHiDHiDHiy_ge == 2352);
 }

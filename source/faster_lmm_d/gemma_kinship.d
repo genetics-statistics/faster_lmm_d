@@ -625,7 +625,36 @@ void check_cvt(int[] indicator_cvt, int[] indicator_idv, ref double[][] cvt, ref
 
 // If flag=0, then use indicator_idv to load W and Y;
 // else, use indicator_cvt to load them.
-void CopyCvtPhen(DMatrix W, DMatrix Y, int[] indicator_idv, int[] indicator_cvt, 
+void CopyCvtPhen(DMatrix W, DMatrix Y, int[] indicator_idv, int[] indicator_cvt,
+                 double[][] cvt, DMatrix pheno, size_t n_ph, size_t n_cvt, size_t flag) {
+  size_t ci_test = 0;
+
+  for (size_t i = 0; i < indicator_idv.length; ++i) {
+    if (flag == 0) {
+      if (indicator_idv[i] == 0) {
+        continue;
+      }
+    } else {
+      if (indicator_cvt[i] == 0) {
+        continue;
+      }
+    }
+
+    for (size_t j = 0; j < n_ph; ++j) {
+      Y.set(ci_test, j, pheno.accessor(i, j));
+    }
+
+    for (size_t j = 0; j < n_cvt; ++j) {
+      W.set(ci_test, j, cvt[i][j]);
+    }
+
+    ci_test++;
+  }
+
+  return;
+}
+
+void CopyCvtPhen2(ref DMatrix W, ref DMatrix Y, int[] indicator_idv, int[] indicator_cvt,
                  double[][] cvt, DMatrix pheno, size_t n_ph, size_t n_cvt, size_t flag) {
   size_t ci_test = 0;
 
@@ -770,7 +799,7 @@ Indicators_result process_cvt_phen(const DMatrix indicator_pheno, double[][] cvt
   writeln("done process_cvt_phen");
   writeln(ni_test);
 
-  if(test_name == "hs1940_kinship"){ 
+  if(test_name == "hs1940_kinship"){
     check_indicator_cvt(s_cvt.elements);
     check_cvt_matrix(s_cvt);
     check_indicator_idv(indicator_idv);
@@ -1047,14 +1076,14 @@ bool plink_kin(const string file_bed,
       } else if (rs in mapRS2weight) {
         i_vc = mapRS2cat[rs];
 
-        //gsl_vector_view 
+        //gsl_vector_view
         DMatrix Xlarge_col = get_col(Xlarge, msize * i_vc + ns_vec[i_vc] % msize);
         //gsl_vector_memcpy(&Xlarge_col.vector, geno);
 
         ns_vec[i_vc]++;
 
         if (ns_vec[i_vc] % msize == 0) {
-          //gsl_matrix_view 
+          //gsl_matrix_view
           DMatrix X_sub = get_sub_dmatrix(Xlarge, 0, msize * i_vc, ni_test, msize);
           //gsl_matrix_view
           DMatrix kin_sub = get_sub_dmatrix( matrix_kin, 0, ni_test * i_vc, ni_test, ni_test);

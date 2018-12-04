@@ -50,6 +50,7 @@ struct DMatrix{
   pragma(inline) const m_items n_pheno() { return cols; }
   pragma(inline) const m_items m_geno() { return rows; }
   pragma(inline) const bool is_square() { return rows == cols; };
+  pragma(inline) const bool is_vector() { return rows == 1 || cols == 1; };
   pragma(inline) const DMatrix T() {
     return slow_matrix_transpose(this);
   };
@@ -341,7 +342,7 @@ bool eqeq(const DMatrix lha, const DMatrix rha) {
   foreach(index, s; lha.elements) {
     double rem = s -rha.elements[index];
     if(abs(rem) > 0.001) {
-      writeln("index", index);
+      writeln("index", index, ", difference => ", rem);
       return false;
     }
   }

@@ -15,20 +15,15 @@ import std.stdio;
 import std.typecons; // for Tuples
 import core.stdc.stdlib : exit;
 
-import cblas : gemm, Transpose, Order, Uplo, cblas_ddot, cblas_daxpy, cblas_dger, cblas_dsyr, cblas_dsyrk;
+import cblas : gemm, Transpose, Order, Uplo, cblas_ddot, cblas_daxpy, cblas_dger, cblas_dsyr, cblas_dsyr2, cblas_dsyrk;
+import lapack.lapack;
 
 import faster_lmm_d.dmatrix;
 import faster_lmm_d.helpers;
 
 extern (C) {
-  void dgetrf_ (int* m, int* n, double* a, int* lda, int* ipiv, int* info);
-  void dgetri_ (int* n, double* a, int* lda, const(int)* ipiv, double* work, int* lwork, int* info);
   int LAPACKE_dgetrf (int matrix_layout, int m, int n, double* a, int lda, int* ipiv);
   double EIGEN_MINVALUE = 1e-10;
-  void dsyev_(char* jobz,  char* uplo, int* n, double *a, int* lda, double *w, double *work, int* lwork, int* info);
-  void dsyevr_(char* jobz, char* range, char* uplo, int* n, double *a, int* lda, double *vl,
-               double *vu, int *il, int *iu, double* abstol, int* m, double *w, double *z,
-               int* ldz, int *isuppz, double *work, int* lwork, int *iwork, int *liwork, int* info);
   int LAPACKE_dsyev (int matrix_layout, char jobz, char uplo, int n,
                       double* a, int lda, double* z);
   int LAPACKE_dsyevr (int matrix_layout, char jobz, char range, char uplo, int n,
@@ -121,7 +116,7 @@ DMatrix ger(const double alpha, const DMatrix X , const DMatrix Y , const DMatri
   assert(m == X.size);
   assert(n == Y.size);
   cblas_dger(Order.RowMajor, m, n, alpha, X.elements.ptr, 1, Y.elements.ptr, 1, elements.ptr, m);
-  return DMatrix(A.shape, elements);
+  return DMatrix(A.shape.dup, elements);
 }
 
 //compute the symmetric rank-1 update A = alpha x x^T + A of the symmetric matrix A
@@ -133,12 +128,21 @@ DMatrix syr(const double alpha, const DMatrix X, const DMatrix A ){
   return DMatrix(A.shape, elements);
 }
 
+//compute the symmetric rank-2 update A = \alpha x y^T + \alpha y x^T + A of the symmetric matrix A
+
+DMatrix syr2(const double alpha, const DMatrix X, const DMatrix Y, const DMatrix A ){
+  assert(A.rows == A.cols);
+  double[] elements = A.elements.dup;
+  cblas_dsyr2(Order.RowMajor, Uplo.Upper, to!int(A.rows), alpha, X.elements.ptr, 1, Y.elements.ptr, 1, elements.ptr, to!int(A.rows));
+  return DMatrix(A.shape.dup, elements);
+}
+
 //compute a rank-k update of the symmetric matrix C, C = alpha A A^T + beta C
 
 DMatrix syrk(const double alpha, const DMatrix A, double beta, const DMatrix C){
   double[] elements = C.elements.dup();
   cblas_dsyrk(Order.RowMajor, Uplo.Upper, Transpose.NoTrans, to!int(C.rows), to!int(A.cols), alpha, A.elements.ptr, to!int(A.cols), beta, elements.ptr, to!int(C.rows));
-  return DMatrix(C.shape, elements);
+  return DMatrix(C.shape.dup, elements);
 }
 
 /*
@@ -379,7 +383,7 @@ void lapack_eigen_symmv(const DMatrix A_const, ref DMatrix eval, ref DMatrix eve
 
     LWORK = 3 * N;
     double[] WORK = new double[LWORK];
-    dsyev_(&JOBZ, &UPLO, &N, A.elements.ptr, &LDA, eval.elements.ptr, WORK.ptr, &LWORK, &INFO);
+    dsyev_(JOBZ, UPLO, N, A.elements.ptr, LDA, eval.elements.ptr, WORK.ptr, LWORK, INFO);
     if (INFO != 0) {
       writeln("Eigen decomposition unsuccessful in lapack_eigen_symmv.");
       return;
@@ -407,9 +411,11 @@ void lapack_eigen_symmv(const DMatrix A_const, ref DMatrix eval, ref DMatrix eve
     double[] WORK_temp = new double[1];
     int[] IWORK_temp = new int[1];
 
-    dsyevr_(&JOBZ, &RANGE, &UPLO, &N, A.elements.ptr, &LDA, &VL, &VU, &IL, &IU,
-            &ABSTOL, &M, eval.elements.ptr, evec.elements.ptr, &LDZ, ISUPPZ.ptr, WORK_temp.ptr,
-            &LWORK, IWORK_temp.ptr, &LIWORK, &INFO);
+    dsyevr_(JOBZ, RANGE, UPLO, N, A.elements.ptr, LDA, &VL, &VU, &IL, &IU,
+            ABSTOL, M, eval.elements.ptr, evec.elements.ptr, LDZ, ISUPPZ.ptr, WORK_temp.ptr,
+            LWORK, IWORK_temp.ptr, &LIWORK, INFO);
+
+
     if (INFO != 0) {
       writeln("Work space estimate unsuccessful in lapack_eigen_symmv.");
       return;
@@ -420,9 +426,9 @@ void lapack_eigen_symmv(const DMatrix A_const, ref DMatrix eval, ref DMatrix eve
     double[] WORK = new double[LWORK];
     int[] IWORK = new int[LIWORK];
 
-    dsyevr_(&JOBZ, &RANGE, &UPLO, &N, A.elements.ptr, &LDA, &VL, &VU, &IL, &IU,
-            &ABSTOL, &M, eval.elements.ptr, evec.elements.ptr, &LDZ, ISUPPZ.ptr, WORK.ptr, &LWORK,
-            IWORK.ptr, &LIWORK, &INFO);
+    dsyevr_(JOBZ, RANGE, UPLO, N, A.elements.ptr, LDA, &VL, &VU, &IL, &IU,
+            ABSTOL, M, eval.elements.ptr, evec.elements.ptr, LDZ, ISUPPZ.ptr, WORK.ptr,
+            LWORK, IWORK.ptr, &LIWORK, INFO);
     if (INFO != 0) {
       writeln("Eigen decomposition unsuccessful in lapack_eigen_symmv.");
       return;
@@ -480,30 +486,42 @@ double VectorVar(const DMatrix v) {
 }
 
 // Center the matrix G.
-void CenterMatrix(DMatrix G) {
+void CenterMatrix(ref DMatrix G) {
   double d;
-  DMatrix w = ones_dmatrix(1, G.shape[0]);
+  DMatrix w = ones_dmatrix(G.shape[0],1);
 
   DMatrix Gw = matrix_mult(G, w);
-  //gsl_blas_dsyr2(CblasUpper, -1.0 / (double)G->size1, Gw, w, G);
+  G = syr2(-1.0 / to!double(G.shape[0]), Gw, w, G);
   d = vector_ddot(w, Gw);
-  //gsl_blas_dsyr(CblasUpper, d / ((double)G->size1 * (double)G->size1), w, G);
+  G = syr(d / (to!double(G.shape[0]) * to!double(G.shape[0])), w, G);
 
-  DMatrix GT = G.T;
+  //DMatrix GT = G.T;
+  for (size_t i = 0; i < G.shape[0]; ++i) {
+    for (size_t j = 0; j < i; ++j) {
+      d = accessor(G, j, i);
+      set(G, i, j, d);
+    }
+  }
   return;
 }
 
 // Center the matrix G.
-void CenterMatrixVec(DMatrix G, const DMatrix w) {
+void CenterMatrixVec(ref DMatrix G, const DMatrix w) {
   double d, wtw;
 
   wtw = vector_ddot(w, w);
   DMatrix Gw = matrix_mult(G, w);
-  //gsl_blas_dsyr2(CblasUpper, -1.0 / wtw, Gw, w, G);
+  G = syr2(-1.0 / wtw, Gw, w, G);
   d = vector_ddot(w, Gw);
-  //gsl_blas_dsyr(CblasUpper, d / (wtw * wtw), w, G);
+  G = syr(d / (wtw * wtw), w, G);
 
-  DMatrix GT = G.T;
+  //DMatrix GT = G.T;
+  for (size_t i = 0; i < G.shape[0]; ++i) {
+    for (size_t j = 0; j < i; ++j) {
+      d = accessor(G, j, i);
+      set(G, i, j, d);
+    }
+  }
 
   return;
 }
