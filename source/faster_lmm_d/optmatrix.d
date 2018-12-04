@@ -15,7 +15,7 @@ import std.stdio;
 import std.typecons; // for Tuples
 import core.stdc.stdlib : exit;
 
-import cblas : gemm, Transpose, Order, Uplo, cblas_ddot, cblas_daxpy, cblas_dger, cblas_dsyr, cblas_dsyrk;
+import cblas : gemm, Transpose, Order, Uplo, cblas_ddot, cblas_daxpy, cblas_dger, cblas_dsyr, cblas_dsyr2, cblas_dsyrk;
 
 import faster_lmm_d.dmatrix;
 import faster_lmm_d.helpers;
@@ -121,7 +121,7 @@ DMatrix ger(const double alpha, const DMatrix X , const DMatrix Y , const DMatri
   assert(m == X.size);
   assert(n == Y.size);
   cblas_dger(Order.RowMajor, m, n, alpha, X.elements.ptr, 1, Y.elements.ptr, 1, elements.ptr, m);
-  return DMatrix(A.shape, elements);
+  return DMatrix(A.shape.dup, elements);
 }
 
 //compute the symmetric rank-1 update A = alpha x x^T + A of the symmetric matrix A
@@ -133,12 +133,21 @@ DMatrix syr(const double alpha, const DMatrix X, const DMatrix A ){
   return DMatrix(A.shape, elements);
 }
 
+//compute the symmetric rank-2 update A = \alpha x y^T + \alpha y x^T + A of the symmetric matrix A
+
+DMatrix syr2(const double alpha, const DMatrix X, const DMatrix Y, const DMatrix A ){
+  assert(A.rows == A.cols);
+  double[] elements = A.elements.dup;
+  cblas_dsyr2(Order.RowMajor, Uplo.Upper, to!int(A.rows), alpha, X.elements.ptr, 1, Y.elements.ptr, 1, elements.ptr, to!int(A.rows));
+  return DMatrix(A.shape.dup, elements);
+}
+
 //compute a rank-k update of the symmetric matrix C, C = alpha A A^T + beta C
 
 DMatrix syrk(const double alpha, const DMatrix A, double beta, const DMatrix C){
   double[] elements = C.elements.dup();
   cblas_dsyrk(Order.RowMajor, Uplo.Upper, Transpose.NoTrans, to!int(C.rows), to!int(A.cols), alpha, A.elements.ptr, to!int(A.cols), beta, elements.ptr, to!int(C.rows));
-  return DMatrix(C.shape, elements);
+  return DMatrix(C.shape.dup, elements);
 }
 
 /*
@@ -480,30 +489,42 @@ double VectorVar(const DMatrix v) {
 }
 
 // Center the matrix G.
-void CenterMatrix(DMatrix G) {
+void CenterMatrix(ref DMatrix G) {
   double d;
-  DMatrix w = ones_dmatrix(1, G.shape[0]);
+  DMatrix w = ones_dmatrix(G.shape[0],1);
 
   DMatrix Gw = matrix_mult(G, w);
-  //gsl_blas_dsyr2(CblasUpper, -1.0 / (double)G->size1, Gw, w, G);
+  G = syr2(-1.0 / to!double(G.shape[0]), Gw, w, G);
   d = vector_ddot(w, Gw);
-  //gsl_blas_dsyr(CblasUpper, d / ((double)G->size1 * (double)G->size1), w, G);
+  G = syr(d / (to!double(G.shape[0]) * to!double(G.shape[0])), w, G);
 
-  DMatrix GT = G.T;
+  //DMatrix GT = G.T;
+  for (size_t i = 0; i < G.shape[0]; ++i) {
+    for (size_t j = 0; j < i; ++j) {
+      d = accessor(G, j, i);
+      set(G, i, j, d);
+    }
+  }
   return;
 }
 
 // Center the matrix G.
-void CenterMatrixVec(DMatrix G, const DMatrix w) {
+void CenterMatrixVec(ref DMatrix G, const DMatrix w) {
   double d, wtw;
 
   wtw = vector_ddot(w, w);
   DMatrix Gw = matrix_mult(G, w);
-  //gsl_blas_dsyr2(CblasUpper, -1.0 / wtw, Gw, w, G);
+  G = syr2(-1.0 / wtw, Gw, w, G);
   d = vector_ddot(w, Gw);
-  //gsl_blas_dsyr(CblasUpper, d / (wtw * wtw), w, G);
+  G = syr(d / (wtw * wtw), w, G);
 
-  DMatrix GT = G.T;
+  //DMatrix GT = G.T;
+  for (size_t i = 0; i < G.shape[0]; ++i) {
+    for (size_t j = 0; j < i; ++j) {
+      d = accessor(G, j, i);
+      set(G, i, j, d);
+    }
+  }
 
   return;
 }

@@ -1188,7 +1188,7 @@ double MphEM(const char func_name, const size_t max_iter, const double max_prec,
     logl_const = -0.5 * to!double(n_size) * to!double(d_size) * mlog(2.0 * PI);
   }
   writeln("logl_const =>", logl_const);
-  assert(abs(logl_const -(-1545.346)) < 1e-3);
+  //assert(abs(logl_const -(-1545.346)) < 1e-3);
   // Start EM.
   writeln("max_iter => ", max_iter);
   for (size_t t = 0; t < max_iter; t++) {
@@ -1243,8 +1243,6 @@ double MphEM(const char func_name, const size_t max_iter, const double max_prec,
 
     // Update V_g and V_e.
     UpdateV(eval, U_hat, E_hat, Sigma_uu, Sigma_ee, V_g, V_e);
-
-    //exit(0);
   }
   writeln("logl_new => ", logl_new);
   return logl_new;
@@ -1473,7 +1471,7 @@ double MphCalcP(const DMatrix eval, const DMatrix x_vec, const DMatrix W,
 void MphCalcBeta(const DMatrix eval, const DMatrix W, const DMatrix Y, const DMatrix V_g,
                  const DMatrix V_e, ref DMatrix UltVehiY, ref DMatrix B, ref DMatrix se_B) {
   writeln("in MphCalcBeta", Y.shape);
-  size_t n_size = eval.size, c_size = W.shape[0], d_size = W.shape[1];
+  size_t n_size = eval.size, c_size = W.shape[0], d_size = V_g.shape[0];
   size_t dc_size = d_size * c_size;
   double delta, dl, d, dy, dw; // , logdet_Ve, logdet_Q;
 
@@ -1499,14 +1497,9 @@ void MphCalcBeta(const DMatrix eval, const DMatrix W, const DMatrix Y, const DMa
   // Calculate Qi and log|Q|.
   // double logdet_Q = CalcQi(eval, D_l, W, Qi);
   CalcQi(eval, D_l, W, Qi);
-  writeln("=========Y=======");
-  writeln(Y.shape);
-  writeln(UltVehi.shape);
-  writeln(W.shape);
   // Calculate UltVehiY.
   UltVehiY = matrix_mult(UltVehi, Y);
 
-  writeln(UltVehiY.shape);
   // Calculate WHiy.
   for (size_t i = 0; i < d_size; i++) {
     dl = D_l.elements[i];
@@ -2154,7 +2147,7 @@ void CalcCRT(const DMatrix Hessian_inv, const DMatrix Qi,
 
   DMatrix Qi_s = get_sub_dmatrix( Qi, (c_size - 1) * d_size, (c_size - 1) * d_size, d_size, d_size);
 
-  writeln(Qi);
+  //writeln(Qi);
   Qi_si = Qi_s.inverse();
 
   // Calculate correction factors.
@@ -2545,22 +2538,22 @@ void analyze_plink(const DMatrix U, const DMatrix eval, const DMatrix UtW, const
   set_sub_dmatrix2(B, 0, 0, d_size, c_size, B_sub);
 
   writeln("Hi_all.shape => ", Hi_all.shape);
-  //assert(eqeq(V_g, DMatrix([4, 4], [233.838,          0,         0,       0,
-  //                                        0, 0.00604845,         0,       0,
-  //                                        0,          0, 0.0640605,       0,
-  //                                        0,          0,         0, 17.7095])
-  //      ));
+  assert(eqeq(V_g, DMatrix([4, 4], [233.838,          0,         0,       0,
+                                          0, 0.00604845,         0,       0,
+                                          0,          0, 0.0640605,       0,
+                                          0,          0,         0, 17.7095])
+        ));
 
-  //assert(eqeq(V_e, DMatrix([4, 4], [67.0937,        0,        0,       0,
-  //                                        0, 0.010498,        0,       0,
-  //                                        0,        0, 0.254285,       0,
-  //                                        0,        0,        0, 17.5755])
-  //      ));
+  assert(eqeq(V_e, DMatrix([4, 4], [67.0937,        0,        0,       0,
+                                          0, 0.010498,        0,       0,
+                                          0,        0, 0.254285,       0,
+                                          0,        0,        0, 17.5755])
+        ));
 
-  //assert(eqeq(B, DMatrix([4, 3], [ 7.07432,    0.37419,   0,
-  //                                -0.0353791,  0.0870001, 0,
-  //                                 0.0122087, -0.0271713, 0,
-  //                                -2.16772,   -0.380524,  0])));
+  assert(eqeq(B, DMatrix([4, 3], [ 7.07432,    0.37419,   0,
+                                  -0.0353791,  0.0870001, 0,
+                                   0.0122087, -0.0271713, 0,
+                                  -2.16772,   -0.380524,  0])));
 
   logl_H0 = MphEM('R', em_iter, em_prec, eval, X_sub, Y, U_hat, E_hat,
                   OmegaU, OmegaE, UltVehiY, UltVehiBX, UltVehiU, UltVehiE, V_g,
@@ -2604,7 +2597,7 @@ void analyze_plink(const DMatrix U, const DMatrix eval, const DMatrix UtW, const
     }
     write("\n");
   }
-  assert(abs(V_g.accessor(0,0) - 242.2079) < 1e-03);
+  //assert(abs(V_g.accessor(0,0) - 242.2079) < 1e-03);
   writeln("se(Vg): ");
   for (size_t i = 0; i < d_size; i++) {
     for (size_t j = 0; j <= i; j++) {
@@ -3078,7 +3071,6 @@ void UpdateV(const DMatrix eval, const DMatrix U, const DMatrix E,
   double delta;
 
   // Calculate the first part: UD^{-1}U^T and EE^T.
-  writeln(U);
   for (size_t k = 0; k < n_size; k++) {
     delta = eval.elements[k];
     if (delta == 0) {
