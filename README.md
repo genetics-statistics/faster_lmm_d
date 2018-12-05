@@ -46,7 +46,7 @@ and a bunch of D libraries.
 Install
 
 ```sh
-sudo apt-get install libopenblas liblapacke libgsl2
+sudo apt-get install libopenblas liblapacke libgsl2 gfortran
 ```
 
 Install LDC
