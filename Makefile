@@ -49,6 +49,8 @@ $(HOME)/.dub/packages/dstats-1.0.5/dstats/libdstats.a \
 $(HOME)/.dub/packages/resusage-0.2.8/resusage/lib/libresusage.a \
 $(HOME)/.dub/packages/tinyendian-0.1.2/tinyendian/libtinyendian.a
 
+DLIBS       = $(LIBRARY_PATH)/libphobos2-ldc.a $(LIBRARY_PATH)/libdruntime-ldc.a
+DLIBS_DEBUG = $(LIBRARY_PATH)/libphobos2-ldc-debug.a $(LIBRARY_PATH)/libdruntime-ldc-debug.a
 DFLAGS = -wi -I./source $(DUB_INCLUDE)
 RPATH  =
 LIBS   = -L=-llapacke -L=-llapack -L=-lblas -L=-lgsl -L=-lgslcblas -L=-lm -L=-lopenblas -L=-lm -L=-lgslcblas
@@ -68,7 +70,12 @@ ifeq ($(ARRAYFIRE),1)
   LIBS        += -L=-lafcuda
 endif
 
-debug: DFLAGS += -O0 -g -d-debug $(RPATH) -link-debuglib $(BACKEND_FLAG) -unittest
+debug:   DFLAGS += -O0 -g -d-debug $(RPATH) -link-debuglib $(BACKEND_FLAG) -unittest
+
+static:  DFLAGS +=  -static -link-defaultlib-shared=false  -L-static-libgfortran -L=-lgfortran
+
+static:  LIBS   =   $(DLIBS) $(LIBRARY_PATH)/libgsl.a $(LIBRARY_PATH)/libz.a $(LIBRARY_PATH)/liblapack.a $(LIBRARY_PATH)/liblapacke.a $(LIBRARY_PATH)/libgslcblas.a $(LIBRARY_PATH)/libopenblas.a $(LIBRARY_PATH)/libm.a -L=-lpthread
+
 release: DFLAGS += -O -release $(RPATH)
 
 profile: DFLAGS += -fprofile-instr-generate=fast_lmm_d-profiler.out
@@ -104,11 +111,11 @@ ifeq ($(VALIDATE),1)
 endif
 
 
-default debug release profile getIR getBC gperf: $(OUT)
+default debug release profile getIR getBC gperf static: $(OUT)
 
 # ---- Compile step
 %.o: %.d
-	$(D_COMPILER) -lib $(DFLAGS) -c $< -od=$(dir $@) $(BACKEND_FLAG)
+	$(D_COMPILER) $(DFLAGS) -c $< -od=$(dir $@) $(BACKEND_FLAG)
 
 # ---- Link step
 $(OUT): build-setup $(OBJ)

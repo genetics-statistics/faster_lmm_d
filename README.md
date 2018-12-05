@@ -49,7 +49,7 @@ and a bunch of D libraries that are installed with the dub tool.
 Install
 
 ```sh
-sudo apt-get install libopenblas liblapacke libgsl2
+sudo apt-get install libopenblas liblapacke libgsl2 gfortran
 ```
 
 Install LDC
